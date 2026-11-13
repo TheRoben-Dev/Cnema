@@ -22,6 +22,7 @@ public static class VlcBootstrap
     {
         try
         {
+            if (OperatingSystem.IsLinux()) MapLinuxSonames();
             var custom = Environment.GetEnvironmentVariable("CINEMA_LIBVLC_PATH");
             if (!string.IsNullOrWhiteSpace(custom) && Directory.Exists(custom))
             {
@@ -56,6 +57,27 @@ public static class VlcBootstrap
                     : "libVLC failed to load.";
             Console.Error.WriteLine($"[Cinema] {Error}\n{ex}");
         }
+    }
+
+    /// <summary>
+    /// Distros ship libvlc.so.5 / libvlccore.so.9; the unversioned libvlc.so only exists when the -dev
+    /// package is installed. Map LibVLCSharp's "libvlc" import to the versioned names so the regular
+    /// runtime package (libvlc5 / vlc-libs) is enough.
+    /// </summary>
+    private static void MapLinuxSonames()
+    {
+        NativeLibrary.SetDllImportResolver(typeof(LibVLC).Assembly, (name, assembly, searchPath) =>
+        {
+            var candidates = name switch
+            {
+                "libvlc" => new[] { "libvlc.so.5", "libvlc.so" },
+                "libvlccore" => new[] { "libvlccore.so.9", "libvlccore.so" },
+                _ => Array.Empty<string>(),
+            };
+            foreach (var c in candidates)
+                if (NativeLibrary.TryLoad(c, assembly, searchPath, out var handle)) return handle;
+            return IntPtr.Zero; // fall back to default probing
+        });
     }
 
     private static string? FindBundledMac()
