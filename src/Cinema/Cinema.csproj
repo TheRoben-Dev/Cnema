@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <AssemblyName>Cinema</AssemblyName>
+    <RootNamespace>Cinema</RootNamespace>
+    <Version>0.1.0</Version>
+    <ApplicationIcon Condition="Exists('Assets/cinema.ico')">Assets/cinema.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <AvaloniaVersion>11.3.23</AvaloniaVersion>
+    <!-- Which OS are we producing a build for? RID wins, otherwise the build host. -->
+    <CinemaTargetsWindows Condition="$(RuntimeIdentifier.StartsWith('win')) Or ('$(RuntimeIdentifier)' == '' And $([MSBuild]::IsOSPlatform('Windows')))">true</CinemaTargetsWindows>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="$(AvaloniaVersion)" />
+    <PackageReference Include="Avalonia.Desktop" Version="$(AvaloniaVersion)" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="$(AvaloniaVersion)" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="$(AvaloniaVersion)" />
+    <PackageReference Include="Avalonia.Controls.ItemsRepeater" Version="11.1.5" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <PackageReference Include="LibVLCSharp" Version="3.10.2" />
+  </ItemGroup>
+
+  <!--
+    Native libVLC per platform:
+      macOS   -> uses the installed VLC.app (see Services/VlcBootstrap.cs); no package needed.
+      Linux   -> uses the system libvlc (apt install libvlc5 vlc-plugin-base / dnf install vlc-libs).
+      Windows -> bundled from NuGet.
+  -->
+  <ItemGroup Condition="'$(CinemaTargetsWindows)' == 'true'">
+    <PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.0.24" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="Assets/**" />
+  </ItemGroup>
+</Project>
