@@ -30,8 +30,8 @@ dotnet run --project src/Cinema
 
 Build a real `Cinema.app` with the icon: `scripts/bundle-macos.sh` (output in `dist/`).
 
-Releases are built by GitHub Actions: pushing a tag like `v0.2.0` publishes macOS (Apple Silicon and Intel),
-Windows and Linux builds.
+Releases are built by GitHub Actions: run the **Release** workflow with a version number (or push a tag like
+`v0.2.0`) to publish macOS (Apple Silicon and Intel), Windows and Linux builds.
 
 | OS | libVLC comes from | Notes |
 | --- | --- | --- |
