@@ -25,7 +25,11 @@ for tool in ffmpeg ffprobe; do
   echo "Fetching $tool ($PLAT, $TAG)"
   curl -fsSL --retry 3 "$BASE/$tool-$PLAT.gz" | gunzip > "$out"
   chmod +x "$out"
-  # Keep the upstream licence text next to the binary.
-  curl -fsSL --retry 3 "$BASE/$tool-$PLAT.LICENSE" -o "$DEST/$tool.LICENSE.txt" || true
 done
+cat > "$DEST/README.txt" <<NOTE
+ffmpeg and ffprobe are separate programs from the FFmpeg project (https://ffmpeg.org),
+licensed under the GNU GPL version 3 or later. These are unmodified static builds from
+https://github.com/eugeneware/ffmpeg-static (release $TAG). You may replace them with any
+other build. See THIRD-PARTY-NOTICES.md shipped with Cinema.
+NOTE
 ls -la "$DEST"

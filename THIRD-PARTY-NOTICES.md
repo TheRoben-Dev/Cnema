@@ -15,7 +15,7 @@ its own licence. None of them are modified.
 ## FFmpeg
 
 - What: the `ffmpeg` and `ffprobe` executables, in the `tools/` folder.
-- From: https://github.com/eugeneware/ffmpeg-static (static builds; licence text ships beside each binary).
+- From: https://github.com/eugeneware/ffmpeg-static (pinned static builds).
 - Licence: GPL-3.0-or-later (these builds include GPL components such as x264).
 - Cinema does not link against FFmpeg. It runs these programs as separate processes for thumbnails,
   metadata and clip export. You can replace them with any other ffmpeg/ffprobe build.

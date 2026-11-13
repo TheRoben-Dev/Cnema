@@ -30,12 +30,10 @@ test -f "$APP/Contents/MacOS/libvlc/$RID/lib/libvlc.dylib" || { echo "libVLC mis
 
 # Ad-hoc signature: required for arm64 binaries to launch at all.
 if command -v codesign >/dev/null 2>&1; then
-  # Sign every Mach-O file first (plugins and tools are not in standard bundle locations), then the app.
-  find "$APP/Contents/MacOS" -type f \( -name '*.dylib' -o -perm +111 \) -print0 |
-    while IFS= read -r -d '' f; do
-      if file -b "$f" | grep -q 'Mach-O'; then codesign --force --sign - "$f"; fi
-    done
-  codesign --force --deep --sign - "$APP"
+  # macOS treats everything under Contents/MacOS as code, so every file there needs a signature
+  # (managed .dll files and VLC data files included) before the bundle itself can be sealed.
+  find "$APP/Contents/MacOS" -type f -print0 | xargs -0 -n 50 codesign --force --sign - 2>/dev/null
+  codesign --force --sign - "$APP"
   codesign --verify --deep --strict "$APP" && echo "Signature OK"
 fi
 echo "Built $APP ($RID, v$VERSION)"

@@ -13,7 +13,7 @@ case "$RID" in
     scripts/bundle-macos.sh "$RID" "$VERSION"
     label=$([ "$RID" = "osx-arm64" ] && echo apple-silicon || echo intel)
     # ditto keeps signatures and permissions intact
-    (cd dist && ditto -c -k --keepParent Cinema.app "Cinema-v$VERSION-macos-$label.zip")
+    (cd dist && ditto -c -k --sequesterRsrc --keepParent Cinema.app "Cinema-v$VERSION-macos-$label.zip")
     ;;
   win-x64|linux-x64)
     out="dist/Cinema"
