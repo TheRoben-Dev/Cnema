@@ -38,6 +38,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public string FfmpegHint => OperatingSystem.IsMacOS() ? "brew install ffmpeg"
         : OperatingSystem.IsWindows() ? "winget install ffmpeg" : "sudo apt install ffmpeg";
 
+    /// <summary>Only animate while a scan is actually enumerating; an indeterminate bar animates even when hidden.</summary>
+    public bool IsScanIndeterminate => IsScanning && ScanProgress <= 0;
+    partial void OnScanProgressChanged(double value) => OnPropertyChanged(nameof(IsScanIndeterminate));
+
     public bool HasNoFolders => Folders.Count <= 1;
     public bool HasNoResults => !HasNoFolders && Videos.Count == 0 && !IsScanning;
     public string HeaderTitle => SelectedFolder?.Name ?? "All videos";
@@ -167,7 +171,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _settings.Save();
         RefreshView();
     }
-    partial void OnIsScanningChanged(bool value) => OnPropertyChanged(nameof(HasNoResults));
+    partial void OnIsScanningChanged(bool value)
+    {
+        OnPropertyChanged(nameof(HasNoResults));
+        OnPropertyChanged(nameof(IsScanIndeterminate));
+    }
 
     private void RefreshView()
     {

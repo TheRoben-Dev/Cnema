@@ -113,7 +113,7 @@
         <Panel DockPanel.Dock="Top" Height="22" Margin="28,0">
           <StackPanel Orientation="Horizontal" Spacing="10" IsVisible="{Binding IsScanning}">
             <ProgressBar Width="140" Height="3" MinHeight="3" Value="{Binding ScanProgress}" VerticalAlignment="Center"
-                         IsIndeterminate="{Binding ScanProgress, Converter={x:Static c:Converters.IsZero}}" />
+                         IsIndeterminate="{Binding IsScanIndeterminate}" />
             <TextBlock Classes="dim" Text="{Binding ScanStatus}" FontSize="11" VerticalAlignment="Center" />
           </StackPanel>
         </Panel>
