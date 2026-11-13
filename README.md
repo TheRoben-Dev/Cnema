@@ -11,8 +11,11 @@ for playback, ffmpeg/ffprobe for thumbnails, metadata and clip export. One codeb
 
 ## Download
 
-Grab a build from [Releases](https://github.com/TheRoben-Dev/Cnema/releases). They are self-contained, so .NET is
-not needed, but you still need VLC (macOS/Linux) and ffmpeg.
+Grab a build from [Releases](https://github.com/TheRoben-Dev/Cnema/releases). On macOS and Windows everything is
+inside the app: the .NET runtime, libVLC with its plugins, and ffmpeg/ffprobe. Nothing else to install.
+
+On Linux, ffmpeg and .NET are bundled but libVLC comes from your distro (VideoLAN publishes no Linux package):
+`sudo apt install libvlc5 vlc-plugin-base`.
 
 The macOS app is not notarized, so the first launch needs either right-click → Open, or:
 
@@ -23,10 +26,12 @@ xattr -dr com.apple.quarantine /Applications/Cinema.app
 ## Run from source (macOS)
 
 ```sh
-brew install --cask dotnet-sdk vlc     # .NET 8+ SDK and VLC.app (provides libVLC)
-brew install ffmpeg                    # thumbnails + clip export
+brew install --cask dotnet-sdk         # .NET 8+ SDK
+brew install ffmpeg                    # only needed when running from source
 dotnet run --project src/Cinema
 ```
+
+libVLC is restored from NuGet, so VLC does not need to be installed.
 
 Build a real `Cinema.app` with the icon: `scripts/bundle-macos.sh` (output in `dist/`).
 
@@ -35,9 +40,9 @@ Releases are built by GitHub Actions: run the **Release** workflow with a versio
 
 | OS | libVLC comes from | Notes |
 | --- | --- | --- |
-| macOS | `/Applications/VLC.app` (or `~/Applications`) | Must match your CPU arch; the universal/arm64 VLC build on Apple Silicon. |
-| Windows | `VideoLAN.LibVLC.Windows` NuGet (bundled automatically) | `winget install ffmpeg` |
-| Linux | system packages: `sudo apt install libvlc5 vlc-plugin-base ffmpeg` | |
+| macOS | `VideoLAN.LibVLC.Mac` NuGet, copied into the app (`libvlc/osx-<arch>/`) | Falls back to an installed VLC.app if the bundled copy is missing. |
+| Windows | `VideoLAN.LibVLC.Windows` NuGet, copied into the app (`libvlc/win-x64/`) | |
+| Linux | system packages: `sudo apt install libvlc5 vlc-plugin-base` | |
 
 Set `CINEMA_LIBVLC_PATH` to a folder containing libvlc + libvlccore to override.
 
@@ -89,4 +94,5 @@ Data lives in `~/Library/Application Support/Cinema` (macOS), `%LOCALAPPDATA%\Ci
 
 ## Licensing
 
-Cinema is MIT licensed. libVLC is LGPL-2.1+ (dynamically linked). ffmpeg is invoked as an external process.
+Cinema is MIT licensed. Release builds bundle libVLC (LGPL, dynamically linked) and ffmpeg (GPL, run as a
+separate program); see [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
