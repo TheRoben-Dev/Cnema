@@ -30,6 +30,7 @@ public sealed partial class VideoItemViewModel : ObservableObject
         _ => "",
     };
     public bool HasResolution => Entry.Height > 0;
+    public bool IsHighRes => Entry.Height >= 2000;
 
     public string Details
     {

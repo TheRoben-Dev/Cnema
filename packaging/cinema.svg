@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1B1F3A"/>
+      <stop offset="1" stop-color="#07080D"/>
+    </linearGradient>
+    <linearGradient id="brand" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8E6BFF"/>
+      <stop offset="1" stop-color="#3DDCFF"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.45" r="0.55">
+      <stop offset="0" stop-color="#6C5CFF" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#6C5CFF" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="sq"><rect x="100" y="100" width="824" height="824" rx="186"/></clipPath>
+    <pattern id="scan" width="8" height="8" patternUnits="userSpaceOnUse">
+      <rect width="8" height="2" fill="#FFFFFF" opacity="0.035"/>
+    </pattern>
+  </defs>
+
+  <!-- squircle tile (macOS icon grid: 824px body on a 1024 canvas) -->
+  <g clip-path="url(#sq)">
+    <rect x="100" y="100" width="824" height="824" fill="url(#bg)"/>
+    <rect x="100" y="100" width="824" height="824" fill="url(#glow)"/>
+    <rect x="100" y="100" width="824" height="824" fill="url(#scan)"/>
+  </g>
+  <rect x="103" y="103" width="818" height="818" rx="183" fill="none" stroke="#FFFFFF" stroke-opacity="0.10" stroke-width="6"/>
+
+  <!-- controller body -->
+  <path d="M 330 318 H 694 C 792 318 838 392 850 500 C 860 590 846 664 792 676 C 742 687 706 640 668 590
+           C 652 569 634 560 610 560 H 414 C 390 560 372 569 356 590 C 318 640 282 687 232 676
+           C 178 664 164 590 174 500 C 186 392 232 318 330 318 Z"
+        fill="#0C0E18" stroke="url(#brand)" stroke-width="26" stroke-linejoin="round"/>
+
+  <!-- d-pad -->
+  <path d="M 322 392 h 44 v 40 h 40 v 44 h -40 v 40 h -44 v -40 h -40 v -44 h 40 z" fill="#FFFFFF" opacity="0.92"/>
+
+  <!-- play button where the face buttons would be -->
+  <circle cx="672" cy="454" r="78" fill="url(#brand)"/>
+  <path d="M 648 410 L 720 454 L 648 498 Z" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="10" stroke-linejoin="round"/>
+
+  <!-- clip timeline with in/out brackets -->
+  <rect x="236" y="762" width="552" height="22" rx="11" fill="#FFFFFF" opacity="0.16"/>
+  <rect x="392" y="762" width="250" height="22" fill="url(#brand)"/>
+  <path d="M 420 732 H 388 V 814 H 420" fill="none" stroke="#FFFFFF" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 614 732 H 646 V 814 H 614" fill="none" stroke="#FFFFFF" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- rec dot -->
+  <circle cx="772" cy="236" r="30" fill="#FF3D71"/>
+  <circle cx="772" cy="236" r="48" fill="none" stroke="#FF3D71" stroke-opacity="0.35" stroke-width="8"/>
+</svg>

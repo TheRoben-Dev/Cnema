@@ -1,0 +1,79 @@
+name: Release
+
+# Push a tag like v0.2.0 to build every platform and publish a GitHub release.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  macos:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        rid: [osx-arm64, osx-x64]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Bundle Cinema.app
+        run: scripts/bundle-macos.sh ${{ matrix.rid }} "${GITHUB_REF_NAME#v}"
+      - name: Zip (ditto keeps the signature and permissions intact)
+        run: ditto -c -k --keepParent dist/Cinema.app "Cinema-${GITHUB_REF_NAME}-macos-${{ matrix.rid == 'osx-arm64' && 'apple-silicon' || 'intel' }}.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.rid }}
+          path: Cinema-*.zip
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Publish
+        shell: bash
+        run: |
+          dotnet publish src/Cinema/Cinema.csproj -c Release -r win-x64 --self-contained true \
+            -p:Version="${GITHUB_REF_NAME#v}" -p:DebugType=none -o dist/Cinema
+          cd dist && 7z a "../Cinema-${GITHUB_REF_NAME}-windows-x64.zip" Cinema
+      - uses: actions/upload-artifact@v4
+        with:
+          name: win-x64
+          path: Cinema-*.zip
+
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Publish
+        run: |
+          dotnet publish src/Cinema/Cinema.csproj -c Release -r linux-x64 --self-contained true \
+            -p:Version="${GITHUB_REF_NAME#v}" -p:DebugType=none -o dist/Cinema
+          cp src/Cinema/Assets/cinema.png dist/Cinema/cinema.png
+          tar -C dist -czf "Cinema-${GITHUB_REF_NAME}-linux-x64.tar.gz" Cinema
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-x64
+          path: Cinema-*.tar.gz
+
+  release:
+    needs: [macos, windows, linux]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            Cinema-*.zip
+            Cinema-*.tar.gz

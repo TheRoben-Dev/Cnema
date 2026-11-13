@@ -65,14 +65,14 @@
 
   <!-- Accent: primary action -->
   <Style Selector="Button.accent">
-    <Setter Property="Background" Value="{StaticResource Accent}" />
-    <Setter Property="Foreground" Value="#1A1206" />
+    <Setter Property="Background" Value="{StaticResource BrandButton}" />
+    <Setter Property="Foreground" Value="{StaticResource OnAccent}" />
     <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="Padding" Value="14,8" />
   </Style>
   <Style Selector="Button.accent:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="{StaticResource AccentHoverColor}" />
-    <Setter Property="Foreground" Value="#1A1206" />
+    <Setter Property="Background" Value="{StaticResource BrandButtonHover}" />
+    <Setter Property="Foreground" Value="{StaticResource OnAccent}" />
   </Style>
   <Style Selector="Button.accent:disabled /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{StaticResource Bg3}" />
@@ -91,7 +91,7 @@
     <Setter Property="Foreground" Value="{StaticResource Bg0}" />
   </Style>
   <Style Selector="Button.play:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="{StaticResource Accent}" />
+    <Setter Property="Background" Value="{StaticResource Cyan}" />
     <Setter Property="Foreground" Value="{StaticResource Bg0}" />
   </Style>
 
@@ -150,7 +150,7 @@
     <Setter Property="Background" Value="{StaticResource AccentSoft}" />
   </Style>
   <Style Selector="ListBox.nav ListBoxItem:selected PathIcon.navicon">
-    <Setter Property="Foreground" Value="{StaticResource Accent}" />
+    <Setter Property="Foreground" Value="{StaticResource Cyan}" />
   </Style>
   <Style Selector="ListBox.nav ListBoxItem Button.remove">
     <Setter Property="Opacity" Value="0" />
@@ -186,6 +186,22 @@
   <Style Selector="Button.card:pointerover Border.thumb">
     <Setter Property="RenderTransform" Value="scale(1.02)" />
   </Style>
+  <Style Selector="Button.card Border.ring">
+    <Setter Property="Opacity" Value="0" />
+    <Setter Property="Transitions">
+      <Transitions><DoubleTransition Property="Opacity" Duration="0:0:0.15" /></Transitions>
+    </Setter>
+  </Style>
+  <Style Selector="Button.card:pointerover Border.ring">
+    <Setter Property="Opacity" Value="1" />
+  </Style>
+  <Style Selector="Border.badge.hi">
+    <Setter Property="Background" Value="{StaticResource Brand}" />
+  </Style>
+  <Style Selector="Border.badge.hi TextBlock">
+    <Setter Property="Foreground" Value="#07080D" />
+    <Setter Property="FontWeight" Value="Bold" />
+  </Style>
   <Style Selector="Button.card Border.playhint">
     <Setter Property="Opacity" Value="0" />
     <Setter Property="Transitions">
@@ -198,7 +214,7 @@
 
   <!-- Badges -->
   <Style Selector="Border.badge">
-    <Setter Property="Background" Value="#D90D0E12" />
+    <Setter Property="Background" Value="#E0090A0F" />
     <Setter Property="CornerRadius" Value="5" />
     <Setter Property="Padding" Value="6,2" />
   </Style>

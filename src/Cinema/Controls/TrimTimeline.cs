@@ -24,7 +24,9 @@ public sealed class TrimTimeline : Control
     public static readonly StyledProperty<ICommand?> SeekCommandProperty =
         AvaloniaProperty.Register<TrimTimeline, ICommand?>(nameof(SeekCommand));
     public static readonly StyledProperty<IBrush> AccentProperty =
-        AvaloniaProperty.Register<TrimTimeline, IBrush>(nameof(Accent), new SolidColorBrush(Color.Parse("#FF9F43")));
+        AvaloniaProperty.Register<TrimTimeline, IBrush>(nameof(Accent), new SolidColorBrush(Color.Parse("#8E6BFF")));
+    public static readonly StyledProperty<IBrush> RangeBrushProperty =
+        AvaloniaProperty.Register<TrimTimeline, IBrush>(nameof(RangeBrush), new SolidColorBrush(Color.Parse("#3DDCFF")));
 
     public double Duration { get => GetValue(DurationProperty); set => SetValue(DurationProperty, value); }
     public double Position { get => GetValue(PositionProperty); set => SetValue(PositionProperty, value); }
@@ -32,6 +34,7 @@ public sealed class TrimTimeline : Control
     public double OutPoint { get => GetValue(OutPointProperty); set => SetValue(OutPointProperty, value); }
     public ICommand? SeekCommand { get => GetValue(SeekCommandProperty); set => SetValue(SeekCommandProperty, value); }
     public IBrush Accent { get => GetValue(AccentProperty); set => SetValue(AccentProperty, value); }
+    public IBrush RangeBrush { get => GetValue(RangeBrushProperty); set => SetValue(RangeBrushProperty, value); }
 
     private const double Pad = 10;
     private const double TrackH = 6;
@@ -42,7 +45,7 @@ public sealed class TrimTimeline : Control
 
     static TrimTimeline()
     {
-        AffectsRender<TrimTimeline>(DurationProperty, PositionProperty, InPointProperty, OutPointProperty, AccentProperty);
+        AffectsRender<TrimTimeline>(DurationProperty, PositionProperty, InPointProperty, OutPointProperty, AccentProperty, RangeBrushProperty);
         FocusableProperty.OverrideDefaultValue<TrimTimeline>(false);
     }
 
@@ -116,7 +119,8 @@ public sealed class TrimTimeline : Control
         var h = Bounds.Height;
         var cy = h / 2 + 4;
         var accent = Accent;
-        var accentColor = (accent as ISolidColorBrush)?.Color ?? Colors.Orange;
+        var range = RangeBrush;
+        var rangeColor = (range as ISolidColorBrush)?.Color ?? Colors.Cyan;
 
         // Hit area (transparent so the whole control receives pointer input).
         ctx.FillRectangle(Brushes.Transparent, new Rect(0, 0, w, h));
@@ -130,10 +134,10 @@ public sealed class TrimTimeline : Control
         {
             var x1 = XFor(hasIn ? InPoint : 0);
             var x2 = XFor(hasOut ? OutPoint : Duration);
-            var range = new Rect(x1, cy - 13, Math.Max(0, x2 - x1), 26);
-            ctx.DrawRectangle(new SolidColorBrush(accentColor, 0.16), new Pen(new SolidColorBrush(accentColor, 0.55), 1), range, 4, 4);
-            if (hasIn) DrawHandle(ctx, x1, cy, accent, left: true);
-            if (hasOut) DrawHandle(ctx, x2, cy, accent, left: false);
+            var box = new Rect(x1, cy - 13, Math.Max(0, x2 - x1), 26);
+            ctx.DrawRectangle(new SolidColorBrush(rangeColor, 0.14), new Pen(new SolidColorBrush(rangeColor, 0.5), 1), box, 4, 4);
+            if (hasIn) DrawHandle(ctx, x1, cy, range, left: true);
+            if (hasOut) DrawHandle(ctx, x2, cy, range, left: false);
         }
 
         // Played portion + playhead.

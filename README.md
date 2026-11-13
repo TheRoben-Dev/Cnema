@@ -9,7 +9,18 @@ play anything VLC can play and cut clips out of it without leaving the app.
 Stack: C# / .NET 8, [Avalonia 11](https://avaloniaui.net) for UI, [LibVLCSharp](https://code.videolan.org/videolan/LibVLCSharp)
 for playback, ffmpeg/ffprobe for thumbnails, metadata and clip export. One codebase for macOS, Windows and Linux.
 
-## Run (macOS)
+## Download
+
+Grab a build from [Releases](https://github.com/TheRoben-Dev/Cnema/releases). They are self-contained, so .NET is
+not needed, but you still need VLC (macOS/Linux) and ffmpeg.
+
+The macOS app is not notarized, so the first launch needs either right-click → Open, or:
+
+```sh
+xattr -dr com.apple.quarantine /Applications/Cinema.app
+```
+
+## Run from source (macOS)
 
 ```sh
 brew install --cask dotnet-sdk vlc     # .NET 8+ SDK and VLC.app (provides libVLC)
@@ -17,7 +28,10 @@ brew install ffmpeg                    # thumbnails + clip export
 dotnet run --project src/Cinema
 ```
 
-Standalone build: `dotnet publish src/Cinema -c Release -r osx-arm64 --self-contained` (or `osx-x64`).
+Build a real `Cinema.app` with the icon: `scripts/bundle-macos.sh` (output in `dist/`).
+
+Releases are built by GitHub Actions: pushing a tag like `v0.2.0` publishes macOS (Apple Silicon and Intel),
+Windows and Linux builds.
 
 | OS | libVLC comes from | Notes |
 | --- | --- | --- |
@@ -75,4 +89,4 @@ Data lives in `~/Library/Application Support/Cinema` (macOS), `%LOCALAPPDATA%\Ci
 
 ## Licensing
 
-libVLC is LGPL-2.1+ (dynamically linked here). ffmpeg is invoked as an external process.
+Cinema is MIT licensed. libVLC is LGPL-2.1+ (dynamically linked). ffmpeg is invoked as an external process.
