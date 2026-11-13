@@ -32,7 +32,13 @@ test -f "$APP/Contents/MacOS/libvlc/$RID/lib/libvlc.dylib" || { echo "libVLC mis
 if command -v codesign >/dev/null 2>&1; then
   # macOS treats everything under Contents/MacOS as code, so every file there needs a signature
   # (managed .dll files and VLC data files included) before the bundle itself can be sealed.
-  find "$APP/Contents/MacOS" -type f -print0 | xargs -0 -n 50 codesign --force --sign - 2>/dev/null
+  failed=0
+  while IFS= read -r -d '' f; do
+    if ! err=$(codesign --force --sign - "$f" 2>&1); then
+      echo "codesign failed: $f: $err"; failed=$((failed + 1))
+    fi
+  done < <(find "$APP/Contents/MacOS" -type f -print0)
+  echo "Signed bundle contents ($failed file(s) could not be signed)"
   codesign --force --sign - "$APP"
   codesign --verify --deep --strict "$APP" && echo "Signature OK"
 fi
