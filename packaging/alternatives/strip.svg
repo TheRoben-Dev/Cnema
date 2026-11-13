@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1B1F3A"/><stop offset="1" stop-color="#07080D"/></linearGradient>
+    <linearGradient id="brand" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8E6BFF"/><stop offset="1" stop-color="#3DDCFF"/></linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.45" r="0.55"><stop offset="0" stop-color="#6C5CFF" stop-opacity="0.55"/><stop offset="1" stop-color="#6C5CFF" stop-opacity="0"/></radialGradient>
+    <clipPath id="sq"><rect x="100" y="100" width="824" height="824" rx="186"/></clipPath>
+    <pattern id="scan" width="8" height="8" patternUnits="userSpaceOnUse"><rect width="8" height="2" fill="#FFFFFF" opacity="0.035"/></pattern>
+  </defs>
+  <g clip-path="url(#sq)">
+    <rect x="100" y="100" width="824" height="824" fill="url(#bg)"/>
+    <rect x="100" y="100" width="824" height="824" fill="url(#glow)"/>
+    <rect x="100" y="100" width="824" height="824" fill="url(#scan)"/>
+  </g>
+  <rect x="103" y="103" width="818" height="818" rx="183" fill="none" stroke="#FFFFFF" stroke-opacity="0.10" stroke-width="6"/>
+  <!-- strip of clips, middle one selected -->
+  <rect x="150" y="372" width="200" height="280" rx="34" fill="#FFFFFF" opacity="0.10"/>
+  <rect x="674" y="372" width="200" height="280" rx="34" fill="#FFFFFF" opacity="0.10"/>
+  <rect x="372" y="330" width="280" height="364" rx="44" fill="url(#brand)"/>
+  <path d="M 474 446 L 574 512 L 474 578 Z" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="22" stroke-linejoin="round"/>
+  <path d="M 356 270 H 318 V 754 H 356" fill="none" stroke="#FFFFFF" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 668 270 H 706 V 754 H 668" fill="none" stroke="#FFFFFF" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

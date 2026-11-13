@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1B1F3A"/><stop offset="1" stop-color="#07080D"/></linearGradient>
+    <linearGradient id="brand" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8E6BFF"/><stop offset="1" stop-color="#3DDCFF"/></linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.45" r="0.55"><stop offset="0" stop-color="#6C5CFF" stop-opacity="0.55"/><stop offset="1" stop-color="#6C5CFF" stop-opacity="0"/></radialGradient>
+    <clipPath id="sq"><rect x="100" y="100" width="824" height="824" rx="186"/></clipPath>
+    <pattern id="scan" width="8" height="8" patternUnits="userSpaceOnUse"><rect width="8" height="2" fill="#FFFFFF" opacity="0.035"/></pattern>
+  </defs>
+  <g clip-path="url(#sq)">
+    <rect x="100" y="100" width="824" height="824" fill="url(#bg)"/>
+    <rect x="100" y="100" width="824" height="824" fill="url(#glow)"/>
+    <rect x="100" y="100" width="824" height="824" fill="url(#scan)"/>
+  </g>
+  <rect x="103" y="103" width="818" height="818" rx="183" fill="none" stroke="#FFFFFF" stroke-opacity="0.10" stroke-width="6"/>
+  <!-- library: stacked frames -->
+  <rect x="330" y="226" width="364" height="60" rx="26" fill="#8E6BFF" opacity="0.30"/>
+  <rect x="282" y="262" width="460" height="70" rx="30" fill="#8E6BFF" opacity="0.55"/>
+  <!-- front frame -->
+  <rect x="226" y="306" width="572" height="350" rx="52" fill="#0C0E18" stroke="url(#brand)" stroke-width="26"/>
+  <path d="M 462 404 L 592 481 L 462 558 Z" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="22" stroke-linejoin="round"/>
+  <!-- trim timeline -->
+  <rect x="236" y="752" width="552" height="22" rx="11" fill="#FFFFFF" opacity="0.16"/>
+  <rect x="372" y="752" width="290" height="22" fill="url(#brand)"/>
+  <path d="M 400 722 H 368 V 804 H 400" fill="none" stroke="#FFFFFF" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 634 722 H 666 V 804 H 634" fill="none" stroke="#FFFFFF" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
