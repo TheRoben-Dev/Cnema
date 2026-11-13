@@ -19,6 +19,7 @@
     <AvaloniaVersion>11.3.23</AvaloniaVersion>
     <!-- Which OS are we producing a build for? RID wins, otherwise the build host. -->
     <CinemaTargetsWindows Condition="$(RuntimeIdentifier.StartsWith('win')) Or ('$(RuntimeIdentifier)' == '' And $([MSBuild]::IsOSPlatform('Windows')))">true</CinemaTargetsWindows>
+    <CinemaTargetsMac Condition="$(RuntimeIdentifier.StartsWith('osx')) Or ('$(RuntimeIdentifier)' == '' And $([MSBuild]::IsOSPlatform('OSX')))">true</CinemaTargetsMac>
   </PropertyGroup>
 
   <ItemGroup>
@@ -32,11 +33,15 @@
   </ItemGroup>
 
   <!--
-    Native libVLC per platform:
-      macOS   -> uses the installed VLC.app (see Services/VlcBootstrap.cs); no package needed.
-      Linux   -> uses the system libvlc (apt install libvlc5 vlc-plugin-base / dnf install vlc-libs).
-      Windows -> bundled from NuGet.
+    Native libVLC per platform (see Services/VlcBootstrap.cs):
+      macOS   -> bundled from NuGet into libvlc/osx-<arch>/ (falls back to an installed VLC.app).
+      Windows -> bundled from NuGet into libvlc/win-<arch>/.
+      Linux   -> VideoLAN publishes no Linux package, so the system libvlc is used
+                 (apt install libvlc5 vlc-plugin-base / dnf install vlc-libs).
   -->
+  <ItemGroup Condition="'$(CinemaTargetsMac)' == 'true'">
+    <PackageReference Include="VideoLAN.LibVLC.Mac" Version="3.1.3.2" />
+  </ItemGroup>
   <ItemGroup Condition="'$(CinemaTargetsWindows)' == 'true'">
     <PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.0.24" />
   </ItemGroup>

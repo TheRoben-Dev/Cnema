@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Builds dist/Cinema.app (self-contained, no .NET install needed) with the app icon.
+# Builds dist/Cinema.app with everything inside it: the .NET runtime, libVLC and its plugins,
+# ffmpeg/ffprobe and the app icon. Nothing else needs to be installed.
 # Usage: scripts/bundle-macos.sh [osx-arm64|osx-x64] [version]
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -17,9 +18,28 @@ cp -R "dist/publish-$RID/." "$APP/Contents/MacOS/"
 cp packaging/cinema.icns "$APP/Contents/Resources/cinema.icns"
 sed "s/__VERSION__/$VERSION/g" packaging/Info.plist > "$APP/Contents/Info.plist"
 chmod +x "$APP/Contents/MacOS/Cinema"
+cp LICENSE THIRD-PARTY-NOTICES.md "$APP/Contents/Resources/"
+
+# ffmpeg + ffprobe (skip with CINEMA_SKIP_FFMPEG=1 to build offline)
+if [ "${CINEMA_SKIP_FFMPEG:-0}" != "1" ]; then
+  scripts/fetch-ffmpeg.sh "$RID" "$APP/Contents/MacOS/tools"
+fi
+
+# libVLC must be inside the bundle.
+test -f "$APP/Contents/MacOS/libvlc/$RID/lib/libvlc.dylib" || { echo "libVLC missing from bundle" >&2; exit 1; }
 
 # Ad-hoc signature: required for arm64 binaries to launch at all.
 if command -v codesign >/dev/null 2>&1; then
-  codesign --force --deep --sign - "$APP"
+  # macOS treats everything under Contents/MacOS as code, so every file there needs a signature
+  # (managed .dll files and VLC data files included) before the bundle itself can be sealed.
+  failed=0
+  while IFS= read -r -d '' f; do
+    if ! err=$(codesign --force --sign - "$f" 2>&1); then
+      echo "codesign failed: $f: $err"; failed=$((failed + 1))
+    fi
+  done < <(find "$APP/Contents/MacOS" -type f -print0)
+  echo "Signed bundle contents ($failed file(s) could not be signed)"
+  codesign --force --sign - "$APP"
+  codesign --verify --deep --strict "$APP" && echo "Signature OK"
 fi
 echo "Built $APP ($RID, v$VERSION)"

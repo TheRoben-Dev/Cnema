@@ -21,3 +21,9 @@ jobs:
         with:
           dotnet-version: 8.0.x
       - run: dotnet build src/Cinema/Cinema.csproj -c Release -warnaserror
+
+  package:
+    if: github.event_name == 'pull_request'
+    uses: ./.github/workflows/package.yml
+    with:
+      version: 0.0.0-pr${{ github.event.number }}

@@ -15,76 +15,17 @@ on:
 permissions:
   contents: write
 
-env:
-  RAW_VERSION: ${{ inputs.version || github.ref_name }}
-
 jobs:
-  macos:
-    runs-on: macos-latest
-    strategy:
-      matrix:
-        include:
-          - rid: osx-arm64
-            label: apple-silicon
-          - rid: osx-x64
-            label: intel
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 8.0.x
-      - name: Bundle Cinema.app
-        run: |
-          VERSION="${RAW_VERSION#v}"
-          scripts/bundle-macos.sh ${{ matrix.rid }} "$VERSION"
-          # ditto keeps the signature and permissions intact
-          ditto -c -k --keepParent dist/Cinema.app "Cinema-v$VERSION-macos-${{ matrix.label }}.zip"
-      - uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.rid }}
-          path: Cinema-*.zip
-
-  windows:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 8.0.x
-      - name: Publish
-        shell: bash
-        run: |
-          VERSION="${RAW_VERSION#v}"
-          dotnet publish src/Cinema/Cinema.csproj -c Release -r win-x64 --self-contained true \
-            -p:Version="$VERSION" -p:DebugType=none -o dist/Cinema
-          cd dist && 7z a "../Cinema-v$VERSION-windows-x64.zip" Cinema
-      - uses: actions/upload-artifact@v4
-        with:
-          name: win-x64
-          path: Cinema-*.zip
-
-  linux:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 8.0.x
-      - name: Publish
-        run: |
-          VERSION="${RAW_VERSION#v}"
-          dotnet publish src/Cinema/Cinema.csproj -c Release -r linux-x64 --self-contained true \
-            -p:Version="$VERSION" -p:DebugType=none -o dist/Cinema
-          cp src/Cinema/Assets/cinema.png dist/Cinema/cinema.png
-          tar -C dist -czf "Cinema-v$VERSION-linux-x64.tar.gz" Cinema
-      - uses: actions/upload-artifact@v4
-        with:
-          name: linux-x64
-          path: Cinema-*.tar.gz
+  package:
+    uses: ./.github/workflows/package.yml
+    with:
+      version: ${{ inputs.version || github.ref_name }}
 
   release:
-    needs: [macos, windows, linux]
+    needs: package
     runs-on: ubuntu-latest
+    env:
+      RAW_VERSION: ${{ inputs.version || github.ref_name }}
     steps:
       - uses: actions/download-artifact@v4
         with:
