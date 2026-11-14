@@ -5,6 +5,8 @@ using Avalonia.VisualTree;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
+using Avalonia.Media;
+using Cnema.Services;
 using Cnema.ViewModels;
 
 namespace Cnema.Views;
@@ -55,6 +57,244 @@ public partial class MainWindow : Window
 
     private MainViewModel? Vm => DataContext as MainViewModel;
 
+    // ---------- controller mode ----------
+    private const double ControllerScale = 1.25;
+    private static readonly bool PadDebugKeys = Environment.GetEnvironmentVariable("CNEMA_PAD_DEBUG") == "1";
+    private readonly GamepadService _pad = new();
+    private bool _controllerFullscreen;
+
+    /// <summary>
+    /// Switches the whole window between the desktop layout and the controller layout: everything
+    /// is scaled up, the D-pad / stick / arrow keys move a visible cursor, and the pad is polled.
+    /// </summary>
+    private void ApplyControllerMode()
+    {
+        if (Vm is not { } vm) return;
+        var on = vm.IsControllerMode;
+        Classes.Set("pad", on);
+        Scaler.LayoutTransform = on ? new ScaleTransform(ControllerScale, ControllerScale) : null;
+        _pad.SetEnabled(on);
+        UpdatePadStatus();
+
+        if (on && vm.ControllerFullscreen && WindowState != WindowState.FullScreen)
+        {
+            _preFullscreenState = WindowState;
+            WindowState = WindowState.FullScreen;
+            _controllerFullscreen = true;
+        }
+        else if (_controllerFullscreen && !(on && vm.ControllerFullscreen))
+        {
+            if (WindowState == WindowState.FullScreen) WindowState = WindowState.Normal;
+            _controllerFullscreen = false;
+        }
+        if (on) Avalonia.Threading.Dispatcher.UIThread.Post(() => FocusGrid(), Avalonia.Threading.DispatcherPriority.Background);
+    }
+
+    private void UpdatePadStatus()
+    {
+        if (Vm is not { } vm) return;
+        vm.PadStatus = _pad.Error ?? (_pad.IsConnected
+            ? "Connected: " + _pad.ControllerName
+            : "No controller found yet. Arrow keys, Enter and Esc work too.");
+    }
+
+    private Control? Focused => FocusManager?.GetFocusedElement() as Control;
+
+    // Navigation is explicit rather than "nearest control in that direction": the screen is a
+    // sidebar column, a grid of cards and the occasional dialog, and each has an obvious order.
+
+    private int GridColumns => Math.Max(1, (int)((VideoGrid.Bounds.Width + 6) / (250 + 6)));
+
+    private bool FocusCard(int index)
+    {
+        if (Vm is not { IsPlayerOpen: false, IsEditing: false, IsSettingsOpen: false } vm || vm.Videos.Count == 0) return false;
+        index = Math.Clamp(index, 0, vm.Videos.Count - 1);
+        // The grid is virtualized: ask for the card, which creates it if it is scrolled out of view.
+        var card = VideoGrid.GetOrCreateElement(index);
+        card.BringIntoView();
+        return card.Focus(NavigationMethod.Directional);
+    }
+
+    private bool FocusGrid() => FocusCard(0);
+
+    /// <summary>The sidebar as one column: every folder and tag, then the controls underneath.</summary>
+    private List<Control> SidebarStops()
+    {
+        var stops = new List<Control>();
+        foreach (var list in new[] { FolderList, TagList })
+            for (var i = 0; list.IsVisible && i < list.ItemCount; i++)
+                if (list.ContainerFromIndex(i) is { } item) stops.Add(item);
+        stops.AddRange(new Control[] { ClipToggle, SaveClipButton, AddFolderButton, SettingsButton }
+            .Where(c => c.IsEffectivelyVisible && c.IsEffectivelyEnabled));
+        return stops;
+    }
+
+    private bool FocusSidebar()
+    {
+        var list = Vm?.SelectedTag is not null ? TagList : FolderList;
+        var item = list.ContainerFromIndex(Math.Max(0, list.SelectedIndex)) as Control;
+        return item?.Focus(NavigationMethod.Directional) == true;
+    }
+
+    private static bool IsDropDownOpen(Control? focused) =>
+        focused is ComboBoxItem || focused is ComboBox { IsDropDownOpen: true };
+
+    private void MoveInLibrary(PadButton b)
+    {
+        if (Vm is not { } vm) return;
+        var focused = Focused;
+        if (IsDropDownOpen(focused)) { SendKey(ArrowFor(b)); return; }
+
+        // ----- on a card -----
+        if (focused is Button { DataContext: VideoItemViewModel item })
+        {
+            var index = vm.Videos.IndexOf(item);
+            var columns = GridColumns;
+            switch (b)
+            {
+                case PadButton.Left when index % columns == 0: FocusSidebar(); break;
+                case PadButton.Left: FocusCard(index - 1); break;
+                case PadButton.Right when index < vm.Videos.Count - 1: FocusCard(index + 1); break;
+                case PadButton.Up when index < columns: SortBox.Focus(NavigationMethod.Directional); break;
+                case PadButton.Up: FocusCard(index - columns); break;
+                case PadButton.Down when index + columns < vm.Videos.Count: FocusCard(index + columns); break;
+                case PadButton.Down when index / columns < (vm.Videos.Count - 1) / columns: FocusCard(vm.Videos.Count - 1); break;
+            }
+            return;
+        }
+
+        // ----- sort box above the grid -----
+        if (ReferenceEquals(focused, SortBox))
+        {
+            if (b == PadButton.Down) FocusGrid();
+            else if (b == PadButton.Left) FocusSidebar();
+            return;
+        }
+
+        // ----- sidebar -----
+        var stops = SidebarStops();
+        var at = focused is null ? -1 : stops.FindIndex(s => ReferenceEquals(s, focused) || s.IsVisualAncestorOf(focused));
+        if (at < 0) { if (!FocusGrid()) FocusSidebar(); return; }
+        switch (b)
+        {
+            case PadButton.Right: if (!FocusGrid()) SortBox.Focus(NavigationMethod.Directional); break;
+            case PadButton.Up when at > 0: stops[at - 1].Focus(NavigationMethod.Directional); break;
+            case PadButton.Down when at < stops.Count - 1: stops[at + 1].Focus(NavigationMethod.Directional); break;
+        }
+    }
+
+    /// <summary>Dialogs are a column of controls: up/down walk it in tab order.</summary>
+    private void MoveInDialog(PadButton b)
+    {
+        var focused = Focused;
+        if (IsDropDownOpen(focused)) { SendKey(ArrowFor(b)); return; }
+        if (b is PadButton.Left or PadButton.Right && focused is TextBox or Slider) { SendKey(ArrowFor(b)); return; }
+        var forward = b is PadButton.Down or PadButton.Right;
+        var scope = (Control)(Vm?.IsSettingsOpen == true ? SettingsScrim : EditScrim);
+        if (focused is null || !scope.IsVisualAncestorOf(focused))
+        {
+            scope.GetVisualDescendants().OfType<Control>()
+                .FirstOrDefault(c => c.Focusable && c.IsEffectivelyVisible && c.IsEffectivelyEnabled && c is not ScrollViewer)
+                ?.Focus(NavigationMethod.Directional);
+            return;
+        }
+        var next = KeyboardNavigationHandler.GetNext(focused,
+            forward ? NavigationDirection.Next : NavigationDirection.Previous) as Control;
+        // Tab order wraps around the whole window; stay inside the dialog.
+        if (next is not null && scope.IsVisualAncestorOf(next)) next.Focus(NavigationMethod.Directional);
+    }
+
+    /// <summary>Sends a key through the normal input route, as if a pad were a tiny keyboard.</summary>
+    private void SendKey(Key key)
+    {
+        Interactive target = Focused is { } f && f.IsEffectivelyVisible ? f : this;
+        target.RaiseEvent(new KeyEventArgs { RoutedEvent = KeyDownEvent, Key = key, KeyDeviceType = KeyDeviceType.Gamepad, Source = target });
+        target.RaiseEvent(new KeyEventArgs { RoutedEvent = KeyUpEvent, Key = key, KeyDeviceType = KeyDeviceType.Gamepad, Source = target });
+    }
+
+    private static Key ArrowFor(PadButton b) => b switch
+    {
+        PadButton.Up => Key.Up, PadButton.Down => Key.Down, PadButton.Left => Key.Left, _ => Key.Right,
+    };
+
+    private void OnPad(PadButton b)
+    {
+        if (Vm is not { } vm || !vm.IsControllerMode) return;
+        var direction = b is PadButton.Up or PadButton.Down or PadButton.Left or PadButton.Right;
+
+        // ----- player: the pad drives playback directly, focus plays no part -----
+        if (vm.IsPlayerOpen && !vm.IsSettingsOpen)
+        {
+            var p = vm.Player;
+            switch (b)
+            {
+                case PadButton.A: p.TogglePlayCommand.Execute(null); break;
+                case PadButton.B: vm.ClosePlayerCommand.Execute(null); PlayerTopBar.IsVisible = true; break;
+                case PadButton.Left: p.SeekCommand.Execute(p.Position - 5000); break;
+                case PadButton.Right: p.SeekCommand.Execute(p.Position + 5000); break;
+                case PadButton.Up: p.Volume = Math.Min(125, p.Volume + 5); break;
+                case PadButton.Down: p.Volume = Math.Max(0, p.Volume - 5); break;
+                case PadButton.X: p.SetInCommand.Execute(null); break;
+                case PadButton.Y: p.SetOutCommand.Execute(null); break;
+                case PadButton.LB: p.StepFrameBackCommand.Execute(null); break;
+                case PadButton.RB: p.StepFrameCommand.Execute(null); break;
+                case PadButton.LT: p.SeekCommand.Execute(p.Position - 10000); break;
+                case PadButton.RT: p.SeekCommand.Execute(p.Position + 10000); break;
+                case PadButton.Start: p.ExportCommand.Execute(null); break;
+                case PadButton.View: vm.SaveClipCommand.Execute(null); break;
+            }
+            return;
+        }
+
+        // ----- dialogs -----
+        if (vm.IsSettingsOpen || vm.IsEditing)
+        {
+            if (b == PadButton.B)
+            {
+                // B first backs out of an open drop-down, then out of the dialog.
+                if (IsDropDownOpen(Focused)) SendKey(Key.Escape);
+                else if (vm.IsSettingsOpen) vm.CancelSettingsCommand.Execute(null);
+                else vm.CancelEditCommand.Execute(null);
+            }
+            else if (b == PadButton.Start)
+            {
+                if (vm.IsSettingsOpen) vm.SaveSettingsCommand.Execute(null);
+                else vm.SaveEditCommand.Execute(null);
+            }
+            else if (b == PadButton.A) SendKey(Focused is ToggleSwitch or CheckBox or RadioButton or ToggleButton ? Key.Space : Key.Enter);
+            else if (direction) MoveInDialog(b);
+            return;
+        }
+
+        // ----- library -----
+        var card = Focused as Button is { DataContext: VideoItemViewModel } c ? c : null;
+        switch (b)
+        {
+            case PadButton.A:
+                if (Focused is null && FocusGrid()) break;
+                SendKey(Focused is ToggleSwitch ? Key.Space : Key.Enter);
+                break;
+            case PadButton.B:
+                if (IsDropDownOpen(Focused)) SendKey(Key.Escape);
+                else if (card is not null || Focused is null) FocusSidebar();
+                else if (!FocusGrid()) FocusSidebar();
+                break;
+            case PadButton.X when card is not null: vm.ToggleFavoriteCommand.Execute(card.DataContext); break;
+            case PadButton.Y when card is not null: vm.BeginEditCommand.Execute(card.DataContext); break;
+            case PadButton.LB: vm.CycleNav(-1); RefocusGridSoon(); break;
+            case PadButton.RB: vm.CycleNav(+1); RefocusGridSoon(); break;
+            case PadButton.Start: vm.OpenSettingsCommand.Execute(null); break;
+            case PadButton.View: vm.SaveClipCommand.Execute(null); break;
+            default:
+                if (direction) MoveInLibrary(b);
+                break;
+        }
+    }
+
+    /// <summary>After the visible videos changed, put the cursor back on the first card.</summary>
+    private void RefocusGridSoon() =>
+        Avalonia.Threading.Dispatcher.UIThread.Post(() => FocusGrid(), Avalonia.Threading.DispatcherPriority.Background);
+
     private void OnQuitClick(object? sender, RoutedEventArgs e) => (Application.Current as App)?.Quit();
 
     /// <summary>
@@ -79,10 +319,25 @@ public partial class MainWindow : Window
     {
         base.OnDataContextChanged(e);
         if (Vm is not { } vm) return;
+        vm.ControllerModeChanged += ApplyControllerMode;
+        _pad.IsActive = () => IsActive && IsVisible;
+        _pad.Pressed += OnPad;
+        _pad.ConnectionChanged += UpdatePadStatus;
+        ApplyControllerMode();
         vm.PickFolder = PickFolderAsync;
         vm.Player.PickSavePath = PickSavePathAsync;
         vm.PropertyChanged += (_, e) =>
         {
+            if (vm.IsControllerMode)
+            {
+                // Keep the cursor somewhere sensible as views open and close.
+                if (e.PropertyName == nameof(MainViewModel.IsPlayerOpen) && !vm.IsPlayerOpen) RefocusGridSoon();
+                if (e.PropertyName is nameof(MainViewModel.Editor) or nameof(MainViewModel.SettingsEditor) &&
+                    vm is { IsEditing: false, IsSettingsOpen: false }) RefocusGridSoon();
+                if (e.PropertyName == nameof(MainViewModel.SettingsEditor) && vm.IsSettingsOpen)
+                    Avalonia.Threading.Dispatcher.UIThread.Post(() => SettingsFirst.Focus(NavigationMethod.Directional),
+                        Avalonia.Threading.DispatcherPriority.Background);
+            }
             if (e.PropertyName != nameof(MainViewModel.Editor) || vm.Editor is null) return;
             // Put the cursor in the name field, ready to type over it.
             Avalonia.Threading.Dispatcher.UIThread.Post(() => { EditName.Focus(); EditName.SelectAll(); },
@@ -210,6 +465,27 @@ public partial class MainWindow : Window
     private void OnPreviewKeyDown(object? sender, KeyEventArgs e)
     {
         if (Vm is not { } vm) return;
+        if (e.KeyDeviceType == KeyDeviceType.Gamepad) return; // already interpreted by OnPad
+        if (PadDebugKeys && e.Key is >= Key.F1 and <= Key.F12)
+        {
+            // Development aid: drive the controller code path without a controller.
+            PadButton[] map =
+            {
+                PadButton.A, PadButton.B, PadButton.X, PadButton.Y, PadButton.LB, PadButton.RB,
+                PadButton.Start, PadButton.View, PadButton.Up, PadButton.Down, PadButton.Left, PadButton.Right,
+            };
+            OnPad(map[e.Key - Key.F1]);
+            e.Handled = true;
+            return;
+        }
+        if (vm.IsControllerMode && !vm.IsPlayerOpen && e.KeyModifiers == KeyModifiers.None &&
+            e.Key is Key.Up or Key.Down or Key.Left or Key.Right &&
+            e.Source is not TextBox && !IsDropDownOpen(Focused) && e.Source is not Slider)
+        {
+            OnPad(e.Key switch { Key.Up => PadButton.Up, Key.Down => PadButton.Down, Key.Left => PadButton.Left, _ => PadButton.Right });
+            e.Handled = true;
+            return;
+        }
         if (vm.IsEditing)
         {
             if (e.Key == Key.Escape) { vm.CancelEditCommand.Execute(null); e.Handled = true; }

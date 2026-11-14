@@ -29,6 +29,7 @@ public sealed class ClipService : IDisposable
     public ClipState State { get; private set; } = ClipState.Off;
     public string? Error { get; private set; }
     public string? Encoder { get; private set; }
+    public CodecOption? Codec { get; private set; }
 
     /// <summary>Raised on any thread when State/Error change.</summary>
     public event Action? Changed;
@@ -87,7 +88,9 @@ public sealed class ClipService : IDisposable
             return;
         }
 
-        var encoder = await CaptureProbe.PickEncoderAsync(ffmpeg, Cfg.HardwareEncoder);
+        var codec = await CaptureProbe.PickAsync(ffmpeg, Cfg.HardwareEncoder, Cfg.Codec);
+        var encoder = codec.Encoder;
+        Codec = codec;
         var ddagrab = await CaptureProbe.HasDdagrabAsync(ffmpeg);
         var devices = OperatingSystem.IsMacOS() ? await CaptureProbe.ListDevicesAsync() : null;
         Encoder = encoder;
@@ -102,6 +105,7 @@ public sealed class ClipService : IDisposable
 
         var args = BuildArguments(Cfg, encoder, ddagrab, devices, AppPaths.ClipBufferDir,
             Environment.GetEnvironmentVariable("DISPLAY"));
+        if (!StartSystemAudio(devices)) return;
         var psi = new ProcessStartInfo(ffmpeg)
         {
             UseShellExecute = false,
@@ -221,6 +225,46 @@ public sealed class ClipService : IDisposable
         Set(ClipState.Error, tail.Length > 0 ? "Capture stopped: " + Shorten(tail) : "Capture stopped unexpectedly.");
     }
 
+    private Process? _audioHelper;
+    private static string SystemAudioFifo => Path.Combine(AppPaths.ClipBufferDir, "system-audio.pcm");
+
+    private bool UsesSystemAudio(CaptureDevices? devices) =>
+        OperatingSystem.IsMacOS() && devices?.Audio.Contains(CaptureProbe.SystemAudio) == true &&
+        (Cfg.Audio1 == CaptureProbe.SystemAudio || Cfg.Audio2 == CaptureProbe.SystemAudio);
+
+    /// <summary>
+    /// macOS system audio: the helper writes PCM into a FIFO that ffmpeg reads as an extra input.
+    /// Started before ffmpeg; the helper waits for ffmpeg to open the FIFO.
+    /// </summary>
+    private bool StartSystemAudio(CaptureDevices? devices)
+    {
+        if (!UsesSystemAudio(devices) || CaptureProbe.SystemAudioHelper is not { } helper) return true;
+        try
+        {
+            using (var mk = Process.Start(new ProcessStartInfo("mkfifo", $"\"{SystemAudioFifo}\"") { UseShellExecute = false }))
+                mk?.WaitForExit(3000);
+            var psi = new ProcessStartInfo(helper) { UseShellExecute = false, CreateNoWindow = true, RedirectStandardError = true };
+            psi.ArgumentList.Add(SystemAudioFifo);
+            _audioHelper = Process.Start(psi);
+            _audioHelper?.BeginErrorReadLine();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Set(ClipState.Error, "System audio could not start: " + ex.Message);
+            return false;
+        }
+    }
+
+    private void StopSystemAudio()
+    {
+        var helper = _audioHelper;
+        _audioHelper = null;
+        if (helper is null) return;
+        try { if (!helper.HasExited) helper.Kill(); } catch { /* already gone */ }
+        helper.Dispose();
+    }
+
     private static string PidFile => Path.Combine(AppPaths.DataDir, "capture.pid");
 
     /// <summary>
@@ -250,7 +294,7 @@ public sealed class ClipService : IDisposable
         _janitor = null;
         var p = _process;
         _process = null;
-        if (p is null) return;
+        if (p is null) { StopSystemAudio(); return; }
         try
         {
             if (!p.HasExited)
@@ -265,6 +309,7 @@ public sealed class ClipService : IDisposable
             try { p.Kill(entireProcessTree: true); } catch { /* already gone */ }
         }
         p.Dispose();
+        StopSystemAudio();
         try { File.Delete(PidFile); } catch { /* best effort */ }
     }
 
@@ -294,7 +339,9 @@ public sealed class ClipService : IDisposable
             // Written next to the buffer and moved into place when complete: the clips folder is a
             // watched library folder, and a half-written file would be scanned as a 0-second video.
             var partial = Path.Combine(AppPaths.ClipBufferDir, "saving.mp4");
-            args.AddRange(new[] { "-i", list, "-map", "0", "-c", "copy", "-movflags", "+faststart", "-f", "mp4", partial });
+            args.AddRange(new[] { "-i", list, "-map", "0", "-c", "copy", "-movflags", "+faststart" });
+            if (Codec?.Codec == "hevc") args.AddRange(new[] { "-tag:v", "hvc1" }); // QuickTime / Photos need hvc1
+            args.AddRange(new[] { "-f", "mp4", partial });
 
             var r = await ProcessRunner.RunAsync(ffmpeg, args);
             if (r.ExitCode != 0 || !File.Exists(partial) || new FileInfo(partial).Length == 0)
@@ -323,7 +370,8 @@ public sealed class ClipService : IDisposable
     private static List<string> Segments()
     {
         if (!Directory.Exists(AppPaths.ClipBufferDir)) return new List<string>();
-        return Directory.EnumerateFiles(AppPaths.ClipBufferDir, "seg*.ts")
+        return Directory.EnumerateFiles(AppPaths.ClipBufferDir, "seg*.*")
+            .Where(f => f.EndsWith(".ts") || f.EndsWith(".mkv"))
             .OrderBy(f => f, StringComparer.Ordinal)
             .ToList();
     }
@@ -389,12 +437,20 @@ public sealed class ClipService : IDisposable
             // avfoundation addresses audio devices by index; drop names that are no longer plugged in.
             var known = macDevices?.Audio ?? Array.Empty<string>();
             audio = audio.Where(known.Contains).ToList();
+            // The system audio entry is not an avfoundation device, so it does not count in the indexes.
+            var avDevices = known.Where(n => n != CaptureProbe.SystemAudio).ToList();
             foreach (var name in audio)
-                a.AddRange(new[]
-                {
-                    "-f", "avfoundation", "-thread_queue_size", "1024",
-                    "-i", ":" + known.ToList().IndexOf(name).ToString(inv),
-                });
+                a.AddRange(name == CaptureProbe.SystemAudio
+                    ? new[]
+                    {
+                        "-f", "f32le", "-ar", "48000", "-ac", "2", "-thread_queue_size", "1024",
+                        "-i", Path.Combine(bufferDir, "system-audio.pcm"),
+                    }
+                    : new[]
+                    {
+                        "-f", "avfoundation", "-thread_queue_size", "1024",
+                        "-i", ":" + avDevices.IndexOf(name).ToString(inv),
+                    });
         }
         else if (OperatingSystem.IsWindows())
         {
@@ -410,7 +466,7 @@ public sealed class ClipService : IDisposable
         // ---- video filters ----
         // Desktop Duplication hands over GPU textures. NVENC and AMF encode those directly (no copy
         // through system memory); anything else, and any resize, needs them downloaded first.
-        var direct = gpuFrames && s.Height <= 0 && encoder is "h264_nvenc" or "h264_amf";
+        var direct = gpuFrames && s.Height <= 0 && (encoder.EndsWith("_nvenc") || encoder.EndsWith("_amf"));
         if (gpuFrames && !direct) filters.Add("hwdownload,format=bgra");
         if (s.Height > 0) filters.Add($"scale=-2:'min({s.Height},ih)':flags=fast_bilinear");
         if (!direct)
@@ -435,11 +491,13 @@ public sealed class ClipService : IDisposable
         // ---- encoders ----
         var kbps = Math.Clamp(s.BitrateMbps, 1, 100) * 1000;
         a.AddRange(new[] { "-c:v", encoder, "-b:v", kbps + "k", "-maxrate", (int)(kbps * 1.5) + "k", "-bufsize", kbps * 2 + "k" });
-        switch (encoder)
+        var family = encoder.Contains('_') ? encoder[(encoder.IndexOf('_') + 1)..] : encoder;
+        switch (family)
         {
-            case "h264_videotoolbox": a.AddRange(new[] { "-realtime", "1" }); break;
-            case "h264_nvenc": a.AddRange(new[] { "-preset", "p4", "-forced-idr", "1" }); break;
-            case "h264_qsv": a.AddRange(new[] { "-preset", "fast" }); break;
+            case "videotoolbox": a.AddRange(new[] { "-realtime", "1" }); break;
+            case "nvenc": a.AddRange(new[] { "-preset", "p4", "-forced-idr", "1" }); break;
+            case "qsv": a.AddRange(new[] { "-preset", "fast" }); break;
+            case "amf": a.AddRange(new[] { "-usage", "lowlatency" }); break;
             case "libx264": a.AddRange(new[] { "-preset", "superfast", "-tune", "zerolatency" }); break;
         }
         // A keyframe at every segment boundary so segments can be cut and joined without re-encoding.
@@ -458,8 +516,9 @@ public sealed class ClipService : IDisposable
         a.AddRange(new[] { "-fps_mode", "cfr", "-r", fps.ToString(inv) });
         a.AddRange(new[]
         {
-            "-f", "segment", "-segment_time", SegmentSeconds.ToString(inv), "-segment_format", "mpegts",
-            "-flush_packets", "1", Path.Combine(bufferDir, "seg%07d.ts"),
+            "-f", "segment", "-segment_time", SegmentSeconds.ToString(inv),
+            "-segment_format", encoder.StartsWith("av1") ? "matroska" : "mpegts",
+            "-flush_packets", "1", Path.Combine(bufferDir, encoder.StartsWith("av1") ? "seg%07d.mkv" : "seg%07d.ts"),
         });
         return a;
     }

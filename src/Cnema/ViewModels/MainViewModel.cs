@@ -46,6 +46,47 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public bool IsSettingsOpen => SettingsEditor is not null;
     partial void OnSettingsEditorChanged(SettingsViewModel? value) => OnPropertyChanged(nameof(IsSettingsOpen));
 
+    // ---------- controller mode ----------
+    public bool IsControllerMode => _settings.Current.ControllerMode;
+    public bool ControllerFullscreen => _settings.Current.ControllerFullscreen;
+    /// <summary>Raised after settings were saved; the window re-applies layout and input.</summary>
+    public event Action? ControllerModeChanged;
+    [ObservableProperty] private string _padStatus = "";
+
+    /// <summary>What the pad buttons do right now; shown along the bottom in Controller mode.</summary>
+    public IReadOnlyList<PadHint> PadHints
+    {
+        get
+        {
+            if (IsSettingsOpen || IsEditing)
+                return new PadHint[] { new("A", "Select", "a"), new("B", "Cancel", "b"), new("☰", "Save", "") };
+            if (IsPlayerOpen)
+                return new PadHint[]
+                {
+                    new("A", "Play / pause", "a"), new("B", "Back", "b"), new("X", "Mark in", "x"), new("Y", "Mark out", "y"),
+                    new("◀ ▶", "Seek", ""), new("LB RB", "Frame", ""), new("LT RT", "10 s", ""), new("☰", "Export clip", ""),
+                };
+            var hints = new List<PadHint>
+            {
+                new("A", "Play", "a"), new("B", "Sidebar / videos", "b"), new("X", "Favourite", "x"), new("Y", "Rename & tags", "y"),
+                new("LB RB", "Folder", ""), new("☰", "Settings", ""),
+            };
+            if (IsClipRecording) hints.Add(new PadHint("⧉", SaveClipLabel, ""));
+            return hints;
+        }
+    }
+
+    /// <summary>LB / RB: step through the sidebar (folders, then tags) without moving focus there.</summary>
+    public void CycleNav(int delta)
+    {
+        var all = Folders.Concat(Tags).ToList();
+        if (all.Count == 0) return;
+        var index = ActiveNav is null ? 0 : all.IndexOf(ActiveNav);
+        var next = all[((index + delta) % all.Count + all.Count) % all.Count];
+        if (next.Kind == NavKind.Tag) SelectedTag = next;
+        else SelectedFolder = next;
+    }
+
     // ---------- clipping status (sidebar + tray) ----------
     public bool IsClipEnabled => _settings.Current.Clip.Enabled;
     public bool IsClipRecording => Clips.State == ClipState.Recording;
@@ -98,6 +139,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _settings = settings;
         _library = library;
         Clips = clips;
+        PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is nameof(IsPlayerOpen) or nameof(Editor) or nameof(SettingsEditor) or nameof(IsClipRecording))
+                OnPropertyChanged(nameof(PadHints));
+        };
         _hotkey = new GlobalHotkey(() => Dispatcher.UIThread.Post(() => SaveClipCommand.Execute(null)));
         Clips.Changed += () => Dispatcher.UIThread.Post(RaiseClipState);
         Clips.ClipSaved += path => Dispatcher.UIThread.Post(() => OnClipSaved(path));
@@ -508,6 +554,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         }
         _settings.Save();
         SettingsEditor = null;
+        OnPropertyChanged(nameof(IsControllerMode));
+        ControllerModeChanged?.Invoke();
         await ApplyClipSettingsAsync();
     }
 

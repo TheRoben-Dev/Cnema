@@ -383,4 +383,37 @@
     <Setter Property="Foreground" Value="{StaticResource Text}" />
     <Setter Property="BorderBrush" Value="{StaticResource Accent}" />
   </Style>
+  <!-- Controller mode: button legend -->
+  <Style Selector="Border.padkey">
+    <Setter Property="Background" Value="{StaticResource Bg3}" />
+    <Setter Property="CornerRadius" Value="11" />
+    <Setter Property="MinWidth" Value="22" />
+    <Setter Property="Height" Value="22" />
+    <Setter Property="Padding" Value="7,0" />
+  </Style>
+  <Style Selector="Border.padkey TextBlock">
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.padkey.a"><Setter Property="Background" Value="#2E9E5B" /></Style>
+  <Style Selector="Border.padkey.b"><Setter Property="Background" Value="#D2453F" /></Style>
+  <Style Selector="Border.padkey.x"><Setter Property="Background" Value="#2F7FD8" /></Style>
+  <Style Selector="Border.padkey.y"><Setter Property="Background" Value="#C99A1E" /></Style>
+
+  <!-- Controller mode: the focused card looks like the hovered one, so the cursor is obvious from the sofa -->
+  <Style Selector="Window.pad Button.card:focus Border.ring">
+    <Setter Property="Opacity" Value="1" />
+  </Style>
+  <Style Selector="Window.pad Button.card:focus Border.playhint">
+    <Setter Property="Opacity" Value="1" />
+  </Style>
+  <Style Selector="Window.pad Button.card:focus /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource Bg2}" />
+  </Style>
+  <Style Selector="Window.pad ListBox.nav ListBoxItem:focus /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="BorderBrush" Value="{StaticResource Accent}" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
 </Styles>

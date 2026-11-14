@@ -10,6 +10,11 @@ public sealed class AppSettings
     /// <summary>Stay alive in the tray / menu bar when the window is closed.</summary>
     public bool KeepInBackground { get; set; }
     public ClipSettings Clip { get; set; } = new();
+
+    /// <summary>Bigger layout, gamepad navigation and on-screen button hints (handhelds, TV PCs).</summary>
+    public bool ControllerMode { get; set; }
+    /// <summary>In Controller mode, open full screen like a console app.</summary>
+    public bool ControllerFullscreen { get; set; } = true;
 }
 
 /// <summary>Settings for the background clipping service (see ClipService).</summary>
@@ -23,6 +28,8 @@ public sealed class ClipSettings
     public int Height { get; set; } = 1080;
     public int BitrateMbps { get; set; } = 12;
     public int AudioBitrateKbps { get; set; } = 160;
+    /// <summary>"h264", "hevc" or "av1"; unsupported choices fall back to H.264.</summary>
+    public string Codec { get; set; } = "h264";
     /// <summary>False forces the software (x264) encoder.</summary>
     public bool HardwareEncoder { get; set; } = true;
     public int Screen { get; set; }

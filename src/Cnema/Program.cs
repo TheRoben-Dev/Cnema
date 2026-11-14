@@ -37,11 +37,16 @@ internal static class Program
         Console.WriteLine($"capture: {(capture is null ? $"no ffmpeg with {CaptureProbe.RequiredInput}" : capture)}");
         if (capture is not null)
         {
-            Console.WriteLine($"encoder: {CaptureProbe.PickEncoderAsync(capture, true).GetAwaiter().GetResult()}");
+            var codecs = CaptureProbe.ListCodecsAsync(capture).GetAwaiter().GetResult();
+            Console.WriteLine($"encoder: {string.Join(", ", codecs.Select(c => $"{c.Codec}={c.Encoder}"))}");
+            if (OperatingSystem.IsMacOS())
+                Console.WriteLine($"sysaudio: {CaptureProbe.SystemAudioHelper ?? "unavailable"}");
             if (OperatingSystem.IsWindows())
                 Console.WriteLine($"ddagrab: {CaptureProbe.HasDdagrabAsync(capture).GetAwaiter().GetResult()}");
         }
-        var ok = vlc is not null && ToolLocator.Ffmpeg is not null && ToolLocator.Ffprobe is not null;
+        var sdl = GamepadService.SelfTest();
+        Console.WriteLine($"gamepad: {sdl}");
+        var ok = sdl == "OK" && vlc is not null && ToolLocator.Ffmpeg is not null && ToolLocator.Ffprobe is not null;
         Console.WriteLine(ok ? "selftest OK" : "selftest FAILED");
         return ok ? 0 : 1;
     }

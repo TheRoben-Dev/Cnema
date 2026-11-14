@@ -30,6 +30,7 @@
     <PackageReference Include="Avalonia.Controls.ItemsRepeater" Version="11.1.5" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <PackageReference Include="LibVLCSharp" Version="3.10.2" />
+    <PackageReference Include="Ultz.Native.SDL" Version="2.32.10" />
   </ItemGroup>
 
   <!--

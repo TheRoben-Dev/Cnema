@@ -25,6 +25,15 @@ if [ "${CNEMA_SKIP_FFMPEG:-0}" != "1" ]; then
   scripts/fetch-ffmpeg.sh "$RID" "$APP/Contents/MacOS/tools"
 fi
 
+# System audio helper (ScreenCaptureKit, macOS 13+). Optional: without it, clipping still records
+# microphones and loopback devices.
+if command -v swiftc >/dev/null 2>&1; then
+  arch=$([ "$RID" = "osx-arm64" ] && echo arm64 || echo x86_64)
+  mkdir -p "$APP/Contents/MacOS/tools"
+  swiftc -O -target "$arch-apple-macos13.0" packaging/macos/cnema-audio.swift \
+    -o "$APP/Contents/MacOS/tools/cnema-audio" && echo "Built cnema-audio ($arch)"
+fi
+
 # libVLC must be inside the bundle.
 test -f "$APP/Contents/MacOS/libvlc/$RID/lib/libvlc.dylib" || { echo "libVLC missing from bundle" >&2; exit 1; }
 
