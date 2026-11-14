@@ -64,6 +64,15 @@ public sealed partial class VideoItemViewModel : ObservableObject
     public string WatchedMenuText => IsUnwatched ? T("Mark as watched") : T("Mark as unwatched");
     public bool HasCustomThumbnail => Entry.ThumbAtMs > 0;
 
+    // ---------- note ----------
+    /// <summary>The "Notes" feature; off, notes are kept but not shown.</summary>
+    public static bool NotesEnabled { get; set; } = true;
+    public bool HasNote => NotesEnabled && !string.IsNullOrWhiteSpace(Entry.Note);
+    public string Note => Entry.Note ?? "";
+    /// <summary>The card's second line: the note when there is one, otherwise resolution, codec and size.</summary>
+    public string Subtitle => HasNote ? Note : Details;
+    public string? SubtitleTip => HasNote ? Details : null;
+
     // ---------- selection ----------
     /// <summary>True while the library is in select mode: cards show a tick box and a click selects.</summary>
     public static bool Selecting { get; set; }

@@ -17,6 +17,9 @@ public sealed partial class SettingsViewModel
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(ShowBrandingOffNotice))] private bool _featureBranding;
     [ObservableProperty] private bool _featureExportQueue;
     [ObservableProperty] private bool _featureKeepEdits;
+    [ObservableProperty] private bool _featureNotes;
+    [ObservableProperty] private bool _featureDragOut;
+    [ObservableProperty] private bool _featureRecorders;
     public bool ShowBrandingOffNotice => !FeatureBranding;
 
     // ---------- watermark ----------
@@ -51,6 +54,9 @@ public sealed partial class SettingsViewModel
         FeatureBranding = f.Branding;
         FeatureExportQueue = f.ExportQueue;
         FeatureKeepEdits = f.KeepEdits;
+        FeatureNotes = f.Notes;
+        FeatureDragOut = f.DragOut;
+        FeatureRecorders = f.Recorders;
         var e = settings.Effects;
         WatermarkPath = e.WatermarkPath;
         WatermarkCorner = new ChipGroup(e.WatermarkCorner,

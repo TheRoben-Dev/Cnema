@@ -22,6 +22,7 @@ public sealed partial class MainViewModel
     {
         VideoItemViewModel.HoverPreview = Features.HoverPreview;
         VideoItemViewModel.UnwatchedBadges = Features.Unwatched;
+        VideoItemViewModel.NotesEnabled = Features.Notes;
         Chapters.Enabled = Features.Chapters;
         Player.RefreshChapters();
         Player.Queue = Features.ExportQueue ? Exports : null;
@@ -34,7 +35,7 @@ public sealed partial class MainViewModel
                  {
                      nameof(ShowClipping), nameof(ShowSessionButton), nameof(ShowController), nameof(ShowCollections),
                      nameof(ShowCleanUp), nameof(ShowStats), nameof(ShowTools), nameof(ShowUnwatchedFilter),
-                     nameof(ShowMiniPlayerButton),
+                     nameof(ShowMiniPlayerButton), nameof(ShowRecorders), nameof(ShowNotes),
                  })
             OnPropertyChanged(name);
         AppearanceChanged?.Invoke();

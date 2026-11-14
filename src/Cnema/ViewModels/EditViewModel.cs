@@ -19,6 +19,9 @@ public sealed partial class EditViewModel : ObservableObject
     [ObservableProperty] private bool _favorite;
     [ObservableProperty] private FolderViewModel? _folder;
     [ObservableProperty] private string? _error;
+    [ObservableProperty] private string _note;
+    /// <summary>The Notes feature is on.</summary>
+    public bool ShowNote { get; init; }
 
     /// <summary>The library folder the file currently lives under (null if none matches).</summary>
     public FolderViewModel? OriginalFolder { get; }
@@ -31,6 +34,7 @@ public sealed partial class EditViewModel : ObservableObject
         _name = item.Title;
         Extension = Path.GetExtension(item.Entry.Path);
         _favorite = item.Entry.Favorite;
+        _note = item.Entry.Note ?? "";
         Tags = new ObservableCollection<string>(item.Entry.Tags);
         _allTags = allTags.ToList();
         Folders = folders.Where(f => f.Kind == NavKind.Folder).ToList();

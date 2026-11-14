@@ -36,6 +36,10 @@ public sealed class AppSettings
     public Dictionary<string, string> Shortcuts { get; set; } = new();
     /// <summary>The editor's sound tools, watermark and intro / outro.</summary>
     public EffectSettings Effects { get; set; } = new();
+    /// <summary>Recording folders of other apps (OBS, NVIDIA, Xbox Game Bar, Steam) brought into the library.</summary>
+    public List<RecorderImport> Recorders { get; set; } = new();
+    /// <summary>Tag videos from other recorders with their game, when the recorder tells.</summary>
+    public bool RecorderTags { get; set; } = true;
 }
 
 /// <summary>Effects that stay as you left them from one export to the next.</summary>
@@ -98,6 +102,12 @@ public sealed class FeatureSettings
     public bool ExportQueue { get; set; } = true;
     /// <summary>Trim marks, parts and effects are kept when the editor closes (until you start over).</summary>
     public bool KeepEdits { get; set; }
+    /// <summary>A line of text per video that search also finds.</summary>
+    public bool Notes { get; set; } = true;
+    /// <summary>Drag videos out of the library into other apps (Discord, a browser, Finder).</summary>
+    public bool DragOut { get; set; } = true;
+    /// <summary>Bring in videos from OBS, NVIDIA, Xbox Game Bar and Steam.</summary>
+    public bool Recorders { get; set; } = true;
 
     public FeatureSettings Clone() => (FeatureSettings)MemberwiseClone();
 }

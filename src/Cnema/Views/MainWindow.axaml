@@ -261,6 +261,13 @@
                     <TextBlock svc:Tr.Text="Stats" FontSize="13" VerticalAlignment="Center" />
                   </StackPanel>
                 </Button>
+                <Button x:Name="RecordersButton" Classes="navbutton" IsVisible="{Binding ShowRecorders}" Command="{Binding OpenRecordersCommand}"
+                        svc:Tr.Tip="Bring in videos from OBS, NVIDIA, Xbox Game Bar and Steam">
+                  <StackPanel Orientation="Horizontal" Spacing="10">
+                    <PathIcon Data="{StaticResource IcImport}" Width="15" Height="15" Foreground="{DynamicResource TextDim}" />
+                    <TextBlock svc:Tr.Text="Other recorders" FontSize="13" VerticalAlignment="Center" />
+                  </StackPanel>
+                </Button>
               </StackPanel>
               <TextBlock Classes="label" svc:Tr.Text="TAGS" Margin="10,22,0,8" IsVisible="{Binding HasTags}" />
               <ListBox x:Name="TagList" Classes="nav" ItemsSource="{Binding Tags}" SelectedItem="{Binding SelectedTag}" IsVisible="{Binding HasTags}">
@@ -451,7 +458,11 @@
                                    IsVisible="{Binding ShowUnwatched}" svc:Tr.Tip="Not watched yet" />
                           <TextBlock Grid.Column="1" Text="{Binding Title}" ToolTip.Tip="{Binding Entry.Path}" ToolTip.ShowDelay="900" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
                         </Grid>
-                        <TextBlock Classes="dim" Text="{Binding Details}" FontSize="11" TextTrimming="CharacterEllipsis" />
+                        <Grid ColumnDefinitions="Auto,*" ToolTip.Tip="{Binding SubtitleTip}">
+                          <PathIcon Data="{StaticResource IcNote}" Width="11" Height="11" Margin="0,0,5,0" Foreground="{DynamicResource Cyan}"
+                                    IsVisible="{Binding HasNote}" VerticalAlignment="Center" />
+                          <TextBlock Grid.Column="1" Classes="dim" Text="{Binding Subtitle}" FontSize="11" TextTrimming="CharacterEllipsis" />
+                        </Grid>
                         <ItemsControl ItemsSource="{Binding Tags}" IsVisible="{Binding HasTags}" Margin="0,3,0,0" Height="20" ClipToBounds="True">
                           <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
@@ -693,6 +704,12 @@
             </ItemsControl>
           </StackPanel>
 
+          <StackPanel Spacing="6" IsVisible="{Binding ShowNote}">
+            <TextBlock Classes="label" svc:Tr.Text="NOTE" />
+            <TextBox x:Name="EditNote" Text="{Binding Note}" svc:Tr.Watermark="What happened in this clip? Search finds it." CornerRadius="8"
+                     TextWrapping="Wrap" MaxLength="300" MaxHeight="80" />
+          </StackPanel>
+
           <TextBlock Text="{Binding Error}" Foreground="{DynamicResource Danger}" FontSize="12" TextWrapping="Wrap"
                      IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
 
@@ -795,6 +812,68 @@
                       </StackPanel>
                       <TextBlock Grid.Column="2" Text="{Binding Reason}" FontSize="11" Foreground="{DynamicResource Cyan}"
                                  VerticalAlignment="Center" Margin="10,0,0,0" MaxWidth="200" TextTrimming="CharacterEllipsis" />
+                    </Grid>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </DockPanel>
+      </Border>
+    </Border>
+
+    <!-- ======================= OTHER RECORDERS ======================= -->
+    <Border x:Name="RecordersScrim" Background="#B3050609" IsVisible="{Binding IsShowingRecorders}">
+      <Border Width="640" MaxHeight="720" Margin="0,40" VerticalAlignment="Center" HorizontalAlignment="Center" Background="{DynamicResource Bg1}"
+              BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="16" BoxShadow="0 18 60 0 #80000000"
+              DataContext="{Binding Recorders}" x:DataType="vm:RecordersViewModel">
+        <DockPanel>
+          <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="24,22,24,6">
+            <TextBlock svc:Tr.Text="Other recorders" FontSize="17" FontWeight="Bold" VerticalAlignment="Center" />
+            <Button x:Name="RecordersClose" Grid.Column="1" Classes="ghost" Padding="6" Command="{Binding #Root.((vm:MainViewModel)DataContext).CloseRecordersCommand}">
+              <PathIcon Data="{StaticResource IcClose}" Width="13" Height="13" />
+            </Button>
+          </Grid>
+          <TextBlock DockPanel.Dock="Top" Classes="dim" FontSize="12" TextWrapping="Wrap" Margin="24,0,24,12"
+                     svc:Tr.Text="Add another app's recording folder and its videos show up here as well, and new ones appear by themselves. Nothing is moved or changed." />
+          <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Line}" BorderThickness="0,1,0,0" Padding="24,12">
+            <Grid ColumnDefinitions="*,Auto">
+              <StackPanel Spacing="2" VerticalAlignment="Center">
+                <TextBlock svc:Tr.Text="Tag by game" FontSize="13" />
+                <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="New videos get the game's name as a tag, when the recorder tells which game it was." />
+              </StackPanel>
+              <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding TagByGame}" />
+            </Grid>
+          </Border>
+          <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <ItemsControl ItemsSource="{Binding Rows}" Margin="24,0,24,16">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:RecorderRow">
+                  <Border Classes="cleanrow" Margin="0,0,0,8" Padding="14,12">
+                    <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
+                      <StackPanel Spacing="3">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                          <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold" />
+                          <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{DynamicResource Cyan}" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <TextBlock Classes="dim mono" Text="{Binding PathText}" FontSize="11" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Path}" />
+                        <TextBlock Classes="dim" Text="{Binding Description}" FontSize="11" TextWrapping="Wrap" />
+                      </StackPanel>
+                      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Margin="12,0,0,0"
+                                  IsVisible="{Binding IsSupported}">
+                        <Button Classes="ghost" svc:Tr.Content="Change…" FontSize="12"
+                                Command="{Binding #Root.((vm:MainViewModel)DataContext).ChangeRecorderFolderCommand}" CommandParameter="{Binding}" />
+                        <Button Classes="accent" svc:Tr.Content="Add" IsVisible="{Binding CanAdd}"
+                                Command="{Binding #Root.((vm:MainViewModel)DataContext).AddRecorderCommand}" CommandParameter="{Binding}" />
+                        <Button Classes="soft" svc:Tr.Content="Remove" IsVisible="{Binding IsAdded}"
+                                Command="{Binding #Root.((vm:MainViewModel)DataContext).RemoveRecorderCommand}" CommandParameter="{Binding}" />
+                      </StackPanel>
+                      <StackPanel Grid.Row="1" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="8" Margin="0,10,0,0" IsVisible="{Binding HasPending}">
+                        <Button Classes="soft" Command="{Binding #Root.((vm:MainViewModel)DataContext).ConvertSteamClipsCommand}" IsEnabled="{Binding !IsConverting}">
+                          <TextBlock Text="{Binding PendingText}" />
+                        </Button>
+                        <ProgressBar IsIndeterminate="True" Width="80" Height="3" MinHeight="3" VerticalAlignment="Center" IsVisible="{Binding IsConverting}" />
+                      </StackPanel>
                     </Grid>
                   </Border>
                 </DataTemplate>
@@ -1296,6 +1375,30 @@
                         <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Bookmarks in a session recording become chapters: in the player, in the saved file and in exports." />
                       </StackPanel>
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureChapters}" />
+                    </Grid>
+                    <Border Classes="sep" />
+                    <Grid Classes="row" ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="2">
+                        <TextBlock svc:Tr.Text="Notes" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Write a line about a video under Rename, tag or move. It shows on the card and search finds it." />
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureNotes}" />
+                    </Grid>
+                    <Border Classes="sep" />
+                    <Grid Classes="row" ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="2">
+                        <TextBlock svc:Tr.Text="Drag out" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Drag a video from the library straight into Discord, a browser or a folder." />
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureDragOut}" />
+                    </Grid>
+                    <Border Classes="sep" />
+                    <Grid Classes="row" ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="2">
+                        <TextBlock svc:Tr.Text="Other recorders" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Bring in videos from OBS, NVIDIA, Xbox Game Bar and Steam, tagged by game." />
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureRecorders}" />
                     </Grid>
                   </StackPanel>
                 </Border>

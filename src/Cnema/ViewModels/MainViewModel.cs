@@ -530,6 +530,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _refreshTimer.Tick += (_, _) => { _refreshTimer.Stop(); RefreshView(); };
 
         _library.FoldersChanged += () => Dispatcher.UIThread.Post(() => _ = RescanAsync());
+        _library.GameTagger = GameTagFor;
         RebuildFolders();
         Loc.Changed += OnLanguageChanged;
         _setupLanguage = SetupLanguages.FirstOrDefault(l => l.Code == Loc.Current);
@@ -555,6 +556,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         ShowWhatsNewAfterUpdate(firstRunEver: _settings.IsFirstRun);
         VideoItemViewModel.HoverPreview = Features.HoverPreview;
         VideoItemViewModel.UnwatchedBadges = Features.Unwatched;
+        VideoItemViewModel.NotesEnabled = Features.Notes;
         Chapters.Enabled = Features.Chapters;
         Player.Queue = Features.ExportQueue ? Exports : null;
         RebuildCollections();
@@ -563,6 +565,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _ = CheckForUpdatesAsync();
         await RescanAsync();
         await RunStorageCleanupAsync();
+        await ImportRecordersAtLaunchAsync();
     }
 
     // ---------- folders ----------
@@ -728,11 +731,13 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         if (search.Length > 0)
         {
             var terms = search.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            // A term matches the path or a tag; "#clutch" matches tags only.
+            // A term matches the path, a tag or the note; "#clutch" matches tags only.
+            var notes = Features.Notes;
             q = q.Where(v => terms.All(t => t.StartsWith('#')
                 ? t.Length > 1 && v.Entry.Tags.Any(tag => tag.Contains(t[1..], StringComparison.OrdinalIgnoreCase))
                 : v.Entry.Path.Contains(t, StringComparison.OrdinalIgnoreCase) ||
-                  v.Entry.Tags.Any(tag => tag.Contains(t, StringComparison.OrdinalIgnoreCase))));
+                  v.Entry.Tags.Any(tag => tag.Contains(t, StringComparison.OrdinalIgnoreCase)) ||
+                  (notes && v.Entry.Note is { } n && n.Contains(t, StringComparison.OrdinalIgnoreCase))));
         }
         q = ApplyFilters(q);
         q = SortIndex switch
@@ -809,7 +814,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void BeginEdit(VideoItemViewModel? item)
     {
-        if (item is not null) Editor = new EditViewModel(item, Folders, AllTags);
+        if (item is not null) Editor = new EditViewModel(item, Folders, AllTags) { ShowNote = Features.Notes };
     }
 
     [RelayCommand] private void CancelEdit() => Editor = null;
@@ -841,6 +846,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         }
         entry.Tags = ed.Tags.ToList();
         entry.Favorite = ed.Favorite;
+        if (ed.ShowNote) entry.Note = string.IsNullOrWhiteSpace(ed.Note) ? null : ed.Note.Trim();
         _library.SaveCache();
         item.RefreshAll();
         Editor = null;
