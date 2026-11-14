@@ -11,6 +11,11 @@ public sealed class VideoSurface : Control
 {
     public static readonly StyledProperty<VideoFrameBuffer?> FramesProperty =
         AvaloniaProperty.Register<VideoSurface, VideoFrameBuffer?>(nameof(Frames));
+    /// <summary>The file's picture size, when known; see <see cref="Render"/>.</summary>
+    public static readonly StyledProperty<int> SourceWidthProperty =
+        AvaloniaProperty.Register<VideoSurface, int>(nameof(SourceWidth));
+    public static readonly StyledProperty<int> SourceHeightProperty =
+        AvaloniaProperty.Register<VideoSurface, int>(nameof(SourceHeight));
 
     private WriteableBitmap? _bitmap;
     private int _pending;
@@ -18,7 +23,7 @@ public sealed class VideoSurface : Control
 
     static VideoSurface()
     {
-        AffectsRender<VideoSurface>(FramesProperty);
+        AffectsRender<VideoSurface>(FramesProperty, SourceWidthProperty, SourceHeightProperty);
     }
 
     public VideoSurface()
@@ -31,6 +36,9 @@ public sealed class VideoSurface : Control
         get => GetValue(FramesProperty);
         set => SetValue(FramesProperty, value);
     }
+
+    public int SourceWidth { get => GetValue(SourceWidthProperty); set => SetValue(SourceWidthProperty, value); }
+    public int SourceHeight { get => GetValue(SourceHeightProperty); set => SetValue(SourceHeightProperty, value); }
 
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
@@ -77,9 +85,18 @@ public sealed class VideoSurface : Control
         if (_bitmap is null) return;
 
         var src = new Size(_bitmap.PixelSize.Width, _bitmap.PixelSize.Height);
-        var scale = Math.Min(bounds.Width / src.Width, bounds.Height / src.Height);
-        var w = src.Width * scale;
-        var h = src.Height * scale;
+        var aspect = src.Width / src.Height;
+        // libVLC can hand over a frame a few lines taller than the picture (1280x738 for a 1280x720
+        // file), scaled to fit. Drawn at the file's own shape, the picture isn't stretched and lines
+        // up with the Effects overlay. A big difference (a rotated phone video) keeps the frame's shape.
+        if (SourceWidth > 0 && SourceHeight > 0)
+        {
+            var known = (double)SourceWidth / SourceHeight;
+            if (Math.Abs(known / aspect - 1) < 0.05) aspect = known;
+        }
+        var (w, h) = bounds.Width / bounds.Height > aspect
+            ? (bounds.Height * aspect, bounds.Height)
+            : (bounds.Width, bounds.Width / aspect);
         var dest = new Rect((bounds.Width - w) / 2, (bounds.Height - h) / 2, w, h);
         context.DrawImage(_bitmap, new Rect(src), dest);
     }

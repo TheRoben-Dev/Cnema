@@ -265,6 +265,6 @@ public static class TrimService
         }
     }
 
-    private static string TempFor(string output) =>
+    internal static string TempFor(string output) =>
         Path.Combine(Path.GetTempPath(), $"cnema-export-{Guid.NewGuid():N}{Path.GetExtension(output)}");
 }

@@ -24,7 +24,12 @@ public partial class MainWindow : Window
         VideoGrid.ElementClearing += (_, e) => (e.Element.DataContext as VideoItemViewModel)?.ReleaseThumbnail();
         VideoGrid.ElementIndexChanged += (_, e) => (e.Element.DataContext as VideoItemViewModel)?.AcquireThumbnail();
 
-        SurfaceHit.Tapped += (_, _) => Vm?.Player.TogglePlayCommand.Execute(null);
+        SurfaceHit.Tapped += (_, _) =>
+        {
+            // A click on the video also takes the keyboard back from a caption box, so shortcuts work again.
+            if (FocusManager?.GetFocusedElement() is TextBox) FocusManager.ClearFocus();
+            Vm?.Player.TogglePlayCommand.Execute(null);
+        };
         SurfaceHit.DoubleTapped += (_, _) => ToggleFullscreen();
         MiniHit.Tapped += (_, _) => Vm?.Player.TogglePlayCommand.Execute(null);
         MiniHit.DoubleTapped += (_, _) => Vm?.ExpandMiniPlayerCommand.Execute(null);
@@ -390,7 +395,18 @@ public partial class MainWindow : Window
         ApplyControllerMode();
         vm.CopyText = async text => { if (Clipboard is { } clipboard) await clipboard.SetTextAsync(text); };
         vm.PickFolder = PickFolderAsync;
+        vm.PickFile = PickMediaFileAsync;
         vm.Player.PickSavePath = PickSavePathAsync;
+        // A new caption gets the cursor in its text box, ready to type.
+        vm.Player.CaptionAdded += caption => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            if (CaptionList.ContainerFromItem(caption) is { } container &&
+                container.GetVisualDescendants().OfType<TextBox>().FirstOrDefault() is { } box)
+            {
+                box.Focus();
+                box.BringIntoView();
+            }
+        }, Avalonia.Threading.DispatcherPriority.Background);
         vm.PropertyChanged += (_, e) =>
         {
             if (vm.IsControllerMode)
@@ -478,6 +494,21 @@ public partial class MainWindow : Window
             AllowMultiple = false,
         });
         return result.FirstOrDefault()?.TryGetLocalPath();
+    }
+
+    private static readonly FilePickerFileType ImageFileType = new("Images") { Patterns = new[] { "*.png", "*.jpg", "*.jpeg", "*.webp", "*.bmp" } };
+    private static readonly FilePickerFileType VideoFileType =
+        new("Videos") { Patterns = new[] { "*.mp4", "*.mov", "*.mkv", "*.webm", "*.avi", "*.m4v" } };
+
+    private async Task<string?> PickMediaFileAsync(string title, bool image)
+    {
+        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = title,
+            AllowMultiple = false,
+            FileTypeFilter = new[] { image ? ImageFileType : VideoFileType },
+        });
+        return files.FirstOrDefault()?.TryGetLocalPath();
     }
 
     private static readonly FilePickerFileType SettingsFileType = new("Cnema settings") { Patterns = new[] { "*.json" } };
@@ -799,9 +830,15 @@ public partial class MainWindow : Window
             }
             return;
         }
-        if (e.Source is TextBox)
+        if (e.Source is TextBox box)
         {
-            if (e.Key == Key.Escape) { vm.SearchText = ""; Focus(); e.Handled = true; }
+            // Esc leaves a text box; in the search box it also clears the search.
+            if (e.Key == Key.Escape)
+            {
+                if (ReferenceEquals(box, SearchBox)) vm.SearchText = "";
+                FocusManager?.ClearFocus();
+                e.Handled = true;
+            }
             return;
         }
 
@@ -886,6 +923,8 @@ public partial class MainWindow : Window
             case "nextMarker": p.NextMarkerCommand.Execute(null); break;
             case "preview": p.PreviewRangeCommand.Execute(null); break;
             case "export": p.ExportCommand.Execute(null); break;
+            case "effects": p.ToggleEffectsCommand.Execute(null); break;
+            case "caption": p.AddCaptionCommand.Execute(null); break;
             case "fullscreen": ToggleFullscreen(); break;
             case "start": p.SeekCommand.Execute(0d); break;
             case "thumb": vm.UseFrameAsThumbnailCommand.Execute(null); break;

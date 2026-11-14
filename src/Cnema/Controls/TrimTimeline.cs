@@ -13,6 +13,9 @@ public readonly record struct TimeRange(double Start, double End);
 /// <summary>A point of interest on the timeline: a session bookmark, or a loud moment found in the audio.</summary>
 public readonly record struct TimelineMarker(double Ms, bool Bookmark);
 
+/// <summary>A caption (Speed false) or speed section (Speed true) from the Effects panel.</summary>
+public readonly record struct EffectRange(double Start, double End, bool Speed);
+
 /// <summary>
 /// Scrub bar with a trim range. Click/drag to seek; drag the bracket handles to move in/out points.
 /// In/Out are two-way bindable (milliseconds, -1 = unset). Seeking is pushed through <see cref="SeekCommand"/>.
@@ -38,10 +41,14 @@ public sealed class TrimTimeline : Control
         AvaloniaProperty.Register<TrimTimeline, IReadOnlyList<TimeRange>?>(nameof(Segments));
     public static readonly StyledProperty<IReadOnlyList<TimelineMarker>?> MarkersProperty =
         AvaloniaProperty.Register<TrimTimeline, IReadOnlyList<TimelineMarker>?>(nameof(Markers));
+    public static readonly StyledProperty<IReadOnlyList<EffectRange>?> EffectsProperty =
+        AvaloniaProperty.Register<TrimTimeline, IReadOnlyList<EffectRange>?>(nameof(Effects));
 
     /// <summary>Segments already added to a multi-part export; drawn as fixed ranges.</summary>
     public IReadOnlyList<TimeRange>? Segments { get => GetValue(SegmentsProperty); set => SetValue(SegmentsProperty, value); }
     public IReadOnlyList<TimelineMarker>? Markers { get => GetValue(MarkersProperty); set => SetValue(MarkersProperty, value); }
+    /// <summary>Captions and speed sections, drawn as thin bars under the track.</summary>
+    public IReadOnlyList<EffectRange>? Effects { get => GetValue(EffectsProperty); set => SetValue(EffectsProperty, value); }
     public double Duration { get => GetValue(DurationProperty); set => SetValue(DurationProperty, value); }
     public double Position { get => GetValue(PositionProperty); set => SetValue(PositionProperty, value); }
     public double InPoint { get => GetValue(InPointProperty); set => SetValue(InPointProperty, value); }
@@ -53,6 +60,8 @@ public sealed class TrimTimeline : Control
     private const double Pad = 10;
     private static readonly IBrush BookmarkBrush = new SolidColorBrush(Color.Parse("#FFD166"));
     private static readonly IBrush HighlightBrush = new SolidColorBrush(Color.Parse("#FF6B9D"));
+    private static readonly IBrush CaptionBrush = new SolidColorBrush(Color.FromArgb(170, 255, 255, 255));
+    private static readonly IBrush SpeedBrush = new SolidColorBrush(Color.Parse("#FF9F43"));
     private const double TrackH = 6;
     private enum Drag { None, Seek, In, Out }
     private Drag _drag;
@@ -62,7 +71,7 @@ public sealed class TrimTimeline : Control
     static TrimTimeline()
     {
         AffectsRender<TrimTimeline>(DurationProperty, PositionProperty, InPointProperty, OutPointProperty, AccentProperty, RangeBrushProperty,
-            SegmentsProperty, MarkersProperty);
+            SegmentsProperty, MarkersProperty, EffectsProperty);
         FocusableProperty.OverrideDefaultValue<TrimTimeline>(false);
     }
 
@@ -154,6 +163,18 @@ public sealed class TrimTimeline : Control
                 var sx2 = XFor(seg.End);
                 ctx.DrawRectangle(new SolidColorBrush(rangeColor, 0.30), null,
                     new Rect(sx1, cy - 9, Math.Max(2, sx2 - sx1), 18), 3, 3);
+            }
+        }
+
+        // Effects: captions (white) and speed sections (orange) as thin bars under the track.
+        if (Duration > 0 && Effects is { Count: > 0 } effects)
+        {
+            foreach (var e in effects)
+            {
+                var ex1 = XFor(e.Start);
+                var ex2 = XFor(e.End);
+                var y = e.Speed ? cy + 11 : cy + 7;
+                ctx.DrawRectangle(e.Speed ? SpeedBrush : CaptionBrush, null, new Rect(ex1, y, Math.Max(3, ex2 - ex1), 3), 1.5, 1.5);
             }
         }
 

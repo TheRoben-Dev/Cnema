@@ -36,7 +36,7 @@ public sealed partial class PlayerViewModel
 
     partial void OnRateChanged(double value)
     {
-        _player?.SetRate((float)value);
+        _player?.SetRate((float)(value * _previewRate));
         foreach (var o in RateOptions) o.IsCurrent = o.Value == value;
         OnPropertyChanged(nameof(RateText));
         OnPropertyChanged(nameof(IsRateChanged));

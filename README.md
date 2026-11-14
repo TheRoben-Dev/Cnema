@@ -99,6 +99,19 @@ Set `CNEMA_LIBVLC_PATH` to a folder containing libvlc + libvlccore to override.
   - *Lossless* (default): stream copy. Instant, zero quality loss, keeps the container. The cut starts on the
     keyframe at or before the in point, so the clip can start up to a GOP earlier than marked.
   - *Precise*: re-encodes to H.264/AAC MP4 (CRF 18). Frame-accurate, slower, slight generation loss.
+- **Effects** (editor, *Effects* or **Shift+E**): everything here changes exports only, never the original file.
+  Effects re-encode, so an export with effects is always *Precise*.
+  - *Captions* (**C** adds one at the playhead): text at the top, middle or bottom, three sizes, white with an
+    outline or on a dark box. They show over the video while you edit, sized like the export, and are burned
+    in with libass (an ASS subtitle file and the bundled Inter font).
+  - *Slow motion and fast forward*: pick a stretch and a speed (¼× to 4×), with an optional ramp that eases in
+    and out. The player previews the speed; sound is time-stretched so it keeps its pitch.
+  - *Sound*: even out loudness (measured, then brought to −14 LUFS with a limiter), and with a separate voice
+    track, boost the voice and lower the game while you talk (sidechain ducking).
+  - *Watermark, intro and outro* (set up under **Settings, Editing**): an image in a corner at a size and
+    opacity you choose, and clips joined before and after, fitted to the export's size.
+- **Export queue**: exports and Share presets run in the background one after another; the *Exports* button
+  shows progress, and lets you cancel, open the folder or clear finished ones. Off, the editor waits for each.
 
 ### Background clipping
 
@@ -146,7 +159,8 @@ are off by default. The check runs at launch, after each saved clip and when set
 
 Nothing optional is forced on you. **Settings, Features** switches off background clipping, session recording,
 controller support, hover preview, loud moment markers, the hover glow, collections, unwatched dots, Clean up,
-Stats, the quick player or chapters; their buttons and settings disappear and they stop running. **Settings, Accessibility** has an interface size (90 to 150 %), high contrast and
+Stats, the quick player, chapters, captions, speed effects, sound tools, watermark and intro, or the export
+queue; their buttons and settings disappear and they stop running. **Settings, Accessibility** has an interface size (90 to 150 %), high contrast and
 reduce motion. Press **?** for the list of keyboard shortcuts; click a key to change it.
 
 **Settings, General, Backup** exports and imports all settings as one file. **Portable mode** creates a
@@ -220,6 +234,7 @@ H.264 at the same quality. Turning off "Use the graphics card" records H.264 wit
 | A | Add selection as a part | N / Shift+N | Next / previous marker |
 | B | A-B loop: start, end, stop | Shift+, / Shift+. | Slower / faster |
 | Ctrl+← / Ctrl+→ | Previous / next chapter | T | Use this frame as the thumbnail |
+| Shift+E | Show or hide the Effects panel | C | Add a caption at the playhead |
 | ? | All shortcuts (and change them) | | |
 
 ## Layout
@@ -227,9 +242,11 @@ H.264 at the same quality. Turning off "Use the graphics card" records H.264 wit
 ```
 src/Cnema
   Services/    VlcBootstrap (native lib loading per OS), LibraryService (scan/cache/watch),
-               MediaProbe, ThumbnailService, TrimService, ToolLocator, PlatformShell, AppPaths
-  Controls/    VideoFrameBuffer + VideoSurface (libVLC -> bitmap), TrimTimeline (scrubber with in/out)
-  ViewModels/  MainViewModel (library), PlayerViewModel (transport + trimming)
+               MediaProbe, ThumbnailService, TrimService, RenderService + Effects (captions, speed,
+               sound, watermark, intro / outro), ToolLocator, PlatformShell, AppPaths
+  Controls/    VideoFrameBuffer + VideoSurface (libVLC -> bitmap), TrimTimeline (scrubber with in/out),
+               EffectsOverlay (caption and watermark preview)
+  ViewModels/  MainViewModel (library), PlayerViewModel (transport, trimming, effects), ExportQueueViewModel
   Views/       MainWindow
 ```
 

@@ -25,9 +25,13 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public ObservableCollection<FolderViewModel> Folders { get; } = new();
     public ObservableCollection<FolderViewModel> Tags { get; } = new();
     public PlayerViewModel Player { get; }
+    /// <summary>Exports running in the background, one at a time (Settings, Features, Export queue).</summary>
+    public ExportQueueViewModel Exports { get; } = new();
 
     /// <summary>Set by the view: opens a native folder picker.</summary>
     public Func<Task<string?>>? PickFolder { get; set; }
+    /// <summary>Set by the view: (title, image or video) to a picked file.</summary>
+    public Func<string, bool, Task<string?>>? PickFile { get; set; }
 
     [ObservableProperty] private ObservableCollection<VideoItemViewModel> _videos = new();
     [ObservableProperty] private FolderViewModel? _selectedFolder;
@@ -499,6 +503,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         Clips.SessionSaved += (path, marks) => Dispatcher.UIThread.Post(() => OnSessionSaved(path, marks));
         Player = new PlayerViewModel(settings);
         Player.Exported += path => { _ = RescanAsync(); };
+        Exports.Finished += OnExportFinished;
         _sortIndex = Math.Clamp(settings.Current.SortIndex, 0, SortModes.Length - 1);
 
         _refreshTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
@@ -518,6 +523,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         VideoItemViewModel.HoverPreview = Features.HoverPreview;
         VideoItemViewModel.UnwatchedBadges = Features.Unwatched;
         Chapters.Enabled = Features.Chapters;
+        Player.Queue = Features.ExportQueue ? Exports : null;
         RebuildCollections();
         IsSetupOpen = _settings.IsFirstRun || Environment.GetEnvironmentVariable("CNEMA_SETUP") == "1";
         _ = ApplyClipSettingsAsync();
@@ -964,10 +970,18 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void OpenSettings()
     {
-        var editor = new SettingsViewModel(_settings.Current) { PickFolder = PickFolder };
+        var editor = new SettingsViewModel(_settings.Current) { PickFolder = PickFolder, PickFile = PickFile };
         SettingsEditor = editor;
         _ = editor.LoadDevicesAsync();
         _ = editor.LoadStorageUsageAsync();
+    }
+
+    /// <summary>From the editor's Effects panel: Settings, opened on the Editing page.</summary>
+    [RelayCommand]
+    private void OpenEditingSettings()
+    {
+        OpenSettings();
+        if (SettingsEditor is { } editor) editor.Page = 2;
     }
 
     [RelayCommand]
@@ -1034,8 +1048,17 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         }
     }
 
+    private void OnExportFinished(ExportJobViewModel job)
+    {
+        if (job.State == ExportState.Cancelled) return;
+        if (job.IsDone) _ = RescanAsync();
+        if (IsPlayerOpen || IsMiniPlayerOpen) Player.ShowToast(job.Status);
+        else ShowToast(job.Status);
+    }
+
     public void Dispose()
     {
+        Exports.CancelAll();
         _hotkey.Dispose();
         Clips.Dispose();
         _scanCts?.Cancel();

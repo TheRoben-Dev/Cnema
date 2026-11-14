@@ -24,6 +24,8 @@ public sealed partial class MainViewModel
         VideoItemViewModel.UnwatchedBadges = Features.Unwatched;
         Chapters.Enabled = Features.Chapters;
         Player.RefreshChapters();
+        Player.Queue = Features.ExportQueue ? Exports : null;
+        Player.RefreshEffectFeatures();
         if (IsMiniPlayerOpen && !UseMiniPlayer) ExpandMiniPlayer();
         foreach (var v in _items.Values) v.RefreshAll();
         if (!Features.Collections && SelectedCollection is not null) SelectedFolder = Folders.FirstOrDefault();

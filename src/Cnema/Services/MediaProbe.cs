@@ -9,8 +9,30 @@ namespace Cnema.Services;
 /// Reads duration / resolution / codecs. ffprobe when one is installed, otherwise the bundled ffmpeg's
 /// own description of the file (ffprobe is not shipped, it would add ~70 MB), libVLC as the last resort.
 /// </summary>
+/// <summary>What an export needs to know about an input file.</summary>
+public sealed record StreamInfo(int Width, int Height, double Fps, int AudioStreams, long DurationMs);
+
 public static class MediaProbe
 {
+    private static readonly System.Text.RegularExpressions.Regex RotationRx =
+        new(@"rotation of (-?\d+(?:\.\d+)?) degrees", System.Text.RegularExpressions.RegexOptions.Compiled);
+
+    /// <summary>Size, frame rate, number of audio streams and length, read through the bundled ffmpeg.</summary>
+    public static async Task<StreamInfo?> InfoAsync(string path, CancellationToken ct)
+    {
+        if (ToolLocator.Ffmpeg is not { } ffmpeg) return null;
+        var r = await ProcessRunner.RunAsync(ffmpeg, new[] { "-hide_banner", "-i", path }, ct: ct);
+        var e = new VideoEntry { Path = path };
+        if (!ParseFfmpegInfo(r.StdErr, e) && e.DurationMs <= 0) return null;
+        var audio = r.StdErr.Split('\n').Count(l => StreamRx.Match(l.TrimEnd('\r')) is { Success: true } m && m.Groups[1].Value == "Audio");
+        var (w, h) = (e.Width, e.Height);
+        // ffmpeg turns phone videos upright while decoding, so a quarter turn swaps the sides.
+        if (RotationRx.Match(r.StdErr) is { Success: true } rot &&
+            Math.Abs(Math.Abs(double.Parse(rot.Groups[1].Value, CultureInfo.InvariantCulture)) - 90) < 1)
+            (w, h) = (h, w);
+        return new StreamInfo(w, h, e.FrameRate, audio, e.DurationMs);
+    }
+
     public static async Task ProbeAsync(VideoEntry e, CancellationToken ct)
     {
         if (ToolLocator.Ffprobe is { } ffprobe && await TryFfprobe(ffprobe, e, ct)) return;

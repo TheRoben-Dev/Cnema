@@ -32,6 +32,31 @@ public sealed class AppSettings
     public AccessibilitySettings Accessibility { get; set; } = new();
     /// <summary>Keyboard shortcuts changed from their defaults: action id to gesture, "" for none.</summary>
     public Dictionary<string, string> Shortcuts { get; set; } = new();
+    /// <summary>The editor's sound tools, watermark and intro / outro.</summary>
+    public EffectSettings Effects { get; set; } = new();
+}
+
+/// <summary>Effects that stay as you left them from one export to the next.</summary>
+public sealed class EffectSettings
+{
+    /// <summary>Bring exports to a steady loudness (see RenderService.TargetLufs).</summary>
+    public bool Normalize { get; set; }
+    /// <summary>Extra volume for the voice track, in dB, for files with a separate voice track.</summary>
+    public double VoiceBoostDb { get; set; }
+    /// <summary>Lower the other tracks while the voice track is talking.</summary>
+    public bool Duck { get; set; }
+
+    public string? WatermarkPath { get; set; }
+    public Corner WatermarkCorner { get; set; } = Corner.BottomRight;
+    /// <summary>Width as a share of the video's width.</summary>
+    public double WatermarkSize { get; set; } = 0.14;
+    public double WatermarkOpacity { get; set; } = 0.8;
+    public bool UseWatermark { get; set; }
+
+    public string? IntroPath { get; set; }
+    public bool UseIntro { get; set; }
+    public string? OutroPath { get; set; }
+    public bool UseOutro { get; set; }
 }
 
 /// <summary>
@@ -55,6 +80,16 @@ public sealed class FeatureSettings
     public bool MiniPlayer { get; set; } = true;
     /// <summary>Session bookmarks become chapters in the player, in session files and in exports.</summary>
     public bool Chapters { get; set; } = true;
+    /// <summary>Text over the video, burned into exports.</summary>
+    public bool Captions { get; set; } = true;
+    /// <summary>Slow motion and fast forward for parts of a clip, with speed ramps.</summary>
+    public bool SpeedEffects { get; set; } = true;
+    /// <summary>Even out loudness, voice boost and lowering the game while you talk.</summary>
+    public bool AudioTools { get; set; } = true;
+    /// <summary>Watermark and intro / outro clips.</summary>
+    public bool Branding { get; set; } = true;
+    /// <summary>Exports run one after another in the background while you keep working.</summary>
+    public bool ExportQueue { get; set; } = true;
 
     public FeatureSettings Clone() => (FeatureSettings)MemberwiseClone();
 }
