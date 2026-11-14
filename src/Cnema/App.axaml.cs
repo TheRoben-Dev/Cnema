@@ -33,6 +33,12 @@ public partial class App : Application
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             var startHidden = desktop.Args?.Contains(AutostartService.BackgroundFlag) == true;
+            // A bug in one click handler should be logged, not take the whole app (and the capture) down.
+            Dispatcher.UIThread.UnhandledException += (_, e) =>
+            {
+                Log.Error("Unhandled UI exception", e.Exception);
+                e.Handled = true;
+            };
             VlcBootstrap.Initialize();
             AutostartService.RefreshIfEnabled();
 

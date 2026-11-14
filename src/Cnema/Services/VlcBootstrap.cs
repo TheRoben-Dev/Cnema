@@ -55,7 +55,7 @@ public static class VlcBootstrap
                 : OperatingSystem.IsLinux()
                     ? "libVLC not found. Install it (e.g. sudo apt install libvlc5 vlc-plugin-base)."
                     : "libVLC failed to load.";
-            Console.Error.WriteLine($"[Cnema] {Error}\n{ex}");
+            Log.Warn($"{Error}\n{ex}");
         }
     }
 

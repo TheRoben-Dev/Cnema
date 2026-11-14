@@ -32,7 +32,7 @@ public sealed class GlobalHotkey : IDisposable
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"[Cnema] Hotkey registration failed: {ex.Message}");
+            Log.Warn($"Hotkey registration failed: {ex.Message}");
             return false;
         }
     }

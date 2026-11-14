@@ -115,6 +115,7 @@ public sealed class ClipService : IDisposable
         };
         foreach (var a in args) psi.ArgumentList.Add(a);
 
+        Log.Info($"Capture starting: {encoder}, {Cfg.Fps} fps, {(Cfg.Height > 0 ? Cfg.Height + "p" : "native")}, {Cfg.BitrateMbps} Mbps");
         var generation = ++_generation;
         var p = new Process { StartInfo = psi, EnableRaisingEvents = true };
         lock (_log) _log.Clear();
@@ -199,6 +200,7 @@ public sealed class ClipService : IDisposable
         string tail;
         lock (_log) tail = string.Join(" ", _log.Where(l => l.Trim().Length > 0).TakeLast(3)).Trim();
         var ranFor = DateTime.UtcNow - _startedAt;
+        Log.Warn($"Capture ffmpeg exited after {ranFor.TotalSeconds:0} s: {tail}");
         _janitor?.Dispose();
         _janitor = null;
         _process = null;
@@ -314,7 +316,7 @@ public sealed class ClipService : IDisposable
     }
 
     /// <summary>Writes the last N seconds to the clips folder. Returns the new file, or null.</summary>
-    public async Task<string?> SaveClipAsync()
+    public async Task<string?> SaveClipAsync(string? label = null)
     {
         if (State != ClipState.Recording) return null;
         await _gate.WaitAsync();
@@ -326,7 +328,9 @@ public sealed class ClipService : IDisposable
 
             var folder = Cfg.ResolvedFolder;
             Directory.CreateDirectory(folder);
-            var output = Path.Combine(folder, $"Clip {DateTime.Now:yyyy-MM-dd HH-mm-ss}.mp4");
+            var prefix = string.Join("_", (label ?? "Clip").Split(Path.GetInvalidFileNameChars().Concat(new[] { '/', '\\', ':' }).ToArray())).Trim();
+            if (prefix.Length == 0) prefix = "Clip";
+            var output = Path.Combine(folder, $"{prefix} {DateTime.Now:yyyy-MM-dd HH-mm-ss}.mp4");
             var list = Path.Combine(AppPaths.ClipBufferDir, "save.txt");
             await File.WriteAllLinesAsync(list, segments.Select(s => $"file '{s.Replace("'", "'\\''")}'"));
 
@@ -347,7 +351,7 @@ public sealed class ClipService : IDisposable
             if (r.ExitCode != 0 || !File.Exists(partial) || new FileInfo(partial).Length == 0)
             {
                 try { File.Delete(partial); } catch { /* nothing written */ }
-                Console.Error.WriteLine($"[Cnema] Saving the clip failed: {r.StdErr}");
+                Log.Warn($"Saving the clip failed: {r.StdErr}");
                 return null;
             }
             File.Move(partial, output, overwrite: false);
@@ -356,7 +360,7 @@ public sealed class ClipService : IDisposable
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"[Cnema] Saving the clip failed: {ex.Message}");
+            Log.Warn($"Saving the clip failed: {ex.Message}");
             return null;
         }
         finally

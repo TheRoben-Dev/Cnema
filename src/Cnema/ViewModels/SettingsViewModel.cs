@@ -68,6 +68,9 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private string _audio1 = NoAudio;
     [ObservableProperty] private string _audio2 = NoAudio;
     [ObservableProperty] private bool _notify;
+    [ObservableProperty] private bool _sound;
+    [ObservableProperty] private bool _tagWithGame;
+    [ObservableProperty] private bool _checkForUpdates;
     [ObservableProperty] private bool _hotkeyCtrl;
     [ObservableProperty] private bool _hotkeyAlt;
     [ObservableProperty] private bool _hotkeyShift;
@@ -115,6 +118,9 @@ public sealed partial class SettingsViewModel : ObservableObject
         _codecWanted = c.Codec;
         _screenIndex = Math.Max(0, c.Screen);
         _notify = c.Notify;
+        _sound = c.Sound;
+        _tagWithGame = c.TagWithGame;
+        _checkForUpdates = settings.CheckForUpdates;
         _hotkeyCtrl = c.HotkeyCtrl;
         _hotkeyAlt = c.HotkeyAlt;
         _hotkeyShift = c.HotkeyShift;
@@ -191,6 +197,9 @@ public sealed partial class SettingsViewModel : ObservableObject
         c.Audio1 = Audio1 == NoAudio ? null : Audio1;
         c.Audio2 = Audio2 == NoAudio || Audio2 == Audio1 ? null : Audio2;
         c.Notify = Notify;
+        c.Sound = Sound;
+        c.TagWithGame = TagWithGame;
+        settings.CheckForUpdates = CheckForUpdates;
         c.HotkeyCtrl = HotkeyCtrl;
         c.HotkeyAlt = HotkeyAlt;
         c.HotkeyShift = HotkeyShift;

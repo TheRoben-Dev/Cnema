@@ -416,4 +416,23 @@
     <Setter Property="BorderBrush" Value="{StaticResource Accent}" />
     <Setter Property="BorderThickness" Value="1" />
   </Style>
+  <Style Selector="Button.updatebar">
+    <Setter Property="Background" Value="{StaticResource AccentSoft}" />
+    <Setter Property="BorderBrush" Value="{StaticResource Accent}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="Padding" Value="10" />
+    <Setter Property="HorizontalContentAlignment" Value="Left" />
+  </Style>
+  <Style Selector="Button.danger">
+    <Setter Property="Background" Value="{StaticResource Danger}" />
+    <Setter Property="Foreground" Value="#FFFFFF" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="14,8" />
+  </Style>
+  <Style Selector="Button.danger:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="#FF5C87" />
+    <Setter Property="Foreground" Value="#FFFFFF" />
+  </Style>
 </Styles>
