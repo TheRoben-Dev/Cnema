@@ -41,3 +41,18 @@ jobs:
           files: |
             Cnema-*.zip
             Cnema-*.tar.gz
+      # The source repository is private, so its releases are invisible to the app's update check
+      # and to anyone downloading. The same builds are published to a public, releases-only repository.
+      # Needs the secret RELEASES_TOKEN: a fine-grained token with Contents read/write on that repo only.
+      - name: Publish to the public releases repository
+        env:
+          GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+          PUBLIC_REPO: TheRoben-Dev/Cnema-releases
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::warning::RELEASES_TOKEN is not set; skipped publishing to $PUBLIC_REPO"
+            exit 0
+          fi
+          gh release create "$TAG" Cnema-*.zip Cnema-*.tar.gz --repo "$PUBLIC_REPO" \
+            --title "Cnema $TAG" \
+            --notes "Cnema $TAG. macOS: unzip, move Cnema.app to Applications, then right-click and Open the first time. Windows: unzip and run Cnema.exe. Linux: needs libvlc5, vlc-plugin-base and ffmpeg from your distribution."
