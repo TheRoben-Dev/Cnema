@@ -122,13 +122,22 @@ public static class RenderService
                 var g = new List<string>();
                 var n = map.Pieces.Count;
 
+                // blur and zoom work on the source picture, in source time, before anything is cut
+                var src = "[0:v:0]";
+                var frame = FrameFilters(fx, origin, Even(info.Width), Even(info.Height), fps);
+                if (frame.Count > 0)
+                {
+                    g.AddRange(frame);
+                    src = "[vsrc]";
+                }
+
                 // video: pieces at their speeds, joined
-                if (n > 1) g.Add("[0:v:0]split=" + n + string.Concat(Enumerable.Range(0, n).Select(i => $"[vs{i}]")));
+                if (n > 1) g.Add(src + "split=" + n + string.Concat(Enumerable.Range(0, n).Select(i => $"[vs{i}]")));
                 for (var i = 0; i < n; i++)
                 {
                     var p = map.Pieces[i];
                     var pts = Math.Abs(p.Rate - 1) < 0.0001 ? "PTS-STARTPTS" : $"(PTS-STARTPTS)/{F(p.Rate)}";
-                    g.Add($"{(n > 1 ? $"[vs{i}]" : "[0:v:0]")}trim=start={S(p.Start)}:end={S(p.End)},setpts={pts}[vp{i}]");
+                    g.Add($"{(n > 1 ? $"[vs{i}]" : src)}trim=start={S(p.Start)}:end={S(p.End)},setpts={pts}[vp{i}]");
                 }
                 g.Add(n > 1 ? string.Concat(Enumerable.Range(0, n).Select(i => $"[vp{i}]")) + $"concat=n={n}:v=1:a=0[vcat]" : "[vp0]null[vcat]");
 
@@ -344,6 +353,67 @@ public static class RenderService
             try { File.Delete(temp); } catch { /* moved, or never written */ }
             try { Directory.Delete(work, recursive: true); } catch { /* temp */ }
         }
+    }
+
+    /// <summary>
+    /// Blurred / pixelated areas and zoom-and-pan, as filter graph lines from [0:v:0] to [vsrc] (none = no lines).
+    /// The input starts at <paramref name="origin"/>, so its timestamps are source time minus origin.
+    /// </summary>
+    internal static List<string> FrameFilters(EffectsSpec fx, long origin, int w, int h, double fps)
+    {
+        var g = new List<string>();
+        if (fx.Blurs.Count == 0 && !fx.HasZoom) return g;
+        // A steady frame rate first: zoompan counts frames, and screen recordings often have none of their own.
+        var cur = "vf0";
+        g.Add($"[0:v:0]fps={F(fps)},format=yuv420p[{cur}]");
+        var i = 0;
+        foreach (var b in fx.Blurs)
+        {
+            var x = Math.Clamp((int)Math.Round(Math.Clamp(b.X, 0, 1) * w) / 2 * 2, 0, w - 4);
+            var y = Math.Clamp((int)Math.Round(Math.Clamp(b.Y, 0, 1) * h) / 2 * 2, 0, h - 4);
+            var bw = Math.Clamp(Even((int)Math.Round(b.W * w)), 4, w - x);
+            var bh = Math.Clamp(Even((int)Math.Round(b.H * h)), 4, h - y);
+            if (bw < 4 || bh < 4) continue;
+            var effect = b.Style == BlurStyle.Pixelate
+                ? $"scale=w='max(2,trunc(iw/{Math.Max(6, Math.Min(bw, bh) / 12)}))':h='max(2,trunc(ih/{Math.Max(6, Math.Min(bw, bh) / 12)}))':flags=area,scale={bw}:{bh}:flags=neighbor"
+                : $"gblur=sigma={F(Math.Clamp(Math.Min(bw, bh) / 8.0, 6, 40))}:steps=3";
+            var start = Math.Max(0, b.Start - origin) / 1000.0;
+            var end = (b.End - origin) / 1000.0;
+            if (end <= 0) continue;
+            g.Add($"[{cur}]split[bk{i}][bs{i}]");
+            g.Add($"[bs{i}]crop={bw}:{bh}:{x}:{y},{effect}[bb{i}]");
+            g.Add($"[bk{i}][bb{i}]overlay=x={x}:y={y}:enable='between(t,{F(start)},{F(end)})'[bo{i}]");
+            cur = $"bo{i}";
+            i++;
+        }
+        if (fx.HasZoom)
+        {
+            var keys = fx.Zoom.OrderBy(k => k.At)
+                .Select(k => (T: (k.At - origin) / 1000.0, Z: Math.Clamp(k.Zoom, 1, ZoomView.MaxZoom), X: Math.Clamp(k.X, 0, 1), Y: Math.Clamp(k.Y, 0, 1)))
+                .ToList();
+            var t = $"(in/{F(fps)})";
+            string Expr(Func<(double T, double Z, double X, double Y), double> v)
+            {
+                var e = F(v(keys[^1]));
+                for (var k = keys.Count - 2; k >= 0; k--)
+                {
+                    var (a, b) = (keys[k], keys[k + 1]);
+                    var span = Math.Max(0.001, b.T - a.T);
+                    var u = $"clip(({t}-{F(a.T)})/{F(span)},0,1)";
+                    var eased = $"({u}*{u}*(3-2*{u}))";
+                    e = $"if(lte({t},{F(b.T)}),{F(v(a))}+({F(v(b) - v(a))})*{eased},{e})";
+                }
+                return $"if(lte({t},{F(keys[0].T)}),{F(v(keys[0]))},{e})";
+            }
+            // Working on a picture twice the size keeps slow zooms from shaking (zoompan moves in whole pixels).
+            var up = h <= 1080 ? 2 : 1;
+            var pre = up > 1 ? $"scale={w * up}:{h * up}:flags=bicubic," : "";
+            g.Add($"[{cur}]{pre}zoompan=z='{Expr(k => k.Z)}':x='clip(({Expr(k => k.X)})*iw-iw/zoom/2,0,iw-iw/zoom)':" +
+                  $"y='clip(({Expr(k => k.Y)})*ih-ih/zoom/2,0,ih-ih/zoom)':d=1:s={w}x{h}:fps={F(fps)},setsar=1[vz]");
+            cur = "vz";
+        }
+        g.Add($"[{cur}]null[vsrc]");
+        return g;
     }
 
     /// <summary>Loudness of the kept audio (mixed, voice boost included), as the gain that brings it to the target.</summary>

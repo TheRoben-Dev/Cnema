@@ -2,6 +2,13 @@
 
 What changed in each Cnema release. The app shows the entries you have not seen yet after it updates.
 
+## 0.19.0
+- Zoom and pan (new Zoom page in the editor): punch in on the action with Z, or set keyframes yourself. On the Zoom page you see the whole picture with the zoom frame on it; drag the frame to aim and its corners to zoom. Cnema glides smoothly from one keyframe to the next, in the preview and in the export.
+- Blur (new Blur page, or H): hide names, chat or bits of the HUD before you share. Drag the box into place and pull its corners to fit, then pick Blur or Pixelate. It covers the whole video, or just the part you choose. You see it blurred in the player.
+- Other recorders now also finds Medal, AMD ReLive, Outplayed, Insights Capture, SteelSeries Moments and Snipping Tool recordings on Windows, and screen recordings on a Mac. "Another app" takes any other folder.
+- Recorders that don't exist on your system are no longer listed.
+- Zoom and pan and Blur can be switched off under Settings, Features. Remember edits keeps them too.
+
 ## 0.18.0
 - Other recorders (sidebar, Tools): bring in videos from OBS, NVIDIA (ShadowPlay / NVIDIA app), Xbox Game Bar and Steam. Cnema finds their recording folders, adds them to your library and picks up new videos by themselves. Nothing is moved or changed. Use Change… if you record somewhere else.
 - Videos from other recorders are tagged with their game where the recorder tells: NVIDIA's game folders, Game Bar file names, Steam's game, and subfolders for OBS. Switch it off with Tag by game.

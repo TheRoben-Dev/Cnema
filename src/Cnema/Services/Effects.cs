@@ -14,6 +14,59 @@ public sealed record CaptionSpec(long Start, long End, string Text, CaptionPosit
 /// <summary>A part of the video played at another speed (source milliseconds). Ramp eases into and out of it.</summary>
 public sealed record SpeedSpec(long Start, long End, double Rate, bool Ramp);
 
+public enum BlurStyle { Blur, Pixelate }
+
+/// <summary>
+/// A hidden area (names, chat, HUD) from <see cref="Start"/> to <see cref="End"/> in source milliseconds.
+/// The rectangle is a share of the picture (0..1), so it fits any export size.
+/// </summary>
+public sealed record BlurSpec(long Start, long End, double X, double Y, double W, double H, BlurStyle Style);
+
+/// <summary>A zoom keyframe at a source moment: how far in (1 = whole picture) and where the middle of the view is (0..1).</summary>
+public sealed record ZoomKey(long At, double Zoom, double X, double Y);
+
+/// <summary>The view at one moment: zoom and centre, eased between keyframes.</summary>
+public readonly record struct ZoomView(double Zoom, double X, double Y)
+{
+    public static readonly ZoomView Whole = new(1, 0.5, 0.5);
+    public const double MaxZoom = 4;
+
+    /// <summary>The visible part of the picture, as a share of it (left, top, width, height).</summary>
+    public (double L, double T, double W, double H) Window
+    {
+        get
+        {
+            var z = Math.Clamp(Zoom, 1, MaxZoom);
+            var size = 1 / z;
+            var l = Math.Clamp(X - size / 2, 0, 1 - size);
+            var t = Math.Clamp(Y - size / 2, 0, 1 - size);
+            return (l, t, size, size);
+        }
+    }
+
+    public bool IsWhole => Zoom <= 1.001;
+
+    /// <summary>The view at <paramref name="ms"/>: holds the first and last keys, eases (smoothstep) in between.</summary>
+    public static ZoomView At(IReadOnlyList<ZoomKey> keys, double ms)
+    {
+        if (keys.Count == 0) return Whole;
+        var sorted = keys.OrderBy(k => k.At).ToList();
+        if (ms <= sorted[0].At) return From(sorted[0]);
+        for (var i = 0; i + 1 < sorted.Count; i++)
+        {
+            var (a, b) = (sorted[i], sorted[i + 1]);
+            if (ms > b.At) continue;
+            var span = Math.Max(1, b.At - a.At);
+            var u = Math.Clamp((ms - a.At) / span, 0, 1);
+            u = u * u * (3 - 2 * u);
+            return new ZoomView(a.Zoom + (b.Zoom - a.Zoom) * u, a.X + (b.X - a.X) * u, a.Y + (b.Y - a.Y) * u);
+        }
+        return From(sorted[^1]);
+    }
+
+    private static ZoomView From(ZoomKey k) => new(k.Zoom, k.X, k.Y);
+}
+
 /// <summary>An image in a corner; Width is a fraction of the video's width.</summary>
 public sealed record WatermarkSpec(string Path, Corner Corner, double Width, double Opacity);
 
@@ -40,8 +93,14 @@ public sealed record EffectsSpec(
     public static readonly EffectsSpec None =
         new(Array.Empty<CaptionSpec>(), Array.Empty<SpeedSpec>(), AudioSpec.None, null, null, null);
 
+    /// <summary>Hidden areas (Blur page).</summary>
+    public IReadOnlyList<BlurSpec> Blurs { get; init; } = Array.Empty<BlurSpec>();
+    /// <summary>Zoom and pan keyframes (Zoom page). One key at 1× or none means no zoom.</summary>
+    public IReadOnlyList<ZoomKey> Zoom { get; init; } = Array.Empty<ZoomKey>();
+    public bool HasZoom => Zoom.Any(k => k.Zoom > 1.001);
+
     public bool IsEmpty => Captions.Count == 0 && Speed.Count == 0 && Audio.IsEmpty &&
-                           Watermark is null && Intro is null && Outro is null;
+                           Watermark is null && Intro is null && Outro is null && Blurs.Count == 0 && !HasZoom;
 }
 
 /// <summary>A stretch of the source played at one speed. Times in milliseconds.</summary>
