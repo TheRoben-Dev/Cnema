@@ -11,15 +11,24 @@ namespace Cnema.Services;
 /// </summary>
 public sealed class Tr : AvaloniaObject
 {
-    public static readonly AttachedProperty<string?> TextProperty = Register("Text");
-    public static readonly AttachedProperty<string?> ContentProperty = Register("Content");
-    public static readonly AttachedProperty<string?> HeaderProperty = Register("Header");
-    public static readonly AttachedProperty<string?> WatermarkProperty = Register("Watermark");
-    public static readonly AttachedProperty<string?> TitleProperty = Register("Title");
-    public static readonly AttachedProperty<string?> OnContentProperty = Register("OnContent");
-    public static readonly AttachedProperty<string?> OffContentProperty = Register("OffContent");
-    public static readonly AttachedProperty<string?> TipProperty = Register("Tip");
-    public static readonly AttachedProperty<string?> NameProperty = Register("Name");
+    public static readonly AttachedProperty<string?> TextProperty =
+        AvaloniaProperty.RegisterAttached<Tr, AvaloniaObject, string?>("Text");
+    public static readonly AttachedProperty<string?> ContentProperty =
+        AvaloniaProperty.RegisterAttached<Tr, AvaloniaObject, string?>("Content");
+    public static readonly AttachedProperty<string?> HeaderProperty =
+        AvaloniaProperty.RegisterAttached<Tr, AvaloniaObject, string?>("Header");
+    public static readonly AttachedProperty<string?> WatermarkProperty =
+        AvaloniaProperty.RegisterAttached<Tr, AvaloniaObject, string?>("Watermark");
+    public static readonly AttachedProperty<string?> TitleProperty =
+        AvaloniaProperty.RegisterAttached<Tr, AvaloniaObject, string?>("Title");
+    public static readonly AttachedProperty<string?> OnContentProperty =
+        AvaloniaProperty.RegisterAttached<Tr, AvaloniaObject, string?>("OnContent");
+    public static readonly AttachedProperty<string?> OffContentProperty =
+        AvaloniaProperty.RegisterAttached<Tr, AvaloniaObject, string?>("OffContent");
+    public static readonly AttachedProperty<string?> TipProperty =
+        AvaloniaProperty.RegisterAttached<Tr, AvaloniaObject, string?>("Tip");
+    public static readonly AttachedProperty<string?> NameProperty =
+        AvaloniaProperty.RegisterAttached<Tr, AvaloniaObject, string?>("Name");
 
     public static string? GetText(AvaloniaObject o) => o.GetValue(TextProperty);
     public static void SetText(AvaloniaObject o, string? v) => o.SetValue(TextProperty, v);
@@ -51,9 +60,6 @@ public sealed class Tr : AvaloniaObject
             p.Changed.AddClassHandler<AvaloniaObject>((o, e) => Changed(o, p, e.NewValue as string));
         Loc.Changed += Refresh;
     }
-
-    private static AttachedProperty<string?> Register(string name) =>
-        AvaloniaProperty.RegisterAttached<Tr, AvaloniaObject, string?>(name);
 
     private static void Changed(AvaloniaObject o, AttachedProperty<string?> source, string? english)
     {
