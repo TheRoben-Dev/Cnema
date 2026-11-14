@@ -15,8 +15,20 @@ public sealed class VideoEntry
     public string? ThumbPath { get; set; }
     public long LastPositionMs { get; set; }
     public DateTime? LastPlayedUtc { get; set; }
+    public List<string> Tags { get; set; } = new();
+    public bool Favorite { get; set; }
 
+    [System.Text.Json.Serialization.JsonIgnore]
     public string FileName => System.IO.Path.GetFileName(Path);
+
+    /// <summary>Things the user set (as opposed to what a scan can rediscover).</summary>
+    public void CopyUserDataFrom(VideoEntry other)
+    {
+        LastPositionMs = other.LastPositionMs;
+        LastPlayedUtc = other.LastPlayedUtc;
+        Tags = other.Tags.ToList();
+        Favorite = other.Favorite;
+    }
 }
 
 public sealed class LibraryCacheFile

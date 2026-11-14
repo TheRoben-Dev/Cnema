@@ -5,6 +5,7 @@ play anything VLC can play and cut clips out of it without leaving the app.
 
 ![Library](docs/library.png)
 ![Player and trimmer](docs/player.png)
+![Rename, tag and move](docs/edit.png)
 
 Stack: C# / .NET 8, [Avalonia 11](https://avaloniaui.net) for UI, [LibVLCSharp](https://code.videolan.org/videolan/LibVLCSharp)
 for playback, ffmpeg/ffprobe for thumbnails, metadata and clip export. One codebase for macOS, Windows and Linux.
@@ -50,6 +51,9 @@ Set `CINEMA_LIBVLC_PATH` to a folder containing libvlc + libvlccore to override.
 
 - **Library**: add any number of folders; scanned recursively, watched for changes, cached so launch is instant.
   Thumbnails, duration, resolution, codec, size. Search, sort, per-folder filtering, resume position.
+- **Organise**: tag videos and star favourites; both appear in the sidebar and in search (`#tag` searches tags only).
+  Rename files and move them between library folders from the app. Tags are stored in Cinema's library, not in
+  the files, and follow a file that is renamed or moved outside the app.
 - **Player**: libVLC playback, frame stepping, speed, volume, fullscreen.
 - **Trim**: set in/out at the playhead or drag the brackets on the timeline, preview/loop the selection, export.
   - *Lossless* (default): stream copy. Instant, zero quality loss, keeps the container. The cut starts on the

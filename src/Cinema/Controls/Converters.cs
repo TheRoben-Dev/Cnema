@@ -6,8 +6,13 @@ namespace Cinema.Controls;
 
 public static class Converters
 {
-    public static readonly IValueConverter LibraryOrFolderIcon = new FuncValueConverter<bool, Geometry?>(isAll =>
-        Lookup(isAll ? "IcLibrary" : "IcFolder"));
+    public static readonly IValueConverter NavIcon = new FuncValueConverter<Cinema.ViewModels.NavKind, Geometry?>(kind =>
+        Lookup(kind switch
+        {
+            Cinema.ViewModels.NavKind.All => "IcLibrary",
+            Cinema.ViewModels.NavKind.Favorites => "IcStar",
+            _ => "IcFolder",
+        }));
 
     public static readonly IValueConverter IsZero = new FuncValueConverter<double, bool>(v => v <= 0);
 

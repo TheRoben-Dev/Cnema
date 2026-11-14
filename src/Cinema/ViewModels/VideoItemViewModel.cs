@@ -45,6 +45,13 @@ public sealed partial class VideoItemViewModel : ObservableObject
         }
     }
 
+    public bool IsFavorite => Entry.Favorite;
+    public IReadOnlyList<string> Tags => Entry.Tags;
+    public bool HasTags => Entry.Tags.Count > 0;
+
+    /// <summary>Re-read everything from the entry after an edit (rename, tags, favourite).</summary>
+    public void RefreshAll() => OnPropertyChanged(string.Empty);
+
     /// <summary>0..1 watched fraction for the resume bar on the card.</summary>
     public double Progress => Entry.DurationMs > 0 ? Math.Clamp((double)Entry.LastPositionMs / Entry.DurationMs, 0, 1) : 0;
     public bool HasProgress => Progress is > 0.01 and < 0.97;
