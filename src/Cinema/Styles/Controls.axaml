@@ -195,13 +195,7 @@
   <Style Selector="Button.card:pointerover Border.ring">
     <Setter Property="Opacity" Value="1" />
   </Style>
-  <Style Selector="Border.badge.hi">
-    <Setter Property="Background" Value="{StaticResource Brand}" />
-  </Style>
-  <Style Selector="Border.badge.hi TextBlock">
-    <Setter Property="Foreground" Value="#07080D" />
-    <Setter Property="FontWeight" Value="Bold" />
-  </Style>
+
   <Style Selector="Button.card Border.playhint">
     <Setter Property="Opacity" Value="0" />
     <Setter Property="Transitions">
@@ -221,6 +215,77 @@
   <Style Selector="Border.badge TextBlock">
     <Setter Property="FontSize" Value="11" />
     <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+
+  <!-- 4K badge: must come after the base badge style to win -->
+  <Style Selector="Border.badge.hi">
+    <Setter Property="Background" Value="{StaticResource Brand}" />
+  </Style>
+  <Style Selector="Border.badge.hi TextBlock">
+    <Setter Property="Foreground" Value="#07080D" />
+    <Setter Property="FontWeight" Value="Bold" />
+  </Style>
+
+  <!-- Tag chips -->
+  <Style Selector="Border.tag">
+    <Setter Property="Background" Value="{StaticResource AccentSoft}" />
+    <Setter Property="CornerRadius" Value="5" />
+    <Setter Property="Padding" Value="6,2" />
+    <Setter Property="Margin" Value="0,0,4,4" />
+  </Style>
+  <Style Selector="Border.tag TextBlock">
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="#C9BCFF" />
+  </Style>
+  <Style Selector="Border.tag.big">
+    <Setter Property="Padding" Value="9,4,5,4" />
+    <Setter Property="CornerRadius" Value="7" />
+    <Setter Property="Margin" Value="0,0,6,6" />
+  </Style>
+  <Style Selector="Border.tag.big TextBlock">
+    <Setter Property="FontSize" Value="12" />
+  </Style>
+  <Style Selector="Button.suggest">
+    <Setter Property="Background" Value="{StaticResource Bg2}" />
+    <Setter Property="BorderBrush" Value="{StaticResource Line}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="7" />
+    <Setter Property="Padding" Value="8,3" />
+    <Setter Property="Margin" Value="0,0,6,6" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Foreground" Value="{StaticResource TextDim}" />
+  </Style>
+
+  <!-- Small round buttons that appear over a thumbnail on hover -->
+  <Style Selector="Button.mini">
+    <Setter Property="Width" Value="28" />
+    <Setter Property="Height" Value="28" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="CornerRadius" Value="14" />
+    <Setter Property="Background" Value="#E0090A0F" />
+    <Setter Property="Foreground" Value="{StaticResource Text}" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.mini:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource Accent}" />
+    <Setter Property="Foreground" Value="{StaticResource OnAccent}" />
+  </Style>
+  <Style Selector="Button.card StackPanel.actions">
+    <Setter Property="Opacity" Value="0" />
+    <Setter Property="Transitions">
+      <Transitions><DoubleTransition Property="Opacity" Duration="0:0:0.12" /></Transitions>
+    </Setter>
+  </Style>
+  <Style Selector="Button.card:pointerover StackPanel.actions">
+    <Setter Property="Opacity" Value="1" />
+  </Style>
+  <Style Selector="Button.card:pointerover Border.fav">
+    <Setter Property="IsVisible" Value="False" />
+  </Style>
+  <Style Selector="ListBox.nav ListBoxItem:selected TextBlock.navicon">
+    <Setter Property="Foreground" Value="{StaticResource Cyan}" />
   </Style>
 
   <!-- Keycap hint -->

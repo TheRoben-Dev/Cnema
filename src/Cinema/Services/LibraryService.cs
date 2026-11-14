@@ -74,9 +74,23 @@ public sealed class LibraryService : IDisposable
                     continue;
                 }
                 var e = new VideoEntry { Path = f.FullName, Size = f.Length, ModifiedUtc = mtime };
-                if (hit is not null) { e.LastPositionMs = hit.LastPositionMs; e.LastPlayedUtc = hit.LastPlayedUtc; }
+                if (hit is not null) e.CopyUserDataFrom(hit);
                 result.Add(e);
                 work.Add(e);
+            }
+        }
+        // A file renamed or moved outside the app shows up as "new" while its old path vanished.
+        // Match those by size + modified time so tags, favourites and resume position follow the file.
+        lock (_cacheLock)
+        {
+            var live = new HashSet<string>(result.Select(r => r.Path), StringComparer.OrdinalIgnoreCase);
+            var orphans = _cache.Entries.Values.Where(v => !live.Contains(v.Path)).ToList();
+            foreach (var e in work.Where(w => !_cache.Entries.ContainsKey(w.Path)))
+            {
+                var matches = orphans.Where(o => o.Size == e.Size && o.ModifiedUtc == e.ModifiedUtc).ToList();
+                if (matches.Count != 1) continue; // ambiguous or none: don't guess
+                e.CopyUserDataFrom(matches[0]);
+                orphans.Remove(matches[0]);
             }
         }
         foreach (var e in result.Except(work)) onEntryReady(e);
@@ -105,6 +119,50 @@ public sealed class LibraryService : IDisposable
         }
         SaveCache();
         return result;
+    }
+
+    /// <summary>
+    /// Renames and/or moves a video on disk and keeps its library data (tags, thumbnail, resume point).
+    /// Returns the new full path. Throws with a user-readable message when it can't be done.
+    /// </summary>
+    public string Relocate(VideoEntry entry, string newFileNameWithoutExtension, string? newDirectory)
+    {
+        var name = newFileNameWithoutExtension.Trim();
+        if (name.Length == 0) throw new InvalidOperationException("The name can't be empty.");
+        if (name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 || name.Contains('/') || name.Contains('\\'))
+            throw new InvalidOperationException("The name contains characters that aren't allowed in file names.");
+        if (name is "." or ".." || name.EndsWith('.') )
+            throw new InvalidOperationException("That name isn't allowed.");
+
+        var oldPath = entry.Path;
+        var dir = string.IsNullOrEmpty(newDirectory) ? Path.GetDirectoryName(oldPath)! : newDirectory;
+        var newPath = Path.Combine(dir, name + Path.GetExtension(oldPath));
+        if (string.Equals(newPath, oldPath, StringComparison.Ordinal)) return oldPath;
+
+        if (!File.Exists(oldPath)) throw new InvalidOperationException("The file no longer exists on disk.");
+        // Allow case-only renames on case-insensitive filesystems; otherwise never overwrite.
+        var caseOnly = string.Equals(newPath, oldPath, StringComparison.OrdinalIgnoreCase);
+        if (!caseOnly && (File.Exists(newPath) || Directory.Exists(newPath)))
+            throw new InvalidOperationException("A file with that name already exists there.");
+
+        try
+        {
+            File.Move(oldPath, newPath);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            throw new InvalidOperationException("Couldn't rename the file: " + ex.Message);
+        }
+
+        lock (_cacheLock)
+        {
+            _cache.Entries.Remove(oldPath);
+            entry.Path = newPath;
+            entry.ModifiedUtc = File.GetLastWriteTimeUtc(newPath);
+            _cache.Entries[newPath] = entry;
+        }
+        SaveCache();
+        return newPath;
     }
 
     public void SaveCache()

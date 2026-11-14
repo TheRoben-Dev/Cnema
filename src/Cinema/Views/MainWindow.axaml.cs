@@ -1,5 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
+using Avalonia.VisualTree;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
@@ -25,6 +27,26 @@ public partial class MainWindow : Window
 
         // Tunnel so shortcuts work even when a button/slider has focus; skipped while typing.
         AddHandler(KeyDownEvent, OnPreviewKeyDown, RoutingStrategies.Tunnel);
+
+        // Our content covers the title bar, so the OS no longer drags the window for us.
+        AddHandler(PointerPressedEvent, OnTitleBarPointerPressed, RoutingStrategies.Bubble, handledEventsToo: false);
+
+        EditScrim.PointerPressed += (_, e) =>
+        {
+            if (ReferenceEquals(e.Source, EditScrim)) Vm?.CancelEditCommand.Execute(null);
+        };
+        EditTagInput.KeyDown += (_, e) =>
+        {
+            if (e.Key != Key.Enter) return;
+            // Enter on an empty tag box saves; otherwise it commits the tag.
+            if (string.IsNullOrWhiteSpace(Vm?.Editor?.TagInput)) Vm?.SaveEditCommand.Execute(null);
+            else Vm?.Editor?.AddTagCommand.Execute(null);
+            e.Handled = true;
+        };
+        EditName.KeyDown += (_, e) =>
+        {
+            if (e.Key == Key.Enter) { Vm?.SaveEditCommand.Execute(null); e.Handled = true; }
+        };
     }
 
     private MainViewModel? Vm => DataContext as MainViewModel;
@@ -35,6 +57,13 @@ public partial class MainWindow : Window
         if (Vm is not { } vm) return;
         vm.PickFolder = PickFolderAsync;
         vm.Player.PickSavePath = PickSavePathAsync;
+        vm.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName != nameof(MainViewModel.Editor) || vm.Editor is null) return;
+            // Put the cursor in the name field, ready to type over it.
+            Avalonia.Threading.Dispatcher.UIThread.Post(() => { EditName.Focus(); EditName.SelectAll(); },
+                Avalonia.Threading.DispatcherPriority.Background);
+        };
     }
 
     /// <summary>
@@ -57,6 +86,30 @@ public partial class MainWindow : Window
         {
             ExtendClientAreaToDecorationsHint = false;
         }
+    }
+
+    private const double TitleBarHeight = 52;
+
+    /// <summary>
+    /// Drag the window from the top strip (anywhere that isn't a control), and double-click it to zoom,
+    /// matching native title bar behaviour on macOS and Windows.
+    /// </summary>
+    private void OnTitleBarPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (!ExtendClientAreaToDecorationsHint || WindowState == WindowState.FullScreen) return;
+        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
+        if (e.GetPosition(this).Y > TitleBarHeight) return;
+        if (Vm?.IsEditing == true) return;
+
+        // Leave clicks on real controls alone.
+        for (var v = e.Source as Avalonia.Visual; v is not null && !ReferenceEquals(v, this); v = v.GetVisualParent())
+            if (v is Button or TextBox or ComboBox or Slider or ListBoxItem or ToggleButton) return;
+
+        if (e.ClickCount == 2)
+            WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+        else
+            BeginMoveDrag(e);
+        e.Handled = true;
     }
 
     // ---------- dialogs ----------
@@ -93,6 +146,18 @@ public partial class MainWindow : Window
     private void OnRevealItemClick(object? sender, RoutedEventArgs e) =>
         Vm?.RevealCommand.Execute((sender as Control)?.DataContext as VideoItemViewModel);
 
+    private void OnEditItemClick(object? sender, RoutedEventArgs e) =>
+        Vm?.BeginEditCommand.Execute((sender as Control)?.DataContext as VideoItemViewModel);
+
+    private void OnFavoriteItemClick(object? sender, RoutedEventArgs e) =>
+        Vm?.ToggleFavoriteCommand.Execute((sender as Control)?.DataContext as VideoItemViewModel);
+
+    private void OnRemoveTagClick(object? sender, RoutedEventArgs e) =>
+        Vm?.Editor?.RemoveTagCommand.Execute((sender as Control)?.DataContext as string);
+
+    private void OnSuggestedTagClick(object? sender, RoutedEventArgs e) =>
+        Vm?.Editor?.AddSuggestedCommand.Execute((sender as Control)?.DataContext as string);
+
     private void OnRevealFolderClick(object? sender, RoutedEventArgs e) =>
         Vm?.RevealFolderCommand.Execute((sender as Control)?.DataContext as FolderViewModel);
 
@@ -121,6 +186,11 @@ public partial class MainWindow : Window
     private void OnPreviewKeyDown(object? sender, KeyEventArgs e)
     {
         if (Vm is not { } vm) return;
+        if (vm.IsEditing)
+        {
+            if (e.Key == Key.Escape) { vm.CancelEditCommand.Execute(null); e.Handled = true; }
+            return;
+        }
         if (e.Source is TextBox)
         {
             if (e.Key == Key.Escape) { vm.SearchText = ""; Focus(); e.Handled = true; }

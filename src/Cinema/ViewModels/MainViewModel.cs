@@ -18,6 +18,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public static string[] SortModes { get; } = { "Name", "Recently modified", "Recently played", "Longest", "Largest" };
 
     public ObservableCollection<FolderViewModel> Folders { get; } = new();
+    public ObservableCollection<FolderViewModel> Tags { get; } = new();
     public PlayerViewModel Player { get; }
 
     /// <summary>Set by the view: opens a native folder picker.</summary>
@@ -25,6 +26,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     [ObservableProperty] private ObservableCollection<VideoItemViewModel> _videos = new();
     [ObservableProperty] private FolderViewModel? _selectedFolder;
+    [ObservableProperty] private FolderViewModel? _selectedTag;
+    [ObservableProperty] private EditViewModel? _editor;
+    public bool IsEditing => Editor is not null;
+    public bool HasTags => Tags.Count > 0;
     [ObservableProperty] private string _searchText = "";
     [ObservableProperty] private int _sortIndex;
     [ObservableProperty] private bool _isScanning;
@@ -42,9 +47,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public bool IsScanIndeterminate => IsScanning && ScanProgress <= 0;
     partial void OnScanProgressChanged(double value) => OnPropertyChanged(nameof(IsScanIndeterminate));
 
-    public bool HasNoFolders => Folders.Count <= 1;
+    public bool HasNoFolders => _settings.Current.Folders.Count == 0;
     public bool HasNoResults => !HasNoFolders && Videos.Count == 0 && !IsScanning;
-    public string HeaderTitle => SelectedFolder?.Name ?? "All videos";
+    private FolderViewModel? ActiveNav => SelectedTag ?? SelectedFolder;
+    public string HeaderTitle => ActiveNav is { Kind: NavKind.Tag } t ? "#" + t.Name : ActiveNav?.Name ?? "All videos";
     public string HeaderCount => Videos.Count == 1 ? "1 video" : $"{Videos.Count:N0} videos";
 
     public MainViewModel(SettingsStore settings, LibraryService library)
@@ -75,9 +81,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private void RebuildFolders(string? select = null)
     {
         Folders.Clear();
-        Folders.Add(new FolderViewModel(null));
+        Folders.Add(new FolderViewModel(NavKind.All));
+        Folders.Add(new FolderViewModel(NavKind.Favorites));
         foreach (var f in _settings.Current.Folders) Folders.Add(new FolderViewModel(f));
-        SelectedFolder = Folders.FirstOrDefault(f => f.Path == select) ?? Folders[0];
+        SelectedFolder = (select is null ? null : Folders.FirstOrDefault(f => f.Path == select)) ?? Folders[0];
         _library.Watch(_settings.Current.Folders);
         OnPropertyChanged(nameof(HasNoFolders));
         UpdateCounts();
@@ -163,7 +170,29 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     }
 
     // ---------- filtering / sorting ----------
-    partial void OnSelectedFolderChanged(FolderViewModel? value) { RefreshView(); OnPropertyChanged(nameof(HeaderTitle)); }
+    // The sidebar is two lists (library + tags) that behave as one selection.
+    private bool _rebuildingTags;
+
+    partial void OnSelectedFolderChanged(FolderViewModel? value)
+    {
+        if (_rebuildingTags) return;
+        if (value is not null) SelectedTag = null;
+        if (value is null && SelectedTag is null) return; // transient: the other list is about to take over
+        RefreshView();
+        OnPropertyChanged(nameof(HeaderTitle));
+    }
+
+    partial void OnSelectedTagChanged(FolderViewModel? value)
+    {
+        if (_rebuildingTags) return;
+        if (value is not null) SelectedFolder = null;
+        else if (SelectedFolder is null && Folders.Count > 0) { SelectedFolder = Folders[0]; return; }
+        if (value is null) return;
+        RefreshView();
+        OnPropertyChanged(nameof(HeaderTitle));
+    }
+
+    partial void OnEditorChanged(EditViewModel? value) => OnPropertyChanged(nameof(IsEditing));
     partial void OnSearchTextChanged(string value) => RefreshView();
     partial void OnSortIndexChanged(int value)
     {
@@ -180,12 +209,16 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private void RefreshView()
     {
         IEnumerable<VideoItemViewModel> q = _items.Values;
-        if (SelectedFolder is { IsAll: false } folder) q = q.Where(v => folder.Contains(v.Entry.Path));
+        if (ActiveNav is { IsAll: false } nav) q = q.Where(nav.Matches);
         var search = SearchText.Trim();
         if (search.Length > 0)
         {
             var terms = search.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            q = q.Where(v => terms.All(t => v.Entry.Path.Contains(t, StringComparison.OrdinalIgnoreCase)));
+            // A term matches the path or a tag; "#clutch" matches tags only.
+            q = q.Where(v => terms.All(t => t.StartsWith('#')
+                ? t.Length > 1 && v.Entry.Tags.Any(tag => tag.Contains(t[1..], StringComparison.OrdinalIgnoreCase))
+                : v.Entry.Path.Contains(t, StringComparison.OrdinalIgnoreCase) ||
+                  v.Entry.Tags.Any(tag => tag.Contains(t, StringComparison.OrdinalIgnoreCase))));
         }
         q = SortIndex switch
         {
@@ -204,7 +237,96 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private void UpdateCounts()
     {
         foreach (var f in Folders)
-            f.Count = f.IsAll ? _items.Count : _items.Keys.Count(k => f.Contains(k));
+            f.Count = f.Kind switch
+            {
+                NavKind.All => _items.Count,
+                NavKind.Favorites => _items.Values.Count(v => v.Entry.Favorite),
+                _ => _items.Keys.Count(k => f.Contains(k)),
+            };
+        RebuildTags();
+    }
+
+    /// <summary>Keeps the sidebar tag list in sync with the tags actually in use.</summary>
+    private void RebuildTags()
+    {
+        var counts = _items.Values.SelectMany(v => v.Entry.Tags)
+            .GroupBy(t => t, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(g => g.Key, StringComparer.CurrentCultureIgnoreCase)
+            .Select(g => (Name: g.First(), Count: g.Count())).ToList();
+
+        var same = counts.Count == Tags.Count && counts.Zip(Tags).All(p => p.First.Name == p.Second.Name);
+        if (same)
+        {
+            foreach (var (c, vm) in counts.Zip(Tags)) vm.Count = c.Count;
+            return;
+        }
+        // Clearing the list makes the ListBox null its selection; hold the handlers off while we swap.
+        var selected = SelectedTag?.Name;
+        _rebuildingTags = true;
+        try
+        {
+            Tags.Clear();
+            foreach (var c in counts) Tags.Add(new FolderViewModel(NavKind.Tag, c.Name) { Count = c.Count });
+            SelectedTag = selected is null ? null
+                : Tags.FirstOrDefault(t => string.Equals(t.Name, selected, StringComparison.OrdinalIgnoreCase));
+        }
+        finally { _rebuildingTags = false; }
+        OnPropertyChanged(nameof(HasTags));
+        // The selected tag no longer exists (its last video was untagged): fall back to All videos.
+        if (selected is not null && SelectedTag is null) SelectedFolder = Folders[0];
+    }
+
+    private IEnumerable<string> AllTags => Tags.Select(t => t.Name);
+
+    // ---------- organising ----------
+    [RelayCommand]
+    private void ToggleFavorite(VideoItemViewModel? item)
+    {
+        if (item is null) return;
+        item.Entry.Favorite = !item.Entry.Favorite;
+        item.RefreshAll();
+        _library.SaveCache();
+        if (ActiveNav?.Kind == NavKind.Favorites) RefreshView(); else UpdateCounts();
+    }
+
+    [RelayCommand]
+    private void BeginEdit(VideoItemViewModel? item)
+    {
+        if (item is not null) Editor = new EditViewModel(item, Folders, AllTags);
+    }
+
+    [RelayCommand] private void CancelEdit() => Editor = null;
+
+    [RelayCommand]
+    private void SaveEdit()
+    {
+        if (Editor is not { } ed) return;
+        if (ed.TagInput.Trim().Length > 0) ed.AddTagCommand.Execute(null); // don't lose a half-typed tag
+        var item = ed.Item;
+        var entry = item.Entry;
+        var oldPath = entry.Path;
+        try
+        {
+            // Moving to another library folder puts the file at that folder's top level.
+            var targetDir = ed.Folder is not null && !ReferenceEquals(ed.Folder, ed.OriginalFolder) ? ed.Folder.Path : null;
+            var newPath = _library.Relocate(entry, ed.Name, targetDir);
+            if (!string.Equals(newPath, oldPath, StringComparison.Ordinal))
+            {
+                _items.Remove(oldPath);
+                _items[newPath] = item;
+            }
+        }
+        catch (InvalidOperationException ex)
+        {
+            ed.Error = ex.Message;
+            return;
+        }
+        entry.Tags = ed.Tags.ToList();
+        entry.Favorite = ed.Favorite;
+        _library.SaveCache();
+        item.RefreshAll();
+        Editor = null;
+        RefreshView();
     }
 
     private static bool Under(string file, string folder) => new FolderViewModel(folder).Contains(file);
