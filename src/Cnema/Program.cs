@@ -37,7 +37,10 @@ internal static class Program
         Console.WriteLine($"capture: {(capture is null ? $"no ffmpeg with {CaptureProbe.RequiredInput}" : capture)}");
         if (capture is not null)
         {
-            Console.WriteLine($"encoder: {CaptureProbe.PickEncoderAsync(capture, true).GetAwaiter().GetResult()}");
+            var codecs = CaptureProbe.ListCodecsAsync(capture).GetAwaiter().GetResult();
+            Console.WriteLine($"encoder: {string.Join(", ", codecs.Select(c => $"{c.Codec}={c.Encoder}"))}");
+            if (OperatingSystem.IsMacOS())
+                Console.WriteLine($"sysaudio: {CaptureProbe.SystemAudioHelper ?? "unavailable"}");
             if (OperatingSystem.IsWindows())
                 Console.WriteLine($"ddagrab: {CaptureProbe.HasDdagrabAsync(capture).GetAwaiter().GetResult()}");
         }

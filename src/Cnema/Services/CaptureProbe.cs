@@ -4,6 +4,18 @@ namespace Cnema.Services;
 
 public sealed record CaptureDevices(IReadOnlyList<string> Screens, IReadOnlyList<string> Audio);
 
+/// <summary>A video format the clipping service can record in, and the encoder that does it here.</summary>
+public sealed record CodecOption(string Codec, string Encoder, bool Hardware)
+{
+    public string Label => Codec switch
+    {
+        "hevc" => "HEVC / H.265 · half the size",
+        "av1" => "AV1 · smallest files",
+        _ => Hardware ? "H.264 · plays everywhere" : "H.264 (software) · plays everywhere",
+    };
+    public override string ToString() => Label;
+}
+
 /// <summary>
 /// Answers "what can this machine capture, and with which ffmpeg?". Everything OS-specific about
 /// screen/audio capture discovery lives here; ClipService turns the answers into a command line.
@@ -52,22 +64,58 @@ public static class CaptureProbe
         return has;
     }
 
-    /// <summary>
-    /// Picks the cheapest H.264 encoder that actually works on this machine by running a tiny
-    /// test encode: a hardware encoder can be compiled in but unusable (no such GPU, old driver).
-    /// </summary>
-    public static async Task<string> PickEncoderAsync(string ffmpeg, bool allowHardware)
+    /// <summary>Hardware encoders worth trying per codec, best first. Software AV1/HEVC are left out:
+    /// far too heavy for an always-on buffer next to a game.</summary>
+    private static string[] HardwareCandidates(string codec) => codec switch
     {
-        if (allowHardware)
+        "h264" => OperatingSystem.IsMacOS() ? new[] { "h264_videotoolbox" }
+            : OperatingSystem.IsWindows() ? new[] { "h264_nvenc", "h264_amf", "h264_qsv" } : new[] { "h264_nvenc" },
+        "hevc" => OperatingSystem.IsMacOS() ? new[] { "hevc_videotoolbox" }
+            : OperatingSystem.IsWindows() ? new[] { "hevc_nvenc", "hevc_amf", "hevc_qsv" } : new[] { "hevc_nvenc" },
+        // No Mac (M1 to M4) encodes AV1 in hardware. NVENC on RTX 40+, AMD RDNA3+, Intel Arc.
+        "av1" => OperatingSystem.IsMacOS() ? Array.Empty<string>()
+            : OperatingSystem.IsWindows() ? new[] { "av1_nvenc", "av1_amf", "av1_qsv" } : new[] { "av1_nvenc" },
+        _ => Array.Empty<string>(),
+    };
+
+    /// <summary>
+    /// Every codec this machine can record in, each with the encoder that will be used. Found by a
+    /// tiny test encode, since an encoder can be compiled in but unusable (no such GPU, old driver).
+    /// H.264 is always present: x264 is the fallback.
+    /// </summary>
+    public static async Task<IReadOnlyList<CodecOption>> ListCodecsAsync(string ffmpeg, bool allowHardware = true)
+    {
+        var options = new List<CodecOption>();
+        foreach (var codec in new[] { "h264", "hevc", "av1" })
         {
-            string[] candidates = OperatingSystem.IsMacOS() ? new[] { "h264_videotoolbox" }
-                : OperatingSystem.IsWindows() ? new[] { "h264_nvenc", "h264_amf", "h264_qsv" }
-                : new[] { "h264_nvenc" };
-            foreach (var enc in candidates)
-                if (await EncoderWorksAsync(ffmpeg, enc)) return enc;
+            if (!allowHardware) break;
+            foreach (var enc in HardwareCandidates(codec))
+                if (await EncoderWorksAsync(ffmpeg, enc))
+                {
+                    options.Add(new CodecOption(codec, enc, true));
+                    break;
+                }
         }
-        return "libx264";
+        if (!options.Any(o => o.Codec == "h264")) options.Insert(0, new CodecOption("h264", "libx264", false));
+        return options;
     }
+
+    /// <summary>The encoder for the chosen codec, falling back to H.264 when this machine can't do it.</summary>
+    public static async Task<CodecOption> PickAsync(string ffmpeg, bool allowHardware, string? codec)
+    {
+        var options = await ListCodecsAsync(ffmpeg, allowHardware);
+        return options.FirstOrDefault(o => o.Codec == codec) ?? options.First(o => o.Codec == "h264");
+    }
+
+    public static async Task<string> PickEncoderAsync(string ffmpeg, bool allowHardware) =>
+        (await PickAsync(ffmpeg, allowHardware, "h264")).Encoder;
+
+    // ---------- macOS system audio ----------
+    public const string SystemAudio = "System audio (everything you hear)";
+
+    /// <summary>The ScreenCaptureKit helper bundled with the macOS app, if this Mac can run it.</summary>
+    public static string? SystemAudioHelper =>
+        OperatingSystem.IsMacOSVersionAtLeast(13) ? ToolLocator.Find("cnema-audio") : null;
 
     private static async Task<bool> EncoderWorksAsync(string ffmpeg, string encoder)
     {
@@ -88,7 +136,9 @@ public static class CaptureProbe
             if (OperatingSystem.IsMacOS() && ffmpeg is not null)
             {
                 var r = await RunQuiet(ffmpeg, "-hide_banner", "-f", "avfoundation", "-list_devices", "true", "-i", "");
-                return ParseAvFoundation(r?.StdErr ?? "");
+                var found = ParseAvFoundation(r?.StdErr ?? "");
+                if (SystemAudioHelper is null) return found;
+                return found with { Audio = found.Audio.Prepend(SystemAudio).ToList() };
             }
             if (OperatingSystem.IsWindows() && ffmpeg is not null)
             {

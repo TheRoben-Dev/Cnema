@@ -463,11 +463,19 @@
                     <ComboBox Grid.Column="1" Classes="field" ItemsSource="{x:Static vm:SettingsViewModel.Bitrates}" SelectedItem="{Binding Bitrate}" />
                   </Grid>
                   <Border Classes="sep" />
+                  <Grid Classes="row" ColumnDefinitions="*,260">
+                    <StackPanel Spacing="2">
+                      <TextBlock Text="Format" />
+                      <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="{Binding CodecDetail}" />
+                    </StackPanel>
+                    <ComboBox Grid.Column="1" Classes="field" ItemsSource="{Binding Codecs}" SelectedItem="{Binding Codec}" />
+                  </Grid>
+                  <Border Classes="sep" />
                   <Grid Classes="row" ColumnDefinitions="*,Auto">
                     <StackPanel Spacing="2">
                       <TextBlock Text="Use the graphics card to encode" />
                       <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap"
-                                 Text="Much lighter on the CPU while gaming. Falls back to software if unavailable." />
+                                 Text="Much lighter on the CPU while gaming. Off records H.264 in software." />
                     </StackPanel>
                     <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding HardwareEncoder}" />
                   </Grid>

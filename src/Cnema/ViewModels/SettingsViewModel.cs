@@ -33,6 +33,7 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     public ObservableCollection<string> AudioDevices { get; } = new() { NoAudio };
     public ObservableCollection<string> Screens { get; } = new();
+    public ObservableCollection<CodecOption> Codecs { get; } = new();
 
     /// <summary>Set by the view: opens a native folder picker.</summary>
     public Func<Task<string?>>? PickFolder { get; set; }
@@ -46,6 +47,11 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(Footprint))] private Choice _bitrate;
     [ObservableProperty] private Choice _audioBitrate;
     [ObservableProperty] private bool _hardwareEncoder;
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(CodecDetail))] private CodecOption? _codec;
+    private string _codecWanted = "h264";
+    public string CodecDetail => Codec is null ? "Checking what this computer can encode…"
+        : Codec.Hardware ? $"Encoded on the graphics chip ({Codec.Encoder})." : "Encoded on the CPU (x264).";
+    partial void OnHardwareEncoderChanged(bool value) => _ = LoadCodecsAsync();
     [ObservableProperty] private int _screenIndex;
     [ObservableProperty] private string _audio1 = NoAudio;
     [ObservableProperty] private string _audio2 = NoAudio;
@@ -68,7 +74,9 @@ public sealed partial class SettingsViewModel : ObservableObject
         : "Keep running in the system tray when the window is closed";
 
     public string AudioHint => OperatingSystem.IsMacOS()
-        ? "macOS has no built-in way to record what the speakers play. Microphones work as they are; for game sound, install a loopback device such as BlackHole and pick it here."
+        ? CaptureProbe.SystemAudioHelper is not null
+            ? "\"System audio\" records everything you hear (games included) and is covered by the Screen Recording permission. Pick your microphone as the second device to add your voice."
+            : "System audio needs macOS 13 or newer. Microphones work as they are; for game sound, install a loopback device such as BlackHole and pick it here."
         : OperatingSystem.IsWindows()
             ? "Microphones work as they are. For game sound, enable \"Stereo Mix\" in Windows sound settings (or install a loopback device) and pick it here."
             : "Sources ending in \".monitor\" record what the speakers play.";
@@ -90,6 +98,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         _bitrate = Nearest(Bitrates, c.BitrateMbps);
         _audioBitrate = Nearest(AudioBitrates, c.AudioBitrateKbps);
         _hardwareEncoder = c.HardwareEncoder;
+        _codecWanted = c.Codec;
         _screenIndex = Math.Max(0, c.Screen);
         _notify = c.Notify;
         _hotkeyCtrl = c.HotkeyCtrl;
@@ -112,6 +121,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     /// <summary>Asks ffmpeg / the sound server which devices exist. Slow-ish, so done after opening.</summary>
     public async Task LoadDevicesAsync()
     {
+        _ = LoadCodecsAsync();
         var devices = await CaptureProbe.ListDevicesAsync();
         var (a1, a2) = (Audio1, Audio2);
         foreach (var name in devices.Audio)
@@ -124,6 +134,18 @@ public sealed partial class SettingsViewModel : ObservableObject
         foreach (var s in devices.Screens) Screens.Add(s);
         ScreenIndex = Math.Clamp(screen, 0, Math.Max(0, Screens.Count - 1));
         HasSeveralScreens = Screens.Count > 1;
+    }
+
+    private async Task LoadCodecsAsync()
+    {
+        if (Codec is not null) _codecWanted = Codec.Codec;
+        var ffmpeg = await CaptureProbe.FindCaptureFfmpegAsync();
+        var options = ffmpeg is null
+            ? new[] { new CodecOption("h264", "libx264", false) }
+            : await CaptureProbe.ListCodecsAsync(ffmpeg, HardwareEncoder);
+        Codecs.Clear();
+        foreach (var o in options) Codecs.Add(o);
+        Codec = Codecs.FirstOrDefault(o => o.Codec == _codecWanted) ?? Codecs.FirstOrDefault();
     }
 
     [RelayCommand]
@@ -148,6 +170,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         c.BitrateMbps = Bitrate.Value;
         c.AudioBitrateKbps = AudioBitrate.Value;
         c.HardwareEncoder = HardwareEncoder;
+        c.Codec = Codec?.Codec ?? _codecWanted;
         c.Screen = Math.Max(0, ScreenIndex);
         c.Audio1 = Audio1 == NoAudio ? null : Audio1;
         c.Audio2 = Audio2 == NoAudio || Audio2 == Audio1 ? null : Audio2;
