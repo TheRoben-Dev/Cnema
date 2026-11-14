@@ -204,9 +204,6 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private bool _sound;
     [ObservableProperty] private bool _tagWithGame;
     [ObservableProperty] private bool _checkForUpdates;
-    [ObservableProperty] private bool _discordStatus;
-    [ObservableProperty] private bool _discordShowNames;
-    public bool CanShowDiscord => DiscordPresence.IsAvailable;
     [ObservableProperty] private bool _autoUpdate;
     public IReadOnlyList<ColorScheme> ColorSchemes => ThemeService.Schemes;
     [ObservableProperty] private ColorScheme _colorScheme = ThemeService.Current;
@@ -330,8 +327,6 @@ public sealed partial class SettingsViewModel : ObservableObject
         _sound = c.Sound;
         _tagWithGame = c.TagWithGame;
         _checkForUpdates = settings.CheckForUpdates;
-        _discordStatus = settings.DiscordStatus;
-        _discordShowNames = settings.DiscordShowNames;
         _autoUpdate = settings.AutoUpdate;
         _colorScheme = ThemeService.Find(settings.ColorScheme);
         var f = settings.Features;
@@ -477,8 +472,6 @@ public sealed partial class SettingsViewModel : ObservableObject
         c.Sound = Sound;
         c.TagWithGame = TagWithGame;
         settings.CheckForUpdates = CheckForUpdates;
-        settings.DiscordStatus = DiscordStatus;
-        settings.DiscordShowNames = DiscordShowNames;
         settings.AutoUpdate = AutoUpdate;
         settings.ColorScheme = ColorScheme.Id;
         settings.Features = new FeatureSettings

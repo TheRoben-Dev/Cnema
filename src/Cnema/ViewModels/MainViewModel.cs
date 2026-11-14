@@ -530,7 +530,6 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
         _library.FoldersChanged += () => Dispatcher.UIThread.Post(() => _ = RescanAsync());
         RebuildFolders();
-        InitPresence();
     }
 
     /// <summary>Show the cached library instantly, then rescan in the background.</summary>
@@ -1058,7 +1057,6 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(IsControllerMode));
         ControllerModeChanged?.Invoke();
         RaiseFeatures();
-        UpdatePresence();
         await ApplyClipSettingsAsync();
         await RunStorageCleanupAsync();
     }
@@ -1110,7 +1108,6 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _hotkey.Dispose();
         RegisterExtraHotkeys(null);
         Clips.Dispose();
-        _discord?.Dispose();
         _scanCts?.Cancel();
         Player.Dispose();
         _library.SaveCache();

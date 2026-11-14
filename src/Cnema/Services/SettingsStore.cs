@@ -32,10 +32,6 @@ public sealed class AppSettings
     public AccessibilitySettings Accessibility { get; set; } = new();
     /// <summary>Keyboard shortcuts changed from their defaults: action id to gesture, "" for none.</summary>
     public Dictionary<string, string> Shortcuts { get; set; } = new();
-    /// <summary>Show what you're doing in Cnema on your Discord profile.</summary>
-    public bool DiscordStatus { get; set; }
-    /// <summary>Include the video's name in the Discord status.</summary>
-    public bool DiscordShowNames { get; set; }
     /// <summary>The editor's sound tools, watermark and intro / outro.</summary>
     public EffectSettings Effects { get; set; } = new();
 }
