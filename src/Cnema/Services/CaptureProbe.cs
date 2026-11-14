@@ -21,8 +21,8 @@ public static class CaptureProbe
         OperatingSystem.IsMacOS() ? "avfoundation" : OperatingSystem.IsWindows() ? "gdigrab" : "x11grab";
 
     /// <summary>
-    /// First ffmpeg (bundled, then system) that can capture the screen here. The static Linux build
-    /// that ships with the app has no x11grab, so a distro ffmpeg is picked up when present.
+    /// First ffmpeg (bundled, then system) that can capture the screen here. Checked rather than
+    /// assumed, because a source run may find an ffmpeg built without the capture device.
     /// </summary>
     public static async Task<string?> FindCaptureFfmpegAsync()
     {

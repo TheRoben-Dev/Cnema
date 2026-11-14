@@ -82,7 +82,7 @@ Platform notes:
 |---|---|---|
 | macOS | Needs the Screen Recording permission (asked on first use). | Microphones work. System sound needs a loopback device such as BlackHole. |
 | Windows | Desktop Duplication (`ddagrab`), `gdigrab` as fallback. | DirectShow devices. System sound needs "Stereo Mix" or a loopback device. |
-| Linux | X11 only, and needs the distro's ffmpeg (the bundled static build has no `x11grab`). | PulseAudio / PipeWire sources; `.monitor` sources record system sound. |
+| Linux | X11 sessions only (`x11grab`); Wayland is not supported yet. | PulseAudio / PipeWire sources; `.monitor` sources record system sound. |
 
 ### Shortcuts (player)
 
