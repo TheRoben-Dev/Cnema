@@ -17,6 +17,8 @@ public sealed class VideoEntry
     public DateTime? LastPlayedUtc { get; set; }
     public List<string> Tags { get; set; } = new();
     public bool Favorite { get; set; }
+    /// <summary>Moments marked with the hotkey during a session recording, in ms from the start.</summary>
+    public List<long> Bookmarks { get; set; } = new();
 
     [System.Text.Json.Serialization.JsonIgnore]
     public string FileName => System.IO.Path.GetFileName(Path);
@@ -28,6 +30,7 @@ public sealed class VideoEntry
         LastPlayedUtc = other.LastPlayedUtc;
         Tags = other.Tags.ToList();
         Favorite = other.Favorite;
+        Bookmarks = other.Bookmarks.ToList();
     }
 }
 

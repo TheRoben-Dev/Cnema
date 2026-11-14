@@ -184,9 +184,122 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public bool HasClipDetail => ClipDetail.Length > 0;
     /// <summary>Close-to-tray applies while clipping is on, or when asked for explicitly.</summary>
     public bool StaysInBackground => _settings.Current.Clip.Enabled || _settings.Current.KeepInBackground;
-    public string SaveClipLabel => $"Save last {LengthText(_settings.Current.Clip.Seconds)}";
+    /// <summary>Clip settings with the active game's profile applied.</summary>
+    private ClipSettings EffectiveClip => _settings.Current.Clip.For(Clips.ActiveGame);
+    public string SaveClipLabel => IsSession ? "Add bookmark" : $"Save last {LengthText(EffectiveClip.Seconds)}";
+
+    // ---------- session recording ----------
+    public bool IsSession => Clips.IsSession;
+    public bool CanToggleSession => IsClipRecording || IsSession;
+    public string SessionLabel => IsSession
+        ? $"Stop session · {Controls.TrimTimeline.FormatTime(Clips.SessionElapsed.TotalMilliseconds)}"
+        : "Record session";
+    private readonly Dictionary<string, IReadOnlyList<long>> _pendingBookmarks = new(StringComparer.OrdinalIgnoreCase);
+    private DispatcherTimer? _sessionTimer;
+    private bool _savingSession;
+
+    [RelayCommand(CanExecute = nameof(CanToggleSession))]
+    private async Task ToggleSessionAsync()
+    {
+        if (_savingSession) return;
+        if (!IsSession)
+        {
+            var game = _settings.Current.Clip.TagWithGame ? PlatformShell.FrontmostAppName() : null;
+            if (Clips.StartSession(game))
+                ShowToast($"Session recording started. {_settings.Current.Clip.HotkeyText} adds a bookmark.");
+            return;
+        }
+        _savingSession = true;
+        ShowToast("Saving the session…");
+        try
+        {
+            if (await Clips.StopSessionAsync() is null) ShowToast("The session could not be saved.");
+        }
+        finally
+        {
+            _savingSession = false;
+        }
+    }
+
+    private void OnSessionSaved(string path, IReadOnlyList<long> bookmarks)
+    {
+        _pendingBookmarks[path] = bookmarks;
+        var name = Path.GetFileNameWithoutExtension(path);
+        var tag = name.EndsWith(" session", StringComparison.Ordinal) ? null : SessionGame(name);
+        if (tag is not null) _pendingTags[path] = tag;
+        if (_settings.Current.Clip.Sound) PlatformShell.PlayConfirmSound();
+        var marks = bookmarks.Count == 0 ? "" : $", {bookmarks.Count} bookmark{(bookmarks.Count == 1 ? "" : "s")}";
+        ShowToast($"Session saved{marks}: {name}");
+        if (_settings.Current.Clip.Notify) PlatformShell.Notify("Session saved", Path.GetFileName(path));
+        _ = RescanAsync();
+    }
+
+    /// <summary>"Warframe session 2026-11-14 21-03-10" gives "warframe"; a plain "Session ..." gives null.</summary>
+    private static string? SessionGame(string fileName)
+    {
+        var i = fileName.IndexOf(" session ", StringComparison.Ordinal);
+        return i > 0 ? fileName[..i].ToLowerInvariant() : null;
+    }
+
+    // ---------- per-game profiles ----------
+    private DispatcherTimer? _profileTimer;
+    private DateTime _lastProfileMatch = DateTime.MinValue;
+    private bool _checkingProfile;
+
+    /// <summary>Watches which app is in front while profiles exist, and switches the capture to its profile.</summary>
+    private void UpdateProfileWatch()
+    {
+        var wanted = _settings.Current.Clip.Enabled && _settings.Current.Clip.Profiles.Any(p => p.Game.Trim().Length > 0);
+        if (!wanted)
+        {
+            _profileTimer?.Stop();
+            Clips.ActiveGame = null;
+            return;
+        }
+        if (_profileTimer is null)
+        {
+            _profileTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(4) };
+            _profileTimer.Tick += async (_, _) => await CheckProfileAsync();
+        }
+        _profileTimer.Start();
+    }
+
+    private async Task CheckProfileAsync()
+    {
+        if (_checkingProfile || Clips.IsSession) return; // never restart capture in the middle of a session
+        _checkingProfile = true;
+        try
+        {
+            var clip = _settings.Current.Clip;
+            var front = await Task.Run(PlatformShell.FrontmostAppName);
+            var match = clip.ProfileFor(front);
+            var current = clip.ProfileFor(Clips.ActiveGame);
+            if (match is not null) _lastProfileMatch = DateTime.UtcNow;
+            // Sticky: alt-tabbing to a browser or to Cnema keeps the game's profile, because switching
+            // bitrate or format restarts the capture and empties the replay buffer.
+            if (match is null && (current is null || DateTime.UtcNow - _lastProfileMatch < TimeSpan.FromMinutes(2))) return;
+            if (ReferenceEquals(match, current)) return;
+
+            var before = clip.For(Clips.ActiveGame);
+            Clips.ActiveGame = match is null ? null : front;
+            var after = clip.For(Clips.ActiveGame);
+            Log.Info(match is null ? "Game profile off" : $"Game profile on: {match.Game}");
+            if (before.BitrateMbps != after.BitrateMbps || before.Codec != after.Codec) await Clips.ApplyAsync();
+            RaiseClipState();
+        }
+        catch (Exception ex)
+        {
+            Log.Warn($"Profile check failed: {ex.Message}");
+        }
+        finally
+        {
+            _checkingProfile = false;
+        }
+    }
+
     public string ClipTitle => Clips.State switch
     {
+        ClipState.Recording when IsSession => "Recording session",
         ClipState.Recording => "Clipping is on",
         ClipState.Starting => "Starting capture…",
         ClipState.Error => "Clipping can't run",
@@ -194,9 +307,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     };
     public string ClipDetail => Clips.State switch
     {
+        ClipState.Recording when IsSession =>
+            $"Recording a session. {_settings.Current.Clip.HotkeyText} adds a bookmark ({Clips.BookmarkCount} so far).",
         ClipState.Recording => _hotkeyRefused
             ? "The hotkey is taken by another app. Pick a different one in settings."
-            : $"{_settings.Current.Clip.HotkeyText} saves the last {LengthText(_settings.Current.Clip.Seconds)}",
+            : $"{_settings.Current.Clip.HotkeyText} saves the last {LengthText(EffectiveClip.Seconds)}",
         ClipState.Error => Clips.Error ?? "",
         ClipState.Starting => "",
         _ => "Record in the background and save moments after they happen.",
@@ -236,6 +351,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _hotkey = new GlobalHotkey(() => Dispatcher.UIThread.Post(() => SaveClipCommand.Execute(null)));
         Clips.Changed += () => Dispatcher.UIThread.Post(RaiseClipState);
         Clips.ClipSaved += path => Dispatcher.UIThread.Post(() => OnClipSaved(path));
+        Clips.SessionSaved += (path, marks) => Dispatcher.UIThread.Post(() => OnSessionSaved(path, marks));
         Player = new PlayerViewModel(settings);
         Player.Exported += path => { _ = RescanAsync(); };
         _sortIndex = Math.Clamp(settings.Current.SortIndex, 0, SortModes.Length - 1);
@@ -348,6 +464,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     {
         if (_items.TryGetValue(e.Path, out var vm)) { if (!ReferenceEquals(vm.Entry, e)) vm.Update(e); }
         else _items[e.Path] = new VideoItemViewModel(e);
+        if (_pendingBookmarks.Remove(e.Path, out var marks))
+        {
+            e.Bookmarks = marks.ToList();
+            _library.SaveCache();
+        }
         if (_pendingTags.Remove(e.Path, out var game))
         {
             // A clip just saved from this game: tag it so the sidebar groups clips per game.
@@ -586,10 +707,18 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                  {
                      nameof(IsClipEnabled), nameof(IsClipRecording), nameof(IsClipStarting), nameof(IsClipError),
                      nameof(ClipTitle), nameof(ClipDetail), nameof(HasClipDetail), nameof(SaveClipLabel),
-                     nameof(StaysInBackground),
+                     nameof(StaysInBackground), nameof(IsSession), nameof(SessionLabel), nameof(CanToggleSession),
                  })
             OnPropertyChanged(name);
         SaveClipCommand.NotifyCanExecuteChanged();
+        ToggleSessionCommand.NotifyCanExecuteChanged();
+        if (IsSession && _sessionTimer is null)
+        {
+            _sessionTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+            _sessionTimer.Tick += (_, _) => { OnPropertyChanged(nameof(SessionLabel)); BackgroundStateChanged?.Invoke(); };
+        }
+        if (IsSession) _sessionTimer!.Start(); else _sessionTimer?.Stop();
+        UpdateProfileWatch();
         BackgroundStateChanged?.Invoke();
     }
 
@@ -598,6 +727,13 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     [RelayCommand(CanExecute = nameof(IsClipRecording))]
     private async Task SaveClipAsync()
     {
+        if (Clips.AddBookmark() is { } at)
+        {
+            // During a session the hotkey marks the moment instead of cutting a separate clip.
+            if (_settings.Current.Clip.Sound) PlatformShell.PlayConfirmSound();
+            ShowToast($"Bookmark added at {Controls.TrimTimeline.FormatTime(at.TotalMilliseconds)}");
+            return;
+        }
         // Ask now, while the game is still in front; saving takes a moment.
         var game = _settings.Current.Clip.TagWithGame ? PlatformShell.FrontmostAppName() : null;
         var path = await Clips.SaveClipAsync(game);
@@ -615,7 +751,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         if (_settings.Current.Clip.Sound) PlatformShell.PlayConfirmSound();
         ShowToast("Clip saved: " + Path.GetFileNameWithoutExtension(path));
         if (_settings.Current.Clip.Notify)
-            PlatformShell.Notify("Clip saved", $"Last {LengthText(_settings.Current.Clip.Seconds)} · {Path.GetFileName(path)}");
+            PlatformShell.Notify("Clip saved", $"Last {LengthText(EffectiveClip.Seconds)} · {Path.GetFileName(path)}");
         _ = RescanAsync();
         _ = CleanupAfterSaveAsync();
     }

@@ -124,7 +124,7 @@ public partial class MainWindow : Window
         foreach (var list in new[] { FolderList, TagList })
             for (var i = 0; list.IsVisible && i < list.ItemCount; i++)
                 if (list.ContainerFromIndex(i) is { } item) stops.Add(item);
-        stops.AddRange(new Control[] { ClipToggle, SaveClipButton, AddFolderButton, SettingsButton }
+        stops.AddRange(new Control[] { ClipToggle, SaveClipButton, SessionButton, AddFolderButton, SettingsButton }
             .Where(c => c.IsEffectivelyVisible && c.IsEffectivelyEnabled));
         return stops;
     }
@@ -585,6 +585,9 @@ public partial class MainWindow : Window
             case Key.I: p.SetInCommand.Execute(null); break;
             case Key.O: p.SetOutCommand.Execute(null); break;
             case Key.X: p.ClearRangeCommand.Execute(null); break;
+            case Key.A: p.AddSegmentCommand.Execute(null); break;
+            case Key.N when shift: p.PreviousMarkerCommand.Execute(null); break;
+            case Key.N: p.NextMarkerCommand.Execute(null); break;
             case Key.P: p.PreviewRangeCommand.Execute(null); break;
             case Key.E: p.ExportCommand.Execute(null); break;
             case Key.F: ToggleFullscreen(); break;

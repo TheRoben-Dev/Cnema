@@ -18,6 +18,15 @@ public sealed class AppSettings
     public bool ControllerFullscreen { get; set; } = true;
 }
 
+/// <summary>Clip length, bitrate and format for one game; 0 or null means "same as the general setting".</summary>
+public sealed class ClipProfile
+{
+    public string Game { get; set; } = "";
+    public int Seconds { get; set; }
+    public int BitrateMbps { get; set; }
+    public string? Codec { get; set; }
+}
+
 /// <summary>Settings for the background clipping service (see ClipService).</summary>
 public sealed class ClipSettings
 {
@@ -42,6 +51,28 @@ public sealed class ClipSettings
     public bool Sound { get; set; } = true;
     /// <summary>Name and tag each clip after the app that was in front when it was saved.</summary>
     public bool TagWithGame { get; set; } = true;
+    /// <summary>With two audio devices: keep them as two tracks instead of mixing them into one.</summary>
+    public bool SeparateTracks { get; set; }
+    /// <summary>Per-game overrides, matched against the app in front.</summary>
+    public List<ClipProfile> Profiles { get; set; } = new();
+
+    /// <summary>These settings with the profile for <paramref name="game"/> applied, if there is one.</summary>
+    public ClipSettings For(string? game)
+    {
+        var p = ProfileFor(game);
+        if (p is null) return this;
+        var c = (ClipSettings)MemberwiseClone();
+        if (p.Seconds > 0) c.Seconds = p.Seconds;
+        if (p.BitrateMbps > 0) c.BitrateMbps = p.BitrateMbps;
+        if (!string.IsNullOrEmpty(p.Codec)) c.Codec = p.Codec!;
+        return c;
+    }
+
+    public ClipProfile? ProfileFor(string? game) => string.IsNullOrWhiteSpace(game)
+        ? null
+        : Profiles.FirstOrDefault(p => p.Game.Trim().Length > 0 &&
+                                       game.Contains(p.Game.Trim(), StringComparison.OrdinalIgnoreCase));
+
     /// <summary>Storage limits for the clips folder; 0 = no limit. Favourites are always kept.</summary>
     public int KeepDays { get; set; }
     public int MaxFolderGb { get; set; }

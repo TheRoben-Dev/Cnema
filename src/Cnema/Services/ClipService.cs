@@ -38,7 +38,116 @@ public sealed class ClipService : IDisposable
 
     public ClipService(SettingsStore settings) => _settings = settings;
 
-    private ClipSettings Cfg => _settings.Current.Clip;
+    /// <summary>The app in front, when a per-game profile exists for it; set by the view model.</summary>
+    public string? ActiveGame { get; set; }
+    private ClipSettings Cfg => _settings.Current.Clip.For(ActiveGame);
+
+    // ---------- session recording ----------
+    // A session is the same rolling buffer with pruning switched off: every segment since the start
+    // is kept and joined into one file at the end, so there is still only one encoder running.
+    private DateTime? _sessionStart;
+    private string? _sessionFirst;
+    private string? _sessionLabel;
+    private readonly List<long> _bookmarks = new();
+
+    public bool IsSession => _sessionStart is not null;
+    public TimeSpan SessionElapsed => _sessionStart is { } s ? DateTime.UtcNow - s : TimeSpan.Zero;
+    public int BookmarkCount { get { lock (_bookmarks) return _bookmarks.Count; } }
+    /// <summary>The finished session file and its bookmarks (ms from the start of the file).</summary>
+    public event Action<string, IReadOnlyList<long>>? SessionSaved;
+
+    public bool StartSession(string? label)
+    {
+        if (State != ClipState.Recording || IsSession) return false;
+        var segments = Segments();
+        if (segments.Count == 0) return false;
+        _sessionFirst = Path.GetFileName(segments[^1]);
+        // The file starts with the segment that is being written now, a moment before this call.
+        DateTime begun;
+        try { begun = File.GetCreationTimeUtc(segments[^1]); } catch { begun = DateTime.UtcNow; }
+        var now = DateTime.UtcNow;
+        _sessionStart = begun > now.AddSeconds(-SegmentSeconds * 2) && begun <= now ? begun : now;
+        _sessionLabel = label;
+        lock (_bookmarks) _bookmarks.Clear();
+        Log.Info("Session recording started");
+        Changed?.Invoke();
+        return true;
+    }
+
+    /// <summary>Marks "now" in the running session. Returns the position, or null without a session.</summary>
+    public TimeSpan? AddBookmark()
+    {
+        if (_sessionStart is not { } start) return null;
+        var at = DateTime.UtcNow - start;
+        lock (_bookmarks) _bookmarks.Add((long)at.TotalMilliseconds);
+        Changed?.Invoke();
+        return at;
+    }
+
+    public async Task<string?> StopSessionAsync()
+    {
+        await _gate.WaitAsync();
+        try { return await FinishSessionCoreAsync(); }
+        finally { _gate.Release(); }
+    }
+
+    /// <summary>Joins the session's segments into one file. The caller holds the gate.</summary>
+    private async Task<string?> FinishSessionCoreAsync()
+    {
+        if (_sessionStart is not { } started || _sessionFirst is not { } first) return null;
+        List<long> marks;
+        lock (_bookmarks) { marks = _bookmarks.ToList(); _bookmarks.Clear(); }
+        var label = _sessionLabel;
+        _sessionStart = null;
+        _sessionFirst = null;
+        _sessionLabel = null;
+        string? output = null;
+        try
+        {
+            var ffmpeg = await CaptureProbe.FindCaptureFfmpegAsync() ?? ToolLocator.Ffmpeg;
+            var segments = Segments().Where(s => string.CompareOrdinal(Path.GetFileName(s), first) >= 0).ToList();
+            if (ffmpeg is null || segments.Count == 0) return null;
+
+            var folder = Cfg.ResolvedFolder;
+            Directory.CreateDirectory(folder);
+            var name = SafeName(label is null ? "Session" : label + " session");
+            output = Path.Combine(folder, $"{name} {started.ToLocalTime():yyyy-MM-dd HH-mm-ss}.mp4");
+            var list = Path.Combine(AppPaths.ClipBufferDir, "session.txt");
+            await File.WriteAllLinesAsync(list, segments.Select(s => $"file '{s.Replace("'", "'\\''")}'"));
+            // Same disk as the destination (a session can be many GB), under a name the library ignores.
+            var partial = output + ".part";
+            var args = new List<string> { "-hide_banner", "-loglevel", "error", "-y", "-f", "concat", "-safe", "0",
+                                          "-i", list, "-map", "0", "-c", "copy", "-movflags", "+faststart" };
+            if (Codec?.Codec == "hevc") args.AddRange(new[] { "-tag:v", "hvc1" });
+            args.AddRange(new[] { "-f", "mp4", partial });
+            var r = await ProcessRunner.RunAsync(ffmpeg, args);
+            if (r.ExitCode != 0 || !File.Exists(partial) || new FileInfo(partial).Length == 0)
+            {
+                try { File.Delete(partial); } catch { /* nothing written */ }
+                Log.Warn($"Saving the session failed: {r.StdErr}");
+                return null;
+            }
+            File.Move(partial, output, overwrite: false);
+            Log.Info($"Session saved: {segments.Count * SegmentSeconds} s, {marks.Count} bookmark(s)");
+            SessionSaved?.Invoke(output, marks);
+            return output;
+        }
+        catch (Exception ex)
+        {
+            Log.Warn($"Saving the session failed: {ex.Message}");
+            return null;
+        }
+        finally
+        {
+            Changed?.Invoke();
+        }
+    }
+
+    private static string SafeName(string text)
+    {
+        var name = string.Join("_", text.Split(Path.GetInvalidFileNameChars().Concat(new[] { '/', '\\', ':' }).ToArray())).Trim();
+        return name.Length == 0 ? "Clip" : name;
+    }
 
     /// <summary>Starts, restarts or stops capture so it matches the current settings.</summary>
     public async Task ApplyAsync()
@@ -46,6 +155,7 @@ public sealed class ClipService : IDisposable
         await _gate.WaitAsync();
         try
         {
+            await FinishSessionCoreAsync(); // a running session is saved before capture restarts
             StopCore();
             _restarts = 0;
             if (Cfg.Enabled) await StartCoreAsync();
@@ -96,6 +206,7 @@ public sealed class ClipService : IDisposable
         Encoder = encoder;
 
         KillStaleCapture();
+        await FinishSessionCoreAsync(); // capture died mid-session: keep what was recorded
         try
         {
             if (Directory.Exists(AppPaths.ClipBufferDir)) Directory.Delete(AppPaths.ClipBufferDir, true);
@@ -164,6 +275,7 @@ public sealed class ClipService : IDisposable
                 ThreadPool.QueueUserWorkItem(_ => FailStuck(generation));
                 return;
             }
+            if (IsSession) return; // a session keeps every segment until it is saved
             var keep = SegmentsFor(Cfg.Seconds) + 2;
             if (!_gate.Wait(0)) return; // a save is reading the buffer right now
             try
@@ -186,6 +298,7 @@ public sealed class ClipService : IDisposable
         {
             if (generation != _generation) return;
             StopCore();
+            await FinishSessionCoreAsync();
             Set(ClipState.Error, "The replay buffer stopped rotating, so capture was stopped to protect your disk.");
         }
         finally
@@ -328,8 +441,7 @@ public sealed class ClipService : IDisposable
 
             var folder = Cfg.ResolvedFolder;
             Directory.CreateDirectory(folder);
-            var prefix = string.Join("_", (label ?? "Clip").Split(Path.GetInvalidFileNameChars().Concat(new[] { '/', '\\', ':' }).ToArray())).Trim();
-            if (prefix.Length == 0) prefix = "Clip";
+            var prefix = SafeName(label ?? "Clip");
             var output = Path.Combine(folder, $"{prefix} {DateTime.Now:yyyy-MM-dd HH-mm-ss}.mp4");
             var list = Path.Combine(AppPaths.ClipBufferDir, "save.txt");
             await File.WriteAllLinesAsync(list, segments.Select(s => $"file '{s.Replace("'", "'\\''")}'"));
@@ -481,7 +593,12 @@ public sealed class ClipService : IDisposable
         if (filters.Count > 0) a.AddRange(new[] { "-vf", string.Join(",", filters) });
 
         // ---- mapping ----
-        if (audio.Count == 2)
+        if (audio.Count == 2 && s.SeparateTracks)
+        {
+            // Two tracks (for example game and microphone) that the editor can mute independently.
+            a.AddRange(new[] { "-map", "0:v", "-map", "1:a", "-map", "2:a" });
+        }
+        else if (audio.Count == 2)
         {
             a.AddRange(new[]
             {
@@ -538,6 +655,11 @@ public sealed class ClipService : IDisposable
 
     public void Dispose()
     {
+        if (IsSession)
+        {
+            // Quitting mid-session: save it rather than throw the recording away.
+            try { Task.Run(StopSessionAsync).Wait(TimeSpan.FromSeconds(30)); } catch { /* shutting down */ }
+        }
         StopCore();
         try
         {

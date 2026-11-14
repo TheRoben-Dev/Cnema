@@ -7,6 +7,22 @@ using LibVLCSharp.Shared;
 
 namespace Cnema.ViewModels;
 
+/// <summary>One part of a multi-segment export, shown as a chip under the timeline.</summary>
+public sealed record SegmentViewModel(double Start, double End)
+{
+    public string Text => $"{TrimTimeline.FormatTime(Start)} – {TrimTimeline.FormatTime(End)}";
+}
+
+/// <summary>One audio track of the open video; unchecked tracks are left out of exports.</summary>
+public sealed partial class AudioTrackViewModel : ObservableObject
+{
+    public int Index { get; }
+    public int VlcId { get; }
+    public string Label { get; }
+    [ObservableProperty] private bool _enabled = true;
+    public AudioTrackViewModel(int index, int vlcId, string label) => (Index, VlcId, Label) = (index, vlcId, label);
+}
+
 public sealed partial class PlayerViewModel : ObservableObject, IDisposable
 {
     private readonly MediaPlayer? _player;
@@ -34,17 +50,125 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
     [ObservableProperty] private bool _loopRange;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasIn), nameof(InText), nameof(HasRange), nameof(RangeText))]
+    [NotifyPropertyChangedFor(nameof(HasIn), nameof(InText), nameof(HasRange), nameof(RangeText), nameof(ExportLabel))]
     private double _inPoint = -1;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasOut), nameof(OutText), nameof(HasRange), nameof(RangeText))]
+    [NotifyPropertyChangedFor(nameof(HasOut), nameof(OutText), nameof(HasRange), nameof(RangeText), nameof(ExportLabel))]
     private double _outPoint = -1;
 
     [ObservableProperty] private bool _preciseExport;
     [ObservableProperty] private bool _isExporting;
     [ObservableProperty] private double _exportProgress;
     [ObservableProperty] private string? _toast;
+
+    // ---------- multi-segment export, audio tracks, markers ----------
+    public System.Collections.ObjectModel.ObservableCollection<SegmentViewModel> Segments { get; } = new();
+    public System.Collections.ObjectModel.ObservableCollection<AudioTrackViewModel> AudioTracks { get; } = new();
+    [ObservableProperty] private IReadOnlyList<TimeRange> _segmentRanges = Array.Empty<TimeRange>();
+    [ObservableProperty] private IReadOnlyList<TimelineMarker> _markers = Array.Empty<TimelineMarker>();
+    public bool HasSegments => Segments.Count > 0;
+    public bool HasAudioTracks => AudioTracks.Count > 1;
+    public bool HasMarkers => Markers.Count > 0;
+    public string ExportLabel => HasSegments ? $"Export {Segments.Count + (HasRange ? 1 : 0)} parts" : "Export clip";
+    private CancellationTokenSource? _highlightCts;
+
+    private void SegmentsChanged()
+    {
+        SegmentRanges = Segments.Select(s => new TimeRange(s.Start, s.End)).ToList();
+        OnPropertyChanged(nameof(HasSegments));
+        OnPropertyChanged(nameof(ExportLabel));
+    }
+
+    /// <summary>Keeps the current in/out selection as one part and clears it for the next.</summary>
+    [RelayCommand]
+    private void AddSegment()
+    {
+        if (!HasRange || EffectiveOut - EffectiveIn < 100)
+        {
+            ShowToast("Set an in and out point first (I / O), then add it as a part.");
+            return;
+        }
+        Segments.Add(new SegmentViewModel(EffectiveIn, EffectiveOut));
+        InPoint = OutPoint = -1;
+        _stopAtOut = false;
+        SegmentsChanged();
+        ShowToast($"Part {Segments.Count} added. Mark the next one, or export.");
+    }
+
+    [RelayCommand]
+    private void RemoveSegment(SegmentViewModel? segment)
+    {
+        if (segment is not null && Segments.Remove(segment)) SegmentsChanged();
+    }
+
+    [RelayCommand]
+    private void JumpToSegment(SegmentViewModel? segment)
+    {
+        if (segment is not null) Seek(segment.Start);
+    }
+
+    /// <summary>Jumps to the next (or previous) bookmark or loud moment.</summary>
+    [RelayCommand]
+    private void NextMarker() => JumpMarker(forward: true);
+    [RelayCommand]
+    private void PreviousMarker() => JumpMarker(forward: false);
+
+    private void JumpMarker(bool forward)
+    {
+        if (Markers.Count == 0) { ShowToast("No markers in this video."); return; }
+        var target = forward
+            ? Markers.Where(m => m.Ms > Position + 500).Select(m => (double?)m.Ms).FirstOrDefault()
+            : Markers.Where(m => m.Ms < Position - 1500).Select(m => (double?)m.Ms).LastOrDefault();
+        if (target is { } ms) Seek(ms);
+    }
+
+    /// <summary>The audio streams to keep in an export; null means "all of them, untouched".</summary>
+    private IReadOnlyList<int>? AudioSelection =>
+        AudioTracks.Count < 2 || AudioTracks.All(t => t.Enabled)
+            ? (AudioTracks.Count >= 2 ? AudioTracks.Select(t => t.Index).ToList() : null)
+            : AudioTracks.Where(t => t.Enabled).Select(t => t.Index).ToList();
+
+    private void LoadAudioTracks()
+    {
+        if (_player is null || AudioTracks.Count > 0) return;
+        var real = _player.AudioTrackDescription.Where(d => d.Id >= 0).ToList();
+        if (real.Count < 2) return;
+        for (var i = 0; i < real.Count; i++)
+        {
+            var track = new AudioTrackViewModel(i, real[i].Id, $"Audio {i + 1}");
+            track.PropertyChanged += (_, _) => ApplyAudioTrack();
+            AudioTracks.Add(track);
+        }
+        OnPropertyChanged(nameof(HasAudioTracks));
+    }
+
+    /// <summary>libVLC plays one track at a time: the first one that is switched on.</summary>
+    private void ApplyAudioTrack()
+    {
+        if (_player is null || AudioTracks.Count < 2) return;
+        var first = AudioTracks.FirstOrDefault(t => t.Enabled);
+        _player.SetAudioTrack(first?.VlcId ?? -1);
+    }
+
+    private async void LoadMarkers(VideoItemViewModel item)
+    {
+        _highlightCts?.Cancel();
+        var cts = _highlightCts = new CancellationTokenSource();
+        var bookmarks = item.Entry.Bookmarks.Select(b => new TimelineMarker(b, true)).ToList();
+        Markers = bookmarks;
+        OnPropertyChanged(nameof(HasMarkers));
+        try
+        {
+            var loud = await HighlightService.DetectAsync(item.Entry.Path, cts.Token);
+            if (cts.IsCancellationRequested || !ReferenceEquals(Current, item)) return;
+            // A loud moment right next to a bookmark adds nothing.
+            var extra = loud.Where(l => !bookmarks.Any(b => Math.Abs(b.Ms - l) < 3000)).Select(l => new TimelineMarker(l, false));
+            Markers = bookmarks.Concat(extra).OrderBy(m => m.Ms).ToList();
+            OnPropertyChanged(nameof(HasMarkers));
+        }
+        catch { /* markers are a nicety */ }
+    }
 
     public PlayerViewModel(SettingsStore settings)
     {
@@ -60,7 +184,7 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
         // event handler can deadlock, so everything is marshalled to the UI thread.
         _player.TimeChanged += (_, e) => Ui(() => OnTime(e.Time));
         _player.LengthChanged += (_, e) => Ui(() => Duration = e.Length);
-        _player.Playing += (_, _) => Ui(() => { IsPlaying = true; ApplyAudio(); });
+        _player.Playing += (_, _) => Ui(() => { IsPlaying = true; ApplyAudio(); LoadAudioTracks(); });
         _player.Paused += (_, _) => Ui(() => IsPlaying = false);
         _player.Stopped += (_, _) => Ui(() => IsPlaying = false);
         _player.EndReached += (_, _) => Ui(() => { IsPlaying = false; Position = Duration; });
@@ -124,6 +248,11 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
         Duration = item.Entry.DurationMs;
         Rate = 1.0;
         _stopAtOut = false;
+        Segments.Clear();
+        SegmentsChanged();
+        AudioTracks.Clear();
+        OnPropertyChanged(nameof(HasAudioTracks));
+        LoadMarkers(item);
 
         using var media = new Media(lib, item.Entry.Path, FromType.FromPath);
         var resume = item.Entry.LastPositionMs;
@@ -245,7 +374,12 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
         if (Current is null || IsExporting) return;
         var start = (long)EffectiveIn;
         var end = (long)EffectiveOut;
-        if (end - start < 100) { ShowToast("Set an in and out point first (I / O)."); return; }
+        // Parts added with "Add part", plus the current selection if there is one, in time order.
+        var parts = Segments.Select(s => ((long)s.Start, (long)s.End)).ToList();
+        if (parts.Count > 0 && HasRange && end - start >= 100) parts.Add((start, end));
+        parts.Sort();
+        if (parts.Count == 1) { (start, end) = parts[0]; parts.Clear(); }
+        if (parts.Count == 0 && end - start < 100) { ShowToast("Set an in and out point first (I / O)."); return; }
         if (ToolLocator.Ffmpeg is null)
         {
             ShowToast(OperatingSystem.IsMacOS() ? "ffmpeg not found. Install with: brew install ffmpeg"
@@ -255,7 +389,9 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
 
         var mode = PreciseExport ? TrimMode.Precise : TrimMode.Lossless;
         var src = Current.Entry.Path;
-        var stamp = $"{TrimTimeline.FormatTime(start)}-{TrimTimeline.FormatTime(end)}".Replace(':', '.');
+        var stamp = parts.Count > 0
+            ? $"{parts.Count} parts"
+            : $"{TrimTimeline.FormatTime(start)}-{TrimTimeline.FormatTime(end)}".Replace(':', '.');
         var suggested = $"{Current.Title} [{stamp}]{TrimService.SuggestedExtension(src, mode)}";
         var dir = Path.GetDirectoryName(src) ?? "";
 
@@ -273,7 +409,10 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
         try
         {
             var progress = new Progress<double>(p => ExportProgress = p * 100);
-            await TrimService.ExportAsync(src, target, start, end, mode, progress, _exportCts.Token);
+            if (parts.Count > 0)
+                await TrimService.ExportSegmentsAsync(src, target, parts, mode, progress, _exportCts.Token, AudioSelection);
+            else
+                await TrimService.ExportAsync(src, target, start, end, mode, progress, _exportCts.Token, AudioSelection);
             ShowToast($"Exported {Path.GetFileName(target)}");
             Exported?.Invoke(target);
         }
@@ -310,7 +449,7 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
         try
         {
             var progress = new Progress<double>(p => ExportProgress = p * 100);
-            await TrimService.ShareAsync(src, target, start, end, preset, progress, _exportCts.Token);
+            await TrimService.ShareAsync(src, target, start, end, preset, progress, _exportCts.Token, AudioSelection);
             var size = VideoItemViewModel.FormatSize(new FileInfo(target).Length);
             var cut = preset == SharePreset.Gif && end - start > TrimService.GifMaxMs ? ", first 20 s" : "";
             ShowToast($"{label} ready: {size}{cut}");

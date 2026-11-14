@@ -19,6 +19,40 @@ public sealed record Choice(string Label, int Value)
     public override string ToString() => Label;
 }
 
+/// <summary>One row of the per-game profile list in Settings.</summary>
+public sealed partial class ProfileRow : ObservableObject
+{
+    public static Choice[] Lengths { get; } =
+        new[] { new Choice("Same length", 0) }.Concat(SettingsViewModel.Lengths).ToArray();
+    public static Choice[] Bitrates { get; } =
+        new[] { new Choice("Same bitrate", 0) }.Concat(SettingsViewModel.Bitrates).ToArray();
+    public static string[] Formats { get; } = { "Same format", "H.264", "HEVC", "AV1" };
+    private static readonly string?[] FormatIds = { null, "h264", "hevc", "av1" };
+
+    [ObservableProperty] private string _game = "";
+    [ObservableProperty] private Choice _length = Lengths[0];
+    [ObservableProperty] private Choice _bitrate = Bitrates[0];
+    [ObservableProperty] private string _format = Formats[0];
+
+    public ProfileRow() { }
+
+    public ProfileRow(ClipProfile p)
+    {
+        _game = p.Game;
+        _length = Lengths.FirstOrDefault(c => c.Value == p.Seconds) ?? Lengths[0];
+        _bitrate = Bitrates.FirstOrDefault(c => c.Value == p.BitrateMbps) ?? Bitrates[0];
+        _format = Formats[Math.Max(0, Array.IndexOf(FormatIds, p.Codec))];
+    }
+
+    public ClipProfile ToProfile() => new()
+    {
+        Game = Game.Trim(),
+        Seconds = Length.Value,
+        BitrateMbps = Bitrate.Value,
+        Codec = FormatIds[Math.Max(0, Array.IndexOf(Formats, Format))],
+    };
+}
+
 /// <summary>Editable copy of the background + clipping settings; nothing changes until Save.</summary>
 public sealed partial class SettingsViewModel : ObservableObject
 {
@@ -52,6 +86,11 @@ public sealed partial class SettingsViewModel : ObservableObject
     public ObservableCollection<string> AudioDevices { get; } = new() { NoAudio };
     public ObservableCollection<string> Screens { get; } = new();
     public ObservableCollection<CodecOption> Codecs { get; } = new();
+    public ObservableCollection<ProfileRow> Profiles { get; } = new();
+    [ObservableProperty] private bool _separateTracks;
+
+    [RelayCommand] private void AddProfile() => Profiles.Add(new ProfileRow());
+    [RelayCommand] private void RemoveProfile(ProfileRow? row) { if (row is not null) Profiles.Remove(row); }
 
     /// <summary>Set by the view: opens a native folder picker.</summary>
     public Func<Task<string?>>? PickFolder { get; set; }
@@ -142,6 +181,8 @@ public sealed partial class SettingsViewModel : ObservableObject
         _hotkeyMeta = c.HotkeyMeta;
         _hotkeyKey = Keys.Contains(c.HotkeyKey) ? c.HotkeyKey : "S";
         _folder = c.ResolvedFolder;
+        _separateTracks = c.SeparateTracks;
+        foreach (var profile in c.Profiles) Profiles.Add(new ProfileRow(profile));
         _keepDays = Nearest(KeepDaysOptions, c.KeepDays);
         _folderCap = Nearest(FolderCaps, c.MaxFolderGb);
         _cleanupTarget = CleanupTargets[c.CleanupArchive ? 1 : 0];
@@ -244,6 +285,8 @@ public sealed partial class SettingsViewModel : ObservableObject
         c.HotkeyKey = HotkeyKey;
         if (UsesArchive && string.Equals(Path.GetFullPath(ArchiveFolder.Trim()), Path.GetFullPath(Folder.Trim()), StringComparison.OrdinalIgnoreCase))
             return "The archive folder has to be a different folder from the clips folder.";
+        c.SeparateTracks = SeparateTracks;
+        c.Profiles = Profiles.Where(p => p.Game.Trim().Length > 0).Select(p => p.ToProfile()).ToList();
         c.KeepDays = KeepDays.Value;
         c.MaxFolderGb = FolderCap.Value;
         c.CleanupArchive = UsesArchive;
