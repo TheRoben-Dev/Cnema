@@ -44,7 +44,9 @@ internal static class Program
             if (OperatingSystem.IsWindows())
                 Console.WriteLine($"ddagrab: {CaptureProbe.HasDdagrabAsync(capture).GetAwaiter().GetResult()}");
         }
-        var ok = vlc is not null && ToolLocator.Ffmpeg is not null && ToolLocator.Ffprobe is not null;
+        var sdl = GamepadService.SelfTest();
+        Console.WriteLine($"gamepad: {sdl}");
+        var ok = sdl == "OK" && vlc is not null && ToolLocator.Ffmpeg is not null && ToolLocator.Ffprobe is not null;
         Console.WriteLine(ok ? "selftest OK" : "selftest FAILED");
         return ok ? 0 : 1;
     }

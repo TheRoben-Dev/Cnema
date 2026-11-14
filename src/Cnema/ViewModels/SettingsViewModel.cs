@@ -5,6 +5,15 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace Cnema.ViewModels;
 
+/// <summary>One entry of the Controller mode button legend. Kind picks the face-button colour.</summary>
+public sealed record PadHint(string Glyph, string Label, string Kind)
+{
+    public bool IsA => Kind == "a";
+    public bool IsB => Kind == "b";
+    public bool IsX => Kind == "x";
+    public bool IsY => Kind == "y";
+}
+
 public sealed record Choice(string Label, int Value)
 {
     public override string ToString() => Label;
@@ -40,6 +49,9 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     [ObservableProperty] private bool _launchAtLogin;
     [ObservableProperty] private bool _keepInBackground;
+    [ObservableProperty] private bool _controllerMode;
+    [ObservableProperty] private bool _controllerFullscreen;
+    [ObservableProperty] private string _controllerStatus = "";
     [ObservableProperty] private bool _clipEnabled;
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(Footprint))] private Choice _length;
     [ObservableProperty] private Choice _resolution;
@@ -91,6 +103,8 @@ public sealed partial class SettingsViewModel : ObservableObject
         var c = settings.Clip;
         _launchAtLogin = AutostartService.IsEnabled;
         _keepInBackground = settings.KeepInBackground;
+        _controllerMode = settings.ControllerMode;
+        _controllerFullscreen = settings.ControllerFullscreen;
         _clipEnabled = c.Enabled;
         _length = Nearest(Lengths, c.Seconds);
         _resolution = Resolutions.FirstOrDefault(r => r.Value == c.Height) ?? Resolutions[0];
@@ -163,6 +177,8 @@ public sealed partial class SettingsViewModel : ObservableObject
             return "Add at least one modifier to the hotkey, or a plain letter would stop working everywhere else.";
         var c = settings.Clip;
         settings.KeepInBackground = KeepInBackground;
+        settings.ControllerMode = ControllerMode;
+        settings.ControllerFullscreen = ControllerFullscreen;
         c.Enabled = ClipEnabled;
         c.Seconds = Length.Value;
         c.Height = Resolution.Value;

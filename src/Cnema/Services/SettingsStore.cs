@@ -10,6 +10,11 @@ public sealed class AppSettings
     /// <summary>Stay alive in the tray / menu bar when the window is closed.</summary>
     public bool KeepInBackground { get; set; }
     public ClipSettings Clip { get; set; } = new();
+
+    /// <summary>Bigger layout, gamepad navigation and on-screen button hints (handhelds, TV PCs).</summary>
+    public bool ControllerMode { get; set; }
+    /// <summary>In Controller mode, open full screen like a console app.</summary>
+    public bool ControllerFullscreen { get; set; } = true;
 }
 
 /// <summary>Settings for the background clipping service (see ClipService).</summary>
