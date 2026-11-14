@@ -367,6 +367,13 @@ public partial class MainWindow : Window
     /// With clipping on (or "keep running" set) the close button only hides the window: playback
     /// stops, the capture and its hotkey carry on, and the tray icon brings the window back.
     /// </summary>
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        // Hidden in the tray: the Discord status goes away until the window is back.
+        if (change.Property == IsVisibleProperty && Vm is { } vm) vm.WindowShown = change.GetNewValue<bool>();
+    }
+
     protected override void OnClosing(WindowClosingEventArgs e)
     {
         if (Application.Current is App { IsQuitting: false, StaysInBackground: true } &&

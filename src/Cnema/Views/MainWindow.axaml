@@ -1087,6 +1087,27 @@
                 </StackPanel>
               </Border>
 
+              <TextBlock Classes="label" Text="DISCORD" Margin="0,8,0,0" IsVisible="{Binding CanShowDiscord}" />
+              <Border Classes="group" IsVisible="{Binding CanShowDiscord}">
+                <StackPanel>
+                  <Grid Classes="row" ColumnDefinitions="*,Auto">
+                    <StackPanel Spacing="2" Margin="0,0,12,0">
+                      <TextBlock Text="Show what I'm doing in Discord" />
+                      <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap"
+                                 Text="Your Discord profile shows Cnema while the window is open: browsing, watching or editing clips, or recording a session. Needs the Discord app on this computer." />
+                    </StackPanel>
+                    <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding DiscordStatus}" />
+                  </Grid>
+                  <StackPanel IsVisible="{Binding DiscordStatus}">
+                    <Border Classes="sep" />
+                    <Grid Classes="row" ColumnDefinitions="*,Auto">
+                      <TextBlock Text="Include the video's name" />
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding DiscordShowNames}" />
+                    </Grid>
+                  </StackPanel>
+                </StackPanel>
+              </Border>
+
               <TextBlock Classes="label" Text="CONTROLLER" Margin="0,8,0,0" IsVisible="{Binding FeatureController}" />
               <Border Classes="group" IsVisible="{Binding FeatureController}">
                 <StackPanel>
