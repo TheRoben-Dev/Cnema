@@ -49,16 +49,106 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     // ---------- updates, diagnostics, delete ----------
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(HasUpdate), nameof(UpdateText))] private UpdateInfo? _update;
     public bool HasUpdate => Update is not null;
-    public string UpdateText => Update is null ? "" : $"Cnema {Update.Version.ToString(3)} is available";
+    public string UpdateText => Update is null ? ""
+        : IsInstallingUpdate ? $"Updating to {Update.Version.ToString(3)}…"
+        : $"Cnema {Update.Version.ToString(3)} is available";
+    public string UpdateAction => IsInstallingUpdate
+        ? (UpdateProgress >= 1 ? "Installing, Cnema will restart" : $"Downloading {UpdateProgress * 100:0}%")
+        : UpdateService.WhyNoSelfUpdate() is null && Update?.AssetUrl is not null ? "Install and restart" : "Get the update";
+
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(UpdateText), nameof(UpdateAction))] private bool _isInstallingUpdate;
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(UpdateAction))] private double _updateProgress;
+    /// <summary>Raised when the app has to exit so the update can replace it.</summary>
+    public event Action? QuitRequested;
+
+    /// <summary>Downloads the update, hands over to the installer script and asks the app to quit.</summary>
+    public async Task<bool> InstallUpdateAsync(bool background)
+    {
+        if (Update is not { AssetUrl: not null } info || IsInstallingUpdate) return false;
+        if (UpdateService.WhyNoSelfUpdate() is { } why)
+        {
+            UpdateStatus = "Can't install automatically: " + why + ".";
+            return false;
+        }
+        IsInstallingUpdate = true;
+        UpdateProgress = 0;
+        try
+        {
+            var progress = new Progress<double>(p => UpdateProgress = Math.Min(p, 0.999));
+            var staged = await UpdateService.DownloadAsync(info, progress, CancellationToken.None);
+            // A session recording is saved by the normal shutdown path before the swap happens.
+            UpdateProgress = 1;
+            UpdateService.ApplyAndRestart(staged, background);
+            QuitRequested?.Invoke();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Log.Warn("Installing the update failed: " + ex.Message);
+            UpdateStatus = "The update could not be installed: " + ex.Message;
+            ShowToast("The update could not be installed. Settings has the details.");
+            IsInstallingUpdate = false;
+            return false;
+        }
+    }
+
+    // ---------- what's new ----------
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(IsShowingWhatsNew))] private IReadOnlyList<ChangelogEntry>? _whatsNew;
+    public bool IsShowingWhatsNew => WhatsNew is { Count: > 0 };
+    public string WhatsNewTitle => "What's new in Cnema " + UpdateService.CurrentText;
+
+    [RelayCommand] private void CloseWhatsNew() => WhatsNew = null;
+
+    /// <summary>The whole changelog, from the button in Settings.</summary>
+    [RelayCommand]
+    private void ShowChangelog()
+    {
+        SettingsEditor = null;
+        WhatsNew = ChangelogService.All.Where(e => e.Version <= UpdateService.Current).ToList();
+    }
+
+    /// <summary>After an update, shows the entries for every version since the one that ran last.</summary>
+    private void ShowWhatsNewAfterUpdate(bool firstRunEver)
+    {
+        var last = UpdateService.Parse(_settings.Current.LastRunVersion);
+        if (last == UpdateService.Current) return;
+        // A first install has nothing to compare with; an older build that never stored its
+        // version did, so it gets the current version's notes.
+        if (!firstRunEver && (last is null || last < UpdateService.Current))
+        {
+            var entries = ChangelogService.Since(last);
+            if (entries.Count > 0) WhatsNew = entries;
+        }
+        _settings.Current.LastRunVersion = UpdateService.CurrentText;
+        _settings.Current.LastUpdateAttempt = null;
+        _settings.Save();
+    }
     public string VersionText => "Version " + UpdateService.CurrentText;
 
-    [RelayCommand] private void OpenUpdate() => PlatformShell.OpenUrl(Update?.Url ?? UpdateService.ReleasesPage);
+    /// <summary>The update card: install in place when that is possible, otherwise open the download page.</summary>
+    [RelayCommand]
+    private async Task OpenUpdateAsync()
+    {
+        if (IsInstallingUpdate) return;
+        if (Update?.AssetUrl is not null && UpdateService.WhyNoSelfUpdate() is null) await InstallUpdateAsync(background: false);
+        else PlatformShell.OpenUrl(Update?.Url ?? UpdateService.ReleasesPage);
+    }
 
     private async Task CheckForUpdatesAsync()
     {
         if (!_settings.Current.CheckForUpdates) return;
         await Task.Delay(TimeSpan.FromSeconds(4)); // let startup finish first
         await CheckForUpdatesCoreAsync(announce: true);
+        // At launch a newer version is installed straight away. Each version is tried once: if the
+        // install did not take, the card stays and the next launch does not loop.
+        if (_settings.Current.AutoUpdate && Update is { AssetUrl: not null } found &&
+            UpdateService.WhyNoSelfUpdate() is null && !Clips.IsSession &&
+            _settings.Current.LastUpdateAttempt != found.Version.ToString(3))
+        {
+            _settings.Current.LastUpdateAttempt = found.Version.ToString(3);
+            _settings.Save();
+            if (await InstallUpdateAsync(background: Environment.GetCommandLineArgs().Contains("--background"))) return;
+        }
         // Cnema usually stays running in the background for days, so one check at launch is not
         // enough: a release published after login would never be seen.
         if (_updateTimer is null)
@@ -82,6 +172,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         if (error is null) Update = found;
         else if (announce) UpdateStatus = "Couldn't check for updates: " + error;
         // One system notification per new version, so it is noticed while Cnema sits in the tray.
+        OnPropertyChanged(nameof(UpdateAction));
         if (announce && found is not null && found.Version != _announced)
         {
             _announced = found.Version;
@@ -410,6 +501,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         foreach (var e in _library.CachedEntries.Where(e => _settings.Current.Folders.Any(f => Under(e.Path, f))))
             _items[e.Path] = new VideoItemViewModel(e);
         RefreshView();
+        ShowWhatsNewAfterUpdate(firstRunEver: _settings.IsFirstRun);
         _ = ApplyClipSettingsAsync();
         _ = CheckForUpdatesAsync();
         await RescanAsync();

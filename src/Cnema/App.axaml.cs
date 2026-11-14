@@ -84,6 +84,7 @@ public partial class App : Application
                     if (e.Kind == ActivationKind.Reopen) ShowWindow();
                 };
 
+            _vm.QuitRequested += () => Dispatcher.UIThread.Post(Quit);
             _ = _vm.InitializeAsync();
         }
         base.OnFrameworkInitializationCompleted();

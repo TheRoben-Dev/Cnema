@@ -49,5 +49,6 @@
 
   <ItemGroup>
     <AvaloniaResource Include="Assets/**" />
+    <EmbeddedResource Include="../../CHANGELOG.md" LogicalName="Cnema.CHANGELOG.md" />
   </ItemGroup>
 </Project>

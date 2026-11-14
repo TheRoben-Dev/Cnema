@@ -4,6 +4,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="using:Cnema.ViewModels"
         xmlns:c="using:Cnema.Controls"
+        xmlns:svc="using:Cnema.Services"
         mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="800"
         x:Class="Cnema.Views.MainWindow"
         x:DataType="vm:MainViewModel"
@@ -72,10 +73,12 @@
               <TextBlock Text="{Binding VlcError}" FontSize="11" TextWrapping="Wrap" />
             </Border>
             <Button Classes="updatebar" HorizontalAlignment="Stretch" Command="{Binding OpenUpdateCommand}" IsVisible="{Binding HasUpdate}"
-                    ToolTip.Tip="Open the download page">
-              <StackPanel Spacing="2">
+>
+              <StackPanel Spacing="4">
                 <TextBlock Text="{Binding UpdateText}" FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap" />
-                <TextBlock Text="Get the update" FontSize="11" Foreground="{StaticResource Cyan}" />
+                <TextBlock Text="{Binding UpdateAction}" FontSize="11" Foreground="{StaticResource Cyan}" />
+                <ProgressBar Minimum="0" Maximum="1" Value="{Binding UpdateProgress}" Height="3" MinHeight="3" MinWidth="0"
+                             IsVisible="{Binding IsInstallingUpdate}" />
               </StackPanel>
             </Button>
             <!-- background clipping status -->
@@ -421,6 +424,39 @@
       </Border>
     </Border>
 
+    <!-- ======================= WHAT'S NEW ======================= -->
+    <Border x:Name="WhatsNewScrim" Background="#B3050609" IsVisible="{Binding IsShowingWhatsNew}">
+      <Border Width="520" MaxHeight="620" VerticalAlignment="Center" HorizontalAlignment="Center" Background="{StaticResource Bg1}"
+              BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="16" Padding="22" BoxShadow="0 18 60 0 #80000000">
+        <DockPanel>
+          <TextBlock DockPanel.Dock="Top" Text="{Binding WhatsNewTitle}" FontSize="17" FontWeight="Bold" Margin="0,0,0,12" />
+          <Button x:Name="WhatsNewClose" DockPanel.Dock="Bottom" Classes="accent" Content="Got it" HorizontalAlignment="Right"
+                  Margin="0,14,0,0" Command="{Binding CloseWhatsNewCommand}" />
+          <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <ItemsControl ItemsSource="{Binding WhatsNew}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="svc:ChangelogEntry">
+                  <StackPanel Spacing="6" Margin="0,0,12,16">
+                    <TextBlock Text="{Binding Title}" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource Cyan}" />
+                    <ItemsControl ItemsSource="{Binding Items}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="x:String">
+                          <Grid ColumnDefinitions="14,*" Margin="0,2">
+                            <TextBlock Text="•" Classes="dim" FontSize="13" />
+                            <TextBlock Grid.Column="1" Text="{Binding}" FontSize="13" TextWrapping="Wrap" />
+                          </Grid>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </StackPanel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </DockPanel>
+      </Border>
+    </Border>
+
     <!-- ======================= SETTINGS ======================= -->
     <Border x:Name="SettingsScrim" Background="#B3050609" IsVisible="{Binding IsSettingsOpen}">
       <Border Width="580" MaxHeight="720" Margin="0,40" VerticalAlignment="Center" HorizontalAlignment="Center"
@@ -467,16 +503,27 @@
                     <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding CheckForUpdates}" />
                   </Grid>
                   <Border Classes="sep" />
-                  <Grid Classes="row" ColumnDefinitions="*,Auto,Auto">
+                  <Grid Classes="row" ColumnDefinitions="*,Auto" IsEnabled="{Binding CheckForUpdates}">
+                    <StackPanel Spacing="2">
+                      <TextBlock Text="Install updates automatically" />
+                      <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="When Cnema starts and finds a newer version, it installs it and restarts." />
+                    </StackPanel>
+                    <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding AutoUpdate}" />
+                  </Grid>
+                  <Border Classes="sep" />
+                  <Grid Classes="row" ColumnDefinitions="*,Auto,Auto,Auto">
                     <StackPanel Spacing="2">
                       <TextBlock Text="{Binding #Root.((vm:MainViewModel)DataContext).VersionText}" />
                       <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap"
                                  Text="{Binding #Root.((vm:MainViewModel)DataContext).UpdateStatus}" />
                     </StackPanel>
-                    <Button Grid.Column="1" Classes="accent" Content="Get the update" Margin="0,0,8,0"
+                    <Button Grid.Column="1" Classes="accent" Margin="0,0,8,0"
+                            Content="{Binding #Root.((vm:MainViewModel)DataContext).UpdateAction}"
                             IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).HasUpdate}"
                             Command="{Binding #Root.((vm:MainViewModel)DataContext).OpenUpdateCommand}" />
-                    <Button Grid.Column="2" Classes="soft" Content="Check now"
+                    <Button Grid.Column="2" Classes="soft" Content="What's new" Margin="0,0,8,0"
+                            Command="{Binding #Root.((vm:MainViewModel)DataContext).ShowChangelogCommand}" />
+                    <Button Grid.Column="3" Classes="soft" Content="Check now"
                             Command="{Binding #Root.((vm:MainViewModel)DataContext).CheckForUpdatesNowCommand}" />
                   </Grid>
                   <Border Classes="sep" />

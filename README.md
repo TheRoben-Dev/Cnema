@@ -125,8 +125,17 @@ are off by default. The check runs at launch, after each saved clip and when set
 
 ### Updates and diagnostics
 
-Cnema checks GitHub Releases once at launch and shows a "new version" card above the clipping panel; it opens
-the release page and never installs anything by itself. The check can be turned off in Settings.
+Cnema checks the public releases page at launch and every 3 hours. At launch a newer version is installed
+straight away: Cnema downloads the build for your system, checks its size and SHA-256 against what GitHub
+published, swaps the app once it has quit and starts again. The old app is kept until the new one is in place.
+A session recording in progress is never interrupted, and each version is tried once, so a failed install
+leaves you with the "new version" card (click it to install) instead of a restart loop. After an update a
+"What's new" screen lists the changes since the version you had; **Settings, What's new** opens the whole
+list, which lives in [CHANGELOG.md](CHANGELOG.md). Both the check and the automatic install can be turned
+off in Settings.
+
+On macOS the builds are not signed with a Developer ID, so the system may ask for the Screen Recording
+permission again after an update.
 
 Warnings, capture errors and crashes are written to `logs/cnema.log` in Cnema's data folder (rotated at 512 KB).
 **Settings, Copy diagnostics** puts the version, OS, encoder list, capture setup and the end of the log on the
