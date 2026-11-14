@@ -482,7 +482,7 @@
                             Segments="{Binding SegmentRanges}" Markers="{Binding Markers}" />
             <Grid ColumnDefinitions="Auto,*,Auto">
               <StackPanel Orientation="Horizontal" Spacing="0" VerticalAlignment="Center">
-                <Button Classes="ghost" Focusable="False" Command="{Binding SkipBackCommand}" ToolTip.Tip="Back 5 s (←)" Padding="6">
+                <Button Classes="ghost" Focusable="False" Command="{Binding SkipBackCommand}" ToolTip.Tip="Back 5 s (Shift+←)" Padding="6">
                   <PathIcon Data="{StaticResource IcRewind}" Width="15" Height="15" />
                 </Button>
                 <Button Classes="ghost" Focusable="False" Command="{Binding TogglePlayCommand}" ToolTip.Tip="Play / pause (Space)" Padding="6">
@@ -491,7 +491,7 @@
                     <PathIcon Data="{StaticResource IcPause}" Width="18" Height="18" IsVisible="{Binding IsPlaying}" />
                   </Panel>
                 </Button>
-                <Button Classes="ghost" Focusable="False" Command="{Binding SkipForwardCommand}" ToolTip.Tip="Forward 5 s (→)" Padding="6">
+                <Button Classes="ghost" Focusable="False" Command="{Binding SkipForwardCommand}" ToolTip.Tip="Forward 5 s (Shift+→)" Padding="6">
                   <PathIcon Data="{StaticResource IcForward}" Width="15" Height="15" />
                 </Button>
                 <Button Classes="ghost" Focusable="False" Command="{Binding ToggleMuteCommand}" ToolTip.Tip="Mute (M)" Padding="6">
@@ -1503,7 +1503,7 @@
               <Button Classes="ghost" Command="{Binding StepFrameBackCommand}" ToolTip.Tip="Previous frame (,)" VerticalAlignment="Center">
                 <PathIcon Data="{StaticResource IcFramePrev}" />
               </Button>
-              <Button Classes="ghost" Command="{Binding SkipBackCommand}" ToolTip.Tip="Back 5 s (←)" VerticalAlignment="Center">
+              <Button Classes="ghost" Command="{Binding SkipBackCommand}" ToolTip.Tip="Back 5 s (Shift+←)" VerticalAlignment="Center">
                 <PathIcon Data="{StaticResource IcRewind}" />
               </Button>
               <Button Classes="play" Command="{Binding TogglePlayCommand}" ToolTip.Tip="Play / pause (Space)" Margin="6,0">
@@ -1512,7 +1512,7 @@
                   <PathIcon Data="{StaticResource IcPause}" Width="20" Height="20" Foreground="{DynamicResource Bg0}" IsVisible="{Binding IsPlaying}" />
                 </Panel>
               </Button>
-              <Button Classes="ghost" Command="{Binding SkipForwardCommand}" ToolTip.Tip="Forward 5 s (→)" VerticalAlignment="Center">
+              <Button Classes="ghost" Command="{Binding SkipForwardCommand}" ToolTip.Tip="Forward 5 s (Shift+→)" VerticalAlignment="Center">
                 <PathIcon Data="{StaticResource IcForward}" />
               </Button>
               <Button Classes="ghost" Command="{Binding StepFrameCommand}" ToolTip.Tip="Next frame (.)" VerticalAlignment="Center">

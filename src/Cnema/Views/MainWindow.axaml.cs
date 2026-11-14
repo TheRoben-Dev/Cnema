@@ -633,7 +633,7 @@ public partial class MainWindow : Window
 
     /// <summary>
     /// The quick player listens to a few player keys while the library has the keyboard: play/pause,
-    /// seeking, mute and speed. Arrow keys up/down stay with the library lists. Esc closes it.
+    /// previous / next video, seeking, mute and speed. Arrow keys up/down stay with the library lists. Esc closes it.
     /// </summary>
     private static bool HandleMiniPlayerKey(MainViewModel vm, KeyEventArgs e)
     {
@@ -642,6 +642,8 @@ public partial class MainWindow : Window
         switch (Shortcuts.Match(e, Shortcuts.Player))
         {
             case "play": p.TogglePlayCommand.Execute(null); return true;
+            case "prevClip": vm.StepClipCommand.Execute(-1); return true;
+            case "nextClip": vm.StepClipCommand.Execute(1); return true;
             case "back5": p.SeekCommand.Execute(p.Position - 5000); return true;
             case "fwd5": p.SeekCommand.Execute(p.Position + 5000); return true;
             case "back1": p.SeekCommand.Execute(p.Position - 1000); return true;
@@ -855,6 +857,8 @@ public partial class MainWindow : Window
         switch (Shortcuts.Match(e, Shortcuts.Player))
         {
             case "play": p.TogglePlayCommand.Execute(null); break;
+            case "prevClip": vm.StepClipCommand.Execute(-1); break;
+            case "nextClip": vm.StepClipCommand.Execute(1); break;
             case "back5": p.SeekCommand.Execute(p.Position - 5000); break;
             case "fwd5": p.SeekCommand.Execute(p.Position + 5000); break;
             case "back1": p.SeekCommand.Execute(p.Position - 1000); break;

@@ -87,8 +87,8 @@ Set `CNEMA_LIBVLC_PATH` to a folder containing libvlc + libvlccore to override.
 - **Stats**: totals, clips per week for the last 8 weeks, and clips per game tag.
 - **Delete**: right-click a video, press Delete on a focused card, or use the Edit panel. Files go to the system
   trash (Finder Trash, Recycle Bin, XDG trash), never straight off the disk.
-- **Quick player**: a video opens in a large player over the library (play/pause, seek, mute; Space, ←/→, M,
-  Esc, or click the dimmed edge to close). *Edit* moves it into the full editor at the same position; the
+- **Quick player**: a video opens in a large player over the library (play/pause, previous / next video, seek,
+  mute; Space, ←/→, Shift+←/→, M, Esc, or click the dimmed edge to close). *Edit* moves it into the full editor at the same position; the
   editor's *Quick player* button moves it back. Off under Settings, Features, videos open straight in the
   editor. Controller mode always uses the editor.
 - **Player**: libVLC playback, frame stepping with a frame-number clock (click the time), speed menu
@@ -210,7 +210,8 @@ H.264 at the same quality. Turning off "Use the graphics card" records H.264 wit
 | Key | Action | Key | Action |
 | --- | --- | --- | --- |
 | Space / K | Play / pause | I / O | Set in / out |
-| ← / → | Seek 5 s (Shift: 1 s) | Shift+I / Shift+O | Jump to in / out |
+| ← / → | Previous / next video | Shift+I / Shift+O | Jump to in / out |
+| Shift+← / Shift+→ | Seek 5 s (Alt / ⌥: 1 s) | | |
 | J | Back 10 s | P | Play selection |
 | , / . | Previous / next frame | L | Loop selection |
 | ↑ / ↓ | Volume | X | Clear selection |

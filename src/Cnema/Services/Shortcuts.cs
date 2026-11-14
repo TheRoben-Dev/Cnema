@@ -22,10 +22,12 @@ public static class Shortcuts
         new("select", Library, "Select several videos", "S"),
 
         new("play", Player, "Play or pause", "Space", "K"),
-        new("back5", Player, "Back 5 seconds", "Left"),
-        new("fwd5", Player, "Forward 5 seconds", "Right"),
-        new("back1", Player, "Back 1 second", "Shift+Left"),
-        new("fwd1", Player, "Forward 1 second", "Shift+Right"),
+        new("prevClip", Player, "Previous video", "Left"),
+        new("nextClip", Player, "Next video", "Right"),
+        new("back5", Player, "Back 5 seconds", "Shift+Left"),
+        new("fwd5", Player, "Forward 5 seconds", "Shift+Right"),
+        new("back1", Player, "Back 1 second", "Alt+Left"),
+        new("fwd1", Player, "Forward 1 second", "Alt+Right"),
         new("back10", Player, "Back 10 seconds", "J"),
         new("fwd10", Player, "Forward 10 seconds", "Shift+L"),
         new("frameBack", Player, "Previous frame", "OemComma"),
@@ -62,7 +64,7 @@ public static class Shortcuts
         ("General", "Quit Cnema", Mod + "+Q"),
         ("General", "Close a dialog or the player", "Esc"),
         ("General", "Select all (while selecting)", Mod + "+A"),
-        ("General", "Quick player: play/pause, seek, mute, close", "Space ← → M Esc"),
+        ("General", "Quick player: play/pause, previous / next video, seek, mute, close", "Space ← → Shift+← → M Esc"),
     };
 
     private static string Mod => OperatingSystem.IsMacOS() ? "⌘" : "Ctrl";

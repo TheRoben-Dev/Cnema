@@ -2,6 +2,9 @@
 
 What changed in each Cnema release. The app shows the entries you have not seen yet after it updates.
 
+## 0.13.2
+- ← and → now go to the previous or next video, in the order the library shows them (with your search, filters and sort), in both the quick player and the editor. Seeking moved to Shift+← and Shift+→ (5 seconds), and Alt+← / Alt+→ (⌥ on a Mac) for 1 second. If you have trim marks or parts in the editor, press the arrow twice so they aren't lost by accident. You can change these keys under Shortcuts (press ?).
+
 ## 0.13.1
 - The mini player is now the quick player: it fills almost the whole window instead of a corner, and works the same way. Click the dimmed edge around it (or press Esc) to close it, and Edit still opens the full editor.
 
