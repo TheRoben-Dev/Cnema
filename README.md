@@ -9,15 +9,17 @@ play anything VLC can play and cut clips out of it without leaving the app.
 ![Background clipping](docs/clipping.png)
 ![Settings](docs/settings.png)
 ![Delete to trash](docs/delete.png)
+![Share presets](docs/share.png)
+![Storage limits](docs/storage.png)
 ![Controller mode](docs/controller.png)
 
 Stack: C# / .NET 8, [Avalonia 11](https://avaloniaui.net) for UI, [LibVLCSharp](https://code.videolan.org/videolan/LibVLCSharp)
-for playback, ffmpeg/ffprobe for thumbnails, metadata and clip export. One codebase for macOS, Windows and Linux.
+for playback, ffmpeg for thumbnails, metadata and clip export. One codebase for macOS, Windows and Linux.
 
 ## Download
 
 Grab a build from [Releases](https://github.com/TheRoben-Dev/Cnema/releases). On macOS and Windows everything is
-inside the app: the .NET runtime, libVLC with its plugins, and ffmpeg/ffprobe. Nothing else to install.
+inside the app: the .NET runtime, libVLC with its plugins, and ffmpeg. Nothing else to install.
 
 On Linux, ffmpeg and .NET are bundled but libVLC comes from your distro (VideoLAN publishes no Linux package):
 `sudo apt install libvlc5 vlc-plugin-base`.
@@ -58,6 +60,11 @@ Set `CNEMA_LIBVLC_PATH` to a folder containing libvlc + libvlccore to override.
 - **Organise**: tag videos and star favourites; both appear in the sidebar and in search (`#tag` searches tags only).
   Rename files and move them between library folders from the app. Tags are stored in Cnema's library, not in
   the files, and follow a file that is renamed or moved outside the app.
+- **Hover scrub**: move the pointer across a card to flick through ten frames of the video. The filmstrip is
+  made the first time you hover and cached next to the thumbnail.
+- **Share presets** (player, *Share*): fit the selection in 10 MB or 50 MB for Discord (two-pass H.264, resolution
+  and frame rate drop only as far as the size needs), centre-cropped vertical 9:16, or a GIF of up to 20 seconds.
+  With no in/out points set, the whole video is converted. The result lands next to the source.
 - **Delete**: right-click a video, press Delete on a focused card, or use the Edit panel. Files go to the system
   trash (Finder Trash, Recycle Bin, XDG trash), never straight off the disk.
 - **Player**: libVLC playback, frame stepping, speed, volume, fullscreen.
@@ -87,6 +94,13 @@ Platform notes:
 | macOS | Needs the Screen Recording permission (asked on first use). | "System audio" (macOS 13+, via ScreenCaptureKit) records everything you hear; microphones work as they are. |
 | Windows | Desktop Duplication (`ddagrab`), `gdigrab` as fallback. | DirectShow devices. System sound needs "Stereo Mix" or a loopback device. |
 | Linux | X11 sessions only (`x11grab`); Wayland is not supported yet. | PulseAudio / PipeWire sources; `.monitor` sources record system sound. |
+
+### Storage limits
+
+Settings, Storage can keep the clips folder in check: remove clips older than a number of days, and keep the
+folder under a size cap by removing the oldest clips first. Removed clips go to the trash or to an archive
+folder of your choice. Favourites are never removed, other library folders are never touched, and both limits
+are off by default. The check runs at launch, after each saved clip and when settings change.
 
 ### Updates and diagnostics
 

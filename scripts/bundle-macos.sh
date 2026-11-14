@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Builds dist/Cnema.app with everything inside it: the .NET runtime, libVLC and its plugins,
-# ffmpeg/ffprobe and the app icon. Nothing else needs to be installed.
+# ffmpeg and the app icon. Nothing else needs to be installed.
 # Usage: scripts/bundle-macos.sh [osx-arm64|osx-x64] [version]
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -20,7 +20,7 @@ sed "s/__VERSION__/$VERSION/g" packaging/Info.plist > "$APP/Contents/Info.plist"
 chmod +x "$APP/Contents/MacOS/Cnema"
 cp LICENSE THIRD-PARTY-NOTICES.md "$APP/Contents/Resources/"
 
-# ffmpeg + ffprobe (skip with CNEMA_SKIP_FFMPEG=1 to build offline)
+# ffmpeg (skip with CNEMA_SKIP_FFMPEG=1 to build offline)
 if [ "${CNEMA_SKIP_FFMPEG:-0}" != "1" ]; then
   scripts/fetch-ffmpeg.sh "$RID" "$APP/Contents/MacOS/tools"
 fi
@@ -36,6 +36,7 @@ fi
 
 # libVLC must be inside the bundle.
 test -f "$APP/Contents/MacOS/libvlc/$RID/lib/libvlc.dylib" || { echo "libVLC missing from bundle" >&2; exit 1; }
+scripts/strip-vlc.sh "$APP/Contents/MacOS/libvlc"
 
 # Ad-hoc signature: required for arm64 binaries to launch at all.
 if command -v codesign >/dev/null 2>&1; then

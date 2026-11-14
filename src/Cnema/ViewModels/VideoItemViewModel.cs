@@ -103,6 +103,60 @@ public sealed partial class VideoItemViewModel : ObservableObject
         catch { /* corrupt thumbnail; card shows placeholder */ }
     }
 
+    // ---------- hover scrub ----------
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(HasScrub))] private Avalonia.Media.IImage? _scrubFrame;
+    [ObservableProperty] private double _scrubPosition;
+    public bool HasScrub => ScrubFrame is not null;
+    private Bitmap? _strip;
+    private int _scrubToken;
+    private int _scrubIndex = -1;
+
+    /// <summary>Pointer came onto the card: after a short pause, load (or make) the filmstrip.</summary>
+    public async void BeginScrub()
+    {
+        if (_strip is not null) return;
+        var token = ++_scrubToken;
+        try
+        {
+            await Task.Delay(220);
+            if (token != _scrubToken) return;
+            var path = await Services.ThumbnailService.EnsureStripAsync(Entry, CancellationToken.None);
+            if (path is null || token != _scrubToken) return;
+            var bmp = await Task.Run(() => new Bitmap(path));
+            if (token != _scrubToken) { bmp.Dispose(); return; }
+            _strip = bmp;
+            ShowScrubFrame();
+        }
+        catch { /* no filmstrip; the card keeps its still thumbnail */ }
+    }
+
+    /// <summary>Pointer moved to this fraction (0..1) of the card's width.</summary>
+    public void Scrub(double fraction)
+    {
+        ScrubPosition = Math.Clamp(fraction, 0, 1);
+        if (_strip is not null) ShowScrubFrame();
+    }
+
+    private void ShowScrubFrame()
+    {
+        if (_strip is not { } strip) return;
+        var n = Services.ThumbnailService.StripFrames;
+        var index = Math.Clamp((int)(ScrubPosition * n), 0, n - 1);
+        if (index == _scrubIndex && ScrubFrame is not null) return;
+        _scrubIndex = index;
+        var w = strip.PixelSize.Width / n;
+        ScrubFrame = new CroppedBitmap(strip, new Avalonia.PixelRect(index * w, 0, w, strip.PixelSize.Height));
+    }
+
+    public void EndScrub()
+    {
+        _scrubToken++;
+        _scrubIndex = -1;
+        ScrubFrame = null;
+        _strip?.Dispose();
+        _strip = null;
+    }
+
     public static string FormatSize(long bytes) => bytes switch
     {
         >= 1L << 30 => $"{bytes / (double)(1L << 30):0.0} GB",

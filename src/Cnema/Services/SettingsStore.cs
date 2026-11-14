@@ -42,6 +42,12 @@ public sealed class ClipSettings
     public bool Sound { get; set; } = true;
     /// <summary>Name and tag each clip after the app that was in front when it was saved.</summary>
     public bool TagWithGame { get; set; } = true;
+    /// <summary>Storage limits for the clips folder; 0 = no limit. Favourites are always kept.</summary>
+    public int KeepDays { get; set; }
+    public int MaxFolderGb { get; set; }
+    /// <summary>false: removed clips go to the trash. true: they move to the archive folder.</summary>
+    public bool CleanupArchive { get; set; }
+    public string? ArchiveFolder { get; set; }
 
     public bool HotkeyCtrl { get; set; } = true;
     public bool HotkeyAlt { get; set; } = true;
@@ -49,6 +55,9 @@ public sealed class ClipSettings
     public bool HotkeyMeta { get; set; }
     public string HotkeyKey { get; set; } = "S";
 
+    public string ResolvedArchiveFolder => string.IsNullOrWhiteSpace(ArchiveFolder)
+        ? ResolvedFolder.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + " Archive"
+        : ArchiveFolder!;
     public string ResolvedFolder => string.IsNullOrWhiteSpace(Folder) ? AppPaths.DefaultClipsDir : Folder!;
 
     public string HotkeyText

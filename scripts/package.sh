@@ -24,6 +24,9 @@ case "$RID" in
     cp LICENSE THIRD-PARTY-NOTICES.md "$out/"
     if [ "$RID" = "win-x64" ]; then
       test -f "$out/libvlc/win-x64/libvlc.dll" || { echo "libVLC missing from package" >&2; exit 1; }
+      # The NuGet package ships three architectures; this archive is x64 only.
+      rm -rf "$out/libvlc/win-x86" "$out/libvlc/win-arm64"
+      scripts/strip-vlc.sh "$out/libvlc"
       (cd dist && 7z a -bso0 "Cnema-v$VERSION-windows-x64.zip" Cnema)
     else
       cp src/Cnema/Assets/cnema.png "$out/cnema.png"
