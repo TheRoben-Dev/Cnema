@@ -2,6 +2,13 @@
 
 What changed in each Cnema release. The app shows the entries you have not seen yet after it updates.
 
+## 0.22.0
+- Controller mode, reworked. The cursor is now a rounded ring with a soft glow in your colour scheme, like the hover glow, instead of the sharp white box.
+- The D-pad goes to whatever is actually in that direction, in Settings, dialogs and the toolbar, instead of jumping around. Coming back to the grid lands on the card you were on, and Auto montage and Other recorders can be reached in the sidebar.
+- Simple editor with a controller: only Trim and Export (In / Out, parts, markers, thumbnail, save frame), so everything can be reached with the pad. Anything you added on the desktop still exports. Switch it off under Settings, General, Controller.
+- In the editor, ▲ / ▼ put the cursor on the tool panel or the controls under the video, and B takes it away again. LT / RT now change the volume.
+- The controller legend at the bottom now shows the right buttons in Settings, dialogs and the editor's tools.
+
 ## 0.21.0
 - Crash-safe sessions: if Cnema crashes, is force quit or your computer loses power in the middle of a session recording, the recording is no longer lost. The next time Cnema starts it saves what was recorded, bookmarks included, as "… session (recovered)" in your clips folder.
 - The replay buffer now lives in Cnema's cache folder instead of the system's temp folder, so it survives a restart. It's still cleared every time capture starts.

@@ -192,6 +192,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private bool _keepInBackground;
     [ObservableProperty] private bool _controllerMode;
     [ObservableProperty] private bool _controllerFullscreen;
+    [ObservableProperty] private bool _controllerSimpleEditor;
     [ObservableProperty] private string _controllerStatus = "";
     [ObservableProperty] private bool _clipEnabled;
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(Footprint))] private Choice _length;
@@ -342,6 +343,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         _keepInBackground = settings.KeepInBackground;
         _controllerMode = settings.ControllerMode;
         _controllerFullscreen = settings.ControllerFullscreen;
+        _controllerSimpleEditor = settings.ControllerSimpleEditor;
         _clipEnabled = c.Enabled;
         _length = Nearest(Lengths, c.Seconds);
         _resolution = Resolutions.FirstOrDefault(r => r.Value == c.Height) ?? Resolutions[0];
@@ -483,6 +485,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         settings.KeepInBackground = KeepInBackground;
         settings.ControllerMode = ControllerMode;
         settings.ControllerFullscreen = ControllerFullscreen;
+        settings.ControllerSimpleEditor = ControllerSimpleEditor;
         c.Enabled = ClipEnabled;
         c.Seconds = Length.Value;
         c.Height = Resolution.Value;
