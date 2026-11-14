@@ -87,9 +87,10 @@ Set `CNEMA_LIBVLC_PATH` to a folder containing libvlc + libvlccore to override.
 - **Stats**: totals, clips per week for the last 8 weeks, and clips per game tag.
 - **Delete**: right-click a video, press Delete on a focused card, or use the Edit panel. Files go to the system
   trash (Finder Trash, Recycle Bin, XDG trash), never straight off the disk.
-- **Mini player**: a video opens in a small player over the library (play/pause, seek, mute; Space, ←/→, M,
-  Esc). *Edit* moves it into the full editor at the same position; the editor's *Mini player* button moves it
-  back. Off under Settings, Features, videos open straight in the editor. Controller mode always uses the editor.
+- **Quick player**: a video opens in a large player over the library (play/pause, seek, mute; Space, ←/→, M,
+  Esc, or click the dimmed edge to close). *Edit* moves it into the full editor at the same position; the
+  editor's *Quick player* button moves it back. Off under Settings, Features, videos open straight in the
+  editor. Controller mode always uses the editor.
 - **Player**: libVLC playback, frame stepping with a frame-number clock (click the time), speed menu
   (0.25× to 4×, Shift+, / Shift+.), A-B loop (**B**), volume, fullscreen.
 - **Chapters**: bookmarks from a session recording become chapters, listed in the player (jump, or select one to
@@ -145,7 +146,7 @@ are off by default. The check runs at launch, after each saved clip and when set
 
 Nothing optional is forced on you. **Settings, Features** switches off background clipping, session recording,
 controller support, hover preview, loud moment markers, the hover glow, collections, unwatched dots, Clean up,
-Stats, the mini player or chapters; their buttons and settings disappear and they stop running. **Settings, Accessibility** has an interface size (90 to 150 %), high contrast and
+Stats, the quick player or chapters; their buttons and settings disappear and they stop running. **Settings, Accessibility** has an interface size (90 to 150 %), high contrast and
 reduce motion. Press **?** for the list of keyboard shortcuts; click a key to change it.
 
 **Settings, General, Backup** exports and imports all settings as one file. **Portable mode** creates a

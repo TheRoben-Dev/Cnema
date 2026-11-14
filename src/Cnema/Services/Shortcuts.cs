@@ -62,7 +62,7 @@ public static class Shortcuts
         ("General", "Quit Cnema", Mod + "+Q"),
         ("General", "Close a dialog or the player", "Esc"),
         ("General", "Select all (while selecting)", Mod + "+A"),
-        ("General", "Mini player: play/pause, seek, mute", "Space ← → M"),
+        ("General", "Quick player: play/pause, seek, mute, close", "Space ← → M Esc"),
     };
 
     private static string Mod => OperatingSystem.IsMacOS() ? "⌘" : "Ctrl";

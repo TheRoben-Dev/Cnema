@@ -2,6 +2,9 @@
 
 What changed in each Cnema release. The app shows the entries you have not seen yet after it updates.
 
+## 0.13.1
+- The mini player is now the quick player: it fills almost the whole window instead of a corner, and works the same way. Click the dimmed edge around it (or press Esc) to close it, and Edit still opens the full editor.
+
 ## 0.13.0
 - Mini player: clicking a video plays it in a small player over the library, so you can keep browsing. Edit opens it in the full editor at the same spot, and the editor's Mini player button sends it back. Space, ← → and M control it; Esc closes it. Switch it off under Settings, Features to open videos straight in the editor.
 - Speed menu: pick 0.25× to 4×, or press Shift+, and Shift+. to go slower or faster.

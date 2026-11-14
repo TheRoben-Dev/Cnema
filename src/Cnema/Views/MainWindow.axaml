@@ -467,71 +467,75 @@
       </DockPanel>
     </Grid>
 
-    <!-- ======================= MINI PLAYER ======================= -->
-    <!-- Plain playback over the library; Edit opens the same video in the full editor. -->
-    <Border x:Name="MiniPlayer" Classes="miniplayer" IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).IsMiniPlayerOpen}" HorizontalAlignment="Right" VerticalAlignment="Bottom"
-            Margin="0,0,22,22" Width="400" DataContext="{Binding Player}" x:DataType="vm:PlayerViewModel">
-      <StackPanel>
-        <Panel Height="225">
-          <c:VideoSurface x:Name="MiniSurface" Frames="{Binding Frames}" />
-          <Border x:Name="MiniHit" Background="Transparent" ToolTip.Tip="Click to play or pause, double-click to edit" ToolTip.ShowDelay="1200" />
-          <Border IsVisible="{Binding Toast, Converter={x:Static ObjectConverters.IsNotNull}}" IsHitTestVisible="False"
-                  HorizontalAlignment="Center" VerticalAlignment="Top" Margin="10,10,48,0"
-                  Background="#E614151B" CornerRadius="8" Padding="10,5" BorderBrush="{DynamicResource Line}" BorderThickness="1">
-            <TextBlock Text="{Binding Toast}" FontSize="11" TextWrapping="Wrap" />
-          </Border>
-          <Button Classes="mini" Focusable="False" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="8" ToolTip.Tip="Close (Esc)"
-                  Command="{Binding #Root.((vm:MainViewModel)DataContext).CloseMiniPlayerCommand}">
-            <PathIcon Data="{StaticResource IcClose}" Width="12" Height="12" />
-          </Button>
-        </Panel>
-        <StackPanel Margin="10,0,10,10" Spacing="2">
-          <c:TrimTimeline Duration="{Binding Duration}" Position="{Binding Position}"
-                          InPoint="{Binding InPoint}" OutPoint="{Binding OutPoint}"
-                          SeekCommand="{Binding SeekCommand}" Accent="{DynamicResource Accent}" RangeBrush="{DynamicResource Cyan}"
-                          Segments="{Binding SegmentRanges}" Markers="{Binding Markers}" />
-          <Grid ColumnDefinitions="Auto,*,Auto">
-            <StackPanel Orientation="Horizontal" Spacing="0" VerticalAlignment="Center">
-              <Button Classes="ghost" Focusable="False" Command="{Binding SkipBackCommand}" ToolTip.Tip="Back 5 s (←)" Padding="6">
-                <PathIcon Data="{StaticResource IcRewind}" Width="15" Height="15" />
-              </Button>
-              <Button Classes="ghost" Focusable="False" Command="{Binding TogglePlayCommand}" ToolTip.Tip="Play / pause (Space)" Padding="6">
-                <Panel>
-                  <PathIcon Data="{StaticResource IcPlay}" Width="18" Height="18" IsVisible="{Binding !IsPlaying}" />
-                  <PathIcon Data="{StaticResource IcPause}" Width="18" Height="18" IsVisible="{Binding IsPlaying}" />
-                </Panel>
-              </Button>
-              <Button Classes="ghost" Focusable="False" Command="{Binding SkipForwardCommand}" ToolTip.Tip="Forward 5 s (→)" Padding="6">
-                <PathIcon Data="{StaticResource IcForward}" Width="15" Height="15" />
-              </Button>
-              <Button Classes="ghost" Focusable="False" Command="{Binding ToggleMuteCommand}" ToolTip.Tip="Mute (M)" Padding="6">
-                <Panel>
-                  <PathIcon Data="{StaticResource IcVolume}" Width="15" Height="15" IsVisible="{Binding !IsMuted}" />
-                  <PathIcon Data="{StaticResource IcMute}" Width="15" Height="15" IsVisible="{Binding IsMuted}" />
-                </Panel>
-              </Button>
-            </StackPanel>
-            <StackPanel Grid.Column="1" Margin="8,0" VerticalAlignment="Center" Spacing="1">
-              <TextBlock Text="{Binding Title}" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Title}" />
-              <StackPanel Orientation="Horizontal" Spacing="4">
-                <TextBlock Classes="dim mono" Text="{Binding PositionText}" FontSize="11" />
-                <TextBlock Classes="dim mono" Text="/" FontSize="11" />
-                <TextBlock Classes="dim mono" Text="{Binding DurationText}" FontSize="11" />
-                <TextBlock Classes="dim" Text="{Binding RateText}" FontSize="11" Margin="4,0,0,0" IsVisible="{Binding IsRateChanged}" />
+    <!-- ======================= QUICK PLAYER ======================= -->
+    <!-- Plain playback over the library, almost window-sized; Edit opens the same video in the full editor.
+         (Called the mini player in code: it started out as a small corner player.) -->
+    <Panel IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).IsMiniPlayerOpen}">
+      <Border x:Name="MiniScrim" Background="#99050609" />
+      <Border x:Name="MiniPlayer" Classes="miniplayer" Margin="48,56,48,40"
+              DataContext="{Binding Player}" x:DataType="vm:PlayerViewModel">
+        <DockPanel>
+          <StackPanel DockPanel.Dock="Bottom" Margin="14,2,14,12" Spacing="2">
+            <c:TrimTimeline Duration="{Binding Duration}" Position="{Binding Position}"
+                            InPoint="{Binding InPoint}" OutPoint="{Binding OutPoint}"
+                            SeekCommand="{Binding SeekCommand}" Accent="{DynamicResource Accent}" RangeBrush="{DynamicResource Cyan}"
+                            Segments="{Binding SegmentRanges}" Markers="{Binding Markers}" />
+            <Grid ColumnDefinitions="Auto,*,Auto">
+              <StackPanel Orientation="Horizontal" Spacing="0" VerticalAlignment="Center">
+                <Button Classes="ghost" Focusable="False" Command="{Binding SkipBackCommand}" ToolTip.Tip="Back 5 s (←)" Padding="6">
+                  <PathIcon Data="{StaticResource IcRewind}" Width="15" Height="15" />
+                </Button>
+                <Button Classes="ghost" Focusable="False" Command="{Binding TogglePlayCommand}" ToolTip.Tip="Play / pause (Space)" Padding="6">
+                  <Panel>
+                    <PathIcon Data="{StaticResource IcPlay}" Width="18" Height="18" IsVisible="{Binding !IsPlaying}" />
+                    <PathIcon Data="{StaticResource IcPause}" Width="18" Height="18" IsVisible="{Binding IsPlaying}" />
+                  </Panel>
+                </Button>
+                <Button Classes="ghost" Focusable="False" Command="{Binding SkipForwardCommand}" ToolTip.Tip="Forward 5 s (→)" Padding="6">
+                  <PathIcon Data="{StaticResource IcForward}" Width="15" Height="15" />
+                </Button>
+                <Button Classes="ghost" Focusable="False" Command="{Binding ToggleMuteCommand}" ToolTip.Tip="Mute (M)" Padding="6">
+                  <Panel>
+                    <PathIcon Data="{StaticResource IcVolume}" Width="15" Height="15" IsVisible="{Binding !IsMuted}" />
+                    <PathIcon Data="{StaticResource IcMute}" Width="15" Height="15" IsVisible="{Binding IsMuted}" />
+                  </Panel>
+                </Button>
               </StackPanel>
-            </StackPanel>
-            <Button Grid.Column="2" Classes="accent" Focusable="False" Padding="12,6" VerticalAlignment="Center"
-                    ToolTip.Tip="Open in the editor: trim, export and share"
-                    Command="{Binding #Root.((vm:MainViewModel)DataContext).ExpandMiniPlayerCommand}">
-              <StackPanel Orientation="Horizontal" Spacing="6">
-                <PathIcon Data="{StaticResource IcEdit}" Width="13" Height="13" Foreground="{DynamicResource OnAccent}" />
-                <TextBlock Text="Edit" FontSize="12" />
+              <StackPanel Grid.Column="1" Margin="10,0" VerticalAlignment="Center" Spacing="1">
+                <TextBlock Text="{Binding Title}" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Title}" />
+                <StackPanel Orientation="Horizontal" Spacing="4">
+                  <TextBlock Classes="dim mono" Text="{Binding PositionText}" FontSize="11" />
+                  <TextBlock Classes="dim mono" Text="/" FontSize="11" />
+                  <TextBlock Classes="dim mono" Text="{Binding DurationText}" FontSize="11" />
+                  <TextBlock Classes="dim" Text="{Binding RateText}" FontSize="11" Margin="4,0,0,0" IsVisible="{Binding IsRateChanged}" />
+                </StackPanel>
               </StackPanel>
+              <Button Grid.Column="2" Classes="accent" Focusable="False" Padding="14,7" VerticalAlignment="Center"
+                      ToolTip.Tip="Open in the editor: trim, export and share"
+                      Command="{Binding #Root.((vm:MainViewModel)DataContext).ExpandMiniPlayerCommand}">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <PathIcon Data="{StaticResource IcEdit}" Width="13" Height="13" Foreground="{DynamicResource OnAccent}" />
+                  <TextBlock Text="Edit" FontSize="12" />
+                </StackPanel>
+              </Button>
+            </Grid>
+          </StackPanel>
+          <Panel Background="Black">
+            <c:VideoSurface x:Name="MiniSurface" Frames="{Binding Frames}" />
+            <Border x:Name="MiniHit" Background="Transparent" ToolTip.Tip="Click to play or pause, double-click to edit" ToolTip.ShowDelay="1200" />
+            <Border IsVisible="{Binding Toast, Converter={x:Static ObjectConverters.IsNotNull}}" IsHitTestVisible="False"
+                    HorizontalAlignment="Center" VerticalAlignment="Top" Margin="48,16,48,0"
+                    Background="#E614151B" CornerRadius="10" Padding="14,8" BorderBrush="{DynamicResource Line}" BorderThickness="1">
+              <TextBlock Text="{Binding Toast}" FontSize="13" TextWrapping="Wrap" />
+            </Border>
+            <Button Classes="mini" Focusable="False" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="10" ToolTip.Tip="Close (Esc)"
+                    Command="{Binding #Root.((vm:MainViewModel)DataContext).CloseMiniPlayerCommand}">
+              <PathIcon Data="{StaticResource IcClose}" Width="12" Height="12" />
             </Button>
-          </Grid>
-        </StackPanel>
-      </StackPanel>
-    </Border>
+          </Panel>
+        </DockPanel>
+      </Border>
+    </Panel>
 
     <!-- ======================= EDIT DETAILS ======================= -->
     <Border x:Name="EditScrim" Background="#B3050609" IsVisible="{Binding IsEditing}">
@@ -1158,8 +1162,8 @@
                     <Border Classes="sep" />
                     <Grid Classes="row" ColumnDefinitions="*,Auto">
                       <StackPanel Spacing="2">
-                        <TextBlock Text="Mini player" />
-                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="Videos play in a small player over the library; Edit opens the full editor. Off, they open straight in the editor." />
+                        <TextBlock Text="Quick player" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="Videos open in a large player over the library; Edit opens the full editor. Off, they open straight in the editor." />
                       </StackPanel>
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureMiniPlayer}" />
                     </Grid>
@@ -1452,12 +1456,12 @@
                 <TextBlock Text="Set thumbnail" FontSize="12" VerticalAlignment="Center" />
               </StackPanel>
             </Button>
-            <Button Classes="ghost" ToolTip.Tip="Keep playing in a small player while you browse the library"
+            <Button Classes="ghost" ToolTip.Tip="Back to the quick player: plain playback over the library"
                     IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).ShowMiniPlayerButton}"
                     Command="{Binding #Root.((vm:MainViewModel)DataContext).ShrinkToMiniPlayerCommand}">
               <StackPanel Orientation="Horizontal" Spacing="6">
                 <PathIcon Data="{StaticResource IcMiniPlayer}" Width="15" Height="15" />
-                <TextBlock Text="Mini player" FontSize="12" VerticalAlignment="Center" />
+                <TextBlock Text="Quick player" FontSize="12" VerticalAlignment="Center" />
               </StackPanel>
             </Button>
           </StackPanel>
