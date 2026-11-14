@@ -44,17 +44,17 @@ jobs:
         shell: bash
         run: |
           case "${{ matrix.rid }}" in
-            osx-arm64) D=dist/Cinema.app/Contents/MacOS ;;
+            osx-arm64) D=dist/Cnema.app/Contents/MacOS ;;
             osx-x64)   echo "Intel build: not runnable on an Apple Silicon runner, skipping"; exit 0 ;;
-            *)         D=dist/Cinema ;;
+            *)         D=dist/Cnema ;;
           esac
           "$D/tools/ffmpeg" -hide_banner -version | head -1
           "$D/tools/ffprobe" -hide_banner -version | head -1
-          "$D/Cinema" --selftest
+          "$D/Cnema" --selftest
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.rid }}
           path: |
-            dist/Cinema-*.zip
-            dist/Cinema-*.tar.gz
+            dist/Cnema-*.zip
+            dist/Cnema-*.tar.gz
           if-no-files-found: error

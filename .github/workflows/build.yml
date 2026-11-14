@@ -20,7 +20,7 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
-      - run: dotnet build src/Cinema/Cinema.csproj -c Release -warnaserror
+      - run: dotnet build src/Cnema/Cnema.csproj -c Release -warnaserror
 
   package:
     if: github.event_name == 'pull_request'
