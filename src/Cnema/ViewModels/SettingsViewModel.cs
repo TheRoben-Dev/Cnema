@@ -126,6 +126,10 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private bool _tagWithGame;
     [ObservableProperty] private bool _checkForUpdates;
     [ObservableProperty] private bool _autoUpdate;
+    public IReadOnlyList<ColorScheme> ColorSchemes => ThemeService.Schemes;
+    [ObservableProperty] private ColorScheme _colorScheme = ThemeService.Current;
+    // Shown straight away as a preview; cancelling Settings puts the saved scheme back.
+    partial void OnColorSchemeChanged(ColorScheme value) { if (value is not null) ThemeService.Apply(value.Id); }
     [ObservableProperty] private bool _hotkeyCtrl;
     [ObservableProperty] private bool _hotkeyAlt;
     [ObservableProperty] private bool _hotkeyShift;
@@ -177,6 +181,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         _tagWithGame = c.TagWithGame;
         _checkForUpdates = settings.CheckForUpdates;
         _autoUpdate = settings.AutoUpdate;
+        _colorScheme = ThemeService.Find(settings.ColorScheme);
         _hotkeyCtrl = c.HotkeyCtrl;
         _hotkeyAlt = c.HotkeyAlt;
         _hotkeyShift = c.HotkeyShift;
@@ -281,6 +286,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         c.TagWithGame = TagWithGame;
         settings.CheckForUpdates = CheckForUpdates;
         settings.AutoUpdate = AutoUpdate;
+        settings.ColorScheme = ColorScheme.Id;
         c.HotkeyCtrl = HotkeyCtrl;
         c.HotkeyAlt = HotkeyAlt;
         c.HotkeyShift = HotkeyShift;

@@ -11,6 +11,8 @@ public sealed class AppSettings
     public bool KeepInBackground { get; set; }
     public ClipSettings Clip { get; set; } = new();
     public bool CheckForUpdates { get; set; } = true;
+    /// <summary>Id of the colour scheme, see ThemeService.</summary>
+    public string ColorScheme { get; set; } = ThemeService.DefaultId;
     /// <summary>Download and install a newer version at launch, without asking.</summary>
     public bool AutoUpdate { get; set; } = true;
     /// <summary>The version an automatic install was last tried for, so a failing one is not retried forever.</summary>
