@@ -10,6 +10,7 @@ public sealed class SavedEdit
     public List<SpeedSpec> Speed { get; set; } = new();
     public List<BlurSpec> Blurs { get; set; } = new();
     public List<ZoomKey> Zoom { get; set; } = new();
+    public string? Music { get; set; }
     public DateTime SavedUtc { get; set; }
 }
 

@@ -80,7 +80,7 @@ public sealed partial class PlayerViewModel
     public bool ShowSpeedTools => Features.SpeedEffects;
     public bool ShowAudioTools => Features.AudioTools;
     public bool ShowBranding => Features.Branding;
-    public bool ShowEffectsButton => ShowCaptionTools || ShowSpeedTools || ShowAudioTools || ShowBranding || ShowZoomTools || ShowBlurTools;
+    public bool ShowEffectsButton => ShowCaptionTools || ShowSpeedTools || ShowAudioTools || ShowBranding || ShowZoomTools || ShowBlurTools || ShowMusicTools;
     public bool HasVoiceTrackChoice => VoiceTrack is not null;
     public bool HasClearableEffects => Captions.Count + SpeedSections.Count + Blurs.Count + ZoomKeys.Count > 0;
     /// <summary>The picture's size, so the preview draws captions where the export will.</summary>
@@ -108,7 +108,7 @@ public sealed partial class PlayerViewModel
         foreach (var name in new[]
                  {
                      nameof(ShowCaptionTools), nameof(ShowSpeedTools), nameof(ShowAudioTools), nameof(ShowBranding),
-                     nameof(ShowEffectsButton), nameof(ShowZoomTools), nameof(ShowBlurTools), nameof(HasWatermark), nameof(HasIntro), nameof(HasOutro),
+                     nameof(ShowEffectsButton), nameof(ShowZoomTools), nameof(ShowBlurTools), nameof(ShowMusicTools), nameof(HasWatermark), nameof(HasIntro), nameof(HasOutro),
                      nameof(UseWatermark), nameof(UseIntro), nameof(UseOutro), nameof(WatermarkName), nameof(IntroName), nameof(OutroName),
                  })
             OnPropertyChanged(name);
@@ -196,6 +196,7 @@ public sealed partial class PlayerViewModel
         {
             Blurs = ShowBlurTools ? Blurs.Where(b => b.End - b.Start >= 100).Select(b => b.ToSpec()).ToList() : new List<BlurSpec>(),
             Zoom = ShowZoomTools ? ZoomKeys.Select(k => k.ToSpec()).ToList() : new List<ZoomKey>(),
+            Music = BuildMusic(),
         };
     }
 
@@ -204,7 +205,7 @@ public sealed partial class PlayerViewModel
         get
         {
             var fx = BuildEffects();
-            return fx.Captions.Count + fx.Speed.Count + fx.Blurs.Count + (fx.HasZoom ? 1 : 0) + (fx.Audio.Normalize ? 1 : 0) + (fx.Audio.VoiceBoostDb != 0 ? 1 : 0) +
+            return fx.Captions.Count + fx.Speed.Count + fx.Blurs.Count + (fx.HasZoom ? 1 : 0) + (fx.Music is null ? 0 : 1) + (fx.Audio.Normalize ? 1 : 0) + (fx.Audio.VoiceBoostDb != 0 ? 1 : 0) +
                    (fx.Audio.Duck ? 1 : 0) + (fx.Watermark is null ? 0 : 1) + (fx.Intro is null ? 0 : 1) + (fx.Outro is null ? 0 : 1);
         }
     }
@@ -257,6 +258,7 @@ public sealed partial class PlayerViewModel
         Captions.Clear();
         SpeedSections.Clear();
         ClearFrameTools();
+        MusicPath = null;
         _previewRate = 1;
         SpeedPreviewText = null;
         VoiceTrack = null;
@@ -365,6 +367,7 @@ public sealed partial class PlayerViewModel
         Captions.Clear();
         SpeedSections.Clear();
         ClearFrameTools();
+        MusicPath = null;
         ShowToast(T("Captions, speed changes, blurred areas and zoom removed."));
     }
 }

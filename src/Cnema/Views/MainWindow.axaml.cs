@@ -219,6 +219,7 @@ public partial class MainWindow : Window
             : Vm?.IsCleaningUp == true ? CleanupScrim
             : Vm?.IsShowingStats == true ? StatsScrim
             : Vm?.IsShowingRecorders == true ? RecordersScrim
+            : Vm?.IsMakingMontage == true ? MontageScrim
             : Vm?.IsConfirmingDelete == true ? DeleteScrim
             : Vm?.IsSettingsOpen == true ? SettingsScrim : EditScrim);
         if (focused is null || !scope.IsVisualAncestorOf(focused))
@@ -299,6 +300,13 @@ public partial class MainWindow : Window
         if (vm.IsShowingStats)
         {
             if (b is PadButton.B or PadButton.A) vm.CloseStatsCommand.Execute(null);
+            return;
+        }
+        if (vm.IsMakingMontage)
+        {
+            if (b == PadButton.B) vm.CloseMontageCommand.Execute(null);
+            else if (b == PadButton.A) SendKey(Focused is CheckBox ? Key.Space : Key.Enter);
+            else if (direction) MoveInDialog(b);
             return;
         }
         if (vm.IsShowingRecorders)
@@ -407,6 +415,8 @@ public partial class MainWindow : Window
         vm.CopyText = async text => { if (Clipboard is { } clipboard) await clipboard.SetTextAsync(text); };
         vm.PickFolder = PickFolderAsync;
         vm.PickFile = PickMediaFileAsync;
+        vm.PickAudio = PickAudioFileAsync;
+        vm.Player.PickAudio = PickAudioFileAsync;
         vm.Player.PickSavePath = PickSavePathAsync;
         // A new caption gets the cursor in its text box, ready to type.
         vm.Player.CaptionAdded += caption => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
@@ -510,6 +520,24 @@ public partial class MainWindow : Window
     private static readonly FilePickerFileType ImageFileType = new(T("Images")) { Patterns = new[] { "*.png", "*.jpg", "*.jpeg", "*.webp", "*.bmp" } };
     private static readonly FilePickerFileType VideoFileType =
         new(T("Videos")) { Patterns = new[] { "*.mp4", "*.mov", "*.mkv", "*.webm", "*.avi", "*.m4v" } };
+
+    private static readonly FilePickerFileType AudioFileType = new(T("Music")) { Patterns = new[] { "*.mp3", "*.m4a", "*.aac", "*.wav", "*.flac", "*.ogg", "*.opus" } };
+
+    private async Task<string?> PickAudioFileAsync()
+    {
+        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = T("Pick a song"),
+            AllowMultiple = false,
+            FileTypeFilter = new[] { AudioFileType },
+        });
+        return files.FirstOrDefault()?.TryGetLocalPath();
+    }
+
+    private void OnClearMontageMusicClick(object? sender, RoutedEventArgs e)
+    {
+        if (Vm?.Montage is { } m) m.MusicPath = null;
+    }
 
     private async Task<string?> PickMediaFileAsync(string title, bool image)
     {
@@ -807,6 +835,11 @@ public partial class MainWindow : Window
         if (vm.IsShowingStats)
         {
             if (e.Key == Key.Escape) { vm.CloseStatsCommand.Execute(null); e.Handled = true; }
+            return;
+        }
+        if (vm.IsMakingMontage)
+        {
+            if (e.Key == Key.Escape) { vm.CloseMontageCommand.Execute(null); e.Handled = true; }
             return;
         }
         if (vm.IsShowingRecorders)

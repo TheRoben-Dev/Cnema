@@ -2,6 +2,11 @@
 
 What changed in each Cnema release. The app shows the entries you have not seen yet after it updates.
 
+## 0.20.0
+- Music: pick a song on the editor's Sound page and it plays under the export. It repeats if it's shorter than the clip, fades in and out, and can drop for a moment whenever the game gets loud (shots, voices), so the action still comes through. Quiet, Medium or Loud.
+- Auto montage (sidebar, Tools, or Montage… while selecting): Cnema takes the loudest moment of each favourite (or the selected videos, or everything in view), puts them together with a crossfade, fade to black, slide or plain cut, adds a song if you like, and saves the result in a Montages folder. It runs in the background under Exports.
+- Both can be switched off under Settings, Features.
+
 ## 0.19.0
 - Zoom and pan (new Zoom page in the editor): punch in on the action with Z, or set keyframes yourself. On the Zoom page you see the whole picture with the zoom frame on it; drag the frame to aim and its corners to zoom. Cnema glides smoothly from one keyframe to the next, in the preview and in the export.
 - Blur (new Blur page, or H): hide names, chat or bits of the HUD before you share. Drag the box into place and pull its corners to fit, then pick Blur or Pixelate. It covers the whole video, or just the part you choose. You see it blurred in the player.

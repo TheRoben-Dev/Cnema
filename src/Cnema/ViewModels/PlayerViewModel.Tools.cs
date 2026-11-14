@@ -26,7 +26,7 @@ public sealed partial class PlayerViewModel
     public bool ShowClearEffects => HasClearableEffects && (IsCaptionsPage || IsSpeedPage || IsZoomPage || IsBlurPage);
 
     /// <summary>The Sound page also holds the audio track switches, so it shows for either.</summary>
-    public bool ShowSoundPage => ShowAudioTools || HasAudioTracks;
+    public bool ShowSoundPage => ShowAudioTools || HasAudioTracks || ShowMusicTools;
 
     public string PageTitle => Page switch
     {
