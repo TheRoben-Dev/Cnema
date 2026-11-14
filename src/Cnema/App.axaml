@@ -35,7 +35,7 @@
       <SolidColorBrush x:Key="PartFill" Color="#223DDCFF" />
       <SolidColorBrush x:Key="PartLine" Color="#553DDCFF" />
       <SolidColorBrush x:Key="Overlay" Color="#E0090A0F" />
-      <BoxShadows x:Key="CardGlow">0 0 26 0 #598E6BFF</BoxShadows>
+      <BoxShadows x:Key="CardGlow">0 0 22 0 #4D8E6BFF</BoxShadows>
       <!-- Brand gradient, shared with the app icon -->
       <LinearGradientBrush x:Key="Brand" StartPoint="0%,0%" EndPoint="100%,100%">
         <GradientStop Offset="0" Color="#8E6BFF" />

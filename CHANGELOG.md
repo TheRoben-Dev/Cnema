@@ -2,6 +2,9 @@
 
 What changed in each Cnema release. The app shows the entries you have not seen yet after it updates.
 
+## 0.10.1
+- The hover glow fades in and out smoothly and sits around the thumbnail instead of the whole card.
+
 ## 0.10.0
 - Color schemes: pick Violet, Graphite, Ember, Mint or Rose under Settings, Appearance. They are flat, without gradients. Aurora keeps the original gradient look.
 - Hovering a video in the library gives it a soft glow in the color of your scheme.

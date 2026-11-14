@@ -170,15 +170,6 @@
     <Setter Property="VerticalContentAlignment" Value="Top" />
     <Setter Property="CornerRadius" Value="12" />
   </Style>
-  <Style Selector="Button.card /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Transitions">
-      <Transitions><BoxShadowsTransition Property="BoxShadow" Duration="0:0:0.2" /></Transitions>
-    </Setter>
-  </Style>
-  <!-- hover: a soft glow in the colour scheme's accent -->
-  <Style Selector="Button.card:pointerover /template/ ContentPresenter#PART_ContentPresenter, Window.pad Button.card:focus /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="BoxShadow" Value="{DynamicResource CardGlow}" />
-  </Style>
   <Style Selector="Button.card:pointerover /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource Bg2}" />
   </Style>
@@ -194,6 +185,20 @@
     </Setter>
   </Style>
   <Style Selector="Button.card:pointerover Border.thumb">
+    <Setter Property="RenderTransform" Value="scale(1.02)" />
+  </Style>
+  <Style Selector="Button.card Border.glow">
+    <Setter Property="Opacity" Value="0" />
+    <Setter Property="RenderTransform" Value="scale(1)" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <DoubleTransition Property="Opacity" Duration="0:0:0.28" Easing="CubicEaseOut" />
+        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.15" />
+      </Transitions>
+    </Setter>
+  </Style>
+  <Style Selector="Button.card:pointerover Border.glow, Window.pad Button.card:focus Border.glow">
+    <Setter Property="Opacity" Value="1" />
     <Setter Property="RenderTransform" Value="scale(1.02)" />
   </Style>
   <Style Selector="Button.card Border.ring">
