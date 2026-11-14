@@ -7,6 +7,12 @@ using Avalonia.Media;
 
 namespace Cnema.Controls;
 
+/// <summary>A kept part of the video on the timeline, in milliseconds.</summary>
+public readonly record struct TimeRange(double Start, double End);
+
+/// <summary>A point of interest on the timeline: a session bookmark, or a loud moment found in the audio.</summary>
+public readonly record struct TimelineMarker(double Ms, bool Bookmark);
+
 /// <summary>
 /// Scrub bar with a trim range. Click/drag to seek; drag the bracket handles to move in/out points.
 /// In/Out are two-way bindable (milliseconds, -1 = unset). Seeking is pushed through <see cref="SeekCommand"/>.
@@ -28,6 +34,14 @@ public sealed class TrimTimeline : Control
     public static readonly StyledProperty<IBrush> RangeBrushProperty =
         AvaloniaProperty.Register<TrimTimeline, IBrush>(nameof(RangeBrush), new SolidColorBrush(Color.Parse("#3DDCFF")));
 
+    public static readonly StyledProperty<IReadOnlyList<TimeRange>?> SegmentsProperty =
+        AvaloniaProperty.Register<TrimTimeline, IReadOnlyList<TimeRange>?>(nameof(Segments));
+    public static readonly StyledProperty<IReadOnlyList<TimelineMarker>?> MarkersProperty =
+        AvaloniaProperty.Register<TrimTimeline, IReadOnlyList<TimelineMarker>?>(nameof(Markers));
+
+    /// <summary>Segments already added to a multi-part export; drawn as fixed ranges.</summary>
+    public IReadOnlyList<TimeRange>? Segments { get => GetValue(SegmentsProperty); set => SetValue(SegmentsProperty, value); }
+    public IReadOnlyList<TimelineMarker>? Markers { get => GetValue(MarkersProperty); set => SetValue(MarkersProperty, value); }
     public double Duration { get => GetValue(DurationProperty); set => SetValue(DurationProperty, value); }
     public double Position { get => GetValue(PositionProperty); set => SetValue(PositionProperty, value); }
     public double InPoint { get => GetValue(InPointProperty); set => SetValue(InPointProperty, value); }
@@ -37,6 +51,8 @@ public sealed class TrimTimeline : Control
     public IBrush RangeBrush { get => GetValue(RangeBrushProperty); set => SetValue(RangeBrushProperty, value); }
 
     private const double Pad = 10;
+    private static readonly IBrush BookmarkBrush = new SolidColorBrush(Color.Parse("#FFD166"));
+    private static readonly IBrush HighlightBrush = new SolidColorBrush(Color.Parse("#FF6B9D"));
     private const double TrackH = 6;
     private enum Drag { None, Seek, In, Out }
     private Drag _drag;
@@ -45,7 +61,8 @@ public sealed class TrimTimeline : Control
 
     static TrimTimeline()
     {
-        AffectsRender<TrimTimeline>(DurationProperty, PositionProperty, InPointProperty, OutPointProperty, AccentProperty, RangeBrushProperty);
+        AffectsRender<TrimTimeline>(DurationProperty, PositionProperty, InPointProperty, OutPointProperty, AccentProperty, RangeBrushProperty,
+            SegmentsProperty, MarkersProperty);
         FocusableProperty.OverrideDefaultValue<TrimTimeline>(false);
     }
 
@@ -127,6 +144,30 @@ public sealed class TrimTimeline : Control
 
         var track = new Rect(Pad, cy - TrackH / 2, TrackWidth, TrackH);
         ctx.DrawRectangle(new SolidColorBrush(Color.FromArgb(46, 255, 255, 255)), null, track, 3, 3);
+
+        // Segments already added to the export.
+        if (Duration > 0 && Segments is { Count: > 0 } segments)
+        {
+            foreach (var seg in segments)
+            {
+                var sx1 = XFor(seg.Start);
+                var sx2 = XFor(seg.End);
+                ctx.DrawRectangle(new SolidColorBrush(rangeColor, 0.30), null,
+                    new Rect(sx1, cy - 9, Math.Max(2, sx2 - sx1), 18), 3, 3);
+            }
+        }
+
+        // Markers: bookmarks (amber) and loud moments (pink), as ticks above the track.
+        if (Duration > 0 && Markers is { Count: > 0 } markers)
+        {
+            foreach (var m in markers)
+            {
+                var mx = XFor(m.Ms);
+                var brush = m.Bookmark ? BookmarkBrush : HighlightBrush;
+                ctx.DrawRectangle(brush, null, new Rect(mx - 1, cy - 12, 2, 8), 1, 1);
+                ctx.DrawEllipse(brush, null, new Point(mx, cy - 13), 3, 3);
+            }
+        }
 
         // Trim range.
         bool hasIn = InPoint >= 0, hasOut = OutPoint >= 0;

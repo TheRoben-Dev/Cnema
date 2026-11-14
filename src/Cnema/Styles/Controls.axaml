@@ -435,4 +435,10 @@
     <Setter Property="Background" Value="#FF5C87" />
     <Setter Property="Foreground" Value="#FFFFFF" />
   </Style>
+  <Style Selector="Border.part">
+    <Setter Property="Background" Value="#223DDCFF" />
+    <Setter Property="BorderBrush" Value="#553DDCFF" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="7" />
+  </Style>
 </Styles>

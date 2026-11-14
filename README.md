@@ -11,6 +11,8 @@ play anything VLC can play and cut clips out of it without leaving the app.
 ![Delete to trash](docs/delete.png)
 ![Share presets](docs/share.png)
 ![Storage limits](docs/storage.png)
+![Parts, audio tracks and markers](docs/parts.png)
+![Game profiles](docs/profiles.png)
 ![Controller mode](docs/controller.png)
 
 Stack: C# / .NET 8, [Avalonia 11](https://avaloniaui.net) for UI, [LibVLCSharp](https://code.videolan.org/videolan/LibVLCSharp)
@@ -60,6 +62,12 @@ Set `CNEMA_LIBVLC_PATH` to a folder containing libvlc + libvlccore to override.
 - **Organise**: tag videos and star favourites; both appear in the sidebar and in search (`#tag` searches tags only).
   Rename files and move them between library folders from the app. Tags are stored in Cnema's library, not in
   the files, and follow a file that is renamed or moved outside the app.
+- **Multi-part export**: mark a selection, press **A** (*Add part*), mark the next one, and Export joins all parts
+  in time order into one file. Lossless parts each start on a keyframe, as with a single trim.
+- **Audio tracks**: a video with several audio tracks (see *separate tracks* under clipping) gets a toggle per
+  track. Export keeps the tracks that are on; Share presets mix them into one. Playback uses the first one on.
+- **Markers**: loud moments in the audio are found when a video opens and shown as pink ticks on the timeline;
+  session bookmarks are amber. **N** and **Shift+N** jump between them.
 - **Hover scrub**: move the pointer across a card to flick through ten frames of the video. The filmstrip is
   made the first time you hover and cached next to the thumbnail.
 - **Share presets** (player, *Share*): fit the selection in 10 MB or 50 MB for Discord (two-pass H.264, resolution
@@ -94,6 +102,19 @@ Platform notes:
 | macOS | Needs the Screen Recording permission (asked on first use). | "System audio" (macOS 13+, via ScreenCaptureKit) records everything you hear; microphones work as they are. |
 | Windows | Desktop Duplication (`ddagrab`), `gdigrab` as fallback. | DirectShow devices. System sound needs "Stereo Mix" or a loopback device. |
 | Linux | X11 sessions only (`x11grab`); Wayland is not supported yet. | PulseAudio / PipeWire sources; `.monitor` sources record system sound. |
+
+### Session recording, separate tracks and game profiles
+
+- **Record session** (sidebar or tray, while clipping is on) keeps everything from that moment until you stop
+  and saves it as one video. During a session the clip hotkey adds a **bookmark** instead of cutting a clip.
+  It is the same capture as the replay buffer, so there is no second encoder; the session is held in the
+  temporary buffer until it is saved, which needs that much free space. Quitting or a capture restart saves
+  the session first.
+- **Separate tracks** (Settings, Audio): with two audio devices, record them as two tracks instead of one mix,
+  so the game or the microphone can be left out afterwards.
+- **Game profiles** (Settings): per game, a different clip length, bitrate or format. Cnema checks which app is
+  in front every few seconds while profiles exist. Changing bitrate or format restarts the capture, so the
+  profile stays on while you alt-tab and is only dropped after two minutes away from the game.
 
 ### Storage limits
 
@@ -151,6 +172,7 @@ H.264 at the same quality. Turning off "Use the graphics card" records H.264 wit
 | ↑ / ↓ | Volume | X | Clear selection |
 | M | Mute | E | Export clip |
 | F | Fullscreen | Esc | Back to library |
+| A | Add selection as a part | N / Shift+N | Next / previous marker |
 
 ## Layout
 

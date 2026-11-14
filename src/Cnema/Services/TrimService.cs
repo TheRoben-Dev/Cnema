@@ -56,8 +56,23 @@ public static class TrimService
 
     public static async Task ShareAsync(
         string source, string output, long inMs, long outMs, SharePreset preset,
-        IProgress<double>? progress, CancellationToken ct)
+        IProgress<double>? progress, CancellationToken ct, IReadOnlyList<int>? audio = null)
     {
+        // Shared files get one audio track: the chosen one, or the chosen ones mixed together,
+        // because Discord and phones only ever play the first track.
+        string[] AudioMap() => audio switch
+        {
+            null => new[] { "-map", "0:a:0?" },
+            { Count: 0 } => new[] { "-an" },
+            { Count: 1 } => new[] { "-map", $"0:a:{audio[0]}?" },
+            _ => new[]
+            {
+                "-filter_complex",
+                string.Concat(audio.Select(i => $"[0:a:{i}]")) + $"amix=inputs={audio.Count}:duration=longest:normalize=0[mixed]",
+                "-map", "[mixed]",
+            },
+        };
+
         var ffmpeg = ToolLocator.Ffmpeg ?? throw new InvalidOperationException("ffmpeg not found.");
         if (outMs <= inMs) throw new ArgumentException("Out point must be after in point.");
         if (preset == SharePreset.Gif) outMs = Math.Min(outMs, inMs + GifMaxMs);
@@ -96,17 +111,16 @@ public static class TrimService
             case SharePreset.Vertical:
                 await Run(new[]
                 {
-                    "-map", "0:v:0", "-map", "0:a:0?",
+                    "-map", "0:v:0",
                     // The middle 9:16 slice of the picture, at most 1080x1920.
                     "-vf", "crop=trunc(ih*9/32)*2:ih,scale=-2:'min(1920,ih)'",
                     "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-pix_fmt", "yuv420p",
-                    "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", "-y", temp,
-                }, 0, 1);
+                }.Concat(AudioMap()).Concat(new[] { "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", "-y", temp }), 0, 1);
                 break;
 
             default:
                 var cap = (preset == SharePreset.Discord10 ? 10L : 50L) * 1000 * 1000;
-                var (height, fps, video, audio) = PlanForSize(cap, durationMs);
+                var (height, fps, video, audioKbps) = PlanForSize(cap, durationMs);
                 var log = Path.Combine(Path.GetTempPath(), $"cnema-pass-{Environment.ProcessId}-{Environment.TickCount64}");
                 var common = new[]
                 {
@@ -120,10 +134,9 @@ public static class TrimService
                 {
                     // Two passes: the only way to land on a file size instead of a quality level.
                     await Run(common.Concat(new[] { "-pass", "1", "-an", "-f", "null", "-y", OperatingSystem.IsWindows() ? "NUL" : "/dev/null" }), 0, 0.45);
-                    await Run(common.Concat(new[]
+                    await Run(common.Concat(new[] { "-pass", "2" }).Concat(AudioMap()).Concat(new[]
                     {
-                        "-pass", "2", "-map", "0:a:0?", "-c:a", "aac", "-b:a", $"{audio}k", "-ac", "2",
-                        "-movflags", "+faststart", "-y", temp,
+                        "-c:a", "aac", "-b:a", $"{audioKbps}k", "-ac", "2", "-movflags", "+faststart", "-y", temp,
                     }), 0.45, 0.55);
                 }
                 finally
@@ -142,7 +155,7 @@ public static class TrimService
 
     public static async Task ExportAsync(
         string source, string output, long inMs, long outMs, TrimMode mode,
-        IProgress<double>? progress, CancellationToken ct)
+        IProgress<double>? progress, CancellationToken ct, IReadOnlyList<int>? audio = null)
     {
         var ffmpeg = ToolLocator.Ffmpeg ?? throw new InvalidOperationException(
             "ffmpeg not found. Install it (macOS: brew install ffmpeg) and restart Cnema.");
@@ -152,8 +165,10 @@ public static class TrimService
         string S(long ms) => (ms / 1000.0).ToString("0.000", CultureInfo.InvariantCulture);
 
         var args = new List<string> { "-hide_banner", "-v", "error", "-nostats", "-progress", "pipe:1",
-                                      "-ss", S(inMs), "-i", source, "-t", S(durationMs),
-                                      "-map", "0:v:0?", "-map", "0:a?" };
+                                      "-ss", S(inMs), "-i", source, "-t", S(durationMs), "-map", "0:v:0?" };
+        // audio: null keeps every track; otherwise only the listed ones (none = silent).
+        if (audio is null) args.AddRange(new[] { "-map", "0:a?" });
+        else foreach (var i in audio) args.AddRange(new[] { "-map", $"0:a:{i}?" });
         if (mode == TrimMode.Lossless)
         {
             args.AddRange(new[] { "-c", "copy", "-avoid_negative_ts", "make_zero" });
@@ -187,6 +202,52 @@ public static class TrimService
         }
         File.Move(temp, output, overwrite: true);
         progress?.Report(1);
+    }
+
+    /// <summary>
+    /// Cuts several parts out of one video and joins them, in the order given, into one file.
+    /// Each part is exported exactly like a single trim, then the parts are joined without re-encoding.
+    /// </summary>
+    public static async Task ExportSegmentsAsync(
+        string source, string output, IReadOnlyList<(long In, long Out)> parts, TrimMode mode,
+        IProgress<double>? progress, CancellationToken ct, IReadOnlyList<int>? audio = null)
+    {
+        var ffmpeg = ToolLocator.Ffmpeg ?? throw new InvalidOperationException("ffmpeg not found.");
+        if (parts.Count == 0) throw new ArgumentException("Nothing to export.");
+        var ext = Path.GetExtension(output);
+        var files = new List<string>();
+        var list = Path.Combine(Path.GetTempPath(), $"cnema-join-{Guid.NewGuid():N}.txt");
+        var joined = TempFor(output);
+        try
+        {
+            for (var i = 0; i < parts.Count; i++)
+            {
+                var piece = Path.Combine(Path.GetTempPath(), $"cnema-part-{Guid.NewGuid():N}{ext}");
+                files.Add(piece);
+                var index = i;
+                var each = new Progress<double>(p => progress?.Report((index + p) / parts.Count * 0.95));
+                await ExportAsync(source, piece, parts[i].In, parts[i].Out, mode, each, ct, audio);
+            }
+            await File.WriteAllLinesAsync(list, files.Select(f => $"file '{f.Replace("'", "'\\''")}'"), ct);
+            var args = new List<string> { "-hide_banner", "-v", "error", "-f", "concat", "-safe", "0", "-i", list,
+                                          "-map", "0", "-c", "copy" };
+            if (ext.Equals(".mp4", StringComparison.OrdinalIgnoreCase) || ext.Equals(".mov", StringComparison.OrdinalIgnoreCase))
+                args.AddRange(new[] { "-movflags", "+faststart" });
+            args.AddRange(new[] { "-y", joined });
+            var r = await ProcessRunner.RunAsync(ffmpeg, args, ct: ct);
+            if (r.ExitCode != 0)
+            {
+                var msg = r.StdErr.Trim();
+                throw new InvalidOperationException(string.IsNullOrEmpty(msg) ? $"ffmpeg exited with {r.ExitCode}" : msg);
+            }
+            File.Move(joined, output, overwrite: true);
+            progress?.Report(1);
+        }
+        finally
+        {
+            foreach (var f in files.Append(list).Append(joined))
+                try { File.Delete(f); } catch { /* temp */ }
+        }
     }
 
     private static string TempFor(string output) =>

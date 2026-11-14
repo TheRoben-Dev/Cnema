@@ -17,6 +17,7 @@ public partial class App : Application
     private MainWindow? _window;
     private TrayIcon? _tray;
     private NativeMenuItem? _traySave;
+    private NativeMenuItem? _traySession;
     private NativeMenuItem? _trayToggle;
     private SingleInstance? _instance;
 
@@ -101,6 +102,8 @@ public partial class App : Application
         open.Click += (_, _) => ShowWindow();
         _traySave = new NativeMenuItem("Save clip");
         _traySave.Click += (_, _) => _vm?.SaveClipCommand.Execute(null);
+        _traySession = new NativeMenuItem("Record session");
+        _traySession.Click += (_, _) => _vm?.ToggleSessionCommand.Execute(null);
         _trayToggle = new NativeMenuItem("Background clipping") { ToggleType = NativeMenuItemToggleType.CheckBox };
         _trayToggle.Click += (_, _) => _vm?.ToggleClippingCommand.Execute(null);
         var quit = new NativeMenuItem("Quit Cnema");
@@ -110,6 +113,7 @@ public partial class App : Application
         menu.Add(open);
         menu.Add(new NativeMenuItemSeparator());
         menu.Add(_traySave);
+        menu.Add(_traySession);
         menu.Add(_trayToggle);
         menu.Add(new NativeMenuItemSeparator());
         menu.Add(quit);
@@ -134,6 +138,11 @@ public partial class App : Application
         {
             _traySave.Header = _vm.SaveClipLabel;
             _traySave.IsEnabled = _vm.IsClipRecording;
+        }
+        if (_traySession is not null)
+        {
+            _traySession.Header = _vm.SessionLabel;
+            _traySession.IsEnabled = _vm.CanToggleSession;
         }
         if (_trayToggle is not null) _trayToggle.IsChecked = _vm.IsClipEnabled;
     }
