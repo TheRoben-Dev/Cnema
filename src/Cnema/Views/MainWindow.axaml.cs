@@ -26,6 +26,8 @@ public partial class MainWindow : Window
 
         SurfaceHit.Tapped += (_, _) => Vm?.Player.TogglePlayCommand.Execute(null);
         SurfaceHit.DoubleTapped += (_, _) => ToggleFullscreen();
+        MiniHit.Tapped += (_, _) => Vm?.Player.TogglePlayCommand.Execute(null);
+        MiniHit.DoubleTapped += (_, _) => Vm?.ExpandMiniPlayerCommand.Execute(null);
 
         // Tunnel so shortcuts work even when a button/slider has focus; skipped while typing.
         AddHandler(KeyDownEvent, OnPreviewKeyDown, RoutingStrategies.Tunnel);
@@ -400,6 +402,10 @@ public partial class MainWindow : Window
                         Avalonia.Threading.DispatcherPriority.Background);
             }
             if (e.PropertyName == nameof(MainViewModel.IsSelecting)) Classes.Set("selecting", vm.IsSelecting);
+            // A paused video sends no new frames, so the surface that just appeared draws the last one itself.
+            if (e.PropertyName is nameof(MainViewModel.IsMiniPlayerOpen) or nameof(MainViewModel.IsPlayerOpen))
+                Avalonia.Threading.Dispatcher.UIThread.Post(() => { Surface.Refresh(); MiniSurface.Refresh(); },
+                    Avalonia.Threading.DispatcherPriority.Background);
             if (e.PropertyName == nameof(MainViewModel.IsNamingCollection) && vm.IsNamingCollection)
                 Avalonia.Threading.Dispatcher.UIThread.Post(() => { CollectionNameBox.Focus(); CollectionNameBox.SelectAll(); },
                     Avalonia.Threading.DispatcherPriority.Background);
@@ -623,6 +629,36 @@ public partial class MainWindow : Window
         }
     }
 
+    /// <summary>
+    /// The mini player listens to a few player keys while the library has the keyboard: play/pause,
+    /// seeking, mute and speed. Arrow keys up/down stay with the library lists. Esc closes it.
+    /// </summary>
+    private static bool HandleMiniPlayerKey(MainViewModel vm, KeyEventArgs e)
+    {
+        var p = vm.Player;
+        if (e.Key == Key.Escape) { vm.CloseMiniPlayerCommand.Execute(null); return true; }
+        switch (Shortcuts.Match(e, Shortcuts.Player))
+        {
+            case "play": p.TogglePlayCommand.Execute(null); return true;
+            case "back5": p.SeekCommand.Execute(p.Position - 5000); return true;
+            case "fwd5": p.SeekCommand.Execute(p.Position + 5000); return true;
+            case "back1": p.SeekCommand.Execute(p.Position - 1000); return true;
+            case "fwd1": p.SeekCommand.Execute(p.Position + 1000); return true;
+            case "mute": p.ToggleMuteCommand.Execute(null); return true;
+            case "speedUp": p.SpeedUpCommand.Execute(null); return true;
+            case "speedDown": p.SpeedDownCommand.Execute(null); return true;
+            default: return false;
+        }
+    }
+
+    /// <summary>A row in a flyout list was picked: close the flyout it sits in.</summary>
+    private void OnFlyoutRowClick(object? sender, RoutedEventArgs e)
+    {
+        // Closed after the click: closing right away detaches the row before its Command runs.
+        for (var l = (sender as Avalonia.LogicalTree.ILogical)?.LogicalParent; l is not null; l = l.LogicalParent)
+            if (l is Popup popup) { Avalonia.Threading.Dispatcher.UIThread.Post(popup.Close); return; }
+    }
+
     private void OnRenameCollectionClick(object? sender, RoutedEventArgs e) =>
         Vm?.BeginRenameCollection((sender as Control)?.DataContext as FolderViewModel);
 
@@ -786,6 +822,11 @@ public partial class MainWindow : Window
             return;
         }
 
+        if (!vm.IsPlayerOpen && vm.IsMiniPlayerOpen && HandleMiniPlayerKey(vm, e))
+        {
+            e.Handled = true;
+            return;
+        }
         if (!vm.IsPlayerOpen)
         {
             e.Handled = true;
@@ -818,7 +859,12 @@ public partial class MainWindow : Window
             case "fwd1": p.SeekCommand.Execute(p.Position + 1000); break;
             case "back10": p.SeekCommand.Execute(p.Position - 10000); break;
             case "fwd10": p.SeekCommand.Execute(p.Position + 10000); break;
-            case "loop": p.LoopRange = !p.LoopRange; break;
+            case "loop": p.ToggleLoopCommand.Execute(null); break;
+            case "abLoop": p.AbLoopCommand.Execute(null); break;
+            case "speedUp": p.SpeedUpCommand.Execute(null); break;
+            case "speedDown": p.SpeedDownCommand.Execute(null); break;
+            case "nextChapter": p.NextChapterCommand.Execute(null); break;
+            case "prevChapter": p.PreviousChapterCommand.Execute(null); break;
             case "frameBack": p.StepFrameBackCommand.Execute(null); break;
             case "frameFwd": p.StepFrameCommand.Execute(null); break;
             case "volUp": p.Volume = Math.Min(125, p.Volume + 5); break;

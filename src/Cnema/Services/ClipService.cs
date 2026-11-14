@@ -116,11 +116,20 @@ public sealed class ClipService : IDisposable
             await File.WriteAllLinesAsync(list, segments.Select(s => $"file '{s.Replace("'", "'\\''")}'"));
             // Same disk as the destination (a session can be many GB), under a name the library ignores.
             var partial = output + ".part";
-            var args = new List<string> { "-hide_banner", "-loglevel", "error", "-y", "-f", "concat", "-safe", "0",
-                                          "-i", list, "-map", "0", "-c", "copy", "-movflags", "+faststart" };
+            // Bookmarks become chapters inside the file, so other players can jump between them too.
+            var chapters = Chapters.Enabled
+                ? Chapters.FromBookmarks(marks, (long)(segments.Count * SegmentSeconds * 1000))
+                : Array.Empty<Chapter>();
+            var meta = chapters.Count > 1 ? Chapters.WriteMetadataFile(chapters) : null;
+            var args = new List<string> { "-hide_banner", "-loglevel", "error", "-y", "-f", "concat", "-safe", "0", "-i", list };
+            if (meta is not null) args.AddRange(new[] { "-i", meta });
+            args.AddRange(new[] { "-map", "0", "-c", "copy", "-movflags", "+faststart" });
+            if (meta is not null) args.AddRange(new[] { "-map_chapters", "1" });
             if (Codec?.Codec == "hevc") args.AddRange(new[] { "-tag:v", "hvc1" });
             args.AddRange(new[] { "-f", "mp4", partial });
-            var r = await ProcessRunner.RunAsync(ffmpeg, args);
+            ProcessResult r;
+            try { r = await ProcessRunner.RunAsync(ffmpeg, args); }
+            finally { if (meta is not null) try { File.Delete(meta); } catch { /* temp file */ } }
             if (r.ExitCode != 0 || !File.Exists(partial) || new FileInfo(partial).Length == 0)
             {
                 try { File.Delete(partial); } catch { /* nothing written */ }

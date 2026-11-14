@@ -645,4 +645,40 @@
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="10" />
   </Style>
+
+  <!-- ======================= Player (v0.13) ======================= -->
+  <Style Selector="Button.ghost.on">
+    <Setter Property="Background" Value="{DynamicResource AccentSoft}" />
+    <Setter Property="Foreground" Value="{DynamicResource Cyan}" />
+  </Style>
+  <Style Selector="Button.ghost.on PathIcon">
+    <Setter Property="Foreground" Value="{DynamicResource Cyan}" />
+  </Style>
+  <!-- A row in a flyout list (speed, chapters) -->
+  <Style Selector="Button.menurow">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource Text}" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="Padding" Value="10,7" />
+    <Setter Property="CornerRadius" Value="7" />
+    <Setter Property="FontSize" Value="13" />
+  </Style>
+  <Style Selector="Button.menurow:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Bg3}" />
+    <Setter Property="Foreground" Value="{DynamicResource Text}" />
+  </Style>
+  <Style Selector="Button.menurow.on">
+    <Setter Property="Background" Value="{DynamicResource AccentSoft}" />
+    <Setter Property="Foreground" Value="{DynamicResource Cyan}" />
+  </Style>
+  <!-- The mini player card -->
+  <Style Selector="Border.miniplayer">
+    <Setter Property="Background" Value="{DynamicResource Bg1}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Line}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="14" />
+    <Setter Property="ClipToBounds" Value="True" />
+    <Setter Property="BoxShadow" Value="0 16 48 0 #99000000" />
+  </Style>
 </Styles>

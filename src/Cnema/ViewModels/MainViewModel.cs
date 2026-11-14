@@ -517,6 +517,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         ShowWhatsNewAfterUpdate(firstRunEver: _settings.IsFirstRun);
         VideoItemViewModel.HoverPreview = Features.HoverPreview;
         VideoItemViewModel.UnwatchedBadges = Features.Unwatched;
+        Chapters.Enabled = Features.Chapters;
         RebuildCollections();
         IsSetupOpen = _settings.IsFirstRun || Environment.GetEnvironmentVariable("CNEMA_SETUP") == "1";
         _ = ApplyClipSettingsAsync();
@@ -815,6 +816,15 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     {
         if (item is null) return;
         if (IsSelecting) { ToggleSelected(item); return; }
+        if (UseMiniPlayer && !IsPlayerOpen)
+        {
+            // The mini player plays over the library; clicking the video it already plays leaves it be.
+            var same = IsMiniPlayerOpen && ReferenceEquals(Player.Current, item);
+            IsMiniPlayerOpen = true;
+            if (!same) await Player.OpenAsync(item);
+            return;
+        }
+        IsMiniPlayerOpen = false;
         IsPlayerOpen = true;
         await Player.OpenAsync(item);
     }

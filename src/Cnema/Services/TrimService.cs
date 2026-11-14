@@ -155,7 +155,8 @@ public static class TrimService
 
     public static async Task ExportAsync(
         string source, string output, long inMs, long outMs, TrimMode mode,
-        IProgress<double>? progress, CancellationToken ct, IReadOnlyList<int>? audio = null)
+        IProgress<double>? progress, CancellationToken ct, IReadOnlyList<int>? audio = null,
+        IReadOnlyList<Chapter>? chapters = null)
     {
         var ffmpeg = ToolLocator.Ffmpeg ?? throw new InvalidOperationException(
             "ffmpeg not found. Install it (macOS: brew install ffmpeg) and restart Cnema.");
@@ -164,8 +165,14 @@ public static class TrimService
         var durationMs = outMs - inMs;
         string S(long ms) => (ms / 1000.0).ToString("0.000", CultureInfo.InvariantCulture);
 
+        // Chapters (from session bookmarks) come in as a second input, right after the source so
+        // that -t stays an output option.
+        var meta = chapters is { Count: > 1 } ? Chapters.WriteMetadataFile(chapters) : null;
         var args = new List<string> { "-hide_banner", "-v", "error", "-nostats", "-progress", "pipe:1",
-                                      "-ss", S(inMs), "-i", source, "-t", S(durationMs), "-map", "0:v:0?" };
+                                      "-ss", S(inMs), "-i", source };
+        if (meta is not null) args.AddRange(new[] { "-i", meta });
+        args.AddRange(new[] { "-t", S(durationMs), "-map", "0:v:0?" });
+        if (meta is not null) args.AddRange(new[] { "-map_chapters", "1" });
         // audio: null keeps every track; otherwise only the listed ones (none = silent).
         if (audio is null) args.AddRange(new[] { "-map", "0:a?" });
         else foreach (var i in audio) args.AddRange(new[] { "-map", $"0:a:{i}?" });
@@ -186,13 +193,21 @@ public static class TrimService
         args.AddRange(new[] { "-y", temp });
 
         using var cleanup = ct.Register(() => { try { File.Delete(temp); } catch { /* still open; temp dir */ } });
-        var r = await ProcessRunner.RunAsync(ffmpeg, args, line =>
+        ProcessResult r;
+        try
         {
-            // -progress emits key=value lines; out_time_us is the encoded position.
-            if (line.StartsWith("out_time_us=", StringComparison.Ordinal) &&
-                long.TryParse(line.AsSpan(12), out var us) && durationMs > 0)
-                progress?.Report(Math.Clamp(us / 1000.0 / durationMs, 0, 1));
-        }, ct);
+            r = await ProcessRunner.RunAsync(ffmpeg, args, line =>
+            {
+                // -progress emits key=value lines; out_time_us is the encoded position.
+                if (line.StartsWith("out_time_us=", StringComparison.Ordinal) &&
+                    long.TryParse(line.AsSpan(12), out var us) && durationMs > 0)
+                    progress?.Report(Math.Clamp(us / 1000.0 / durationMs, 0, 1));
+            }, ct);
+        }
+        finally
+        {
+            if (meta is not null) try { File.Delete(meta); } catch { /* temp file */ }
+        }
 
         if (r.ExitCode != 0)
         {

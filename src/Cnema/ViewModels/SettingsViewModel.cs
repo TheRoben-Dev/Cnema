@@ -157,6 +157,8 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private bool _featureUnwatched;
     [ObservableProperty] private bool _featureCleanUp;
     [ObservableProperty] private bool _featureStats;
+    [ObservableProperty] private bool _featureMiniPlayer;
+    [ObservableProperty] private bool _featureChapters;
 
     // ---------- accessibility ----------
     public static Choice[] UiScales { get; } =
@@ -252,6 +254,8 @@ public sealed partial class SettingsViewModel : ObservableObject
         _featureUnwatched = f.Unwatched;
         _featureCleanUp = f.CleanUp;
         _featureStats = f.Stats;
+        _featureMiniPlayer = f.MiniPlayer;
+        _featureChapters = f.Chapters;
         var a = settings.Accessibility;
         _uiScale = UiScales.OrderBy(o => Math.Abs(o.Value - a.UiScale * 100)).First();
         _highContrast = a.HighContrast;
@@ -366,6 +370,7 @@ public sealed partial class SettingsViewModel : ObservableObject
             Clipping = FeatureClipping, Sessions = FeatureSessions, Controller = FeatureController,
             HoverPreview = FeatureHoverPreview, LoudMarkers = FeatureLoudMarkers, HoverGlow = FeatureHoverGlow,
             Collections = FeatureCollections, Unwatched = FeatureUnwatched, CleanUp = FeatureCleanUp, Stats = FeatureStats,
+            MiniPlayer = FeatureMiniPlayer, Chapters = FeatureChapters,
         };
         // Switching a module off switches off what it was doing, not only its buttons.
         if (!FeatureClipping) c.Enabled = false;

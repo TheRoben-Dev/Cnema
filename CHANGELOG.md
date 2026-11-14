@@ -2,6 +2,13 @@
 
 What changed in each Cnema release. The app shows the entries you have not seen yet after it updates.
 
+## 0.13.0
+- Mini player: clicking a video plays it in a small player over the library, so you can keep browsing. Edit opens it in the full editor at the same spot, and the editor's Mini player button sends it back. Space, ← → and M control it; Esc closes it. Switch it off under Settings, Features to open videos straight in the editor.
+- Speed menu: pick 0.25× to 4×, or press Shift+, and Shift+. to go slower or faster.
+- A-B loop: press B at the start and again at the end; the part between repeats until you press B once more. The loop is also the trim selection, so you can export it as it is.
+- Chapters from bookmarks: the bookmarks you drop while recording a session become chapters. The player lists them (jump to one, or select it to export just that chapter), Ctrl+← and Ctrl+→ (⌘ on a Mac) step between them, and session recordings and exports carry them so other players show them too.
+- Click the player clock to show the frame number instead of tenths of a second, handy with frame stepping (, and .).
+
 ## 0.12.0
 - Filters next to the search box: resolution, length, date added and "only videos I haven't watched". The button shows how many are on.
 - Collections: group videos from any folders, like playlists. Right-click a video, Add to collection, or use + in the sidebar. A video can be in several collections, and renaming or moving it keeps it there.

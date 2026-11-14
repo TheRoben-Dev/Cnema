@@ -6,6 +6,8 @@ public sealed class AppSettings
     public int SortIndex { get; set; }
     public bool PreciseExport { get; set; }
     public int Volume { get; set; } = 80;
+    /// <summary>The player clock shows the frame (m:ss f12) instead of tenths of a second.</summary>
+    public bool ShowFrames { get; set; }
 
     /// <summary>Stay alive in the tray / menu bar when the window is closed.</summary>
     public bool KeepInBackground { get; set; }
@@ -49,6 +51,10 @@ public sealed class FeatureSettings
     public bool Unwatched { get; set; } = true;
     public bool CleanUp { get; set; } = true;
     public bool Stats { get; set; } = true;
+    /// <summary>Videos open in a small player over the library; Edit opens the full editor.</summary>
+    public bool MiniPlayer { get; set; } = true;
+    /// <summary>Session bookmarks become chapters in the player, in session files and in exports.</summary>
+    public bool Chapters { get; set; } = true;
 
     public FeatureSettings Clone() => (FeatureSettings)MemberwiseClone();
 }
