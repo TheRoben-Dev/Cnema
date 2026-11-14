@@ -1370,6 +1370,14 @@
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureSessions}" />
                     </Grid>
                     <Border Classes="sep" />
+                    <Grid Classes="row" ColumnDefinitions="*,Auto" IsEnabled="{Binding FeatureSessions}">
+                      <StackPanel Spacing="2">
+                        <TextBlock svc:Tr.Text="Crash-safe sessions" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="If Cnema or your computer stops in the middle of a session, what was recorded is saved the next time Cnema starts." />
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureRecoverSessions}" />
+                    </Grid>
+                    <Border Classes="sep" />
                     <Grid Classes="row" ColumnDefinitions="*,Auto">
                       <StackPanel Spacing="2">
                         <TextBlock svc:Tr.Text="Controller support" />

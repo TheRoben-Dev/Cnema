@@ -561,7 +561,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         Player.Queue = Features.ExportQueue ? Exports : null;
         RebuildCollections();
         IsSetupOpen = _settings.IsFirstRun || Environment.GetEnvironmentVariable("CNEMA_SETUP") == "1";
-        _ = ApplyClipSettingsAsync();
+        _ = RecoverThenApplyClipsAsync();
         _ = CheckForUpdatesAsync();
         await RescanAsync();
         await RunStorageCleanupAsync();
@@ -927,6 +927,13 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         }
         RaiseClipState();
         await Clips.ApplyAsync();
+    }
+
+    /// <summary>A session an earlier run never saved is joined first, then capture starts as usual.</summary>
+    private async Task RecoverThenApplyClipsAsync()
+    {
+        await Clips.RecoverAtLaunchAsync();
+        await ApplyClipSettingsAsync();
     }
 
     private void RaiseClipState()
