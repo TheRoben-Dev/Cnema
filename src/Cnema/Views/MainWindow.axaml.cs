@@ -644,11 +644,13 @@ public partial class MainWindow : Window
     }
 
     /// <summary>A choice in a bulk-bar flyout was made: close it, the toast says what happened.</summary>
-    private void OnBulkFlyoutDone(object? sender, RoutedEventArgs e)
-    {
-        BulkTagButton.Flyout?.Hide();
-        BulkCollectionButton.Flyout?.Hide();
-    }
+    private void OnBulkFlyoutDone(object? sender, RoutedEventArgs e) =>
+        // Posted: hiding the flyout right away detaches the button before its Command runs.
+        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            BulkTagButton.Flyout?.Hide();
+            BulkCollectionButton.Flyout?.Hide();
+        });
 
     // ---------- fullscreen ----------
     private void OnFullscreenClick(object? sender, RoutedEventArgs e) => ToggleFullscreen();
