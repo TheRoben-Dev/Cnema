@@ -156,6 +156,13 @@ public sealed class ClipSettings
     public bool TagWithGame { get; set; } = true;
     /// <summary>With two audio devices: keep them as two tracks instead of mixing them into one.</summary>
     public bool SeparateTracks { get; set; }
+    /// <summary>A webcam to put in a corner of every clip; null = none.</summary>
+    public string? Camera { get; set; }
+    /// <summary>"top-left", "top-right", "bottom-left" or "bottom-right".</summary>
+    public string CameraCorner { get; set; } = "bottom-right";
+    /// <summary>The camera picture's height as a percentage of the video's.</summary>
+    public int CameraSize { get; set; } = 25;
+
     /// <summary>Per-game overrides, matched against the app in front.</summary>
     public List<ClipProfile> Profiles { get; set; } = new();
 
@@ -168,6 +175,13 @@ public sealed class ClipSettings
         if (p.Seconds > 0) c.Seconds = p.Seconds;
         if (p.BitrateMbps > 0) c.BitrateMbps = p.BitrateMbps;
         if (!string.IsNullOrEmpty(p.Codec)) c.Codec = p.Codec!;
+        return c;
+    }
+
+    public ClipSettings WithoutCamera()
+    {
+        var c = (ClipSettings)MemberwiseClone();
+        c.Camera = null;
         return c;
     }
 
