@@ -118,6 +118,8 @@ public sealed class FeatureSettings
     public bool Blur { get; set; } = true;
     /// <summary>A music track under exports, with auto-ducking.</summary>
     public bool Music { get; set; } = true;
+    /// <summary>A session that was cut short by a crash or power loss is saved at the next start.</summary>
+    public bool RecoverSessions { get; set; } = true;
     /// <summary>Auto montage: the best moments of several videos stitched with transitions.</summary>
     public bool Montage { get; set; } = true;
 

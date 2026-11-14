@@ -2,6 +2,11 @@
 
 What changed in each Cnema release. The app shows the entries you have not seen yet after it updates.
 
+## 0.21.0
+- Crash-safe sessions: if Cnema crashes, is force quit or your computer loses power in the middle of a session recording, the recording is no longer lost. The next time Cnema starts it saves what was recorded, bookmarks included, as "… session (recovered)" in your clips folder.
+- The replay buffer now lives in Cnema's cache folder instead of the system's temp folder, so it survives a restart. It's still cleared every time capture starts.
+- Can be switched off under Settings, Features (Crash-safe sessions).
+
 ## 0.20.0
 - Music: pick a song on the editor's Sound page and it plays under the export. It repeats if it's shorter than the clip, fades in and out, and can drop for a moment whenever the game gets loud (shots, voices), so the action still comes through. Quiet, Medium or Loud.
 - Auto montage (sidebar, Tools, or Montage… while selecting): Cnema takes the loudest moment of each favourite (or the selected videos, or everything in view), puts them together with a crossfade, fade to black, slide or plain cut, adds a song if you like, and saves the result in a Montages folder. It runs in the background under Exports.

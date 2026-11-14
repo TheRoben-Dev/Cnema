@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Globalization;
+using System.Text.Json;
 
 namespace Cnema.Services;
 
@@ -74,6 +75,7 @@ public sealed class ClipService : IDisposable
         _sessionStart = begun > now.AddSeconds(-SegmentSeconds * 2) && begun <= now ? begun : now;
         _sessionLabel = label;
         lock (_bookmarks) _bookmarks.Clear();
+        WriteMarker();
         Log.Info("Session recording started");
         Changed?.Invoke();
         return true;
@@ -85,6 +87,7 @@ public sealed class ClipService : IDisposable
         if (_sessionStart is not { } start) return null;
         var at = DateTime.UtcNow - start;
         lock (_bookmarks) _bookmarks.Add((long)at.TotalMilliseconds);
+        WriteMarker();
         Changed?.Invoke();
         return at;
     }
@@ -106,17 +109,33 @@ public sealed class ClipService : IDisposable
         _sessionStart = null;
         _sessionFirst = null;
         _sessionLabel = null;
+        try
+        {
+            return await JoinSessionAsync(new SessionMarker(first, label, started, marks, Codec?.Codec), recovered: false);
+        }
+        finally
+        {
+            DeleteMarker();
+            Changed?.Invoke();
+        }
+    }
+
+    private async Task<string?> JoinSessionAsync(SessionMarker session, bool recovered)
+    {
         string? output = null;
+        var marks = session.Bookmarks ?? new List<long>();
         try
         {
             var ffmpeg = await CaptureProbe.FindCaptureFfmpegAsync() ?? ToolLocator.Ffmpeg;
-            var segments = Segments().Where(s => string.CompareOrdinal(Path.GetFileName(s), first) >= 0).ToList();
+            var segments = Segments().Where(s => string.CompareOrdinal(Path.GetFileName(s), session.First) >= 0).ToList();
             if (ffmpeg is null || segments.Count == 0) return null;
 
             var folder = Cfg.ResolvedFolder;
             Directory.CreateDirectory(folder);
-            var name = SafeName(label is null ? "Session" : label + " session");
-            output = Path.Combine(folder, $"{name} {started.ToLocalTime():yyyy-MM-dd HH-mm-ss}.mp4");
+            var name = SafeName(session.Label is null ? "Session" : session.Label + " session");
+            if (recovered) name += " (" + T("recovered") + ")";
+            output = Path.Combine(folder, $"{name} {session.StartedUtc.ToLocalTime():yyyy-MM-dd HH-mm-ss}.mp4");
+            if (File.Exists(output)) output = Path.Combine(folder, $"{name} {session.StartedUtc.ToLocalTime():yyyy-MM-dd HH-mm-ss} {DateTime.Now:HHmmss}.mp4");
             var list = Path.Combine(AppPaths.ClipBufferDir, "session.txt");
             await File.WriteAllLinesAsync(list, segments.Select(s => $"file '{s.Replace("'", "'\\''")}'"));
             // Same disk as the destination (a session can be many GB), under a name the library ignores.
@@ -126,23 +145,26 @@ public sealed class ClipService : IDisposable
                 ? Chapters.FromBookmarks(marks, (long)(segments.Count * SegmentSeconds * 1000))
                 : Array.Empty<Chapter>();
             var meta = chapters.Count > 1 ? Chapters.WriteMetadataFile(chapters) : null;
-            var args = new List<string> { "-hide_banner", "-loglevel", "error", "-y", "-f", "concat", "-safe", "0", "-i", list };
+            var args = new List<string> { "-hide_banner", "-loglevel", "error", "-y" };
+            // The last segment of a recording that was cut short ends mid-packet; read past the damage.
+            if (recovered) args.AddRange(new[] { "-err_detect", "ignore_err", "-fflags", "+discardcorrupt+genpts" });
+            args.AddRange(new[] { "-f", "concat", "-safe", "0", "-i", list });
             if (meta is not null) args.AddRange(new[] { "-i", meta });
             args.AddRange(new[] { "-map", "0", "-c", "copy", "-movflags", "+faststart" });
             if (meta is not null) args.AddRange(new[] { "-map_chapters", "1" });
-            if (Codec?.Codec == "hevc") args.AddRange(new[] { "-tag:v", "hvc1" });
+            if (session.Codec == "hevc") args.AddRange(new[] { "-tag:v", "hvc1" });
             args.AddRange(new[] { "-f", "mp4", partial });
             ProcessResult r;
             try { r = await ProcessRunner.RunAsync(ffmpeg, args); }
             finally { if (meta is not null) try { File.Delete(meta); } catch { /* temp file */ } }
-            if (r.ExitCode != 0 || !File.Exists(partial) || new FileInfo(partial).Length == 0)
+            if (!File.Exists(partial) || new FileInfo(partial).Length == 0 || (r.ExitCode != 0 && !recovered))
             {
                 try { File.Delete(partial); } catch { /* nothing written */ }
                 Log.Warn($"Saving the session failed: {r.StdErr}");
                 return null;
             }
             File.Move(partial, output, overwrite: false);
-            Log.Info($"Session saved: {segments.Count * SegmentSeconds} s, {marks.Count} bookmark(s)");
+            Log.Info($"Session {(recovered ? "recovered" : "saved")}: {segments.Count * SegmentSeconds} s, {marks.Count} bookmark(s)");
             SessionSaved?.Invoke(output, marks);
             return output;
         }
@@ -151,9 +173,80 @@ public sealed class ClipService : IDisposable
             Log.Warn($"Saving the session failed: {ex.Message}");
             return null;
         }
+    }
+
+    // ---------- crash safety ----------
+    // While a session runs, a small file next to the segments says where it starts, what it is called and
+    // where the bookmarks are. If Cnema never gets to save the session (a crash, a power cut, a force quit),
+    // the file is still there at the next start and the segments are joined into a "(recovered)" video.
+
+    private sealed record SessionMarker(string First, string? Label, DateTime StartedUtc, List<long>? Bookmarks, string? Codec);
+
+    private static string MarkerFile => Path.Combine(AppPaths.ClipBufferDir, "session.json");
+
+    private void WriteMarker()
+    {
+        if (_sessionStart is not { } started || _sessionFirst is not { } first) return;
+        try
+        {
+            List<long> marks;
+            lock (_bookmarks) marks = _bookmarks.ToList();
+            var json = JsonSerializer.Serialize(new SessionMarker(first, _sessionLabel, started, marks, Codec?.Codec));
+            var tmp = MarkerFile + ".tmp";
+            File.WriteAllText(tmp, json);
+            File.Move(tmp, MarkerFile, overwrite: true);
+        }
+        catch (Exception ex) { Log.Warn($"Couldn't write the session marker: {ex.Message}"); }
+    }
+
+    private static void DeleteMarker()
+    {
+        try { File.Delete(MarkerFile); } catch { /* not there */ }
+    }
+
+    /// <summary>
+    /// Saves a session that an earlier run of Cnema never finished. The caller holds the gate, and capture
+    /// is not writing to the buffer. Does nothing without a marker, or when crash-safe sessions are off.
+    /// </summary>
+    private async Task<string?> RecoverCoreAsync()
+    {
+        if (IsSession || !File.Exists(MarkerFile)) return null;
+        SessionMarker? marker = null;
+        try { marker = JsonSerializer.Deserialize<SessionMarker>(File.ReadAllText(MarkerFile)); }
+        catch (Exception ex) { Log.Warn($"The session marker couldn't be read: {ex.Message}"); }
+        DeleteMarker(); // one attempt only: a broken recording must not block capture at every start
+        if (marker is null || string.IsNullOrEmpty(marker.First) || !_settings.Current.Features.RecoverSessions) return null;
+        Log.Info("Recovering a session that wasn't saved");
+        try { return await JoinSessionAsync(marker, recovered: true); }
+        finally { Changed?.Invoke(); }
+    }
+
+    /// <summary>
+    /// At launch: saves an unfinished session from an earlier run when capture isn't about to do it
+    /// (clipping off), and clears the buffer left behind by older versions in the temp folder.
+    /// </summary>
+    public async Task RecoverAtLaunchAsync()
+    {
+        try
+        {
+            if (Directory.Exists(AppPaths.LegacyClipBufferDir)) Directory.Delete(AppPaths.LegacyClipBufferDir, true);
+        }
+        catch { /* temp folder */ }
+        await _gate.WaitAsync();
+        try
+        {
+            if (State is ClipState.Starting or ClipState.Recording) return; // capture start handles it
+            KillStaleCapture();
+            await RecoverCoreAsync();
+            try
+            {
+                if (Directory.Exists(AppPaths.ClipBufferDir)) Directory.Delete(AppPaths.ClipBufferDir, true);
+            }
+            catch { /* removed on the next capture start */ }
+        }
         finally
         {
-            Changed?.Invoke();
+            _gate.Release();
         }
     }
 
@@ -225,6 +318,7 @@ public sealed class ClipService : IDisposable
 
         KillStaleCapture();
         await FinishSessionCoreAsync(); // capture died mid-session: keep what was recorded
+        await RecoverCoreAsync(); // Cnema itself died mid-session last time
         try
         {
             if (Directory.Exists(AppPaths.ClipBufferDir)) Directory.Delete(AppPaths.ClipBufferDir, true);
@@ -752,10 +846,12 @@ public sealed class ClipService : IDisposable
             try { Task.Run(StopSessionAsync).Wait(TimeSpan.FromSeconds(30)); } catch { /* shutting down */ }
         }
         StopCore();
+        // A session that couldn't be saved in time stays on disk and is recovered at the next start.
+        if (File.Exists(MarkerFile)) return;
         try
         {
             if (Directory.Exists(AppPaths.ClipBufferDir)) Directory.Delete(AppPaths.ClipBufferDir, true);
         }
-        catch { /* temp folder; the OS cleans it up eventually */ }
+        catch { /* cache folder; cleared on the next capture start */ }
     }
 }

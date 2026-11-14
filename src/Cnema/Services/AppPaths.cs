@@ -9,8 +9,30 @@ public static class AppPaths
     public static string LibraryFile => Path.Combine(DataDir, "library.json");
     public static string CollectionsFile => Path.Combine(DataDir, "collections.json");
 
-    /// <summary>Rolling capture segments for the clipping service. Wiped on every start.</summary>
-    public static string ClipBufferDir => Path.Combine(Path.GetTempPath(), "cnema-clip-buffer");
+    /// <summary>
+    /// Rolling capture segments for the clipping service. It lives in the user's cache folder rather than
+    /// the temp folder, so a session cut short by a crash or a power cut is still there at the next start.
+    /// </summary>
+    public static string ClipBufferDir { get; } = ResolveBufferDir();
+
+    /// <summary>Where the buffer lived up to v0.20; removed at start.</summary>
+    public static string LegacyClipBufferDir => Path.Combine(Path.GetTempPath(), "cnema-clip-buffer");
+
+    private static string ResolveBufferDir()
+    {
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        string root;
+        if (OperatingSystem.IsMacOS())
+            root = Path.Combine(home, "Library", "Caches", "Cnema");
+        else if (OperatingSystem.IsWindows())
+            root = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Cnema", "Cache");
+        else
+            root = Path.Combine(Environment.GetEnvironmentVariable("XDG_CACHE_HOME") is { Length: > 0 } xdg
+                ? xdg
+                : Path.Combine(home, ".cache"), "cnema");
+        if (string.IsNullOrEmpty(home) && !OperatingSystem.IsWindows()) root = Path.Combine(Path.GetTempPath(), "cnema");
+        return Path.Combine(root, "clip-buffer");
+    }
 
     public static string DefaultClipsDir
     {

@@ -879,5 +879,8 @@
   "{0} video could not be moved to the {1}": "{0} video kunde inte flyttas till {1}",
   "{0} videos": "{0} videor",
   "{0} videos could not be moved to the {1}": "{0} videor kunde inte flyttas till {1}",
-  "{0}, about {1} long.": "{0}, ungefär {1} långt."
+  "{0}, about {1} long.": "{0}, ungefär {1} långt.",
+  "recovered": "återställd",
+  "Crash-safe sessions": "Kraschsäkra sessioner",
+  "If Cnema or your computer stops in the middle of a session, what was recorded is saved the next time Cnema starts.": "Om Cnema eller datorn stängs av mitt i en session sparas det som hann spelas in nästa gång Cnema startar."
 }
