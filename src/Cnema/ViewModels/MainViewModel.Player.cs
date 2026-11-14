@@ -37,7 +37,7 @@ public sealed partial class MainViewModel
 
     /// <summary>
     /// ← / →: the previous or next video in the library's current order, with its search, filters and
-    /// sort. In the editor, a video with trim marks or parts asks for a second press before they go.
+    /// sort. In the editor, a video with trim marks, parts or effects asks for a second press before they go.
     /// </summary>
     [RelayCommand]
     private async Task StepClipAsync(int delta)
@@ -57,7 +57,7 @@ public sealed partial class MainViewModel
         {
             _armedStep = delta;
             _armedUntil = DateTime.UtcNow.AddSeconds(4);
-            Player.ShowToast($"Press again to open the {(delta > 0 ? "next" : "previous")} video. Your trim marks and parts here will be cleared.");
+            Player.ShowToast($"Press again to open the {(delta > 0 ? "next" : "previous")} video. Your trim marks, parts and effects here will be cleared.");
             return;
         }
         _armedStep = 0;

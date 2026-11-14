@@ -2,6 +2,16 @@
 
 What changed in each Cnema release. The app shows the entries you have not seen yet after it updates.
 
+## 0.14.0
+- Effects panel in the editor (Effects button, or Shift+E). Everything in it changes exports only; your original file stays as it is.
+- Captions: press C to add text at the playhead, then pick top, middle or bottom, a size, and white text with an outline or on a dark box. You see them over the video while you edit, at the size the export will have.
+- Slow motion and fast forward: pick part of a clip and a speed from ¼× to 4×, with an optional ramp that eases in and out. The player plays it at that speed so you can check it, and the sound keeps its pitch.
+- Sound tools: even out loudness so quiet clips aren't too quiet (−14 LUFS, what YouTube and Twitch use). With your mic on its own track, boost your voice and lower the game while you talk.
+- Watermark, intro and outro: set them up once under Settings, Editing (image, corner, size, opacity, and clips to put before and after), then switch them on or off per export.
+- Export queue: exports and Share presets run in the background one after another while you keep editing. The Exports button shows progress, and you can cancel, open the folder, or clear finished ones.
+- The video in the player is no longer slightly stretched for some files.
+- All of this can be switched off under Settings, Features.
+
 ## 0.13.2
 - ← and → now go to the previous or next video, in the order the library shows them (with your search, filters and sort), in both the quick player and the editor. Seeking moved to Shift+← and Shift+→ (5 seconds), and Alt+← / Alt+→ (⌥ on a Mac) for 1 second. If you have trim marks or parts in the editor, press the arrow twice so they aren't lost by accident. You can change these keys under Shortcuts (press ?).
 

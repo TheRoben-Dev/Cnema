@@ -68,8 +68,8 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
     [ObservableProperty] private IReadOnlyList<TimeRange> _segmentRanges = Array.Empty<TimeRange>();
     [ObservableProperty] private IReadOnlyList<TimelineMarker> _markers = Array.Empty<TimelineMarker>();
     public bool HasSegments => Segments.Count > 0;
-    /// <summary>Work that opening another video would throw away: trim marks or parts.</summary>
-    public bool HasEdits => HasIn || HasOut || HasSegments;
+    /// <summary>Work that opening another video would throw away: trim marks, parts, captions or speed changes.</summary>
+    public bool HasEdits => HasIn || HasOut || HasSegments || Captions.Count > 0 || SpeedSections.Count > 0;
     public bool HasAudioTracks => AudioTracks.Count > 1;
     public bool HasMarkers => Markers.Count > 0;
     public string ExportLabel => HasSegments ? $"Export {Segments.Count + (HasRange ? 1 : 0)} parts" : "Export clip";
@@ -143,6 +143,7 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
             AudioTracks.Add(track);
         }
         OnPropertyChanged(nameof(HasAudioTracks));
+        BuildVoiceTrackChoice();
     }
 
     /// <summary>libVLC plays one track at a time: the first one that is switched on.</summary>
@@ -178,6 +179,7 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
         _settings = settings;
         _volume = settings.Current.Volume;
         _preciseExport = settings.Current.PreciseExport;
+        InitEffects();
         if (VlcBootstrap.LibVLC is not { } lib) return;
 
         _player = new MediaPlayer(lib) { EnableHardwareDecoding = true };
@@ -210,9 +212,20 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
     private double EffectiveIn => HasIn ? InPoint : 0;
     private double EffectiveOut => HasOut ? OutPoint : Duration;
 
-    partial void OnPositionChanged(double value) { OnPropertyChanged(nameof(PositionText)); UpdateCurrentChapter(); }
+    partial void OnPositionChanged(double value)
+    {
+        OnPropertyChanged(nameof(PositionText));
+        UpdateCurrentChapter();
+        UpdateEffectsPreview();
+    }
     partial void OnDurationChanged(double value) { OnPropertyChanged(nameof(DurationText)); OnPropertyChanged(nameof(RangeText)); BuildChapters(); }
-    partial void OnCurrentChanged(VideoItemViewModel? value) { OnPropertyChanged(nameof(Title)); OnPropertyChanged(nameof(Subtitle)); }
+    partial void OnCurrentChanged(VideoItemViewModel? value)
+    {
+        OnPropertyChanged(nameof(Title));
+        OnPropertyChanged(nameof(Subtitle));
+        OnPropertyChanged(nameof(VideoWidth));
+        OnPropertyChanged(nameof(VideoHeight));
+    }
     partial void OnVolumeChanged(int value) { ApplyAudio(); _settings.Current.Volume = value; }
     partial void OnIsMutedChanged(bool value) => ApplyAudio();
     partial void OnPreciseExportChanged(bool value) { _settings.Current.PreciseExport = value; _settings.Save(); }
@@ -262,6 +275,7 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(HasAudioTracks));
         LoadMarkers(item);
         BuildChapters();
+        ResetEffects();
 
         using var media = new Media(lib, item.Entry.Path, FromType.FromPath);
         var resume = item.Entry.LastPositionMs;
@@ -377,6 +391,9 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
         if (!_player.IsPlaying) _player.SetPause(false);
     }
 
+    /// <summary>Set while the export queue is switched on: exports then run in the background, one at a time.</summary>
+    public ExportQueueViewModel? Queue { get; set; }
+
     [RelayCommand]
     private async Task ExportAsync()
     {
@@ -396,7 +413,10 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
             return;
         }
 
-        var mode = PreciseExport ? TrimMode.Precise : TrimMode.Lossless;
+        // Effects mean re-encoding, whatever Lossless / Precise says.
+        var fx = BuildEffects();
+        var withFx = !fx.IsEmpty;
+        var mode = PreciseExport || withFx ? TrimMode.Precise : TrimMode.Lossless;
         var src = Current.Entry.Path;
         var stamp = parts.Count > 0
             ? $"{parts.Count} parts"
@@ -412,28 +432,23 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
             return;
         }
 
-        _exportCts = new CancellationTokenSource();
-        IsExporting = true;
-        ExportProgress = 0;
-        try
+        var audio = AudioSelection;
+        Func<IProgress<double>, CancellationToken, Task> work;
+        if (withFx)
         {
-            var progress = new Progress<double>(p => ExportProgress = p * 100);
-            if (parts.Count > 0)
-                await TrimService.ExportSegmentsAsync(src, target, parts, mode, progress, _exportCts.Token, AudioSelection);
-            else
-                await TrimService.ExportAsync(src, target, start, end, mode, progress, _exportCts.Token, AudioSelection,
-                    ChaptersFor(start, end));
-            ShowToast($"Exported {Path.GetFileName(target)}");
-            Exported?.Invoke(target);
+            var ranges = parts.Count > 0 ? parts : new List<(long, long)> { (start, end) };
+            var job = new RenderJob(src, target, ranges, audio, fx, null, SourceChapters());
+            work = (progress, ct) => RenderService.RenderAsync(job, progress, ct);
         }
-        catch (OperationCanceledException) { ShowToast("Export cancelled."); }
-        catch (Exception ex) { ShowToast("Export failed: " + FirstLine(ex.Message)); }
-        finally
+        else if (parts.Count > 0)
+            work = (progress, ct) => TrimService.ExportSegmentsAsync(src, target, parts, mode, progress, ct, audio);
+        else
         {
-            IsExporting = false;
-            _exportCts.Dispose();
-            _exportCts = null;
+            var chapters = ChaptersFor(start, end);
+            work = (progress, ct) => TrimService.ExportAsync(src, target, start, end, mode, progress, ct, audio, chapters);
         }
+        var detail = (parts.Count > 0 ? $"{parts.Count} parts" : "Clip") + (withFx ? $" · {Plural(EffectsCount, "effect")}" : "");
+        await RunExportAsync(target, detail, work, () => $"Exported {Path.GetFileName(target)}", reveal: false);
     }
 
     /// <summary>Share presets: re-encode the selection (or the whole video) for a place with limits.</summary>
@@ -451,7 +466,32 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
         var src = Current.Entry.Path;
         var dir = Path.GetDirectoryName(src) ?? "";
         var target = Path.Combine(dir, $"{Current.Title} [{suffix}]{ext}");
-        for (var i = 2; File.Exists(target); i++) target = Path.Combine(dir, $"{Current.Title} [{suffix} {i}]{ext}");
+        for (var i = 2; File.Exists(target) || Queue?.IsTarget(target) == true; i++)
+            target = Path.Combine(dir, $"{Current.Title} [{suffix} {i}]{ext}");
+
+        var fx = BuildEffects();
+        var audio = AudioSelection;
+        Func<IProgress<double>, CancellationToken, Task> work = fx.IsEmpty
+            ? (progress, ct) => TrimService.ShareAsync(src, target, start, end, preset, progress, ct, audio)
+            : (progress, ct) => RenderService.RenderAsync(
+                new RenderJob(src, target, new[] { (start, end) }, audio, fx, preset, null), progress, ct);
+        var cut = preset == SharePreset.Gif && end - start > TrimService.GifMaxMs ? ", first 20 s" : "";
+        await RunExportAsync(target, label + (fx.IsEmpty ? "" : $" · {Plural(EffectsCount, "effect")}"), work,
+            () => $"{label} ready: {VideoItemViewModel.FormatSize(new FileInfo(target).Length)}{cut}", reveal: true);
+    }
+
+    /// <summary>Runs an export here with a progress bar, or hands it to the export queue.</summary>
+    private async Task RunExportAsync(
+        string target, string detail, Func<IProgress<double>, CancellationToken, Task> work, Func<string> doneText, bool reveal)
+    {
+        if (Queue is { } queue)
+        {
+            queue.Add(target, detail, work, doneText);
+            ShowToast(queue.PendingCount > 1
+                ? $"Added to the export queue ({queue.PendingCount} to go)."
+                : "Exporting in the background. Keep editing if you like.");
+            return;
+        }
 
         _exportCts = new CancellationTokenSource();
         IsExporting = true;
@@ -459,12 +499,10 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
         try
         {
             var progress = new Progress<double>(p => ExportProgress = p * 100);
-            await TrimService.ShareAsync(src, target, start, end, preset, progress, _exportCts.Token, AudioSelection);
-            var size = VideoItemViewModel.FormatSize(new FileInfo(target).Length);
-            var cut = preset == SharePreset.Gif && end - start > TrimService.GifMaxMs ? ", first 20 s" : "";
-            ShowToast($"{label} ready: {size}{cut}");
+            await work(progress, _exportCts.Token);
+            ShowToast(doneText());
             Exported?.Invoke(target);
-            PlatformShell.Reveal(target);
+            if (reveal) PlatformShell.Reveal(target);
         }
         catch (OperationCanceledException) { ShowToast("Export cancelled."); }
         catch (Exception ex) { ShowToast("Export failed: " + FirstLine(ex.Message)); }
@@ -475,6 +513,11 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
             _exportCts = null;
         }
     }
+
+    private IReadOnlyList<Chapter>? SourceChapters() =>
+        ChapterList.Count < 2 ? null : ChapterList.Select(c => c.Chapter).ToList();
+
+    private static string Plural(int n, string what) => n == 1 ? "1 " + what : $"{n} {what}s";
 
     [RelayCommand] private void CancelExport() => _exportCts?.Cancel();
 
@@ -495,7 +538,7 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
         try { await Task.Delay(3500, cts.Token); Toast = null; } catch (OperationCanceledException) { }
     }
 
-    private static string FirstLine(string s) => s.Split('\n', 2)[0].Trim();
+    internal static string FirstLine(string s) => s.Split('\n', 2)[0].Trim();
 
     public static string FormatPrecise(double ms)
     {

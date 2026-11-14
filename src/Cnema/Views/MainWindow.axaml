@@ -17,6 +17,70 @@
         ExtendClientAreaToDecorationsHint="True"
         ExtendClientAreaTitleBarHeightHint="52">
 
+  <Window.DataTemplates>
+    <!-- A "pick one" row of chips (caption position, speed, voice track...) -->
+    <DataTemplate DataType="vm:ChipGroup" x:DataType="vm:ChipGroup">
+      <Border Classes="chipbar">
+        <ItemsControl ItemsSource="{Binding Chips}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="1" /></ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:OptionChip">
+              <Button Classes="chip" Classes.on="{Binding IsOn}" Content="{Binding Label}" Command="{Binding PickCommand}"
+                      ToolTip.Tip="{Binding Tip}" />
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </Border>
+    </DataTemplate>
+
+    <!-- The export queue, shown from the Exports button in the library and the editor -->
+    <DataTemplate DataType="vm:ExportQueueViewModel" x:DataType="vm:ExportQueueViewModel">
+      <StackPanel Width="380" Spacing="6">
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock Classes="label" Text="EXPORTS" VerticalAlignment="Center" Margin="4,0,0,0" />
+          <Button Grid.Column="1" Classes="ghost" FontSize="11" Content="Clear finished" Padding="8,3"
+                  IsVisible="{Binding HasFinished}" Command="{Binding ClearFinishedCommand}" />
+        </Grid>
+        <ScrollViewer MaxHeight="420">
+          <ItemsControl ItemsSource="{Binding Jobs}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:ExportJobViewModel">
+                <Border Classes="fxcard" Margin="0,0,0,6" Padding="10,8">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <StackPanel Spacing="3">
+                      <TextBlock Text="{Binding Title}" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Target}" />
+                      <TextBlock Classes="dim" Text="{Binding Detail}" FontSize="11" />
+                      <ProgressBar Value="{Binding Progress}" Height="4" MinHeight="4" CornerRadius="2" Margin="0,3,0,1" IsVisible="{Binding IsRunning}" />
+                      <TextBlock Text="{Binding Status}" FontSize="11" TextWrapping="Wrap" Classes.err="{Binding IsFailed}" Classes.dim="{Binding !IsFailed}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top" Margin="6,0,0,0">
+                      <Button Classes="ghost" Padding="6" ToolTip.Tip="Show in folder" IsVisible="{Binding IsDone}"
+                              Command="{Binding #Root.((vm:MainViewModel)DataContext).Exports.RevealCommand}" CommandParameter="{Binding}">
+                        <PathIcon Data="{StaticResource IcFolder}" Width="13" Height="13" />
+                      </Button>
+                      <Button Classes="ghost" Padding="6" ToolTip.Tip="Cancel this export" IsVisible="{Binding CanCancel}"
+                              Command="{Binding #Root.((vm:MainViewModel)DataContext).Exports.CancelCommand}" CommandParameter="{Binding}">
+                        <PathIcon Data="{StaticResource IcClose}" Width="11" Height="11" />
+                      </Button>
+                      <Button Classes="ghost" Padding="6" ToolTip.Tip="Remove from the list" IsVisible="{Binding IsFinished}"
+                              Command="{Binding #Root.((vm:MainViewModel)DataContext).Exports.RemoveCommand}" CommandParameter="{Binding}">
+                        <PathIcon Data="{StaticResource IcClose}" Width="11" Height="11" />
+                      </Button>
+                    </StackPanel>
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Margin="4,0"
+                   Text="Exports run one at a time while you keep working. Quitting Cnema stops them." />
+      </StackPanel>
+    </DataTemplate>
+  </Window.DataTemplates>
+
   <LayoutTransformControl x:Name="Scaler">
   <DockPanel>
     <!-- ======================= CONTROLLER LEGEND ======================= -->
@@ -220,18 +284,30 @@
       <!-- Main pane -->
       <DockPanel Grid.Column="1">
         <!-- Toolbar -->
-        <Grid x:Name="Toolbar" DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto" Margin="28,0,28,0"
+        <Grid x:Name="Toolbar" DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto,Auto" Margin="28,0,28,0"
               Height="72" Background="Transparent">
           <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="2" IsHitTestVisible="False">
             <TextBlock Text="{Binding HeaderTitle}" FontSize="22" FontWeight="Bold" />
             <TextBlock Classes="dim" Text="{Binding HeaderCount}" FontSize="12" />
           </StackPanel>
-          <Panel Grid.Column="1" Width="260" VerticalAlignment="Center" Margin="0,0,10,0">
+          <Button Grid.Column="1" Classes="soft" VerticalAlignment="Center" Margin="0,0,10,0" Padding="12,8"
+                  IsVisible="{Binding Exports.HasJobs}" ToolTip.Tip="Exports running in the background">
+            <StackPanel Orientation="Horizontal" Spacing="7">
+              <PathIcon Data="{StaticResource IcExport}" Width="14" Height="14" />
+              <TextBlock Text="{Binding Exports.ButtonText}" FontSize="13" />
+            </StackPanel>
+            <Button.Flyout>
+              <Flyout Placement="BottomEdgeAlignedRight">
+                <ContentControl Content="{Binding Exports}" />
+              </Flyout>
+            </Button.Flyout>
+          </Button>
+          <Panel Grid.Column="2" Width="260" VerticalAlignment="Center" Margin="0,0,10,0">
             <TextBox Classes="search" Watermark="Search names or #tags" Text="{Binding SearchText}" x:Name="SearchBox" />
             <PathIcon Data="{StaticResource IcSearch}" Width="15" Height="15" Foreground="{DynamicResource TextDim}"
                       HorizontalAlignment="Left" Margin="12,0,0,0" IsHitTestVisible="False" />
           </Panel>
-          <Button Grid.Column="2" Classes="soft" Classes.on="{Binding HasFilters}" VerticalAlignment="Center" Margin="0,0,8,0" Padding="12,8"
+          <Button Grid.Column="3" Classes="soft" Classes.on="{Binding HasFilters}" VerticalAlignment="Center" Margin="0,0,8,0" Padding="12,8"
                   ToolTip.Tip="Filter by resolution, length, date or watched">
             <StackPanel Orientation="Horizontal" Spacing="7">
               <PathIcon Data="{StaticResource IcFilter}" Width="14" Height="14" />
@@ -250,14 +326,14 @@
               </Flyout>
             </Button.Flyout>
           </Button>
-          <ComboBox x:Name="SortBox" Grid.Column="3" VerticalAlignment="Center" MinWidth="170" Margin="0,0,6,0"
+          <ComboBox x:Name="SortBox" Grid.Column="4" VerticalAlignment="Center" MinWidth="170" Margin="0,0,6,0"
                     ItemsSource="{x:Static vm:MainViewModel.SortModes}" SelectedIndex="{Binding SortIndex}"
                     CornerRadius="10" Background="{DynamicResource Bg2}" BorderBrush="{DynamicResource Line}" />
-          <ToggleButton Grid.Column="4" Classes="ghost" VerticalAlignment="Center" ToolTip.Tip="Select several videos"
+          <ToggleButton Grid.Column="5" Classes="ghost" VerticalAlignment="Center" ToolTip.Tip="Select several videos"
                         IsChecked="{Binding IsSelecting}">
             <PathIcon Data="{StaticResource IcSelect}" />
           </ToggleButton>
-          <Button Grid.Column="5" Classes="ghost" VerticalAlignment="Center" ToolTip.Tip="Rescan folders"
+          <Button Grid.Column="6" Classes="ghost" VerticalAlignment="Center" ToolTip.Tip="Rescan folders"
                   Command="{Binding RescanCommand}">
             <PathIcon Data="{StaticResource IcRefresh}" />
           </Button>
@@ -521,7 +597,8 @@
             </Grid>
           </StackPanel>
           <Panel Background="Black">
-            <c:VideoSurface x:Name="MiniSurface" Frames="{Binding Frames}" />
+            <c:VideoSurface x:Name="MiniSurface" Frames="{Binding Frames}"
+                          SourceWidth="{Binding VideoWidth}" SourceHeight="{Binding VideoHeight}" />
             <Border x:Name="MiniHit" Background="Transparent" ToolTip.Tip="Click to play or pause, double-click to edit" ToolTip.ShowDelay="1200" />
             <Border IsVisible="{Binding Toast, Converter={x:Static ObjectConverters.IsNotNull}}" IsHitTestVisible="False"
                     HorizontalAlignment="Center" VerticalAlignment="Top" Margin="48,16,48,0"
@@ -907,7 +984,7 @@
     </Border>
 
     <!-- ======================= SETTINGS ======================= -->
-    <Border x:Name="SettingsScrim" Background="#B3050609" IsVisible="{Binding IsSettingsOpen}">
+    <Border x:Name="SettingsScrim" Background="#B3050609" IsVisible="{Binding IsSettingsOpen}" ZIndex="10">
       <Border Width="580" MaxHeight="720" Margin="0,40" VerticalAlignment="Stretch" HorizontalAlignment="Center"
               Background="{DynamicResource Bg1}" BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="16"
               BoxShadow="0 18 60 0 #80000000" DataContext="{Binding SettingsEditor}" x:DataType="vm:SettingsViewModel">
@@ -1177,6 +1254,132 @@
                     </Grid>
                   </StackPanel>
                 </Border>
+                <TextBlock Classes="label" Text="EDITING AND EXPORT" Margin="0,8,0,0" />
+                <Border Classes="group">
+                  <StackPanel>
+                    <Grid Classes="row" ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="2">
+                        <TextBlock Text="Captions" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="Text over the video in the editor, burned into exports." />
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureCaptions}" />
+                    </Grid>
+                    <Border Classes="sep" />
+                    <Grid Classes="row" ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="2">
+                        <TextBlock Text="Slow motion and speed ramps" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="Slow down or speed up part of a clip, easing in and out." />
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureSpeedEffects}" />
+                    </Grid>
+                    <Border Classes="sep" />
+                    <Grid Classes="row" ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="2">
+                        <TextBlock Text="Sound tools" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="Even out loudness, boost your voice and lower the game while you talk." />
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureAudioTools}" />
+                    </Grid>
+                    <Border Classes="sep" />
+                    <Grid Classes="row" ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="2">
+                        <TextBlock Text="Watermark and intro" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="Your logo in a corner, and an intro or outro clip around exports." />
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureBranding}" />
+                    </Grid>
+                    <Border Classes="sep" />
+                    <Grid Classes="row" ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="2">
+                        <TextBlock Text="Export queue" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="Exports run in the background one after another, so you can keep editing. Off, the editor waits for each export." />
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureExportQueue}" />
+                    </Grid>
+                  </StackPanel>
+                </Border>
+              </StackPanel>
+
+              <!-- ==== Editing ==== -->
+              <StackPanel Spacing="12" IsVisible="{Binding IsEditingPage}">
+                <TextBlock Classes="dim" FontSize="12" TextWrapping="Wrap" Margin="4,0"
+                           Text="Your watermark and intro / outro clips. Switch them on per export in the editor's Effects panel; they stay on until you switch them off." />
+                <Border Classes="group" IsVisible="{Binding ShowBrandingOffNotice}">
+                  <Grid Classes="row" ColumnDefinitions="*,Auto">
+                    <TextBlock Text="Watermark and intro is switched off under Features." TextWrapping="Wrap" />
+                    <Button Grid.Column="1" Classes="soft" Content="Switch on" Command="{Binding EnableBrandingCommand}" />
+                  </Grid>
+                </Border>
+                <StackPanel Spacing="12" IsVisible="{Binding FeatureBranding}">
+                <TextBlock Classes="label" Text="WATERMARK" />
+                <Border Classes="group">
+                  <StackPanel>
+                    <Grid Classes="row" ColumnDefinitions="*,Auto,Auto">
+                      <StackPanel Spacing="2">
+                        <TextBlock Text="Image" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="{Binding WatermarkName}" />
+                      </StackPanel>
+                      <Button Grid.Column="1" Classes="soft" Content="Choose…" Margin="0,0,8,0" Command="{Binding ChooseWatermarkCommand}" />
+                      <Button Grid.Column="2" Classes="ghost" Content="Remove" Command="{Binding RemoveWatermarkCommand}" IsVisible="{Binding HasWatermarkImage}" />
+                    </Grid>
+                    <StackPanel IsVisible="{Binding HasWatermarkImage}">
+                      <Border Classes="sep" />
+                      <Grid Classes="row" ColumnDefinitions="*,Auto">
+                        <TextBlock Text="Corner" />
+                        <ContentControl Grid.Column="1" Content="{Binding WatermarkCorner}" />
+                      </Grid>
+                      <Border Classes="sep" />
+                      <Grid Classes="row" ColumnDefinitions="*,Auto,Auto">
+                        <TextBlock Text="Size (share of the video's width)" />
+                        <Slider Grid.Column="1" Width="180" Minimum="5" Maximum="40" TickFrequency="1" IsSnapToTickEnabled="True"
+                                Value="{Binding WatermarkSize}" VerticalAlignment="Center" Margin="0,-6,10,-6" />
+                        <TextBlock Grid.Column="2" Classes="mono" Width="44" TextAlignment="Right" Text="{Binding WatermarkSizeText}" />
+                      </Grid>
+                      <Border Classes="sep" />
+                      <Grid Classes="row" ColumnDefinitions="*,Auto,Auto">
+                        <TextBlock Text="Opacity" />
+                        <Slider Grid.Column="1" Width="180" Minimum="20" Maximum="100" TickFrequency="5" IsSnapToTickEnabled="True"
+                                Value="{Binding WatermarkOpacity}" VerticalAlignment="Center" Margin="0,-6,10,-6" />
+                        <TextBlock Grid.Column="2" Classes="mono" Width="44" TextAlignment="Right" Text="{Binding WatermarkOpacityText}" />
+                      </Grid>
+                      <Border Classes="sep" />
+                      <Grid Classes="row" ColumnDefinitions="*,Auto">
+                        <TextBlock Text="Add it to exports" />
+                        <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding UseWatermark}" />
+                      </Grid>
+                    </StackPanel>
+                  </StackPanel>
+                </Border>
+
+                <TextBlock Classes="label" Text="INTRO AND OUTRO" Margin="0,8,0,0" />
+                <Border Classes="group">
+                  <StackPanel>
+                    <Grid Classes="row" ColumnDefinitions="*,Auto,Auto,Auto">
+                      <StackPanel Spacing="2">
+                        <TextBlock Text="Intro clip" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="{Binding IntroName}" />
+                      </StackPanel>
+                      <Button Grid.Column="1" Classes="soft" Content="Choose…" Margin="0,0,8,0" Command="{Binding ChooseIntroCommand}" />
+                      <Button Grid.Column="2" Classes="ghost" Content="Remove" Margin="0,0,8,0" Command="{Binding RemoveIntroCommand}" IsVisible="{Binding HasIntroClip}" />
+                      <ToggleSwitch Grid.Column="3" Classes="bare" IsChecked="{Binding UseIntro}" IsEnabled="{Binding HasIntroClip}"
+                                    ToolTip.Tip="Add it to exports" />
+                    </Grid>
+                    <Border Classes="sep" />
+                    <Grid Classes="row" ColumnDefinitions="*,Auto,Auto,Auto">
+                      <StackPanel Spacing="2">
+                        <TextBlock Text="Outro clip" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="{Binding OutroName}" />
+                      </StackPanel>
+                      <Button Grid.Column="1" Classes="soft" Content="Choose…" Margin="0,0,8,0" Command="{Binding ChooseOutroCommand}" />
+                      <Button Grid.Column="2" Classes="ghost" Content="Remove" Margin="0,0,8,0" Command="{Binding RemoveOutroCommand}" IsVisible="{Binding HasOutroClip}" />
+                      <ToggleSwitch Grid.Column="3" Classes="bare" IsChecked="{Binding UseOutro}" IsEnabled="{Binding HasOutroClip}"
+                                    ToolTip.Tip="Add it to exports" />
+                    </Grid>
+                  </StackPanel>
+                </Border>
+                <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Margin="4,0"
+                           Text="Intro and outro clips are fitted to each export's size, with black bars if the shape differs. Exports and Share presets both use them." />
+                </StackPanel>
               </StackPanel>
 
               <!-- ==== Accessibility ==== -->
@@ -1449,6 +1652,25 @@
             <TextBlock Classes="dim" Text="{Binding Subtitle}" FontSize="12" VerticalAlignment="Center" />
           </StackPanel>
           <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" Margin="0,0,12,0">
+            <Button Classes="ghost" ToolTip.Tip="Exports running in the background"
+                    IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).Exports.HasJobs}">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <PathIcon Data="{StaticResource IcExport}" Width="15" Height="15" />
+                <TextBlock Text="{Binding #Root.((vm:MainViewModel)DataContext).Exports.ButtonText}" FontSize="12" VerticalAlignment="Center" />
+              </StackPanel>
+              <Button.Flyout>
+                <Flyout Placement="BottomEdgeAlignedRight">
+                  <ContentControl Content="{Binding #Root.((vm:MainViewModel)DataContext).Exports}" />
+                </Flyout>
+              </Button.Flyout>
+            </Button>
+            <Button Classes="ghost" Classes.on="{Binding IsEffectsOpen}" Command="{Binding ToggleEffectsCommand}"
+                    IsVisible="{Binding ShowEffectsButton}" ToolTip.Tip="Captions, slow motion, sound and watermark (Shift+E)">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <PathIcon Data="{StaticResource IcSparkle}" Width="15" Height="15" />
+                <TextBlock Text="{Binding EffectsButtonText}" FontSize="12" VerticalAlignment="Center" />
+              </StackPanel>
+            </Button>
             <Button Classes="ghost" ToolTip.Tip="Use this frame as the thumbnail (T)"
                     Command="{Binding #Root.((vm:MainViewModel)DataContext).UseFrameAsThumbnailCommand}">
               <StackPanel Orientation="Horizontal" Spacing="6">
@@ -1468,16 +1690,227 @@
         </Grid>
       </Border>
 
-      <!-- Video -->
-      <Panel Grid.Row="1">
-        <c:VideoSurface x:Name="Surface" Frames="{Binding Frames}" />
+      <!-- Video, and the Effects panel beside it -->
+      <Grid Grid.Row="1" ColumnDefinitions="*,Auto">
+      <Panel>
+        <c:VideoSurface x:Name="Surface" Frames="{Binding Frames}"
+                          SourceWidth="{Binding VideoWidth}" SourceHeight="{Binding VideoHeight}" />
+        <c:EffectsOverlay Captions="{Binding PreviewCaptions}" Watermark="{Binding PreviewWatermark}"
+                          VideoWidth="{Binding VideoWidth}" VideoHeight="{Binding VideoHeight}" />
         <Border Background="Transparent" x:Name="SurfaceHit" />
+        <Border Classes="speedbadge" IsVisible="{Binding SpeedPreviewText, Converter={x:Static ObjectConverters.IsNotNull}}"
+                IsHitTestVisible="False" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="16">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <PathIcon Data="{StaticResource IcSpeed}" Width="13" Height="13" Foreground="#FF9F43" />
+            <TextBlock Text="{Binding SpeedPreviewText}" FontSize="12" FontWeight="SemiBold" />
+          </StackPanel>
+        </Border>
         <Border IsVisible="{Binding Toast, Converter={x:Static ObjectConverters.IsNotNull}}"
                 HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,18,0,0"
                 Background="#E614151B" CornerRadius="10" Padding="14,8" BorderBrush="{DynamicResource Line}" BorderThickness="1">
           <TextBlock Text="{Binding Toast}" FontSize="13" />
         </Border>
       </Panel>
+
+      <!-- ===== EFFECTS PANEL ===== -->
+      <Border Grid.Column="1" Width="340" Background="{DynamicResource Bg1}" BorderBrush="{DynamicResource Line}" BorderThickness="1,0,0,0"
+              IsVisible="{Binding IsEffectsOpen}">
+        <DockPanel>
+          <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="16,14,10,2">
+            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+              <PathIcon Data="{StaticResource IcSparkle}" Width="15" Height="15" Foreground="{DynamicResource Cyan}" />
+              <TextBlock Text="Effects" FontSize="15" FontWeight="Bold" />
+            </StackPanel>
+            <Button Grid.Column="1" Classes="ghost" Command="{Binding ToggleEffectsCommand}" ToolTip.Tip="Close (Shift+E)">
+              <PathIcon Data="{StaticResource IcClose}" Width="12" Height="12" />
+            </Button>
+          </Grid>
+          <TextBlock DockPanel.Dock="Top" Classes="dim" FontSize="11" TextWrapping="Wrap" Margin="16,0,16,10" Text="{Binding EffectsNote}" />
+          <ScrollViewer x:Name="EffectsScroll">
+            <StackPanel Spacing="16" Margin="12,0,12,18">
+
+              <!-- captions -->
+              <StackPanel Spacing="8" IsVisible="{Binding ShowCaptionTools}">
+                <Grid ColumnDefinitions="Auto,*,Auto">
+                  <PathIcon Data="{StaticResource IcText}" Width="13" Height="13" Margin="4,0,8,0" Foreground="{DynamicResource TextDim}" />
+                  <TextBlock Grid.Column="1" Classes="label" Text="CAPTIONS" VerticalAlignment="Center" />
+                  <Button Grid.Column="2" Classes="soft" Padding="10,5" Command="{Binding AddCaptionCommand}" ToolTip.Tip="Add a caption at the playhead (C)">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                      <PathIcon Data="{StaticResource IcAdd}" Width="11" Height="11" />
+                      <TextBlock Text="Add caption" FontSize="12" />
+                    </StackPanel>
+                  </Button>
+                </Grid>
+                <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Margin="4,0" IsVisible="{Binding !Captions.Count}"
+                           Text="Text over the video, burned into exports. A new caption starts at the playhead and lasts 3 seconds." />
+                <ItemsControl x:Name="CaptionList" ItemsSource="{Binding Captions}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:CaptionViewModel">
+                      <Border Classes="fxcard" Margin="0,0,0,8">
+                        <StackPanel Spacing="8">
+                          <TextBox Classes="fx" Text="{Binding Text}" Watermark="Caption text" AcceptsReturn="True" TextWrapping="Wrap" MaxHeight="96" />
+                          <Grid ColumnDefinitions="*,Auto,Auto,Auto">
+                            <Button Classes="ghost" Padding="4,3" HorizontalAlignment="Left" ToolTip.Tip="Jump to this caption"
+                                    Command="{Binding #Root.((vm:MainViewModel)DataContext).Player.JumpToCaptionCommand}" CommandParameter="{Binding}">
+                              <TextBlock Classes="mono" FontSize="11" Text="{Binding RangeText}" />
+                            </Button>
+                            <Button Grid.Column="1" Classes="ghost" Padding="7,3" ToolTip.Tip="Start the caption at the playhead"
+                                    Command="{Binding #Root.((vm:MainViewModel)DataContext).Player.CaptionStartHereCommand}" CommandParameter="{Binding}">
+                              <TextBlock Text="Start here" FontSize="11" />
+                            </Button>
+                            <Button Grid.Column="2" Classes="ghost" Padding="7,3" ToolTip.Tip="End the caption at the playhead"
+                                    Command="{Binding #Root.((vm:MainViewModel)DataContext).Player.CaptionEndHereCommand}" CommandParameter="{Binding}">
+                              <TextBlock Text="End here" FontSize="11" />
+                            </Button>
+                            <Button Grid.Column="3" Classes="ghost" Padding="6" ToolTip.Tip="Remove this caption"
+                                    Command="{Binding #Root.((vm:MainViewModel)DataContext).Player.RemoveCaptionCommand}" CommandParameter="{Binding}">
+                              <PathIcon Data="{StaticResource IcDelete}" Width="13" Height="13" />
+                            </Button>
+                          </Grid>
+                          <WrapPanel Orientation="Horizontal">
+                            <ContentControl Content="{Binding Position}" Margin="0,0,6,6" />
+                            <ContentControl Content="{Binding Size}" Margin="0,0,6,6" />
+                            <ContentControl Content="{Binding Look}" Margin="0,0,0,6" />
+                          </WrapPanel>
+                        </StackPanel>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+
+              <!-- slow motion / fast forward -->
+              <StackPanel Spacing="8" IsVisible="{Binding ShowSpeedTools}">
+                <Grid ColumnDefinitions="Auto,*,Auto">
+                  <PathIcon Data="{StaticResource IcSpeed}" Width="13" Height="13" Margin="4,0,8,0" Foreground="{DynamicResource TextDim}" />
+                  <TextBlock Grid.Column="1" Classes="label" Text="SPEED" VerticalAlignment="Center" />
+                  <Button Grid.Column="2" Classes="soft" Padding="10,5" Command="{Binding AddSpeedSectionCommand}"
+                          ToolTip.Tip="Slow down or speed up part of the clip, starting at the playhead">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                      <PathIcon Data="{StaticResource IcAdd}" Width="11" Height="11" />
+                      <TextBlock Text="Add slow-mo" FontSize="12" />
+                    </StackPanel>
+                  </Button>
+                </Grid>
+                <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Margin="4,0" IsVisible="{Binding !SpeedSections.Count}"
+                           Text="Slow motion or fast forward for part of the clip; the player plays it at that speed so you can check it. Slow motion is smoothest on 60 fps recordings." />
+                <ItemsControl ItemsSource="{Binding SpeedSections}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:SpeedSectionViewModel">
+                      <Border Classes="fxcard" Margin="0,0,0,8">
+                        <StackPanel Spacing="8">
+                          <Grid ColumnDefinitions="*,Auto,Auto,Auto">
+                            <StackPanel Spacing="0">
+                              <TextBlock Text="{Binding Title}" FontSize="12" FontWeight="SemiBold" Margin="4,0,0,0" />
+                              <Button Classes="ghost" Padding="4,2" HorizontalAlignment="Left" ToolTip.Tip="Play this part"
+                                      Command="{Binding #Root.((vm:MainViewModel)DataContext).Player.JumpToSpeedSectionCommand}" CommandParameter="{Binding}">
+                                <TextBlock Classes="mono" FontSize="11" Text="{Binding RangeText}" />
+                              </Button>
+                            </StackPanel>
+                            <Button Grid.Column="1" Classes="ghost" Padding="7,3" VerticalAlignment="Center" ToolTip.Tip="Start at the playhead"
+                                    Command="{Binding #Root.((vm:MainViewModel)DataContext).Player.SpeedStartHereCommand}" CommandParameter="{Binding}">
+                              <TextBlock Text="Start here" FontSize="11" />
+                            </Button>
+                            <Button Grid.Column="2" Classes="ghost" Padding="7,3" VerticalAlignment="Center" ToolTip.Tip="End at the playhead"
+                                    Command="{Binding #Root.((vm:MainViewModel)DataContext).Player.SpeedEndHereCommand}" CommandParameter="{Binding}">
+                              <TextBlock Text="End here" FontSize="11" />
+                            </Button>
+                            <Button Grid.Column="3" Classes="ghost" Padding="6" VerticalAlignment="Center" ToolTip.Tip="Remove"
+                                    Command="{Binding #Root.((vm:MainViewModel)DataContext).Player.RemoveSpeedSectionCommand}" CommandParameter="{Binding}">
+                              <PathIcon Data="{StaticResource IcDelete}" Width="13" Height="13" />
+                            </Button>
+                          </Grid>
+                          <ContentControl Content="{Binding Rate}" />
+                          <CheckBox IsChecked="{Binding Ramp}" FontSize="12" Content="Ease in and out (speed ramp)"
+                                    ToolTip.Tip="Change speed gradually over 0.6 s at each end instead of in one jump" />
+                        </StackPanel>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+
+              <!-- sound -->
+              <StackPanel Spacing="8" IsVisible="{Binding ShowAudioTools}">
+                <Grid ColumnDefinitions="Auto,*">
+                  <PathIcon Data="{StaticResource IcVolume}" Width="13" Height="13" Margin="4,0,8,0" Foreground="{DynamicResource TextDim}" />
+                  <TextBlock Grid.Column="1" Classes="label" Text="SOUND" VerticalAlignment="Center" />
+                </Grid>
+                <Border Classes="fxcard">
+                  <StackPanel Spacing="10">
+                    <Grid ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="2">
+                        <TextBlock Text="Even out loudness" FontSize="12" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="Brings exports to the same loudness YouTube and Twitch use (−14 LUFS), so quiet clips aren't too quiet." />
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding Normalize}" />
+                    </Grid>
+                    <StackPanel Spacing="10" IsVisible="{Binding HasVoiceTrackChoice}">
+                      <Border Classes="sep" />
+                      <StackPanel Spacing="6">
+                        <TextBlock Text="Voice track" FontSize="12" />
+                        <ContentControl Content="{Binding VoiceTrack}" />
+                      </StackPanel>
+                      <StackPanel Spacing="6">
+                        <TextBlock Text="Voice boost" FontSize="12" />
+                        <ContentControl Content="{Binding VoiceBoost}" />
+                      </StackPanel>
+                      <Grid ColumnDefinitions="*,Auto">
+                        <StackPanel Spacing="2">
+                          <TextBlock Text="Lower the game while you talk" FontSize="12" />
+                          <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="The other tracks duck under your voice, then come back." />
+                        </StackPanel>
+                        <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding Duck}" />
+                      </Grid>
+                    </StackPanel>
+                    <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" IsVisible="{Binding !HasVoiceTrackChoice}"
+                               Text="Voice boost and lowering the game need the microphone on its own track: Settings, Clipping, two audio devices with Separate tracks." />
+                  </StackPanel>
+                </Border>
+              </StackPanel>
+
+              <!-- watermark, intro, outro -->
+              <StackPanel Spacing="8" IsVisible="{Binding ShowBranding}">
+                <Grid ColumnDefinitions="Auto,*">
+                  <PathIcon Data="{StaticResource IcImage}" Width="13" Height="13" Margin="4,0,8,0" Foreground="{DynamicResource TextDim}" />
+                  <TextBlock Grid.Column="1" Classes="label" Text="WATERMARK AND INTRO" VerticalAlignment="Center" />
+                </Grid>
+                <Border Classes="fxcard">
+                  <StackPanel Spacing="10">
+                    <Grid ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="2">
+                        <TextBlock Text="Watermark" FontSize="12" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="{Binding WatermarkName}" />
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding UseWatermark}" IsEnabled="{Binding HasWatermark}" />
+                    </Grid>
+                    <Grid ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="2">
+                        <TextBlock Text="Intro clip" FontSize="12" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="{Binding IntroName}" />
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding UseIntro}" IsEnabled="{Binding HasIntro}" />
+                    </Grid>
+                    <Grid ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="2">
+                        <TextBlock Text="Outro clip" FontSize="12" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="{Binding OutroName}" />
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding UseOutro}" IsEnabled="{Binding HasOutro}" />
+                    </Grid>
+                    <Button Classes="soft" HorizontalAlignment="Left" Padding="10,5" FontSize="12" Content="Set up in Settings…"
+                            Command="{Binding #Root.((vm:MainViewModel)DataContext).OpenEditingSettingsCommand}" />
+                  </StackPanel>
+                </Border>
+              </StackPanel>
+
+              <Button Classes="ghost" HorizontalAlignment="Center" FontSize="12" Content="Remove all captions and speed changes"
+                      Command="{Binding ClearEffectsCommand}" IsVisible="{Binding HasClearableEffects}" />
+            </StackPanel>
+          </ScrollViewer>
+        </DockPanel>
+      </Border>
+      </Grid>
 
       <!-- Controls -->
       <Border Grid.Row="2" Background="{DynamicResource Bg1}" BorderBrush="{DynamicResource Line}" BorderThickness="0,1,0,0"
@@ -1486,7 +1919,7 @@
           <c:TrimTimeline Duration="{Binding Duration}" Position="{Binding Position}"
                           InPoint="{Binding InPoint}" OutPoint="{Binding OutPoint}"
                           SeekCommand="{Binding SeekCommand}" Accent="{DynamicResource Accent}" RangeBrush="{DynamicResource Cyan}"
-                          Segments="{Binding SegmentRanges}" Markers="{Binding Markers}" />
+                          Segments="{Binding SegmentRanges}" Markers="{Binding Markers}" Effects="{Binding EffectRanges}" />
 
           <!-- Transport row -->
           <Grid ColumnDefinitions="*,Auto,*">

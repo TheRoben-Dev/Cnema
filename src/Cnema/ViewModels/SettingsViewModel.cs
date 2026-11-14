@@ -132,15 +132,16 @@ public sealed partial class SettingsViewModel : ObservableObject
     partial void OnColorSchemeChanged(ColorScheme value) { if (value is not null) ThemeService.Apply(value.Id, HighContrast); }
 
     // ---------- pages ----------
-    public static string[] PageNames { get; } = { "General", "Features", "Clipping", "Accessibility" };
+    public static string[] PageNames { get; } = { "General", "Features", "Editing", "Clipping", "Accessibility" };
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsGeneralPage), nameof(IsFeaturesPage), nameof(IsClippingPage), nameof(IsAccessibilityPage),
-        nameof(ShowClippingSettings), nameof(ShowClippingOffNotice))]
+    [NotifyPropertyChangedFor(nameof(IsGeneralPage), nameof(IsFeaturesPage), nameof(IsEditingPage), nameof(IsClippingPage),
+        nameof(IsAccessibilityPage), nameof(ShowClippingSettings), nameof(ShowClippingOffNotice))]
     private int _page;
     public bool IsGeneralPage => Page == 0;
     public bool IsFeaturesPage => Page == 1;
-    public bool IsClippingPage => Page == 2;
-    public bool IsAccessibilityPage => Page == 3;
+    public bool IsEditingPage => Page == 2;
+    public bool IsClippingPage => Page == 3;
+    public bool IsAccessibilityPage => Page == 4;
     public bool ShowClippingSettings => IsClippingPage && FeatureClipping;
     public bool ShowClippingOffNotice => IsClippingPage && !FeatureClipping;
     /// <summary>LB / RB on a controller, Ctrl+Tab on a keyboard.</summary>
@@ -256,6 +257,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         _featureStats = f.Stats;
         _featureMiniPlayer = f.MiniPlayer;
         _featureChapters = f.Chapters;
+        LoadEditing(settings);
         var a = settings.Accessibility;
         _uiScale = UiScales.OrderBy(o => Math.Abs(o.Value - a.UiScale * 100)).First();
         _highContrast = a.HighContrast;
@@ -371,7 +373,10 @@ public sealed partial class SettingsViewModel : ObservableObject
             HoverPreview = FeatureHoverPreview, LoudMarkers = FeatureLoudMarkers, HoverGlow = FeatureHoverGlow,
             Collections = FeatureCollections, Unwatched = FeatureUnwatched, CleanUp = FeatureCleanUp, Stats = FeatureStats,
             MiniPlayer = FeatureMiniPlayer, Chapters = FeatureChapters,
+            Captions = FeatureCaptions, SpeedEffects = FeatureSpeedEffects, AudioTools = FeatureAudioTools,
+            Branding = FeatureBranding, ExportQueue = FeatureExportQueue,
         };
+        WriteEditing(settings);
         // Switching a module off switches off what it was doing, not only its buttons.
         if (!FeatureClipping) c.Enabled = false;
         if (!FeatureController) settings.ControllerMode = false;

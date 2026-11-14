@@ -8,10 +8,12 @@ public sealed record ProcessResult(int ExitCode, string StdOut, string StdErr);
 public static class ProcessRunner
 {
     public static async Task<ProcessResult> RunAsync(
-        string file, IEnumerable<string> args, Action<string>? onStdOutLine = null, CancellationToken ct = default)
+        string file, IEnumerable<string> args, Action<string>? onStdOutLine = null, CancellationToken ct = default,
+        string? workingDirectory = null)
     {
         var psi = new ProcessStartInfo(file)
         {
+            WorkingDirectory = workingDirectory ?? "",
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
