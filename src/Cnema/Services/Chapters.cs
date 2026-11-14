@@ -31,9 +31,9 @@ public static class Chapters
         }
         if (starts.Count == 0) return Array.Empty<Chapter>();
 
-        var list = new List<Chapter> { new(1, 0, starts[0], "Start") };
+        var list = new List<Chapter> { new(1, 0, starts[0], T("Start")) };
         for (var i = 0; i < starts.Count; i++)
-            list.Add(new Chapter(i + 2, starts[i], i + 1 < starts.Count ? starts[i + 1] : durationMs, $"Bookmark {i + 1}"));
+            list.Add(new Chapter(i + 2, starts[i], i + 1 < starts.Count ? starts[i + 1] : durationMs, F("Bookmark {0}", i + 1)));
         return list;
     }
 

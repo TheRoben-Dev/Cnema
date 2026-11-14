@@ -4,7 +4,7 @@ namespace Cnema.Services;
 
 public sealed record ChangelogEntry(Version Version, IReadOnlyList<string> Items)
 {
-    public string Title => "Version " + Version.ToString(3);
+    public string Title => F("Version {0}", Version.ToString(3));
 }
 
 /// <summary>Reads CHANGELOG.md, which is built into the app so it can be shown offline.</summary>

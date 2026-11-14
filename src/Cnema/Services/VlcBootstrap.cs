@@ -51,10 +51,10 @@ public static class VlcBootstrap
         catch (Exception ex)
         {
             Error = OperatingSystem.IsMacOS()
-                ? "libVLC failed to load. Reinstall Cnema, or install VLC.app into /Applications as a fallback."
+                ? T("libVLC failed to load. Reinstall Cnema, or install VLC.app into /Applications as a fallback.")
                 : OperatingSystem.IsLinux()
-                    ? "libVLC not found. Install it (e.g. sudo apt install libvlc5 vlc-plugin-base)."
-                    : "libVLC failed to load.";
+                    ? T("libVLC not found. Install it (e.g. sudo apt install libvlc5 vlc-plugin-base).")
+                    : T("libVLC failed to load.");
             Log.Warn($"{Error}\n{ex}");
         }
     }

@@ -25,6 +25,12 @@ public sealed partial class AudioTrackViewModel : ObservableObject
 
 public sealed partial class PlayerViewModel : ObservableObject, IDisposable
 {
+    /// <summary>Re-reads every text property after a language change.</summary>
+    public void RefreshTexts()
+    {
+        OnPropertyChanged(string.Empty);
+    }
+
     private readonly MediaPlayer? _player;
     private readonly SettingsStore _settings;
     private CancellationTokenSource? _exportCts;
@@ -72,7 +78,7 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
     public bool HasEdits => HasIn || HasOut || HasSegments || Captions.Count > 0 || SpeedSections.Count > 0;
     public bool HasAudioTracks => AudioTracks.Count > 1;
     public bool HasMarkers => Markers.Count > 0;
-    public string ExportLabel => HasSegments ? $"Export {Segments.Count + (HasRange ? 1 : 0)} parts" : "Export clip";
+    public string ExportLabel => HasSegments ? P(Segments.Count + (HasRange ? 1 : 0), "Export {0} part", "Export {0} parts") : T("Export clip");
     private CancellationTokenSource? _highlightCts;
 
     private void SegmentsChanged()
@@ -88,14 +94,14 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
     {
         if (!HasRange || EffectiveOut - EffectiveIn < 100)
         {
-            ShowToast("Set an in and out point first (I / O), then add it as a part.");
+            ShowToast(T("Set an in and out point first (I / O), then add it as a part."));
             return;
         }
         Segments.Add(new SegmentViewModel(EffectiveIn, EffectiveOut));
         InPoint = OutPoint = -1;
         _stopAtOut = false;
         SegmentsChanged();
-        ShowToast($"Part {Segments.Count} added. Mark the next one, or export.");
+        ShowToast(F("Part {0} added. Mark the next one, or export.", Segments.Count));
     }
 
     [RelayCommand]
@@ -118,7 +124,7 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
 
     private void JumpMarker(bool forward)
     {
-        if (Markers.Count == 0) { ShowToast("No markers in this video."); return; }
+        if (Markers.Count == 0) { ShowToast(T("No markers in this video.")); return; }
         var target = forward
             ? Markers.Where(m => m.Ms > Position + 500).Select(m => (double?)m.Ms).FirstOrDefault()
             : Markers.Where(m => m.Ms < Position - 1500).Select(m => (double?)m.Ms).LastOrDefault();
@@ -138,7 +144,7 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
         if (real.Count < 2) return;
         for (var i = 0; i < real.Count; i++)
         {
-            var track = new AudioTrackViewModel(i, real[i].Id, $"Audio {i + 1}");
+            var track = new AudioTrackViewModel(i, real[i].Id, F("Audio {0}", i + 1));
             track.PropertyChanged += (_, _) => ApplyAudioTrack();
             AudioTracks.Add(track);
         }
@@ -195,7 +201,7 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
         _player.Paused += (_, _) => Ui(() => IsPlaying = false);
         _player.Stopped += (_, _) => Ui(() => IsPlaying = false);
         _player.EndReached += (_, _) => Ui(OnEndReached);
-        _player.EncounteredError += (_, _) => Ui(() => ShowToast("Playback error: libVLC could not play this file."));
+        _player.EncounteredError += (_, _) => Ui(() => ShowToast(T("Playback error: libVLC could not play this file.")));
     }
 
     private static void Ui(Action a) => Dispatcher.UIThread.Post(a);
@@ -255,12 +261,16 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
     {
         if (_player is null || VlcBootstrap.LibVLC is not { } lib)
         {
-            ShowToast(VlcBootstrap.Error ?? "libVLC is not available.");
+            ShowToast(VlcBootstrap.Error ?? T("libVLC is not available."));
             return;
         }
         HideToast();
         // Switching videos in the quick player or with ← / →: remember where the last one was left.
-        if (_active && Current is { } previous && !ReferenceEquals(previous, item)) SaveProgress(previous);
+        if (_active && Current is { } previous && !ReferenceEquals(previous, item))
+        {
+            SaveProgress(previous);
+            RememberEdits(previous);
+        }
         _active = true;
         await _pendingStop;
         Frames?.Reset();
@@ -279,14 +289,16 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
         LoadMarkers(item);
         BuildChapters();
         ResetEffects();
+        var restored = RestoreEdits(item);
 
         using var media = new Media(lib, item.Entry.Path, FromType.FromPath);
         var resume = item.Entry.LastPositionMs;
         if (item.HasProgress && resume > 5000)
         {
             media.AddOption($":start-time={resume / 1000.0:0.###}".Replace(',', '.'));
-            ShowToast($"Resumed at {TrimTimeline.FormatTime(resume)}");
+            ShowToast(F("Resumed at {0}", TrimTimeline.FormatTime(resume)));
         }
+        if (restored) ShowToast(T("Your edits from last time are back. Start over clears them."));
         _player.Play(media);
     }
 
@@ -304,7 +316,11 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
 
     public void Close()
     {
-        if (Current is { } cur && _active) SaveProgress(cur);
+        if (Current is { } cur && _active)
+        {
+            SaveProgress(cur);
+            RememberEdits(cur);
+        }
         _active = false;
         _exportCts?.Cancel();
         // Stop() blocks until the decoder threads exit; keep that off the UI thread.
@@ -408,11 +424,11 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
         if (parts.Count > 0 && HasRange && end - start >= 100) parts.Add((start, end));
         parts.Sort();
         if (parts.Count == 1) { (start, end) = parts[0]; parts.Clear(); }
-        if (parts.Count == 0 && end - start < 100) { ShowToast("Set an in and out point first (I / O)."); return; }
+        if (parts.Count == 0 && end - start < 100) { ShowToast(T("Set an in and out point first (I / O).")); return; }
         if (ToolLocator.Ffmpeg is null)
         {
-            ShowToast(OperatingSystem.IsMacOS() ? "ffmpeg not found. Install with: brew install ffmpeg"
-                                                : "ffmpeg not found. Install it and make sure it is on PATH.");
+            ShowToast(OperatingSystem.IsMacOS() ? T("ffmpeg not found. Install with: brew install ffmpeg")
+                                                : T("ffmpeg not found. Install it and make sure it is on PATH."));
             return;
         }
 
@@ -431,7 +447,7 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
         if (string.IsNullOrEmpty(target)) return;
         if (string.Equals(Path.GetFullPath(target), Path.GetFullPath(src), StringComparison.OrdinalIgnoreCase))
         {
-            ShowToast("Pick a different file name; the source can't be overwritten.");
+            ShowToast(T("Pick a different file name; the source can't be overwritten."));
             return;
         }
 
@@ -450,8 +466,8 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
             var chapters = ChaptersFor(start, end);
             work = (progress, ct) => TrimService.ExportAsync(src, target, start, end, mode, progress, ct, audio, chapters);
         }
-        var detail = (parts.Count > 0 ? $"{parts.Count} parts" : "Clip") + (withFx ? $" · {Plural(EffectsCount, "effect")}" : "");
-        await RunExportAsync(target, detail, work, () => $"Exported {Path.GetFileName(target)}", reveal: false);
+        var detail = (parts.Count > 0 ? F("{0} parts", parts.Count) : T("Clip")) + (withFx ? " · " + P(EffectsCount, "{0} effect", "{0} effects") : "");
+        await RunExportAsync(target, detail, work, () => F("Exported {0}", Path.GetFileName(target)), reveal: false);
     }
 
     /// <summary>Share presets: re-encode the selection (or the whole video) for a place with limits.</summary>
@@ -459,13 +475,14 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
     private async Task ShareAsync(string? presetName)
     {
         if (Current is null || IsExporting || !Enum.TryParse<SharePreset>(presetName, out var preset)) return;
-        if (ToolLocator.Ffmpeg is null) { ShowToast("ffmpeg not found, so there is nothing to convert with."); return; }
+        if (ToolLocator.Ffmpeg is null) { ShowToast(T("ffmpeg not found, so there is nothing to convert with.")); return; }
         var start = (long)EffectiveIn;
         var end = (long)EffectiveOut;
         if (end - start < 100) { start = 0; end = (long)Duration; }
         if (end - start < 100) return;
 
         var (suffix, ext, label) = TrimService.Describe(preset);
+        label = T(label);
         var src = Current.Entry.Path;
         var dir = Path.GetDirectoryName(src) ?? "";
         var target = Path.Combine(dir, $"{Current.Title} [{suffix}]{ext}");
@@ -478,9 +495,9 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
             ? (progress, ct) => TrimService.ShareAsync(src, target, start, end, preset, progress, ct, audio)
             : (progress, ct) => RenderService.RenderAsync(
                 new RenderJob(src, target, new[] { (start, end) }, audio, fx, preset, null), progress, ct);
-        var cut = preset == SharePreset.Gif && end - start > TrimService.GifMaxMs ? ", first 20 s" : "";
-        await RunExportAsync(target, label + (fx.IsEmpty ? "" : $" · {Plural(EffectsCount, "effect")}"), work,
-            () => $"{label} ready: {VideoItemViewModel.FormatSize(new FileInfo(target).Length)}{cut}", reveal: true);
+        var cut = preset == SharePreset.Gif && end - start > TrimService.GifMaxMs ? T(", first 20 s") : "";
+        await RunExportAsync(target, label + (fx.IsEmpty ? "" : " · " + P(EffectsCount, "{0} effect", "{0} effects")), work,
+            () => F("{0} ready: {1}", label, VideoItemViewModel.FormatSize(new FileInfo(target).Length)) + cut, reveal: true);
     }
 
     /// <summary>Runs an export here with a progress bar, or hands it to the export queue.</summary>
@@ -491,8 +508,8 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
         {
             queue.Add(target, detail, work, doneText);
             ShowToast(queue.PendingCount > 1
-                ? $"Added to the export queue ({queue.PendingCount} to go)."
-                : "Exporting in the background. Keep editing if you like.");
+                ? F("Added to the export queue ({0} to go).", queue.PendingCount)
+                : T("Exporting in the background. Keep editing if you like."));
             return;
         }
 
@@ -507,8 +524,8 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
             Exported?.Invoke(target);
             if (reveal) PlatformShell.Reveal(target);
         }
-        catch (OperationCanceledException) { ShowToast("Export cancelled."); }
-        catch (Exception ex) { ShowToast("Export failed: " + FirstLine(ex.Message)); }
+        catch (OperationCanceledException) { ShowToast(T("Export cancelled.")); }
+        catch (Exception ex) { ShowToast(T("Export failed: ") + FirstLine(ex.Message)); }
         finally
         {
             IsExporting = false;
@@ -520,7 +537,7 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
     private IReadOnlyList<Chapter>? SourceChapters() =>
         ChapterList.Count < 2 ? null : ChapterList.Select(c => c.Chapter).ToList();
 
-    private static string Plural(int n, string what) => n == 1 ? "1 " + what : $"{n} {what}s";
+
 
     [RelayCommand] private void CancelExport() => _exportCts?.Cancel();
 
@@ -550,8 +567,69 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
         return t.TotalHours >= 1 ? t.ToString(@"h\:mm\:ss\.f") : t.ToString(@"m\:ss\.f");
     }
 
+    // ---------- remembered edits (Settings, Features, Remember edits) ----------
+    private bool KeepEdits => _settings.Current.Features.KeepEdits;
+
+    /// <summary>Stores the editor state for <paramref name="item"/>, or forgets it when there is none.</summary>
+    private void RememberEdits(VideoItemViewModel item)
+    {
+        if (!KeepEdits) return;
+        if (!HasEdits) { EditStore.Remove(item.Entry.Path); return; }
+        EditStore.Set(item.Entry.Path, new SavedEdit
+        {
+            In = InPoint,
+            Out = OutPoint,
+            Parts = Segments.Select(s => new[] { s.Start, s.End }).ToList(),
+            Captions = Captions.Select(c => c.ToSpec()).ToList(),
+            Speed = SpeedSections.Select(s => s.ToSpec()).ToList(),
+        });
+    }
+
+    private bool RestoreEdits(VideoItemViewModel item)
+    {
+        if (!KeepEdits || EditStore.Get(item.Entry.Path) is not { } e) return false;
+        InPoint = e.In;
+        OutPoint = e.Out;
+        foreach (var p in e.Parts.Where(p => p.Length == 2)) Segments.Add(new SegmentViewModel(p[0], p[1]));
+        SegmentsChanged();
+        foreach (var spec in e.Captions)
+        {
+            var c = new CaptionViewModel { Text = spec.Text, Start = spec.Start, End = spec.End };
+            c.Position.Value = spec.Position;
+            c.Size.Value = spec.Size;
+            c.Look.Value = spec.Style;
+            c.Changed += EffectsChanged;
+            Captions.Add(c);
+        }
+        foreach (var spec in e.Speed)
+        {
+            var s = new SpeedSectionViewModel { Start = spec.Start, End = spec.End, Ramp = spec.Ramp };
+            s.Rate.Value = spec.Rate;
+            s.Changed += EffectsChanged;
+            SpeedSections.Add(s);
+        }
+        EffectsChanged();
+        return HasEdits;
+    }
+
+    /// <summary>Clears trim marks, parts and effects for this video, including what was remembered.</summary>
+    [RelayCommand]
+    private void StartOver()
+    {
+        if (Current is null) return;
+        InPoint = OutPoint = -1;
+        LoopRange = false;
+        Segments.Clear();
+        SegmentsChanged();
+        ClearEffectsCommand.Execute(null);
+        EditStore.Remove(Current.Entry.Path);
+        OnPropertyChanged(nameof(HasEdits));
+        ShowToast(T("Back to the original: no trim marks, parts or effects."));
+    }
+
     public void Dispose()
     {
+        if (Current is { } cur && _active) RememberEdits(cur);
         _exportCts?.Cancel();
         _player?.Stop();
         _player?.Dispose();

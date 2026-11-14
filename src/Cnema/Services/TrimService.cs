@@ -73,8 +73,8 @@ public static class TrimService
             },
         };
 
-        var ffmpeg = ToolLocator.Ffmpeg ?? throw new InvalidOperationException("ffmpeg not found.");
-        if (outMs <= inMs) throw new ArgumentException("Out point must be after in point.");
+        var ffmpeg = ToolLocator.Ffmpeg ?? throw new InvalidOperationException(T("ffmpeg not found."));
+        if (outMs <= inMs) throw new ArgumentException(T("Out point must be after in point."));
         if (preset == SharePreset.Gif) outMs = Math.Min(outMs, inMs + GifMaxMs);
         var durationMs = outMs - inMs;
         string S(long ms) => (ms / 1000.0).ToString("0.000", CultureInfo.InvariantCulture);
@@ -159,8 +159,8 @@ public static class TrimService
         IReadOnlyList<Chapter>? chapters = null)
     {
         var ffmpeg = ToolLocator.Ffmpeg ?? throw new InvalidOperationException(
-            "ffmpeg not found. Install it (macOS: brew install ffmpeg) and restart Cnema.");
-        if (outMs <= inMs) throw new ArgumentException("Out point must be after in point.");
+            T("ffmpeg not found. Install it (macOS: brew install ffmpeg) and restart Cnema."));
+        if (outMs <= inMs) throw new ArgumentException(T("Out point must be after in point."));
 
         var durationMs = outMs - inMs;
         string S(long ms) => (ms / 1000.0).ToString("0.000", CultureInfo.InvariantCulture);
@@ -227,8 +227,8 @@ public static class TrimService
         string source, string output, IReadOnlyList<(long In, long Out)> parts, TrimMode mode,
         IProgress<double>? progress, CancellationToken ct, IReadOnlyList<int>? audio = null)
     {
-        var ffmpeg = ToolLocator.Ffmpeg ?? throw new InvalidOperationException("ffmpeg not found.");
-        if (parts.Count == 0) throw new ArgumentException("Nothing to export.");
+        var ffmpeg = ToolLocator.Ffmpeg ?? throw new InvalidOperationException(T("ffmpeg not found."));
+        if (parts.Count == 0) throw new ArgumentException(T("Nothing to export."));
         var ext = Path.GetExtension(output);
         var files = new List<string>();
         var list = Path.Combine(Path.GetTempPath(), $"cnema-join-{Guid.NewGuid():N}.txt");

@@ -21,7 +21,7 @@ public sealed partial class ExportJobViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(IsRunning), nameof(IsFinished), nameof(IsDone), nameof(IsFailed), nameof(CanCancel))]
     private ExportState _state;
     [ObservableProperty] private double _progress;
-    [ObservableProperty] private string _status = "Waiting";
+    [ObservableProperty] private string _status = T("Waiting");
 
     public bool IsRunning => State == ExportState.Running;
     public bool IsFinished => State is ExportState.Done or ExportState.Failed or ExportState.Cancelled;
@@ -45,6 +45,12 @@ public sealed partial class ExportJobViewModel : ObservableObject
 /// </summary>
 public sealed partial class ExportQueueViewModel : ObservableObject
 {
+    /// <summary>Re-reads every text property after a language change.</summary>
+    public void RefreshTexts()
+    {
+        OnPropertyChanged(string.Empty);
+    }
+
     private bool _pumping;
 
     public ObservableCollection<ExportJobViewModel> Jobs { get; } = new();
@@ -64,9 +70,9 @@ public sealed partial class ExportQueueViewModel : ObservableObject
             var running = Jobs.FirstOrDefault(j => j.IsRunning);
             var waiting = Jobs.Count(j => j.State == ExportState.Waiting);
             if (running is not null)
-                return waiting > 0 ? $"Exporting {running.Progress:0}% · {waiting} waiting" : $"Exporting {running.Progress:0}%";
+                return waiting > 0 ? F("Exporting {0:0}% · {1} waiting", running.Progress, waiting) : F("Exporting {0:0}%", running.Progress);
             var failed = Jobs.Count(j => j.IsFailed);
-            return failed > 0 ? $"Exports · {failed} failed" : "Exports";
+            return failed > 0 ? F("Exports · {0} failed", failed) : T("Exports");
         }
     }
 
@@ -110,13 +116,13 @@ public sealed partial class ExportQueueViewModel : ObservableObject
                 catch (OperationCanceledException)
                 {
                     job.State = ExportState.Cancelled;
-                    job.Status = "Cancelled";
+                    job.Status = T("Cancelled");
                 }
                 catch (Exception ex)
                 {
                     Log.Warn($"Export of {job.Target} failed: {ex.Message}");
                     job.State = ExportState.Failed;
-                    job.Status = "Failed: " + PlayerViewModel.FirstLine(ex.Message);
+                    job.Status = T("Failed: ") + PlayerViewModel.FirstLine(ex.Message);
                 }
                 Raise();
                 Finished?.Invoke(job);
@@ -144,7 +150,7 @@ public sealed partial class ExportQueueViewModel : ObservableObject
         if (job.State == ExportState.Waiting)
         {
             job.State = ExportState.Cancelled;
-            job.Status = "Cancelled";
+            job.Status = T("Cancelled");
             Raise();
             return;
         }

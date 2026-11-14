@@ -61,7 +61,7 @@ public sealed partial class VideoItemViewModel : ObservableObject
     public static bool UnwatchedBadges { get; set; } = true;
     public bool IsUnwatched => Entry.LastPlayedUtc is null;
     public bool ShowUnwatched => UnwatchedBadges && IsUnwatched;
-    public string WatchedMenuText => IsUnwatched ? "Mark as watched" : "Mark as unwatched";
+    public string WatchedMenuText => IsUnwatched ? T("Mark as watched") : T("Mark as unwatched");
     public bool HasCustomThumbnail => Entry.ThumbAtMs > 0;
 
     // ---------- selection ----------

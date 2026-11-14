@@ -12,14 +12,15 @@ public sealed partial class FolderViewModel : ObservableObject
     public string? Path { get; }
     /// <summary>Tag name (Kind == Tag), otherwise null.</summary>
     public string? Tag { get; }
-    public string Name { get; }
+    private readonly string _name;
+    public string Name => Kind switch { NavKind.All => T("All videos"), NavKind.Favorites => T("Favourites"), _ => _name };
 
     public string Tooltip => Kind switch
     {
-        NavKind.All => "Every video in every folder",
-        NavKind.Favorites => "Videos you starred",
-        NavKind.Tag => $"Videos tagged \"{Tag}\"",
-        NavKind.Collection => $"Your collection \"{Name}\"",
+        NavKind.All => T("Every video in every folder"),
+        NavKind.Favorites => T("Videos you starred"),
+        NavKind.Tag => F("Videos tagged \"{0}\"", Tag),
+        NavKind.Collection => F("Your collection \"{0}\"", Name),
         _ => Path!,
     };
     public bool IsAll => Kind == NavKind.All;
@@ -38,14 +39,16 @@ public sealed partial class FolderViewModel : ObservableObject
         Kind = kind;
         Path = kind == NavKind.Folder ? value : null;
         Tag = kind == NavKind.Tag ? value : null;
-        Name = kind switch
+        _name = kind switch
         {
-            NavKind.All => "All videos",
-            NavKind.Favorites => "Favourites",
+            NavKind.All or NavKind.Favorites => "",
             NavKind.Tag or NavKind.Collection => value!,
             _ => System.IO.Path.GetFileName(value!.TrimEnd('/', '\\')) is { Length: > 0 } n ? n : value!,
         };
     }
+
+    /// <summary>Re-reads the translated name and tooltip after a language change.</summary>
+    public void Refresh() => OnPropertyChanged(string.Empty);
 
     /// <summary>Folder containment test (only meaningful for All / Folder rows).</summary>
     public bool Contains(string file) =>

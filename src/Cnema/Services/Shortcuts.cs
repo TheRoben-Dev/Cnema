@@ -128,7 +128,7 @@ public static class Shortcuts
             if (!keys.Any(k => k.Equals(gesture))) continue;
             var left = keys.Where(k => !k.Equals(gesture)).ToList();
             _custom[other.Id] = left.Count > 0 ? left[0].ToString() : "";
-            bumped = other.Label;
+            bumped = T(other.Label);
         }
         _custom[id] = gesture.ToString();
         return bumped;

@@ -95,6 +95,9 @@ Set `CNEMA_LIBVLC_PATH` to a folder containing libvlc + libvlccore to override.
   (0.25× to 4×, Shift+, / Shift+.), A-B loop (**B**), volume, fullscreen.
 - **Chapters**: bookmarks from a session recording become chapters, listed in the player (jump, or select one to
   export it). Session files and exports get them as real chapters (ffmpeg metadata), so other players see them.
+- **Remember edits** (Settings, Features, off by default): trim marks, parts, captions and speed changes are kept
+  per video when the editor closes, in Cnema's data folder (`edits.json`), never in the video. *Start over* on the
+  Trim page clears them.
 - **Trim**: set in/out at the playhead or drag the brackets on the timeline, preview/loop the selection, export.
   - *Lossless* (default): stream copy. Instant, zero quality loss, keeps the container. The cut starts on the
     keyframe at or before the in point, so the clip can start up to a GOP earlier than marked.
@@ -248,6 +251,13 @@ H.264 at the same quality. Turning off "Use the graphics card" records H.264 wit
 | Ctrl+← / Ctrl+→ | Previous / next chapter | T | Use this frame as the thumbnail |
 | Shift+E | Show or hide the tool panel | C | Add a caption at the playhead |
 | G | Save this frame as an image | ? | All shortcuts (and change them) |
+
+## Languages
+
+English and Swedish. Settings, General, *Language* switches live; the default follows the system language and
+falls back to English. All UI text goes through `Loc` (`T("English text")` in code, `svc:Tr.Text="English text"`
+in XAML), with the English text as the key, so anything untranslated shows in English. A translation is a flat
+JSON file of `"English": "translation"` in `src/Cnema/Assets/Lang/`; add its code to `Loc.Languages` to offer it.
 
 ## Layout
 

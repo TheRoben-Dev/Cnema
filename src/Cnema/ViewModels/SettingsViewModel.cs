@@ -14,8 +14,16 @@ public sealed record PadHint(string Glyph, string Label, string Kind)
     public bool IsY => Kind == "y";
 }
 
-public sealed record Choice(string Label, int Value)
+/// <summary>One entry of the language picker; Code "" follows the system.</summary>
+public sealed record LanguageOption(string Code, string Name)
 {
+    public override string ToString() => Name;
+}
+
+public sealed record Choice(string English, int Value)
+{
+    /// <summary>The label in the current language.</summary>
+    public string Label => T(English);
     public override string ToString() => Label;
 }
 
@@ -26,7 +34,7 @@ public sealed partial class ProfileRow : ObservableObject
         new[] { new Choice("Same length", 0) }.Concat(SettingsViewModel.Lengths).ToArray();
     public static Choice[] Bitrates { get; } =
         new[] { new Choice("Same bitrate", 0) }.Concat(SettingsViewModel.Bitrates).ToArray();
-    public static string[] Formats { get; } = { "Same format", "H.264", "HEVC", "AV1" };
+    public static string[] Formats { get; } = { T("Same format"), "H.264", "HEVC", "AV1" };
     private static readonly string?[] FormatIds = { null, "h264", "hevc", "av1" };
 
     [ObservableProperty] private string _game = "";
@@ -85,7 +93,13 @@ public sealed partial class HotkeyRow : ObservableObject
 /// <summary>Editable copy of the background + clipping settings; nothing changes until Save.</summary>
 public sealed partial class SettingsViewModel : ObservableObject
 {
-    public const string NoAudio = "None";
+    /// <summary>Re-reads every text property after a language change.</summary>
+    public void RefreshTexts()
+    {
+        OnPropertyChanged(string.Empty);
+    }
+
+    public static readonly string NoAudio = T("None");
 
     public static Choice[] Lengths { get; } =
     {
@@ -115,7 +129,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     public ObservableCollection<string> AudioDevices { get; } = new() { NoAudio };
     public ObservableCollection<string> Screens { get; } = new();
 
-    public const string NoCamera = "None";
+    public static readonly string NoCamera = T("None");
     public ObservableCollection<string> Cameras { get; } = new() { NoCamera };
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(HasCamera))] private string _camera = NoCamera;
     public bool HasCamera => Camera != NoCamera;
@@ -194,8 +208,8 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private bool _hardwareEncoder;
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(CodecDetail))] private CodecOption? _codec;
     private string _codecWanted = "h264";
-    public string CodecDetail => Codec is null ? "Checking what this computer can encode…"
-        : Codec.Hardware ? $"Encoded on the graphics chip ({Codec.Encoder})." : "Encoded on the CPU (x264).";
+    public string CodecDetail => Codec is null ? T("Checking what this computer can encode…")
+        : Codec.Hardware ? F("Encoded on the graphics chip ({0}).", Codec.Encoder) : T("Encoded on the CPU (x264).");
     partial void OnHardwareEncoderChanged(bool value) => _ = LoadCodecsAsync();
     [ObservableProperty] private int _screenIndex;
     [ObservableProperty] private string _audio1 = NoAudio;
@@ -210,8 +224,22 @@ public sealed partial class SettingsViewModel : ObservableObject
     // Shown straight away as a preview; cancelling Settings puts the saved scheme back.
     partial void OnColorSchemeChanged(ColorScheme value) { if (value is not null) ThemeService.Apply(value.Id, HighContrast); }
 
+    public IReadOnlyList<LanguageOption> LanguageOptions { get; } =
+        new[] { new LanguageOption("", SystemLanguageLabel()) }
+            .Concat(Loc.Languages.Select(l => new LanguageOption(l.Code, l.Name))).ToList();
+    [ObservableProperty] private LanguageOption _language = null!;
+    // Also a live preview, like the colour scheme.
+    partial void OnLanguageChanged(LanguageOption value) { if (value is not null) Loc.Apply(value.Code); }
+
+    private static string SystemLanguageLabel()
+    {
+        var sys = Loc.SystemLanguage;
+        var name = Loc.Languages.FirstOrDefault(l => l.Code == sys).Name ?? "English";
+        return F("Same as the system ({0})", name);
+    }
+
     // ---------- pages ----------
-    public static string[] PageNames { get; } = { "General", "Features", "Editing", "Clipping", "Accessibility" };
+    public static LocalizedText[] PageNames { get; } = LocalizedText.List("General", "Features", "Editing", "Clipping", "Accessibility");
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsGeneralPage), nameof(IsFeaturesPage), nameof(IsEditingPage), nameof(IsClippingPage),
         nameof(IsAccessibilityPage), nameof(ShowClippingSettings), nameof(ShowClippingOffNotice))]
@@ -252,8 +280,8 @@ public sealed partial class SettingsViewModel : ObservableObject
     // ---------- portable mode ----------
     public bool IsPortable => AppPaths.IsPortable;
     public string PortableStatus => AppPaths.IsPortable
-        ? "On: settings, library and thumbnails are kept in \"Cnema Data\" next to the app. Delete or rename that folder to turn it off."
-        : "Keep settings, library and thumbnails next to the app, for running Cnema from a USB stick.";
+        ? T("On: settings, library and thumbnails are kept in \"Cnema Data\" next to the app. Delete or rename that folder to turn it off.")
+        : T("Keep settings, library and thumbnails next to the app, for running Cnema from a USB stick.");
     [ObservableProperty] private string? _portableMessage;
 
     [RelayCommand]
@@ -262,11 +290,11 @@ public sealed partial class SettingsViewModel : ObservableObject
         try
         {
             AppPaths.MakePortable();
-            PortableMessage = "Done. Cnema uses the \"Cnema Data\" folder from the next start.";
+            PortableMessage = T("Done. Cnema uses the \"Cnema Data\" folder from the next start.");
         }
         catch (Exception ex)
         {
-            PortableMessage = "Could not create the folder next to the app: " + ex.Message;
+            PortableMessage = T("Could not create the folder next to the app: ") + ex.Message;
         }
     }
 
@@ -285,16 +313,16 @@ public sealed partial class SettingsViewModel : ObservableObject
     public string ShiftLabel => OperatingSystem.IsMacOS() ? "⇧ Shift" : "Shift";
     public string MetaLabel => OperatingSystem.IsMacOS() ? "⌘ Command" : OperatingSystem.IsWindows() ? "Win" : "Super";
     public string BackgroundLabel => OperatingSystem.IsMacOS()
-        ? "Keep running in the menu bar when the window is closed"
-        : "Keep running in the system tray when the window is closed";
+        ? T("Keep running in the menu bar when the window is closed")
+        : T("Keep running in the system tray when the window is closed");
 
     public string AudioHint => OperatingSystem.IsMacOS()
         ? CaptureProbe.SystemAudioHelper is not null
-            ? "\"System audio\" records everything you hear (games included) and is covered by the Screen Recording permission. Pick your microphone as the second device to add your voice."
-            : "System audio needs macOS 13 or newer. Microphones work as they are; for game sound, install a loopback device such as BlackHole and pick it here."
+            ? T("\"System audio\" records everything you hear (games included) and is covered by the Screen Recording permission. Pick your microphone as the second device to add your voice.")
+            : T("System audio needs macOS 13 or newer. Microphones work as they are; for game sound, install a loopback device such as BlackHole and pick it here.")
         : OperatingSystem.IsWindows()
-            ? "Microphones work as they are. For game sound, enable \"Stereo Mix\" in Windows sound settings (or install a loopback device) and pick it here."
-            : "Sources ending in \".monitor\" record what the speakers play.";
+            ? T("Microphones work as they are. For game sound, enable \"Stereo Mix\" in Windows sound settings (or install a loopback device) and pick it here.")
+            : T("Sources ending in \".monitor\" record what the speakers play.");
 
     /// <summary>Temp disk the rolling buffer needs; nothing else is written until a clip is saved.</summary>
     public string Footprint
@@ -302,8 +330,8 @@ public sealed partial class SettingsViewModel : ObservableObject
         get
         {
             var longest = ExtraHotkeys.Select(h => h.Length).Append(Length).MaxBy(c => c.Value)!;
-            return $"Keeps the last {longest.Label} in a temporary buffer of about {Bitrate.Value * (longest.Value + 6) / 8:N0} MB. " +
-                   "Nothing is kept unless you save a clip.";
+            return F("Keeps the last {0} in a temporary buffer of about {1:N0} MB. Nothing is kept unless you save a clip.",
+                longest.Label, Bitrate.Value * (longest.Value + 6) / 8);
         }
     }
 
@@ -329,6 +357,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         _checkForUpdates = settings.CheckForUpdates;
         _autoUpdate = settings.AutoUpdate;
         _colorScheme = ThemeService.Find(settings.ColorScheme);
+        _language = LanguageOptions.FirstOrDefault(l => l.Code == settings.Language) ?? LanguageOptions[0];
         var f = settings.Features;
         _featureClipping = f.Clipping;
         _featureSessions = f.Sessions;
@@ -435,21 +464,21 @@ public sealed partial class SettingsViewModel : ObservableObject
         var folder = Folder;
         var u = await Task.Run(() => StorageService.Measure(folder));
         StorageUsage = u.Count == 0
-            ? "The clips folder is empty."
-            : $"The clips folder holds {u.Count} clip{(u.Count == 1 ? "" : "s")}, {VideoItemViewModel.FormatSize(u.Bytes)}.";
+            ? T("The clips folder is empty.")
+            : F(u.Count == 1 ? "The clips folder holds {0} clip, {1}." : "The clips folder holds {0} clips, {1}.", u.Count, VideoItemViewModel.FormatSize(u.Bytes));
     }
 
     /// <summary>Copies the edits into the settings object. Returns a message if something is invalid.</summary>
     public string? WriteTo(AppSettings settings)
     {
         if (ClipEnabled && !(HotkeyCtrl || HotkeyAlt || HotkeyShift || HotkeyMeta) && HotkeyKey.Length == 1)
-            return "Add at least one modifier to the hotkey, or a plain letter would stop working everywhere else.";
+            return T("Add at least one modifier to the hotkey, or a plain letter would stop working everywhere else.");
         if (ClipEnabled && ExtraHotkeys.Any(h => !h.HasModifier && h.Key.Length == 1))
-            return "Add at least one modifier to each extra hotkey, or a plain letter would stop working everywhere else.";
+            return T("Add at least one modifier to each extra hotkey, or a plain letter would stop working everywhere else.");
         var combos = ExtraHotkeys.Select(h => h.Combo)
             .Prepend(ClipSettings.FormatHotkey(HotkeyCtrl, HotkeyAlt, HotkeyShift, HotkeyMeta, HotkeyKey)).ToList();
         if (combos.Distinct().Count() != combos.Count)
-            return "Two save-clip hotkeys use the same keys. Give each one its own.";
+            return T("Two save-clip hotkeys use the same keys. Give each one its own.");
         var c = settings.Clip;
         settings.KeepInBackground = KeepInBackground;
         settings.ControllerMode = ControllerMode;
@@ -474,6 +503,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         settings.CheckForUpdates = CheckForUpdates;
         settings.AutoUpdate = AutoUpdate;
         settings.ColorScheme = ColorScheme.Id;
+        settings.Language = Language.Code;
         settings.Features = new FeatureSettings
         {
             Clipping = FeatureClipping, Sessions = FeatureSessions, Controller = FeatureController,
@@ -481,7 +511,7 @@ public sealed partial class SettingsViewModel : ObservableObject
             Collections = FeatureCollections, Unwatched = FeatureUnwatched, CleanUp = FeatureCleanUp, Stats = FeatureStats,
             MiniPlayer = FeatureMiniPlayer, Chapters = FeatureChapters,
             Captions = FeatureCaptions, SpeedEffects = FeatureSpeedEffects, AudioTools = FeatureAudioTools,
-            Branding = FeatureBranding, ExportQueue = FeatureExportQueue,
+            Branding = FeatureBranding, ExportQueue = FeatureExportQueue, KeepEdits = FeatureKeepEdits,
         };
         WriteEditing(settings);
         // Switching a module off switches off what it was doing, not only its buttons.
@@ -497,7 +527,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         c.HotkeyMeta = HotkeyMeta;
         c.HotkeyKey = HotkeyKey;
         if (UsesArchive && string.Equals(Path.GetFullPath(ArchiveFolder.Trim()), Path.GetFullPath(Folder.Trim()), StringComparison.OrdinalIgnoreCase))
-            return "The archive folder has to be a different folder from the clips folder.";
+            return T("The archive folder has to be a different folder from the clips folder.");
         c.SeparateTracks = SeparateTracks;
         c.Profiles = Profiles.Where(p => p.Game.Trim().Length > 0).Select(p => p.ToProfile()).ToList();
         c.ExtraHotkeys = ExtraHotkeys.Select(h => h.ToHotkey()).ToList();

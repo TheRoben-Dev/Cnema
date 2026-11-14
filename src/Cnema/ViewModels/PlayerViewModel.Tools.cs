@@ -28,19 +28,19 @@ public sealed partial class PlayerViewModel
 
     public string PageTitle => Page switch
     {
-        ToolPage.Captions => "Captions",
-        ToolPage.Speed => "Slow motion and fast forward",
-        ToolPage.Sound => "Sound",
-        ToolPage.Brand => "Watermark, intro and outro",
-        ToolPage.Share => "Export and share",
-        _ => "Trim",
+        ToolPage.Captions => T("Captions"),
+        ToolPage.Speed => T("Slow motion and fast forward"),
+        ToolPage.Sound => T("Sound"),
+        ToolPage.Brand => T("Watermark, intro and outro"),
+        ToolPage.Share => T("Export and share"),
+        _ => T("Trim"),
     };
 
     public string MarkerText => Markers.Count switch
     {
-        0 => "No markers",
-        1 => "1 marker",
-        var n => $"{n} markers",
+        0 => T("No markers"),
+        1 => T("1 marker"),
+        var n => F("{0} markers", n),
     };
 
     private void InitTools()

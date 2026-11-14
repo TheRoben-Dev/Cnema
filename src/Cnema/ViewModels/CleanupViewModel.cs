@@ -21,8 +21,8 @@ public sealed partial class CleanupViewModel : ObservableObject
     private readonly CancellationTokenSource _cts = new();
     public ObservableCollection<CleanupRow> Rows { get; } = new();
     [ObservableProperty] private bool _isScanning = true;
-    [ObservableProperty] private string _summary = "Looking for duplicates and broken or empty files…";
-    [ObservableProperty] private string _removeText = "Move to trash";
+    [ObservableProperty] private string _summary = T("Looking for duplicates and broken or empty files…");
+    [ObservableProperty] private string _removeText = T("Move to trash");
     [ObservableProperty] private bool _canRemove;
 
     public IEnumerable<CleanupRow> Checked => Rows.Where(r => r.IsChecked && r.Item is not null);
@@ -40,26 +40,27 @@ public sealed partial class CleanupViewModel : ObservableObject
         {
             return;
         }
-        var trash = OperatingSystem.IsWindows() ? "Recycle Bin" : "Trash";
+        var trash = T(OperatingSystem.IsWindows() ? "Recycle Bin" : "Trash");
         foreach (var group in found.Where(f => f.Reason == CleanupReason.Duplicate).GroupBy(f => f.Group))
         {
             var original = group.First(f => !f.Suggested).Entry;
             foreach (var f in group)
-                Rows.Add(Row(f, lookup, f.Suggested ? $"Copy of “{Path.GetFileNameWithoutExtension(original.Path)}”" : "Original, kept"));
+                Rows.Add(Row(f, lookup, f.Suggested ? F("Copy of “{0}”", Path.GetFileNameWithoutExtension(original.Path)) : T("Original, kept")));
         }
         foreach (var f in found.Where(f => f.Reason != CleanupReason.Duplicate))
             Rows.Add(Row(f, lookup, f.Reason switch
             {
-                CleanupReason.Empty => "Empty file",
-                CleanupReason.Unreadable => "Can't be played",
-                _ => "Shorter than 2 seconds",
+                CleanupReason.Empty => T("Empty file"),
+                CleanupReason.Unreadable => T("Can't be played"),
+                _ => T("Shorter than 2 seconds"),
             }));
         foreach (var r in Rows) r.PropertyChanged += (_, _) => Recount(trash);
         var dupes = found.Count(f => f.Reason == CleanupReason.Duplicate && f.Suggested);
         var junk = found.Count(f => f.Reason != CleanupReason.Duplicate);
         Summary = dupes + junk == 0
-            ? "Nothing to clean up. No duplicates, and every file plays."
-            : $"Found {Plural(dupes, "duplicate")} and {Plural(junk, "broken, empty or very short file")}. The ticked ones are suggested; you choose.";
+            ? T("Nothing to clean up. No duplicates, and every file plays.")
+            : F("Found {0} and {1}. The ticked ones are suggested; you choose.",
+                P(dupes, "{0} duplicate", "{0} duplicates"), P(junk, "{0} broken, empty or very short file", "{0} broken, empty or very short files"));
         IsScanning = false;
         Recount(trash);
     }
@@ -78,8 +79,6 @@ public sealed partial class CleanupViewModel : ObservableObject
     {
         var n = Checked.Count();
         CanRemove = n > 0;
-        RemoveText = n == 0 ? "Move to " + trash : $"Move {n} to {trash}";
+        RemoveText = n == 0 ? F("Move to {0}", trash) : F("Move {0} to {1}", n, trash);
     }
-
-    private static string Plural(int n, string what) => n == 1 ? "1 " + what : $"{n} {what}s";
 }

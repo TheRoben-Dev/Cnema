@@ -102,7 +102,7 @@ public static class PlatformShell
                 ? x : Path.Combine(Home, ".local", "share");
             MoveToHomeTrash(path, Path.Combine(data, "Trash"), info: true);
         }
-        if (File.Exists(path)) throw new IOException("The file could not be moved to the trash.");
+        if (File.Exists(path)) throw new IOException(T("The file could not be moved to the trash."));
     }
 
     private static string Home => Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);

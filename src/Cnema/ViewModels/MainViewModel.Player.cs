@@ -46,18 +46,20 @@ public sealed partial class MainViewModel
         // Holding the key flips through videos at a steady pace instead of queueing every repeat.
         if (DateTime.UtcNow - _lastStep < TimeSpan.FromMilliseconds(180)) return;
         var i = Videos.IndexOf(current);
-        if (i < 0) { Player.ShowToast("This video isn't in the library view right now."); return; }
+        if (i < 0) { Player.ShowToast(T("This video isn't in the library view right now.")); return; }
         var j = i + delta;
         if (j < 0 || j >= Videos.Count)
         {
-            Player.ShowToast(delta > 0 ? "That was the last video." : "This is the first video.");
+            Player.ShowToast(delta > 0 ? T("That was the last video.") : T("This is the first video."));
             return;
         }
-        if (IsPlayerOpen && Player.HasEdits && !(_armedStep == delta && DateTime.UtcNow < _armedUntil))
+        if (IsPlayerOpen && Player.HasEdits && !Features.KeepEdits && !(_armedStep == delta && DateTime.UtcNow < _armedUntil))
         {
             _armedStep = delta;
             _armedUntil = DateTime.UtcNow.AddSeconds(4);
-            Player.ShowToast($"Press again to open the {(delta > 0 ? "next" : "previous")} video. Your trim marks, parts and effects here will be cleared.");
+            Player.ShowToast(T(delta > 0
+                ? "Press again to open the next video. Your trim marks, parts and effects here will be cleared."
+                : "Press again to open the previous video. Your trim marks, parts and effects here will be cleared."));
             return;
         }
         _armedStep = 0;

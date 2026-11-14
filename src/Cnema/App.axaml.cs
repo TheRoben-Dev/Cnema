@@ -20,6 +20,8 @@ public partial class App : Application
     private NativeMenuItem? _traySession;
     private NativeMenuItem? _trayUpdate;
     private NativeMenuItem? _trayToggle;
+    private NativeMenuItem? _trayOpen;
+    private NativeMenuItem? _trayQuit;
     private SingleInstance? _instance;
 
     /// <summary>True once the user chose Quit: closing the window then really closes it.</summary>
@@ -41,10 +43,12 @@ public partial class App : Application
                 Log.Error("Unhandled UI exception", e.Exception);
                 e.Handled = true;
             };
+            // Language first, so even start-up errors (libVLC missing) are translated.
+            var settings = new SettingsStore();
+            Loc.Apply(settings.Current.Language);
             VlcBootstrap.Initialize();
             AutostartService.RefreshIfEnabled();
 
-            var settings = new SettingsStore();
             ThemeService.Apply(settings.Current.ColorScheme, settings.Current.Accessibility.HighContrast);
             Shortcuts.Load(settings.Current.Shortcuts);
             _vm = new MainViewModel(settings, new LibraryService(), new ClipService(settings));
@@ -102,18 +106,18 @@ public partial class App : Application
 
     private void BuildTray()
     {
-        var open = new NativeMenuItem("Open Cnema");
+        var open = _trayOpen = new NativeMenuItem(T("Open Cnema"));
         open.Click += (_, _) => ShowWindow();
-        _traySave = new NativeMenuItem("Save clip");
+        _traySave = new NativeMenuItem(T("Save clip"));
         _traySave.Click += (_, _) => _vm?.SaveClipCommand.Execute(null);
-        _traySession = new NativeMenuItem("Record session");
+        _traySession = new NativeMenuItem(T("Record session"));
         _traySession.Click += (_, _) => _vm?.ToggleSessionCommand.Execute(null);
-        _trayToggle = new NativeMenuItem("Background clipping") { ToggleType = NativeMenuItemToggleType.CheckBox };
+        _trayToggle = new NativeMenuItem(T("Background clipping")) { ToggleType = NativeMenuItemToggleType.CheckBox };
         _trayToggle.Click += (_, _) => _vm?.ToggleClippingCommand.Execute(null);
-        var quit = new NativeMenuItem("Quit Cnema");
+        var quit = _trayQuit = new NativeMenuItem(T("Quit Cnema"));
         quit.Click += (_, _) => Quit();
 
-        _trayUpdate = new NativeMenuItem("Get the update") { IsVisible = false };
+        _trayUpdate = new NativeMenuItem(T("Get the update")) { IsVisible = false };
         _trayUpdate.Click += (_, _) => _vm?.OpenUpdateCommand.Execute(null);
         var menu = new NativeMenu();
         menu.Add(open);
@@ -141,6 +145,10 @@ public partial class App : Application
         if (_vm is null || _tray is null) return;
         _tray.IsVisible = _vm.StaysInBackground;
         _tray.ToolTipText = "Cnema · " + _vm.ClipTitle;
+        // Fixed labels too, so the menu follows a language change.
+        if (_trayOpen is not null) _trayOpen.Header = T("Open Cnema");
+        if (_trayQuit is not null) _trayQuit.Header = T("Quit Cnema");
+        if (_trayToggle is not null) _trayToggle.Header = T("Background clipping");
         if (_traySave is not null)
         {
             _traySave.Header = _vm.SaveClipLabel;
@@ -154,7 +162,7 @@ public partial class App : Application
         if (_trayUpdate is not null)
         {
             _trayUpdate.IsVisible = _vm.HasUpdate;
-            if (_vm.HasUpdate) _trayUpdate.Header = _vm.UpdateText + " · get it";
+            if (_vm.HasUpdate) _trayUpdate.Header = _vm.UpdateText + T(" · get it");
         }
         if (_trayToggle is not null) _trayToggle.IsChecked = _vm.IsClipEnabled;
     }

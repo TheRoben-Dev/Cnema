@@ -102,7 +102,7 @@ public sealed class GamepadService : IDisposable
         catch (Exception ex)
         {
             _failed = true;
-            Error = "Controller support could not be loaded: " + ex.Message;
+            Error = T("Controller support could not be loaded: ") + ex.Message;
             Log.Warn($"" + Error);
             return false;
         }

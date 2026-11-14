@@ -24,7 +24,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     public ClipService Clips { get; }
 
-    public static string[] SortModes { get; } = { "Name", "Recently modified", "Recently played", "Longest", "Largest" };
+    public static LocalizedText[] SortModes { get; } = LocalizedText.List("Name", "Recently modified", "Recently played", "Longest", "Largest");
 
     public ObservableCollection<FolderViewModel> Folders { get; } = new();
     public ObservableCollection<FolderViewModel> Tags { get; } = new();
@@ -58,11 +58,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(HasUpdate), nameof(UpdateText))] private UpdateInfo? _update;
     public bool HasUpdate => Update is not null;
     public string UpdateText => Update is null ? ""
-        : IsInstallingUpdate ? $"Updating to {Update.Version.ToString(3)}…"
-        : $"Cnema {Update.Version.ToString(3)} is available";
+        : IsInstallingUpdate ? F("Updating to {0}…", Update.Version.ToString(3))
+        : F("Cnema {0} is available", Update.Version.ToString(3));
     public string UpdateAction => IsInstallingUpdate
-        ? (UpdateProgress >= 1 ? "Installing, Cnema will restart" : $"Downloading {UpdateProgress * 100:0}%")
-        : UpdateService.WhyNoSelfUpdate() is null && Update?.AssetUrl is not null ? "Install and restart" : "Get the update";
+        ? (UpdateProgress >= 1 ? T("Installing, Cnema will restart") : F("Downloading {0:0}%", UpdateProgress * 100))
+        : UpdateService.WhyNoSelfUpdate() is null && Update?.AssetUrl is not null ? T("Install and restart") : T("Get the update");
 
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(UpdateText), nameof(UpdateAction))] private bool _isInstallingUpdate;
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(UpdateAction))] private double _updateProgress;
@@ -75,7 +75,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         if (Update is not { AssetUrl: not null } info || IsInstallingUpdate) return false;
         if (UpdateService.WhyNoSelfUpdate() is { } why)
         {
-            UpdateStatus = "Can't install automatically: " + why + ".";
+            UpdateStatus = F("Can't install automatically: {0}.", why);
             return false;
         }
         IsInstallingUpdate = true;
@@ -93,8 +93,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         catch (Exception ex)
         {
             Log.Warn("Installing the update failed: " + ex.Message);
-            UpdateStatus = "The update could not be installed: " + ex.Message;
-            ShowToast("The update could not be installed. Settings has the details.");
+            UpdateStatus = T("The update could not be installed: ") + ex.Message;
+            ShowToast(T("The update could not be installed. Settings has the details."));
             IsInstallingUpdate = false;
             return false;
         }
@@ -103,7 +103,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     // ---------- what's new ----------
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(IsShowingWhatsNew))] private IReadOnlyList<ChangelogEntry>? _whatsNew;
     public bool IsShowingWhatsNew => WhatsNew is { Count: > 0 };
-    public string WhatsNewTitle => "What's new in Cnema " + UpdateService.CurrentText;
+    public string WhatsNewTitle => F("What's new in Cnema {0}", UpdateService.CurrentText);
 
     [RelayCommand] private void CloseWhatsNew() => WhatsNew = null;
 
@@ -131,7 +131,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _settings.Current.LastUpdateAttempt = null;
         _settings.Save();
     }
-    public string VersionText => "Version " + UpdateService.CurrentText;
+    public string VersionText => F("Version {0}", UpdateService.CurrentText);
 
     /// <summary>The update card: install in place when that is possible, otherwise open the download page.</summary>
     [RelayCommand]
@@ -178,13 +178,13 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     {
         var (found, error) = await UpdateService.CheckDetailedAsync();
         if (error is null) Update = found;
-        else if (announce) UpdateStatus = "Couldn't check for updates: " + error;
+        else if (announce) UpdateStatus = T("Couldn't check for updates: ") + error;
         // One system notification per new version, so it is noticed while Cnema sits in the tray.
         OnPropertyChanged(nameof(UpdateAction));
         if (announce && found is not null && found.Version != _announced)
         {
             _announced = found.Version;
-            PlatformShell.Notify("Cnema update", $"Version {found.Version.ToString(3)} is available. Open Cnema to get it.");
+            PlatformShell.Notify(T("Cnema update"), F("Version {0} is available. Open Cnema to get it.", found.Version.ToString(3)));
         }
         BackgroundStateChanged?.Invoke();
         return error;
@@ -194,11 +194,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private async Task CheckForUpdatesNowAsync()
     {
-        UpdateStatus = "Checking…";
+        UpdateStatus = T("Checking…");
         var error = await CheckForUpdatesCoreAsync(announce: false);
-        UpdateStatus = error is not null ? "Couldn't check for updates: " + error
-            : Update is { } u ? $"Version {u.Version.ToString(3)} is available."
-            : $"You have the latest version ({UpdateService.CurrentText}).";
+        UpdateStatus = error is not null ? T("Couldn't check for updates: ") + error
+            : Update is { } u ? F("Version {0} is available.", u.Version.ToString(3))
+            : F("You have the latest version ({0}).", UpdateService.CurrentText);
     }
 
     /// <summary>Set by the view: puts text on the clipboard.</summary>
@@ -210,7 +210,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         var report = await BuildDiagnosticsAsync();
         if (CopyText is not null) await CopyText(report);
         if (SettingsEditor is { } editor) editor.Error = null;
-        ShowToast("Diagnostics copied. Paste them wherever you report the problem.");
+        ShowToast(T("Diagnostics copied. Paste them wherever you report the problem."));
     }
 
     /// <summary>Everything needed to debug a report in one paste. No file names from the library.</summary>
@@ -244,8 +244,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty] private string? _deleteError;
     public bool IsConfirmingDelete => PendingDelete is not null || PendingBulkDelete is not null;
     public string DeletePrompt => PendingBulkDelete is { } many
-        ? $"Move {many.Count} video{(many.Count == 1 ? "" : "s")} to the {TrashName}?"
-        : PendingDelete is null ? "" : $"Move “{PendingDelete.Title}” to the {TrashName}?";
+        ? F(many.Count == 1 ? "Move {0} video to the {1}?" : "Move {0} videos to the {1}?", many.Count, TrashName)
+        : PendingDelete is null ? "" : F("Move “{0}” to the {1}?", PendingDelete.Title, TrashName);
 
     [RelayCommand]
     private void RequestDelete(VideoItemViewModel? item)
@@ -267,8 +267,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             PendingBulkDelete = null;
             IsSelecting = false;
             RefreshView();
-            ShowToast(failed == 0 ? $"Moved {many.Count} video{(many.Count == 1 ? "" : "s")} to the {TrashName}"
-                : $"{failed} video{(failed == 1 ? "" : "s")} could not be moved to the {TrashName}");
+            ShowToast(failed == 0 ? F(many.Count == 1 ? "Moved {0} video to the {1}" : "Moved {0} videos to the {1}", many.Count, TrashName)
+                : F(failed == 1 ? "{0} video could not be moved to the {1}" : "{0} videos could not be moved to the {1}", failed, TrashName));
             return;
         }
         if (PendingDelete is not { } item) return;
@@ -278,12 +278,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             _items.Remove(item.Entry.Path);
             PendingDelete = null;
             RefreshView();
-            ShowToast("Moved to the trash: " + item.Title);
+            ShowToast(F("Moved to the {0}: {1}", TrashName, item.Title));
         }
         catch (Exception ex)
         {
             Log.Warn($"Delete failed: {ex.Message}");
-            DeleteError = "Couldn't move it to the trash: " + ex.Message;
+            DeleteError = F("Couldn't move it to the {0}: {1}", TrashName, ex.Message);
         }
     }
 
@@ -300,17 +300,17 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         get
         {
             if (IsSettingsOpen || IsEditing)
-                return new PadHint[] { new("A", "Select", "a"), new("B", "Cancel", "b"), new("☰", "Save", "") };
+                return new PadHint[] { new("A", T("Select"), "a"), new("B", T("Cancel"), "b"), new("☰", T("Save"), "") };
             if (IsPlayerOpen)
                 return new PadHint[]
                 {
-                    new("A", "Play / pause", "a"), new("B", "Back", "b"), new("X", "Mark in", "x"), new("Y", "Mark out", "y"),
-                    new("◀ ▶", "Seek", ""), new("LB RB", "Frame", ""), new("LT RT", "10 s", ""), new("☰", "Export clip", ""),
+                    new("A", T("Play / pause"), "a"), new("B", T("Back"), "b"), new("X", T("Mark in"), "x"), new("Y", T("Mark out"), "y"),
+                    new("◀ ▶", T("Seek"), ""), new("LB RB", T("Frame"), ""), new("LT RT", "10 s", ""), new("☰", T("Export clip"), ""),
                 };
             var hints = new List<PadHint>
             {
-                new("A", "Play", "a"), new("B", "Sidebar / videos", "b"), new("X", "Favourite", "x"), new("Y", "Rename & tags", "y"),
-                new("LB RB", "Folder", ""), new("☰", "Settings", ""),
+                new("A", T("Play"), "a"), new("B", T("Sidebar / videos"), "b"), new("X", T("Favourite"), "x"), new("Y", T("Rename & tags"), "y"),
+                new("LB RB", T("Folder"), ""), new("☰", T("Settings"), ""),
             };
             if (IsClipRecording) hints.Add(new PadHint("⧉", SaveClipLabel, ""));
             return hints;
@@ -339,14 +339,14 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public bool StaysInBackground => _settings.Current.Clip.Enabled || _settings.Current.KeepInBackground;
     /// <summary>Clip settings with the active game's profile applied.</summary>
     private ClipSettings EffectiveClip => _settings.Current.Clip.For(Clips.ActiveGame);
-    public string SaveClipLabel => IsSession ? "Add bookmark" : $"Save last {LengthText(EffectiveClip.Seconds)}";
+    public string SaveClipLabel => IsSession ? T("Add bookmark") : F("Save last {0}", LengthText(EffectiveClip.Seconds));
 
     // ---------- session recording ----------
     public bool IsSession => Clips.IsSession;
     public bool CanToggleSession => IsClipRecording || IsSession;
     public string SessionLabel => IsSession
-        ? $"Stop session · {Controls.TrimTimeline.FormatTime(Clips.SessionElapsed.TotalMilliseconds)}"
-        : "Record session";
+        ? F("Stop session · {0}", Controls.TrimTimeline.FormatTime(Clips.SessionElapsed.TotalMilliseconds))
+        : T("Record session");
     private readonly Dictionary<string, IReadOnlyList<long>> _pendingBookmarks = new(StringComparer.OrdinalIgnoreCase);
     private DispatcherTimer? _sessionTimer;
     private bool _savingSession;
@@ -359,14 +359,14 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         {
             var game = _settings.Current.Clip.TagWithGame ? PlatformShell.FrontmostAppName() : null;
             if (Clips.StartSession(game))
-                ShowToast($"Session recording started. {_settings.Current.Clip.HotkeyText} adds a bookmark.");
+                ShowToast(F("Session recording started. {0} adds a bookmark.", _settings.Current.Clip.HotkeyText));
             return;
         }
         _savingSession = true;
-        ShowToast("Saving the session…");
+        ShowToast(T("Saving the session…"));
         try
         {
-            if (await Clips.StopSessionAsync() is null) ShowToast("The session could not be saved.");
+            if (await Clips.StopSessionAsync() is null) ShowToast(T("The session could not be saved."));
         }
         finally
         {
@@ -381,9 +381,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         var tag = name.EndsWith(" session", StringComparison.Ordinal) ? null : SessionGame(name);
         if (tag is not null) _pendingTags[path] = tag;
         if (_settings.Current.Clip.Sound) PlatformShell.PlayConfirmSound();
-        var marks = bookmarks.Count == 0 ? "" : $", {bookmarks.Count} bookmark{(bookmarks.Count == 1 ? "" : "s")}";
-        ShowToast($"Session saved{marks}: {name}");
-        if (_settings.Current.Clip.Notify) PlatformShell.Notify("Session saved", Path.GetFileName(path));
+        var marks = bookmarks.Count == 0 ? "" : ", " + P(bookmarks.Count, "{0} bookmark", "{0} bookmarks");
+        ShowToast(F("Session saved{0}: {1}", marks, name));
+        if (_settings.Current.Clip.Notify) PlatformShell.Notify(T("Session saved"), Path.GetFileName(path));
         _ = RescanAsync();
     }
 
@@ -452,22 +452,23 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     public string ClipTitle => Clips.State switch
     {
-        ClipState.Recording when IsSession => "Recording session",
-        ClipState.Recording => "Clipping is on",
-        ClipState.Starting => "Starting capture…",
-        ClipState.Error => "Clipping can't run",
-        _ => "Clipping is off",
+        ClipState.Recording when IsSession => T("Recording session"),
+        ClipState.Recording => T("Clipping is on"),
+        ClipState.Starting => T("Starting capture…"),
+        ClipState.Error => T("Clipping can't run"),
+        _ => T("Clipping is off"),
     };
     public string ClipDetail => Clips.State switch
     {
         ClipState.Recording when IsSession =>
-            $"Recording a session. {_settings.Current.Clip.HotkeyText} adds a bookmark ({Clips.BookmarkCount} so far).",
+            F("Recording a session. {0} adds a bookmark ({1} so far).", _settings.Current.Clip.HotkeyText, Clips.BookmarkCount),
         ClipState.Recording => _hotkeyRefused || _refusedExtras.Count > 0
-            ? $"{string.Join(" and ", RefusedHotkeys)} {(RefusedHotkeys.Count == 1 ? "is" : "are")} taken by another app. Pick a different one in settings."
+            ? F(RefusedHotkeys.Count == 1 ? "{0} is taken by another app. Pick a different one in settings." : "{0} are taken by another app. Pick different ones in settings.",
+                string.Join(T(" and "), RefusedHotkeys))
             : Clips.CameraNote is { } note ? $"{HotkeySummary}. {note}" : HotkeySummary,
         ClipState.Error => Clips.Error ?? "",
         ClipState.Starting => "",
-        _ => "Record in the background and save moments after they happen.",
+        _ => T("Record in the background and save moments after they happen."),
     };
     /// <summary>Raised when tray-relevant state changed (clipping on/off, background mode).</summary>
     public event Action? BackgroundStateChanged;
@@ -481,8 +482,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         get
         {
             var c = _settings.Current.Clip;
-            var text = $"{c.HotkeyText} saves the last {LengthText(EffectiveClip.Seconds)}";
-            foreach (var h in c.ExtraHotkeys) text += $", {h.Text} the last {LengthText(h.Seconds)}";
+            var text = F("{0} saves the last {1}", c.HotkeyText, LengthText(EffectiveClip.Seconds));
+            foreach (var h in c.ExtraHotkeys) text += F(", {0} the last {1}", h.Text, LengthText(h.Seconds));
             return text;
         }
     }
@@ -503,8 +504,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public bool HasNoFolders => _settings.Current.Folders.Count == 0;
     public bool HasNoResults => !HasNoFolders && Videos.Count == 0 && !IsScanning;
     private FolderViewModel? ActiveNav => SelectedTag ?? SelectedCollection ?? SelectedFolder;
-    public string HeaderTitle => ActiveNav is { Kind: NavKind.Tag } t ? "#" + t.Name : ActiveNav?.Name ?? "All videos";
-    public string HeaderCount => Videos.Count == 1 ? "1 video" : $"{Videos.Count:N0} videos";
+    public string HeaderTitle => ActiveNav is { Kind: NavKind.Tag } t ? "#" + t.Name : ActiveNav?.Name ?? T("All videos");
+    public string HeaderCount => Videos.Count == 1 ? T("1 video") : F("{0:N0} videos", Videos.Count);
 
     public MainViewModel(SettingsStore settings, LibraryService library, ClipService clips)
     {
@@ -530,6 +531,19 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
         _library.FoldersChanged += () => Dispatcher.UIThread.Post(() => _ = RescanAsync());
         RebuildFolders();
+        Loc.Changed += OnLanguageChanged;
+        _setupLanguage = SetupLanguages.FirstOrDefault(l => l.Code == Loc.Current);
+    }
+
+    /// <summary>Re-reads every text property so the window follows a language change straight away.</summary>
+    private void OnLanguageChanged()
+    {
+        foreach (var f in Folders) f.Refresh();
+        OnPropertyChanged(string.Empty);
+        Player.RefreshTexts();
+        Exports.RefreshTexts();
+        SettingsEditor?.RefreshTexts();
+        BackgroundStateChanged?.Invoke();
     }
 
     /// <summary>Show the cached library instantly, then rescan in the background.</summary>
@@ -606,14 +620,14 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         var cts = _scanCts = new CancellationTokenSource();
         var folders = _settings.Current.Folders.ToList();
         IsScanning = true;
-        ScanStatus = "Scanning folders…";
+        ScanStatus = T("Scanning folders…");
         ScanProgress = 0;
         try
         {
             var progress = new Progress<(int done, int total)>(p =>
             {
                 if (p.total == 0) return;
-                ScanStatus = $"Indexing {p.done}/{p.total}";
+                ScanStatus = F("Indexing {0}/{1}", p.done, p.total);
                 ScanProgress = 100.0 * p.done / p.total;
             });
             var found = await _library.ScanAsync(folders, e => Dispatcher.UIThread.Post(() => Upsert(e)), progress, cts.Token);
@@ -624,7 +638,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             RefreshView();
         }
         catch (OperationCanceledException) { }
-        catch (Exception ex) { Player.ShowToast("Scan failed: " + ex.Message); }
+        catch (Exception ex) { Player.ShowToast(T("Scan failed: ") + ex.Message); }
         finally
         {
             if (_scanCts == cts)
@@ -964,13 +978,13 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         {
             // During a session the hotkey marks the moment instead of cutting a separate clip.
             if (_settings.Current.Clip.Sound) PlatformShell.PlayConfirmSound();
-            ShowToast($"Bookmark added at {Controls.TrimTimeline.FormatTime(at.TotalMilliseconds)}");
+            ShowToast(F("Bookmark added at {0}", Controls.TrimTimeline.FormatTime(at.TotalMilliseconds)));
             return;
         }
         // Ask now, while the game is still in front; saving takes a moment.
         var game = _settings.Current.Clip.TagWithGame ? PlatformShell.FrontmostAppName() : null;
         var path = await Clips.SaveClipAsync(game, seconds);
-        if (path is null) ShowToast("The clip could not be saved.");
+        if (path is null) ShowToast(T("The clip could not be saved."));
         else if (game is not null)
         {
             _pendingTags[path] = game.ToLowerInvariant();
@@ -982,9 +996,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private void OnClipSaved(string path, int seconds)
     {
         if (_settings.Current.Clip.Sound) PlatformShell.PlayConfirmSound();
-        ShowToast("Clip saved: " + Path.GetFileNameWithoutExtension(path));
+        ShowToast(T("Clip saved: ") + Path.GetFileNameWithoutExtension(path));
         if (_settings.Current.Clip.Notify)
-            PlatformShell.Notify("Clip saved", $"Last {LengthText(seconds)} · {Path.GetFileName(path)}");
+            PlatformShell.Notify(T("Clip saved"), F("Last {0} · {1}", LengthText(seconds), Path.GetFileName(path)));
         _ = RescanAsync();
         _ = CleanupAfterSaveAsync();
     }
@@ -1035,6 +1049,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     {
         SettingsEditor = null;
         ThemeService.Apply(_settings.Current.ColorScheme, Accessibility.HighContrast); // drop a previewed look
+        Loc.Apply(_settings.Current.Language); // and a previewed language
     }
 
     [RelayCommand]
@@ -1081,8 +1096,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             });
             if (result is { Removed: > 0 }) _ = RescanAsync();
             if (result is { Removed: > 0 })
-                ShowToast($"Storage limit: {result.Removed} old clip{(result.Removed == 1 ? "" : "s")} " +
-                          $"({VideoItemViewModel.FormatSize(result.Bytes)}) moved to the {(result.Archived ? "archive" : "trash")}.");
+                ShowToast(F(result.Archived
+                        ? (result.Removed == 1 ? "Storage limit: {0} old clip ({1}) moved to the archive." : "Storage limit: {0} old clips ({1}) moved to the archive.")
+                        : (result.Removed == 1 ? "Storage limit: {0} old clip ({1}) moved to the {2}." : "Storage limit: {0} old clips ({1}) moved to the {2}."),
+                    result.Removed, VideoItemViewModel.FormatSize(result.Bytes), TrashName));
         }
         catch (Exception ex)
         {

@@ -115,8 +115,8 @@ public partial class MainWindow : Window
     {
         if (Vm is not { } vm) return;
         vm.PadStatus = _pad.Error ?? (_pad.IsConnected
-            ? "Connected: " + _pad.ControllerName
-            : "No controller found yet. Arrow keys, Enter and Esc work too.");
+            ? T("Connected: ") + _pad.ControllerName
+            : T("No controller found yet. Arrow keys, Enter and Esc work too."));
     }
 
     private Control? Focused => FocusManager?.GetFocusedElement() as Control;
@@ -490,15 +490,15 @@ public partial class MainWindow : Window
     {
         var result = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
         {
-            Title = "Add a video folder",
+            Title = T("Add a video folder"),
             AllowMultiple = false,
         });
         return result.FirstOrDefault()?.TryGetLocalPath();
     }
 
-    private static readonly FilePickerFileType ImageFileType = new("Images") { Patterns = new[] { "*.png", "*.jpg", "*.jpeg", "*.webp", "*.bmp" } };
+    private static readonly FilePickerFileType ImageFileType = new(T("Images")) { Patterns = new[] { "*.png", "*.jpg", "*.jpeg", "*.webp", "*.bmp" } };
     private static readonly FilePickerFileType VideoFileType =
-        new("Videos") { Patterns = new[] { "*.mp4", "*.mov", "*.mkv", "*.webm", "*.avi", "*.m4v" } };
+        new(T("Videos")) { Patterns = new[] { "*.mp4", "*.mov", "*.mkv", "*.webm", "*.avi", "*.m4v" } };
 
     private async Task<string?> PickMediaFileAsync(string title, bool image)
     {
@@ -511,13 +511,13 @@ public partial class MainWindow : Window
         return files.FirstOrDefault()?.TryGetLocalPath();
     }
 
-    private static readonly FilePickerFileType SettingsFileType = new("Cnema settings") { Patterns = new[] { "*.json" } };
+    private static readonly FilePickerFileType SettingsFileType = new(T("Cnema settings")) { Patterns = new[] { "*.json" } };
 
     private async Task<string?> PickSettingsSavePathAsync()
     {
         var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
-            Title = "Export settings",
+            Title = T("Export settings"),
             SuggestedFileName = "Cnema settings.json",
             DefaultExtension = "json",
             ShowOverwritePrompt = true,
@@ -530,7 +530,7 @@ public partial class MainWindow : Window
     {
         var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            Title = "Import settings",
+            Title = T("Import settings"),
             AllowMultiple = false,
             FileTypeFilter = new[] { SettingsFileType },
         });
@@ -543,12 +543,12 @@ public partial class MainWindow : Window
         var ext = Path.GetExtension(suggestedName).TrimStart('.');
         var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
-            Title = "Export clip",
+            Title = T("Export clip"),
             SuggestedFileName = suggestedName,
             SuggestedStartLocation = start,
             DefaultExtension = ext,
             ShowOverwritePrompt = true,
-            FileTypeChoices = new[] { new FilePickerFileType(ext.ToUpperInvariant() + " video") { Patterns = new[] { "*." + ext } } },
+            FileTypeChoices = new[] { new FilePickerFileType(F("{0} video", ext.ToUpperInvariant())) { Patterns = new[] { "*." + ext } } },
         });
         return file?.TryGetLocalPath();
     }
@@ -653,7 +653,7 @@ public partial class MainWindow : Window
                         rows.Add(sub);
                     }
                     if (rows.Count > 0) rows.Add(new Separator());
-                    var create = new MenuItem { Header = "New collection…" };
+                    var create = new MenuItem { Header = T("New collection…") };
                     create.Click += (_, _) => vm.NewCollectionWith(new[] { item });
                     rows.Add(create);
                     mi.ItemsSource = rows;

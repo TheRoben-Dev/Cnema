@@ -48,7 +48,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <AvaloniaResource Include="Assets/**" />
+    <AvaloniaResource Include="Assets/**" Exclude="Assets/Lang/**" />
     <EmbeddedResource Include="../../CHANGELOG.md" LogicalName="Cnema.CHANGELOG.md" />
+    <EmbeddedResource Include="Assets/Lang/*.json" LogicalName="Cnema.Lang.%(Filename).json" />
   </ItemGroup>
 </Project>
