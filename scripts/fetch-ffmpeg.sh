@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Downloads static ffmpeg + ffprobe builds into <dest>/ so Cnema can ship them in its "tools" folder.
+# Downloads a static ffmpeg build into <dest>/ so Cnema can ship them in its "tools" folder.
 # Usage: scripts/fetch-ffmpeg.sh <osx-arm64|osx-x64|win-x64|linux-x64> <dest-dir>
 #
 # Source: https://github.com/eugeneware/ffmpeg-static (pinned release). These are GPL builds; they are
@@ -20,16 +20,17 @@ case "$RID" in
 esac
 
 mkdir -p "$DEST"
-for tool in ffmpeg ffprobe; do
+# ffprobe is deliberately not shipped: Cnema reads metadata through ffmpeg, which saves ~70 MB.
+for tool in ffmpeg; do
   out="$DEST/$tool$EXT"
   echo "Fetching $tool ($PLAT, $TAG)"
   curl -fsSL --retry 3 "$BASE/$tool-$PLAT.gz" | gunzip > "$out"
   chmod +x "$out"
 done
 cat > "$DEST/README.txt" <<NOTE
-ffmpeg and ffprobe are separate programs from the FFmpeg project (https://ffmpeg.org),
-licensed under the GNU GPL version 3 or later. These are unmodified static builds from
-https://github.com/eugeneware/ffmpeg-static (release $TAG). You may replace them with any
+ffmpeg is a separate program from the FFmpeg project (https://ffmpeg.org),
+licensed under the GNU GPL version 3 or later. This is an unmodified static build from
+https://github.com/eugeneware/ffmpeg-static (release $TAG). You may replace it with any
 other build. See THIRD-PARTY-NOTICES.md shipped with Cnema.
 NOTE
 ls -la "$DEST"

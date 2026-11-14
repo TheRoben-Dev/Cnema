@@ -436,6 +436,27 @@ public partial class MainWindow : Window
     private void OnEditItemClick(object? sender, RoutedEventArgs e) =>
         Vm?.BeginEditCommand.Execute((sender as Control)?.DataContext as VideoItemViewModel);
 
+    // Hover scrub: the pointer's x position over a card picks a frame from the video's filmstrip.
+    private void OnThumbPointerEntered(object? sender, PointerEventArgs e)
+    {
+        if (sender is Control { DataContext: VideoItemViewModel item } c && Vm is { IsControllerMode: false })
+        {
+            item.Scrub(c.Bounds.Width > 0 ? e.GetPosition(c).X / c.Bounds.Width : 0);
+            item.BeginScrub();
+        }
+    }
+
+    private void OnThumbPointerMoved(object? sender, PointerEventArgs e)
+    {
+        if (sender is Control { DataContext: VideoItemViewModel item } c && c.Bounds.Width > 0)
+            item.Scrub(e.GetPosition(c).X / c.Bounds.Width);
+    }
+
+    private void OnThumbPointerExited(object? sender, PointerEventArgs e)
+    {
+        if (sender is Control { DataContext: VideoItemViewModel item }) item.EndScrub();
+    }
+
     private void OnDeleteItemClick(object? sender, RoutedEventArgs e) =>
         Vm?.RequestDeleteCommand.Execute((sender as Control)?.DataContext as VideoItemViewModel);
 

@@ -173,6 +173,8 @@ public sealed class LibraryService : IDisposable
         try
         {
             if (entry.ThumbPath is { Length: > 0 } thumb && File.Exists(thumb)) File.Delete(thumb);
+            var strip = ThumbnailService.StripPathFor(entry);
+            if (File.Exists(strip)) File.Delete(strip);
         }
         catch { /* an orphaned thumbnail is harmless */ }
         SaveCache();

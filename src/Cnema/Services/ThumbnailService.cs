@@ -38,4 +38,50 @@ public static class ThumbnailService
         }
         return null;
     }
+    public const int StripFrames = 10;
+    private static readonly SemaphoreSlim StripGate = new(1, 1);
+
+    public static string StripPathFor(VideoEntry e) => PathFor(e)[..^4] + "-strip.jpg";
+
+    /// <summary>
+    /// One wide image of <see cref="StripFrames"/> evenly spaced frames, for scrubbing over a card.
+    /// Each frame is its own keyframe seek, so a two-hour file costs the same as a ten-second clip.
+    /// </summary>
+    public static async Task<string?> EnsureStripAsync(VideoEntry e, CancellationToken ct)
+    {
+        var target = StripPathFor(e);
+        if (File.Exists(target)) return target;
+        if (ToolLocator.Ffmpeg is not { } ffmpeg || e.DurationMs < 2000) return null;
+
+        await StripGate.WaitAsync(ct);
+        try
+        {
+            if (File.Exists(target)) return target;
+            var args = new List<string> { "-v", "error" };
+            var graph = new StringBuilder();
+            for (var i = 0; i < StripFrames; i++)
+            {
+                var t = e.DurationMs / 1000.0 * (i + 0.5) / StripFrames;
+                args.AddRange(new[] { "-ss", t.ToString("0.###", CultureInfo.InvariantCulture), "-i", e.Path });
+                graph.Append(CultureInfo.InvariantCulture,
+                    $"[{i}:v:0]scale=256:144:force_original_aspect_ratio=increase,crop=256:144,setsar=1[v{i}];");
+            }
+            for (var i = 0; i < StripFrames; i++) graph.Append(CultureInfo.InvariantCulture, $"[v{i}]");
+            graph.Append(CultureInfo.InvariantCulture, $"hstack=inputs={StripFrames}[out]");
+            var temp = target + ".tmp.jpg";
+            args.AddRange(new[] { "-filter_complex", graph.ToString(), "-map", "[out]", "-frames:v", "1", "-q:v", "5", "-y", temp });
+            var r = await ProcessRunner.RunAsync(ffmpeg, args, ct: ct);
+            if (r.ExitCode != 0 || !File.Exists(temp))
+            {
+                try { File.Delete(temp); } catch { /* nothing written */ }
+                return null;
+            }
+            File.Move(temp, target, overwrite: true);
+            return target;
+        }
+        finally
+        {
+            StripGate.Release();
+        }
+    }
 }

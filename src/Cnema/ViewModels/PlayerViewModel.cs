@@ -287,6 +287,46 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
         }
     }
 
+    /// <summary>Share presets: re-encode the selection (or the whole video) for a place with limits.</summary>
+    [RelayCommand]
+    private async Task ShareAsync(string? presetName)
+    {
+        if (Current is null || IsExporting || !Enum.TryParse<SharePreset>(presetName, out var preset)) return;
+        if (ToolLocator.Ffmpeg is null) { ShowToast("ffmpeg not found, so there is nothing to convert with."); return; }
+        var start = (long)EffectiveIn;
+        var end = (long)EffectiveOut;
+        if (end - start < 100) { start = 0; end = (long)Duration; }
+        if (end - start < 100) return;
+
+        var (suffix, ext, label) = TrimService.Describe(preset);
+        var src = Current.Entry.Path;
+        var dir = Path.GetDirectoryName(src) ?? "";
+        var target = Path.Combine(dir, $"{Current.Title} [{suffix}]{ext}");
+        for (var i = 2; File.Exists(target); i++) target = Path.Combine(dir, $"{Current.Title} [{suffix} {i}]{ext}");
+
+        _exportCts = new CancellationTokenSource();
+        IsExporting = true;
+        ExportProgress = 0;
+        try
+        {
+            var progress = new Progress<double>(p => ExportProgress = p * 100);
+            await TrimService.ShareAsync(src, target, start, end, preset, progress, _exportCts.Token);
+            var size = VideoItemViewModel.FormatSize(new FileInfo(target).Length);
+            var cut = preset == SharePreset.Gif && end - start > TrimService.GifMaxMs ? ", first 20 s" : "";
+            ShowToast($"{label} ready: {size}{cut}");
+            Exported?.Invoke(target);
+            PlatformShell.Reveal(target);
+        }
+        catch (OperationCanceledException) { ShowToast("Export cancelled."); }
+        catch (Exception ex) { ShowToast("Export failed: " + FirstLine(ex.Message)); }
+        finally
+        {
+            IsExporting = false;
+            _exportCts.Dispose();
+            _exportCts = null;
+        }
+    }
+
     [RelayCommand] private void CancelExport() => _exportCts?.Cancel();
 
     // ---------- helpers ----------

@@ -256,6 +256,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _ = ApplyClipSettingsAsync();
         _ = CheckForUpdatesAsync();
         await RescanAsync();
+        await RunStorageCleanupAsync();
     }
 
     // ---------- folders ----------
@@ -616,6 +617,14 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         if (_settings.Current.Clip.Notify)
             PlatformShell.Notify("Clip saved", $"Last {LengthText(_settings.Current.Clip.Seconds)} · {Path.GetFileName(path)}");
         _ = RescanAsync();
+        _ = CleanupAfterSaveAsync();
+    }
+
+    private async Task CleanupAfterSaveAsync()
+    {
+        // Let the "Clip saved" toast be read before a storage message can replace it.
+        await Task.Delay(4000);
+        await RunStorageCleanupAsync();
     }
 
     private void ShowToast(string text)
@@ -641,6 +650,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         var editor = new SettingsViewModel(_settings.Current) { PickFolder = PickFolder };
         SettingsEditor = editor;
         _ = editor.LoadDevicesAsync();
+        _ = editor.LoadStorageUsageAsync();
     }
 
     [RelayCommand] private void CancelSettings() => SettingsEditor = null;
@@ -665,6 +675,40 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(IsControllerMode));
         ControllerModeChanged?.Invoke();
         await ApplyClipSettingsAsync();
+        await RunStorageCleanupAsync();
+    }
+
+    // ---------- storage limits ----------
+    private bool _cleaning;
+
+    /// <summary>Applies the age and size limits from Settings to the clips folder. Favourites stay.</summary>
+    public async Task RunStorageCleanupAsync()
+    {
+        var c = _settings.Current.Clip;
+        if (_cleaning || (c.KeepDays <= 0 && c.MaxFolderGb <= 0)) return;
+        _cleaning = true;
+        try
+        {
+            var favourites = _items.Values.Where(i => i.Entry.Favorite)
+                .Select(i => i.Entry.Path).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var result = await Task.Run(() =>
+            {
+                var plan = StorageService.Plan(c, favourites.Contains, DateTime.UtcNow);
+                return plan.Count == 0 ? null : StorageService.Apply(c, plan);
+            });
+            if (result is { Removed: > 0 }) _ = RescanAsync();
+            if (result is { Removed: > 0 })
+                ShowToast($"Storage limit: {result.Removed} old clip{(result.Removed == 1 ? "" : "s")} " +
+                          $"({VideoItemViewModel.FormatSize(result.Bytes)}) moved to the {(result.Archived ? "archive" : "trash")}.");
+        }
+        catch (Exception ex)
+        {
+            Log.Warn($"Storage cleanup failed: {ex.Message}");
+        }
+        finally
+        {
+            _cleaning = false;
+        }
     }
 
     public void Dispose()

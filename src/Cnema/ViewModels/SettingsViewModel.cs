@@ -39,6 +39,15 @@ public sealed partial class SettingsViewModel : ObservableObject
     public static Choice[] AudioBitrates { get; } =
         new[] { 96, 128, 160, 192, 256 }.Select(k => new Choice($"{k} kbps", k)).ToArray();
     public static IReadOnlyList<string> Keys => GlobalHotkey.Keys;
+    public static Choice[] KeepDaysOptions { get; } =
+    {
+        new("Keep everything", 0), new("7 days", 7), new("14 days", 14), new("30 days", 30),
+        new("90 days", 90), new("1 year", 365),
+    };
+    public static Choice[] FolderCaps { get; } =
+        new[] { new Choice("No limit", 0) }
+            .Concat(new[] { 5, 10, 25, 50, 100, 250 }.Select(g => new Choice($"{g} GB", g))).ToArray();
+    public static Choice[] CleanupTargets { get; } = { new("Trash", 0), new("Archive folder", 1) };
 
     public ObservableCollection<string> AudioDevices { get; } = new() { NoAudio };
     public ObservableCollection<string> Screens { get; } = new();
@@ -58,6 +67,12 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private Choice _frameRate;
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(Footprint))] private Choice _bitrate;
     [ObservableProperty] private Choice _audioBitrate;
+    [ObservableProperty] private Choice _keepDays;
+    [ObservableProperty] private Choice _folderCap;
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(UsesArchive))] private Choice _cleanupTarget;
+    [ObservableProperty] private string _archiveFolder = "";
+    [ObservableProperty] private string _storageUsage = "";
+    public bool UsesArchive => CleanupTarget.Value == 1;
     [ObservableProperty] private bool _hardwareEncoder;
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(CodecDetail))] private CodecOption? _codec;
     private string _codecWanted = "h264";
@@ -127,6 +142,10 @@ public sealed partial class SettingsViewModel : ObservableObject
         _hotkeyMeta = c.HotkeyMeta;
         _hotkeyKey = Keys.Contains(c.HotkeyKey) ? c.HotkeyKey : "S";
         _folder = c.ResolvedFolder;
+        _keepDays = Nearest(KeepDaysOptions, c.KeepDays);
+        _folderCap = Nearest(FolderCaps, c.MaxFolderGb);
+        _cleanupTarget = CleanupTargets[c.CleanupArchive ? 1 : 0];
+        _archiveFolder = c.ResolvedArchiveFolder;
         // Show saved devices straight away; the real list replaces them once probed.
         foreach (var name in new[] { c.Audio1, c.Audio2 })
             if (!string.IsNullOrWhiteSpace(name) && !AudioDevices.Contains(name)) AudioDevices.Add(name);
@@ -176,6 +195,24 @@ public sealed partial class SettingsViewModel : ObservableObject
         if (!string.IsNullOrWhiteSpace(picked)) Folder = picked;
     }
 
+    [RelayCommand]
+    private async Task BrowseArchiveAsync()
+    {
+        if (PickFolder is null) return;
+        var picked = await PickFolder();
+        if (!string.IsNullOrWhiteSpace(picked)) ArchiveFolder = picked;
+    }
+
+    /// <summary>Fills the "clips folder now holds" line; counting files stays off the UI thread.</summary>
+    public async Task LoadStorageUsageAsync()
+    {
+        var folder = Folder;
+        var u = await Task.Run(() => StorageService.Measure(folder));
+        StorageUsage = u.Count == 0
+            ? "The clips folder is empty."
+            : $"The clips folder holds {u.Count} clip{(u.Count == 1 ? "" : "s")}, {VideoItemViewModel.FormatSize(u.Bytes)}.";
+    }
+
     /// <summary>Copies the edits into the settings object. Returns a message if something is invalid.</summary>
     public string? WriteTo(AppSettings settings)
     {
@@ -205,7 +242,14 @@ public sealed partial class SettingsViewModel : ObservableObject
         c.HotkeyShift = HotkeyShift;
         c.HotkeyMeta = HotkeyMeta;
         c.HotkeyKey = HotkeyKey;
+        if (UsesArchive && string.Equals(Path.GetFullPath(ArchiveFolder.Trim()), Path.GetFullPath(Folder.Trim()), StringComparison.OrdinalIgnoreCase))
+            return "The archive folder has to be a different folder from the clips folder.";
+        c.KeepDays = KeepDays.Value;
+        c.MaxFolderGb = FolderCap.Value;
+        c.CleanupArchive = UsesArchive;
         c.Folder = string.IsNullOrWhiteSpace(Folder) || Folder == AppPaths.DefaultClipsDir ? null : Folder.Trim();
+        c.ArchiveFolder = string.IsNullOrWhiteSpace(ArchiveFolder) || ArchiveFolder.Trim() == c.ResolvedFolder + " Archive"
+            ? null : ArchiveFolder.Trim();
         return null;
     }
 }
