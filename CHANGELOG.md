@@ -2,6 +2,16 @@
 
 What changed in each Cnema release. The app shows the entries you have not seen yet after it updates.
 
+## 0.11.0
+- Settings has pages now: General, Features, Clipping and Accessibility. Ctrl+Tab, or LB and RB on a controller, switches between them.
+- Features: switch off anything you don't use (background clipping, session recording, controller support, hover preview, loud moment markers, hover glow). Its buttons and settings disappear and it stops running.
+- Accessibility: make the whole interface bigger or smaller, turn on high contrast, or reduce motion (no animations, zoom or glow).
+- Press ? to see every keyboard shortcut. Click one to give it another key; a key that was taken moves over and you're told which action lost it.
+- Export your settings to a file and import them on another computer (Settings, General, Backup).
+- Portable mode keeps settings, library and thumbnails in a "Cnema Data" folder next to the app, for running Cnema from a USB stick.
+- A short welcome screen on the very first start lets you pick a look, add folders and choose features.
+- Fixed: after saving settings, the clip hotkey could be reported as taken by another app on Linux.
+
 ## 0.10.1
 - The hover glow fades in and out smoothly and sits around the thumbnail instead of the whole card.
 

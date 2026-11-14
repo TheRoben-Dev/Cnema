@@ -23,8 +23,52 @@ public static class AppPaths
         }
     }
 
+    /// <summary>
+    /// Portable mode: a "Cnema Data" folder next to the app (next to Cnema.app on macOS, next to the
+    /// Cnema folder elsewhere) holds settings, library and thumbnails instead of the user profile.
+    /// It sits beside the app rather than inside it so updates, which replace the app, leave it alone.
+    /// </summary>
+    public static string PortableDir
+    {
+        get
+        {
+            var dir = AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            if (OperatingSystem.IsMacOS() && Path.GetDirectoryName(Path.GetDirectoryName(dir)) is { } bundle &&
+                bundle.EndsWith(".app", StringComparison.OrdinalIgnoreCase))
+                dir = bundle;
+            return Path.Combine(Path.GetDirectoryName(dir) ?? dir, "Cnema Data");
+        }
+    }
+
+    public static bool IsPortable { get; private set; }
+
+    /// <summary>Copies settings, library and thumbnails into <see cref="PortableDir"/>; used from the next start.</summary>
+    public static void MakePortable()
+    {
+        var target = PortableDir;
+        Directory.CreateDirectory(target);
+        foreach (var file in new[] { "settings.json", "library.json" })
+        {
+            var from = Path.Combine(DataDir, file);
+            if (File.Exists(from)) File.Copy(from, Path.Combine(target, file), overwrite: true);
+        }
+        var thumbs = Path.Combine(target, "thumbs");
+        Directory.CreateDirectory(thumbs);
+        foreach (var f in Directory.EnumerateFiles(ThumbDir))
+            File.Copy(f, Path.Combine(thumbs, Path.GetFileName(f)), overwrite: true);
+    }
+
     private static string ResolveDataDir()
     {
+        try
+        {
+            if (Directory.Exists(PortableDir))
+            {
+                IsPortable = true;
+                return PortableDir;
+            }
+        }
+        catch { /* fall back to the user profile */ }
         var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         string root;
         if (OperatingSystem.IsMacOS())

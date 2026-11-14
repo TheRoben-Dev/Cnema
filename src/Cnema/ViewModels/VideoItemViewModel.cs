@@ -112,9 +112,12 @@ public sealed partial class VideoItemViewModel : ObservableObject
     private int _scrubIndex = -1;
 
     /// <summary>Pointer came onto the card: after a short pause, load (or make) the filmstrip.</summary>
+    /// <summary>The "Hover preview" feature; off, cards keep their still thumbnail.</summary>
+    public static bool HoverPreview { get; set; } = true;
+
     public async void BeginScrub()
     {
-        if (_strip is not null) return;
+        if (_strip is not null || !HoverPreview) return;
         var token = ++_scrubToken;
         try
         {

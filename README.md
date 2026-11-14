@@ -123,6 +123,17 @@ folder under a size cap by removing the oldest clips first. Removed clips go to 
 folder of your choice. Favourites are never removed, other library folders are never touched, and both limits
 are off by default. The check runs at launch, after each saved clip and when settings change.
 
+### Features, accessibility and shortcuts
+
+Nothing optional is forced on you. **Settings, Features** switches off background clipping, session recording,
+controller support, hover preview, loud moment markers or the hover glow; their buttons and settings disappear
+and they stop running. **Settings, Accessibility** has an interface size (90 to 150 %), high contrast and
+reduce motion. Press **?** for the list of keyboard shortcuts; click a key to change it.
+
+**Settings, General, Backup** exports and imports all settings as one file. **Portable mode** creates a
+`Cnema Data` folder next to the app (next to `Cnema.app` on macOS) and keeps settings, library and thumbnails
+there from the next start; delete or rename the folder to go back.
+
 ### Color schemes
 
 **Settings, Appearance** switches between a few flat color schemes (Violet, Graphite, Ember, Mint, Rose) and

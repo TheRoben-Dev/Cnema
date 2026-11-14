@@ -502,6 +502,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             _items[e.Path] = new VideoItemViewModel(e);
         RefreshView();
         ShowWhatsNewAfterUpdate(firstRunEver: _settings.IsFirstRun);
+        VideoItemViewModel.HoverPreview = Features.HoverPreview;
+        IsSetupOpen = _settings.IsFirstRun || Environment.GetEnvironmentVariable("CNEMA_SETUP") == "1";
         _ = ApplyClipSettingsAsync();
         _ = CheckForUpdatesAsync();
         await RescanAsync();
@@ -840,7 +842,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                  {
                      nameof(IsClipEnabled), nameof(IsClipRecording), nameof(IsClipStarting), nameof(IsClipError),
                      nameof(ClipTitle), nameof(ClipDetail), nameof(HasClipDetail), nameof(SaveClipLabel),
-                     nameof(StaysInBackground), nameof(IsSession), nameof(SessionLabel), nameof(CanToggleSession),
+                     nameof(StaysInBackground), nameof(IsSession), nameof(SessionLabel), nameof(CanToggleSession), nameof(ShowSessionButton),
                  })
             OnPropertyChanged(name);
         SaveClipCommand.NotifyCanExecuteChanged();
@@ -926,7 +928,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private void CancelSettings()
     {
         SettingsEditor = null;
-        ThemeService.Apply(_settings.Current.ColorScheme); // drop a previewed colour scheme
+        ThemeService.Apply(_settings.Current.ColorScheme, Accessibility.HighContrast); // drop a previewed look
     }
 
     [RelayCommand]
@@ -948,6 +950,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         SettingsEditor = null;
         OnPropertyChanged(nameof(IsControllerMode));
         ControllerModeChanged?.Invoke();
+        RaiseFeatures();
         await ApplyClipSettingsAsync();
         await RunStorageCleanupAsync();
     }

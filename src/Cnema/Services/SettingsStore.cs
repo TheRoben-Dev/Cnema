@@ -24,6 +24,38 @@ public sealed class AppSettings
     public bool ControllerMode { get; set; }
     /// <summary>In Controller mode, open full screen like a console app.</summary>
     public bool ControllerFullscreen { get; set; } = true;
+
+    /// <summary>Which optional parts of Cnema are switched on (Settings, Features).</summary>
+    public FeatureSettings Features { get; set; } = new();
+    public AccessibilitySettings Accessibility { get; set; } = new();
+    /// <summary>Keyboard shortcuts changed from their defaults: action id to gesture, "" for none.</summary>
+    public Dictionary<string, string> Shortcuts { get; set; } = new();
+}
+
+/// <summary>
+/// Optional modules. Roben's rule: no feature is forced on anyone, so each one can be switched off,
+/// and its buttons and settings disappear with it.
+/// </summary>
+public sealed class FeatureSettings
+{
+    public bool Clipping { get; set; } = true;
+    public bool Sessions { get; set; } = true;
+    public bool Controller { get; set; } = true;
+    public bool HoverPreview { get; set; } = true;
+    public bool LoudMarkers { get; set; } = true;
+    public bool HoverGlow { get; set; } = true;
+
+    public FeatureSettings Clone() => (FeatureSettings)MemberwiseClone();
+}
+
+public sealed class AccessibilitySettings
+{
+    /// <summary>Size of the whole interface, 1 = 100 %.</summary>
+    public double UiScale { get; set; } = 1;
+    /// <summary>Black background, white text and a bright accent, whatever the colour scheme.</summary>
+    public bool HighContrast { get; set; }
+    /// <summary>No animations, zooms or glows.</summary>
+    public bool ReducedMotion { get; set; }
 }
 
 /// <summary>Clip length, bitrate and format for one game; 0 or null means "same as the general setting".</summary>
@@ -121,4 +153,15 @@ public sealed class SettingsStore
     public bool IsFirstRun { get; } = !File.Exists(AppPaths.SettingsFile);
     public AppSettings Current { get; } = JsonStore.Load<AppSettings>(AppPaths.SettingsFile);
     public void Save() => JsonStore.Save(AppPaths.SettingsFile, Current);
+
+    /// <summary>Takes over every setting from an imported file, except the bookkeeping of updates.</summary>
+    public void ReplaceWith(AppSettings imported)
+    {
+        foreach (var prop in typeof(AppSettings).GetProperties())
+        {
+            if (!prop.CanWrite || prop.Name is nameof(AppSettings.LastRunVersion) or nameof(AppSettings.LastUpdateAttempt)) continue;
+            prop.SetValue(Current, prop.GetValue(imported));
+        }
+        Save();
+    }
 }

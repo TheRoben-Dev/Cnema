@@ -82,7 +82,7 @@
               </StackPanel>
             </Button>
             <!-- background clipping status -->
-            <Border Classes="clipbar" Classes.on="{Binding IsClipRecording}" Classes.err="{Binding IsClipError}">
+            <Border Classes="clipbar" Classes.on="{Binding IsClipRecording}" Classes.err="{Binding IsClipError}" IsVisible="{Binding ShowClipping}">
               <StackPanel Spacing="8">
                 <Grid ColumnDefinitions="Auto,*,Auto">
                   <Ellipse Classes="clipdot" Width="8" Height="8" VerticalAlignment="Center" Margin="2,0,8,0" />
@@ -99,7 +99,7 @@
                   </StackPanel>
                 </Button>
                 <Button x:Name="SessionButton" Classes="soft" Classes.rec="{Binding IsSession}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Padding="10,7"
-                        Command="{Binding ToggleSessionCommand}" IsVisible="{Binding CanToggleSession}"
+                        Command="{Binding ToggleSessionCommand}" IsVisible="{Binding ShowSessionButton}"
                         ToolTip.Tip="Record everything from now until you stop, as one video. The clip hotkey adds bookmarks.">
                   <StackPanel Orientation="Horizontal" Spacing="7">
                     <Ellipse Width="8" Height="8" Fill="#FF4D6D" VerticalAlignment="Center" />
@@ -467,9 +467,122 @@
       </Border>
     </Border>
 
+    <!-- ======================= KEYBOARD SHORTCUTS ======================= -->
+    <Border x:Name="ShortcutsScrim" Background="#B3050609" IsVisible="{Binding IsShowingShortcuts}">
+      <Border Width="560" MaxHeight="700" Margin="0,40" VerticalAlignment="Center" HorizontalAlignment="Center" Background="{DynamicResource Bg1}"
+              BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="16" BoxShadow="0 18 60 0 #80000000"
+              DataContext="{Binding ShortcutSheet}" x:DataType="vm:ShortcutsViewModel">
+        <DockPanel>
+          <StackPanel DockPanel.Dock="Top" Spacing="4" Margin="24,22,24,12">
+            <TextBlock Text="Keyboard shortcuts" FontSize="17" FontWeight="Bold" />
+            <TextBlock Classes="dim" FontSize="12" TextWrapping="Wrap" Text="Click a key to change it." />
+          </StackPanel>
+          <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Line}" BorderThickness="0,1,0,0" Padding="24,14">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+              <Button Classes="ghost" Content="Reset all" FontSize="12" Command="{Binding ResetAllCommand}" />
+              <TextBlock Grid.Column="1" Text="{Binding Message}" Foreground="{DynamicResource Cyan}" FontSize="12" TextWrapping="Wrap"
+                         VerticalAlignment="Center" Margin="12,0" />
+              <Button x:Name="ShortcutsClose" Grid.Column="2" Classes="accent" Content="Done"
+                      Command="{Binding #Root.((vm:MainViewModel)DataContext).CloseShortcutsCommand}" />
+            </Grid>
+          </Border>
+          <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <ItemsControl ItemsSource="{Binding Groups}" Margin="24,0,24,16">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:ShortcutGroup">
+                  <StackPanel Spacing="6" Margin="0,0,0,14">
+                    <TextBlock Classes="label" Text="{Binding Name}" />
+                    <Border Classes="group">
+                      <ItemsControl ItemsSource="{Binding Rows}">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate x:DataType="vm:ShortcutRow">
+                            <Grid ColumnDefinitions="*,Auto,Auto" Margin="14,5">
+                              <TextBlock Text="{Binding Label}" FontSize="13" VerticalAlignment="Center" />
+                              <Button Grid.Column="1" Classes="keychip" Classes.capturing="{Binding IsCapturing}" Classes.custom="{Binding IsCustom}"
+                                      Content="{Binding Keys}" IsEnabled="{Binding !IsFixed}"
+                                      Command="{Binding #Root.((vm:MainViewModel)DataContext).ShortcutSheet.CaptureCommand}" CommandParameter="{Binding}" />
+                              <Button Grid.Column="2" Classes="ghost" Margin="4,0,0,0" Padding="6" ToolTip.Tip="Back to the default key"
+                                      IsVisible="{Binding IsCustom}"
+                                      Command="{Binding #Root.((vm:MainViewModel)DataContext).ShortcutSheet.ResetCommand}" CommandParameter="{Binding}">
+                                <PathIcon Data="{StaticResource IcRefresh}" Width="12" Height="12" />
+                              </Button>
+                            </Grid>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </Border>
+                  </StackPanel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </DockPanel>
+      </Border>
+    </Border>
+
+    <!-- ======================= FIRST-RUN SETUP ======================= -->
+    <Border x:Name="SetupScrim" Background="#E6050609" IsVisible="{Binding IsSetupOpen}">
+      <Border Width="560" MaxHeight="720" Margin="0,40" VerticalAlignment="Center" HorizontalAlignment="Center" Background="{DynamicResource Bg1}"
+              BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="16" BoxShadow="0 18 60 0 #80000000">
+        <DockPanel>
+          <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Line}" BorderThickness="0,1,0,0" Padding="24,14">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" VerticalAlignment="Center"
+                         Text="You can change all of this later in Settings." />
+              <Button x:Name="SetupDone" Grid.Column="1" Classes="accent" Content="Start using Cnema" Command="{Binding FinishSetupCommand}" />
+            </Grid>
+          </Border>
+          <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="12" Margin="24,24,24,18">
+              <StackPanel Spacing="4">
+                <TextBlock Text="Welcome to Cnema" FontSize="22" FontWeight="Bold" />
+                <TextBlock Classes="dim" FontSize="13" TextWrapping="Wrap"
+                           Text="A few choices to make it yours. Nothing here is required." />
+              </StackPanel>
+
+              <TextBlock Classes="label" Text="LOOK" Margin="0,6,0,0" />
+              <ListBox Classes="swatches" ItemsSource="{Binding ColorSchemes}" SelectedItem="{Binding SetupScheme}">
+                <ListBox.ItemsPanel>
+                  <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                </ListBox.ItemsPanel>
+                <ListBox.ItemTemplate>
+                  <DataTemplate x:DataType="svc:ColorScheme">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                      <Ellipse Width="14" Height="14" VerticalAlignment="Center" Fill="{Binding Accent}" />
+                      <TextBlock Text="{Binding Name}" VerticalAlignment="Center" FontSize="12" />
+                    </StackPanel>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+
+              <TextBlock Classes="label" Text="YOUR VIDEOS" Margin="0,6,0,0" />
+              <Border Classes="group">
+                <Grid Classes="row" ColumnDefinitions="*,Auto">
+                  <TextBlock Text="{Binding SetupFolders}" TextWrapping="Wrap" FontSize="12" VerticalAlignment="Center" />
+                  <Button Grid.Column="1" Classes="soft" Content="Add a folder…" Margin="10,0,0,0" Command="{Binding SetupAddFolderCommand}" />
+                </Grid>
+              </Border>
+
+              <TextBlock Classes="label" Text="FEATURES" Margin="0,6,0,0" />
+              <Border Classes="group">
+                <StackPanel Margin="14,8" Spacing="2">
+                  <CheckBox IsChecked="{Binding SetupClipping}" Content="Background clipping: save past moments with a hotkey" />
+                  <CheckBox IsChecked="{Binding SetupSessions}" IsEnabled="{Binding SetupClipping}" Content="Session recording: record a whole session as one video" />
+                  <CheckBox IsChecked="{Binding SetupController}" Content="Controller support, for handhelds and TVs" />
+                  <CheckBox IsChecked="{Binding SetupHoverPreview}" Content="Hover preview: skim a video by moving the pointer over it" />
+                  <CheckBox IsChecked="{Binding SetupLoudMarkers}" Content="Loud moment markers on the timeline" />
+                  <CheckBox IsChecked="{Binding SetupHoverGlow}" Content="Hover glow around videos" />
+                </StackPanel>
+              </Border>
+            </StackPanel>
+          </ScrollViewer>
+        </DockPanel>
+      </Border>
+    </Border>
+
     <!-- ======================= SETTINGS ======================= -->
     <Border x:Name="SettingsScrim" Background="#B3050609" IsVisible="{Binding IsSettingsOpen}">
-      <Border Width="580" MaxHeight="720" Margin="0,40" VerticalAlignment="Center" HorizontalAlignment="Center"
+      <Border Width="580" MaxHeight="720" Margin="0,40" VerticalAlignment="Stretch" HorizontalAlignment="Center"
               Background="{DynamicResource Bg1}" BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="16"
               BoxShadow="0 18 60 0 #80000000" DataContext="{Binding SettingsEditor}" x:DataType="vm:SettingsViewModel">
         <DockPanel>
@@ -478,6 +591,8 @@
             <TextBlock Grid.Column="1" Classes="dim" FontSize="11" VerticalAlignment="Center"
                        Text="{Binding #Root.((vm:MainViewModel)DataContext).VersionText}" />
           </Grid>
+          <ListBox DockPanel.Dock="Top" Classes="tabs" Margin="20,0,20,8" ItemsSource="{x:Static vm:SettingsViewModel.PageNames}"
+                   SelectedIndex="{Binding Page}" />
 
           <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Line}" BorderThickness="0,1,0,0" Padding="24,14">
             <Grid ColumnDefinitions="Auto,*,Auto">
@@ -497,9 +612,11 @@
             </Grid>
           </Border>
 
-          <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <ScrollViewer x:Name="SettingsScroll" VerticalScrollBarVisibility="Auto">
             <StackPanel Spacing="12" Margin="24,4,24,20">
 
+              <!-- ==== General ==== -->
+              <StackPanel Spacing="12" IsVisible="{Binding IsGeneralPage}">
               <TextBlock Classes="label" Text="APPEARANCE" />
               <Border Classes="group">
                 <Grid Classes="row" ColumnDefinitions="*,Auto">
@@ -567,8 +684,8 @@
                 </StackPanel>
               </Border>
 
-              <TextBlock Classes="label" Text="CONTROLLER" Margin="0,8,0,0" />
-              <Border Classes="group">
+              <TextBlock Classes="label" Text="CONTROLLER" Margin="0,8,0,0" IsVisible="{Binding FeatureController}" />
+              <Border Classes="group" IsVisible="{Binding FeatureController}">
                 <StackPanel>
                   <Grid Classes="row" ColumnDefinitions="*,Auto">
                     <StackPanel Spacing="2">
@@ -589,7 +706,143 @@
                 </StackPanel>
               </Border>
 
-              <TextBlock Classes="label" Text="CLIPPING" Margin="0,8,0,0" />
+              <TextBlock Classes="label" Text="KEYBOARD" Margin="0,8,0,0" />
+              <Border Classes="group">
+                <Grid Classes="row" ColumnDefinitions="*,Auto">
+                  <StackPanel Spacing="2">
+                    <TextBlock Text="Keyboard shortcuts" />
+                    <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="See every shortcut and change any of them. Press ? anywhere to open the list." />
+                  </StackPanel>
+                  <Button Grid.Column="1" Classes="soft" Content="Shortcuts…"
+                          Command="{Binding #Root.((vm:MainViewModel)DataContext).ShowShortcutsCommand}" />
+                </Grid>
+              </Border>
+
+              <TextBlock Classes="label" Text="BACKUP" Margin="0,8,0,0" />
+              <Border Classes="group">
+                <StackPanel>
+                  <Grid Classes="row" ColumnDefinitions="*,Auto,Auto">
+                    <StackPanel Spacing="2">
+                      <TextBlock Text="Settings file" />
+                      <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="Save all settings to a file, or load them on another computer." />
+                    </StackPanel>
+                    <Button Grid.Column="1" Classes="soft" Content="Export…" Margin="0,0,8,0"
+                            Command="{Binding #Root.((vm:MainViewModel)DataContext).ExportSettingsCommand}" />
+                    <Button Grid.Column="2" Classes="soft" Content="Import…"
+                            Command="{Binding #Root.((vm:MainViewModel)DataContext).ImportSettingsCommand}" />
+                  </Grid>
+                  <Border Classes="sep" />
+                  <Grid Classes="row" ColumnDefinitions="*,Auto">
+                    <StackPanel Spacing="2">
+                      <TextBlock Text="Portable mode" />
+                      <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="{Binding PortableStatus}" />
+                      <TextBlock FontSize="11" TextWrapping="Wrap" Foreground="{DynamicResource Cyan}" Text="{Binding PortableMessage}"
+                                 IsVisible="{Binding PortableMessage, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                    </StackPanel>
+                    <Panel Grid.Column="1">
+                      <Button Classes="soft" Content="Make portable" Command="{Binding MakePortableCommand}" IsVisible="{Binding !IsPortable}" />
+                      <Button Classes="soft" Content="Show folder" Command="{Binding ShowPortableFolderCommand}" IsVisible="{Binding IsPortable}" />
+                    </Panel>
+                  </Grid>
+                </StackPanel>
+              </Border>
+              </StackPanel>
+
+              <!-- ==== Features ==== -->
+              <StackPanel Spacing="12" IsVisible="{Binding IsFeaturesPage}">
+                <TextBlock Classes="dim" FontSize="12" TextWrapping="Wrap" Margin="4,0"
+                           Text="Switch off anything you don't use. Its buttons and settings disappear, and it stops running." />
+                <Border Classes="group">
+                  <StackPanel>
+                    <Grid Classes="row" ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="2">
+                        <TextBlock Text="Background clipping" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="Keep the last moments of your screen and save them with a hotkey." />
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureClipping}" />
+                    </Grid>
+                    <Border Classes="sep" />
+                    <Grid Classes="row" ColumnDefinitions="*,Auto" IsEnabled="{Binding FeatureClipping}">
+                      <StackPanel Spacing="2">
+                        <TextBlock Text="Session recording" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="Record a whole session as one video, with bookmarks from the clip hotkey." />
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureSessions}" />
+                    </Grid>
+                    <Border Classes="sep" />
+                    <Grid Classes="row" ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="2">
+                        <TextBlock Text="Controller support" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="Controller mode, for handhelds and TVs." />
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureController}" />
+                    </Grid>
+                    <Border Classes="sep" />
+                    <Grid Classes="row" ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="2">
+                        <TextBlock Text="Hover preview" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="Move the pointer across a video to skim through it." />
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureHoverPreview}" />
+                    </Grid>
+                    <Border Classes="sep" />
+                    <Grid Classes="row" ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="2">
+                        <TextBlock Text="Loud moment markers" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="Mark loud moments on the timeline so you can jump between them." />
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureLoudMarkers}" />
+                    </Grid>
+                    <Border Classes="sep" />
+                    <Grid Classes="row" ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="2">
+                        <TextBlock Text="Hover glow" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="A soft glow in your color scheme around the video under the pointer." />
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureHoverGlow}" />
+                    </Grid>
+                  </StackPanel>
+                </Border>
+              </StackPanel>
+
+              <!-- ==== Accessibility ==== -->
+              <StackPanel Spacing="12" IsVisible="{Binding IsAccessibilityPage}">
+                <Border Classes="group">
+                  <StackPanel>
+                    <Grid Classes="row" ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="2">
+                        <TextBlock Text="Interface size" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="Makes text, buttons and videos bigger or smaller." />
+                      </StackPanel>
+                      <ComboBox Grid.Column="1" Classes="field" MinWidth="120" ItemsSource="{x:Static vm:SettingsViewModel.UiScales}" SelectedItem="{Binding UiScale}" />
+                    </Grid>
+                    <Border Classes="sep" />
+                    <Grid Classes="row" ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="2">
+                        <TextBlock Text="High contrast" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="Black background, white text and clearer lines, with your scheme's accent color." />
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding HighContrast}" />
+                    </Grid>
+                    <Border Classes="sep" />
+                    <Grid Classes="row" ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="2">
+                        <TextBlock Text="Reduce motion" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="No animations, zooming or glow." />
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding ReducedMotion}" />
+                    </Grid>
+                  </StackPanel>
+                </Border>
+              </StackPanel>
+
+              <!-- ==== Clipping ==== -->
+              <Border Classes="group" IsVisible="{Binding ShowClippingOffNotice}" Padding="16,14">
+                <TextBlock Classes="dim" FontSize="12" TextWrapping="Wrap"
+                           Text="Background clipping is switched off. Switch it on under Features to set it up." />
+              </Border>
+              <StackPanel Spacing="12" IsVisible="{Binding ShowClippingSettings}">
+              <TextBlock Classes="label" Text="CLIPPING" />
               <Border Classes="group">
                 <StackPanel>
                   <Grid Classes="row" ColumnDefinitions="*,Auto">
@@ -785,6 +1038,7 @@
                   </Grid>
                 </StackPanel>
               </Border>
+              </StackPanel>
             </StackPanel>
           </ScrollViewer>
         </DockPanel>

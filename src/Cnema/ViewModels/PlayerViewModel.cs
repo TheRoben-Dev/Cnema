@@ -158,6 +158,7 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
         var bookmarks = item.Entry.Bookmarks.Select(b => new TimelineMarker(b, true)).ToList();
         Markers = bookmarks;
         OnPropertyChanged(nameof(HasMarkers));
+        if (!_settings.Current.Features.LoudMarkers) return;
         try
         {
             var loud = await HighlightService.DetectAsync(item.Entry.Path, cts.Token);

@@ -72,7 +72,7 @@ public partial class MainWindow : Window
         if (Vm is not { } vm) return;
         var on = vm.IsControllerMode;
         Classes.Set("pad", on);
-        Scaler.LayoutTransform = on ? new ScaleTransform(ControllerScale, ControllerScale) : null;
+        ApplyAppearance();
         _pad.SetEnabled(on);
         UpdatePadStatus();
 
@@ -88,6 +88,17 @@ public partial class MainWindow : Window
             _controllerFullscreen = false;
         }
         if (on) Avalonia.Threading.Dispatcher.UIThread.Post(() => FocusGrid(), Avalonia.Threading.DispatcherPriority.Background);
+    }
+
+    /// <summary>Interface size, reduced motion and the hover glow, from Accessibility and Features.</summary>
+    private void ApplyAppearance()
+    {
+        if (Vm is not { } vm) return;
+        var a = vm.Accessibility;
+        var scale = Math.Clamp(a.UiScale, 0.75, 2) * (vm.IsControllerMode ? ControllerScale : 1);
+        Scaler.LayoutTransform = Math.Abs(scale - 1) < 0.001 ? null : new ScaleTransform(scale, scale);
+        Classes.Set("reduced", a.ReducedMotion);
+        Classes.Set("noglow", !vm.Features.HoverGlow);
     }
 
     private void UpdatePadStatus()
@@ -190,7 +201,10 @@ public partial class MainWindow : Window
         if (IsDropDownOpen(focused)) { SendKey(ArrowFor(b)); return; }
         if (b is PadButton.Left or PadButton.Right && focused is TextBox or Slider) { SendKey(ArrowFor(b)); return; }
         var forward = b is PadButton.Down or PadButton.Right;
-        var scope = (Control)(Vm?.IsConfirmingDelete == true ? DeleteScrim : Vm?.IsSettingsOpen == true ? SettingsScrim : EditScrim);
+        var scope = (Control)(Vm?.IsSetupOpen == true ? SetupScrim
+            : Vm?.IsShowingShortcuts == true ? ShortcutsScrim
+            : Vm?.IsConfirmingDelete == true ? DeleteScrim
+            : Vm?.IsSettingsOpen == true ? SettingsScrim : EditScrim);
         if (focused is null || !scope.IsVisualAncestorOf(focused))
         {
             scope.GetVisualDescendants().OfType<Control>()
@@ -247,6 +261,20 @@ public partial class MainWindow : Window
         }
 
         // ----- dialogs -----
+        if (vm.IsSetupOpen)
+        {
+            if (b == PadButton.Start) vm.FinishSetupCommand.Execute(null);
+            else if (b == PadButton.A) SendKey(Focused is CheckBox or ToggleSwitch ? Key.Space : Key.Enter);
+            else if (direction) MoveInDialog(b);
+            return;
+        }
+        if (vm.IsShowingShortcuts)
+        {
+            if (b == PadButton.B) vm.CloseShortcutsCommand.Execute(null);
+            else if (b == PadButton.A) SendKey(Key.Enter);
+            else if (direction) MoveInDialog(b);
+            return;
+        }
         if (vm.IsShowingWhatsNew)
         {
             if (b is PadButton.B or PadButton.A) vm.CloseWhatsNewCommand.Execute(null);
@@ -273,6 +301,8 @@ public partial class MainWindow : Window
                 if (vm.IsSettingsOpen) vm.SaveSettingsCommand.Execute(null);
                 else vm.SaveEditCommand.Execute(null);
             }
+            else if (b is PadButton.LB or PadButton.RB && vm.SettingsEditor is { } settingsPage)
+                settingsPage.CyclePage(b == PadButton.LB ? -1 : 1);
             else if (b == PadButton.A) SendKey(Focused is ToggleSwitch or CheckBox or RadioButton or ToggleButton ? Key.Space : Key.Enter);
             else if (direction) MoveInDialog(b);
             return;
@@ -332,6 +362,9 @@ public partial class MainWindow : Window
         base.OnDataContextChanged(e);
         if (Vm is not { } vm) return;
         vm.ControllerModeChanged += ApplyControllerMode;
+        vm.AppearanceChanged += ApplyAppearance;
+        vm.PickSettingsSavePath = PickSettingsSavePathAsync;
+        vm.PickSettingsFile = PickSettingsFileAsync;
         _pad.IsActive = () => IsActive && IsVisible;
         _pad.Pressed += OnPad;
         _pad.ConnectionChanged += UpdatePadStatus;
@@ -351,6 +384,11 @@ public partial class MainWindow : Window
                     Avalonia.Threading.Dispatcher.UIThread.Post(() => SettingsFirst.Focus(NavigationMethod.Directional),
                         Avalonia.Threading.DispatcherPriority.Background);
             }
+            if (e.PropertyName == nameof(MainViewModel.SettingsEditor) && vm.SettingsEditor is { } editor)
+                editor.PropertyChanged += (_, pe) =>
+                {
+                    if (pe.PropertyName == nameof(SettingsViewModel.Page)) SettingsScroll.Offset = default;
+                };
             if (e.PropertyName != nameof(MainViewModel.Editor) || vm.Editor is null) return;
             // Put the cursor in the name field, ready to type over it.
             Avalonia.Threading.Dispatcher.UIThread.Post(() => { EditName.Focus(); EditName.SelectAll(); },
@@ -413,6 +451,32 @@ public partial class MainWindow : Window
             AllowMultiple = false,
         });
         return result.FirstOrDefault()?.TryGetLocalPath();
+    }
+
+    private static readonly FilePickerFileType SettingsFileType = new("Cnema settings") { Patterns = new[] { "*.json" } };
+
+    private async Task<string?> PickSettingsSavePathAsync()
+    {
+        var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Export settings",
+            SuggestedFileName = "Cnema settings.json",
+            DefaultExtension = "json",
+            ShowOverwritePrompt = true,
+            FileTypeChoices = new[] { SettingsFileType },
+        });
+        return file?.TryGetLocalPath();
+    }
+
+    private async Task<string?> PickSettingsFileAsync()
+    {
+        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Import settings",
+            AllowMultiple = false,
+            FileTypeFilter = new[] { SettingsFileType },
+        });
+        return files.FirstOrDefault()?.TryGetLocalPath();
     }
 
     private async Task<string?> PickSavePathAsync(string suggestedName, string startDir)
@@ -499,6 +563,10 @@ public partial class MainWindow : Window
     }
 
     // ---------- keyboard ----------
+    // Some platforms leave KeySymbol empty for shifted keys, so Shift+/ (US layout) counts too.
+    private static bool IsQuestionMark(KeyEventArgs e) =>
+        e.KeySymbol == "?" || (e.Key == Key.OemQuestion && e.KeyModifiers == KeyModifiers.Shift);
+
     private void OnPreviewKeyDown(object? sender, KeyEventArgs e)
     {
         if (Vm is not { } vm) return;
@@ -523,6 +591,14 @@ public partial class MainWindow : Window
             e.Handled = true;
             return;
         }
+        if (vm.IsShowingShortcuts && vm.ShortcutSheet is { } sheet)
+        {
+            // While a row waits for its new key, that key belongs to the sheet.
+            if (sheet.HandleKey(e)) { e.Handled = true; return; }
+            if (e.Key == Key.Escape || IsQuestionMark(e)) { vm.CloseShortcutsCommand.Execute(null); e.Handled = true; }
+            return;
+        }
+        if (vm.IsSetupOpen) return;
         if (vm.IsShowingWhatsNew)
         {
             if (e.Key is Key.Escape or Key.Enter) { vm.CloseWhatsNewCommand.Execute(null); e.Handled = true; }
@@ -547,6 +623,11 @@ public partial class MainWindow : Window
         if (vm.IsSettingsOpen)
         {
             if (e.Key == Key.Escape) { vm.CancelSettingsCommand.Execute(null); e.Handled = true; }
+            else if (e.Key == Key.Tab && e.KeyModifiers.HasFlag(KeyModifiers.Control) && vm.SettingsEditor is { } page)
+            {
+                page.CyclePage(e.KeyModifiers.HasFlag(KeyModifiers.Shift) ? -1 : 1);
+                e.Handled = true;
+            }
             return;
         }
         if (e.Source is TextBox)
@@ -568,44 +649,63 @@ public partial class MainWindow : Window
             e.Handled = true;
             return;
         }
+        // "?" is Shift+/ on a US keyboard and Shift++ on a Swedish one, so match the character, not the key.
+        if (IsQuestionMark(e))
+        {
+            vm.ShowShortcutsCommand.Execute(null);
+            e.Handled = true;
+            return;
+        }
+
         if (!vm.IsPlayerOpen)
         {
-            if ((cmd && e.Key == Key.F) || e.Key == Key.OemQuestion) { SearchBox.Focus(); e.Handled = true; }
+            e.Handled = true;
+            switch (Shortcuts.Match(e, Shortcuts.Library))
+            {
+                case "search": SearchBox.Focus(); break;
+                case "settings": vm.OpenSettingsCommand.Execute(null); break;
+                case "refresh": vm.RescanCommand.Execute(null); break;
+                default: e.Handled = false; break;
+            }
             return;
         }
 
         var p = vm.Player;
-        var shift = e.KeyModifiers.HasFlag(KeyModifiers.Shift);
-        e.Handled = true;
-        switch (e.Key)
+        if (e.Key == Key.Escape)
         {
-            case Key.Space: case Key.K: p.TogglePlayCommand.Execute(null); break;
-            case Key.Left: p.SeekCommand.Execute(p.Position - (shift ? 1000 : 5000)); break;
-            case Key.Right: p.SeekCommand.Execute(p.Position + (shift ? 1000 : 5000)); break;
-            case Key.J: p.SeekCommand.Execute(p.Position - 10000); break;
-            case Key.L when !cmd && shift: p.SeekCommand.Execute(p.Position + 10000); break;
-            case Key.L: p.LoopRange = !p.LoopRange; break;
-            case Key.OemComma: p.StepFrameBackCommand.Execute(null); break;
-            case Key.OemPeriod: p.StepFrameCommand.Execute(null); break;
-            case Key.Up: p.Volume = Math.Min(125, p.Volume + 5); break;
-            case Key.Down: p.Volume = Math.Max(0, p.Volume - 5); break;
-            case Key.M: p.ToggleMuteCommand.Execute(null); break;
-            case Key.I when shift: p.JumpToInCommand.Execute(null); break;
-            case Key.O when shift: p.JumpToOutCommand.Execute(null); break;
-            case Key.I: p.SetInCommand.Execute(null); break;
-            case Key.O: p.SetOutCommand.Execute(null); break;
-            case Key.X: p.ClearRangeCommand.Execute(null); break;
-            case Key.A: p.AddSegmentCommand.Execute(null); break;
-            case Key.N when shift: p.PreviousMarkerCommand.Execute(null); break;
-            case Key.N: p.NextMarkerCommand.Execute(null); break;
-            case Key.P: p.PreviewRangeCommand.Execute(null); break;
-            case Key.E: p.ExportCommand.Execute(null); break;
-            case Key.F: ToggleFullscreen(); break;
-            case Key.Home: p.SeekCommand.Execute(0d); break;
-            case Key.Escape:
-                if (WindowState == WindowState.FullScreen) ToggleFullscreen();
-                else vm.ClosePlayerCommand.Execute(null);
-                break;
+            if (WindowState == WindowState.FullScreen) ToggleFullscreen();
+            else vm.ClosePlayerCommand.Execute(null);
+            e.Handled = true;
+            return;
+        }
+        e.Handled = true;
+        switch (Shortcuts.Match(e, Shortcuts.Player))
+        {
+            case "play": p.TogglePlayCommand.Execute(null); break;
+            case "back5": p.SeekCommand.Execute(p.Position - 5000); break;
+            case "fwd5": p.SeekCommand.Execute(p.Position + 5000); break;
+            case "back1": p.SeekCommand.Execute(p.Position - 1000); break;
+            case "fwd1": p.SeekCommand.Execute(p.Position + 1000); break;
+            case "back10": p.SeekCommand.Execute(p.Position - 10000); break;
+            case "fwd10": p.SeekCommand.Execute(p.Position + 10000); break;
+            case "loop": p.LoopRange = !p.LoopRange; break;
+            case "frameBack": p.StepFrameBackCommand.Execute(null); break;
+            case "frameFwd": p.StepFrameCommand.Execute(null); break;
+            case "volUp": p.Volume = Math.Min(125, p.Volume + 5); break;
+            case "volDown": p.Volume = Math.Max(0, p.Volume - 5); break;
+            case "mute": p.ToggleMuteCommand.Execute(null); break;
+            case "jumpIn": p.JumpToInCommand.Execute(null); break;
+            case "jumpOut": p.JumpToOutCommand.Execute(null); break;
+            case "setIn": p.SetInCommand.Execute(null); break;
+            case "setOut": p.SetOutCommand.Execute(null); break;
+            case "clear": p.ClearRangeCommand.Execute(null); break;
+            case "addPart": p.AddSegmentCommand.Execute(null); break;
+            case "prevMarker": p.PreviousMarkerCommand.Execute(null); break;
+            case "nextMarker": p.NextMarkerCommand.Execute(null); break;
+            case "preview": p.PreviewRangeCommand.Execute(null); break;
+            case "export": p.ExportCommand.Execute(null); break;
+            case "fullscreen": ToggleFullscreen(); break;
+            case "start": p.SeekCommand.Execute(0d); break;
             default: e.Handled = false; break;
         }
     }
