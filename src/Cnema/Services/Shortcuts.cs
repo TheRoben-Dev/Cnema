@@ -45,6 +45,11 @@ public static class Shortcuts
         new("addPart", Player, "Add the selection as a part", "A"),
         new("nextMarker", Player, "Next marker", "N"),
         new("prevMarker", Player, "Previous marker", "Shift+N"),
+        new("speedDown", Player, "Slower", "Shift+OemComma"),
+        new("speedUp", Player, "Faster", "Shift+OemPeriod"),
+        new("abLoop", Player, "A-B loop: start, end, stop", "B"),
+        new("prevChapter", Player, "Previous chapter", "Ctrl+Left"),
+        new("nextChapter", Player, "Next chapter", "Ctrl+Right"),
         new("export", Player, "Export", "E"),
         new("thumb", Player, "Use this frame as the thumbnail", "T"),
     };
@@ -57,6 +62,7 @@ public static class Shortcuts
         ("General", "Quit Cnema", Mod + "+Q"),
         ("General", "Close a dialog or the player", "Esc"),
         ("General", "Select all (while selecting)", Mod + "+A"),
+        ("General", "Mini player: play/pause, seek, mute", "Space ← → M"),
     };
 
     private static string Mod => OperatingSystem.IsMacOS() ? "⌘" : "Ctrl";

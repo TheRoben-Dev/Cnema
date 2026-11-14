@@ -14,6 +14,7 @@ public sealed class VideoSurface : Control
 
     private WriteableBitmap? _bitmap;
     private int _pending;
+    private long _presentedId = -1;
 
     static VideoSurface()
     {
@@ -58,8 +59,15 @@ public sealed class VideoSurface : Control
         Dispatcher.UIThread.Post(() =>
         {
             Volatile.Write(ref _pending, 0);
-            if (Frames?.Present(ref _bitmap) == true) InvalidateVisual();
+            // A hidden surface (the full player while the mini player shows) skips the copy.
+            if (IsEffectivelyVisible) Refresh();
         }, DispatcherPriority.Render);
+    }
+
+    /// <summary>Draws the newest frame, e.g. right after this surface became visible on a paused video.</summary>
+    public void Refresh()
+    {
+        if (Frames?.Present(ref _bitmap, ref _presentedId) == true) InvalidateVisual();
     }
 
     public override void Render(DrawingContext context)

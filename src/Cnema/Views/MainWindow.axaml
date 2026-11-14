@@ -467,6 +467,72 @@
       </DockPanel>
     </Grid>
 
+    <!-- ======================= MINI PLAYER ======================= -->
+    <!-- Plain playback over the library; Edit opens the same video in the full editor. -->
+    <Border x:Name="MiniPlayer" Classes="miniplayer" IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).IsMiniPlayerOpen}" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+            Margin="0,0,22,22" Width="400" DataContext="{Binding Player}" x:DataType="vm:PlayerViewModel">
+      <StackPanel>
+        <Panel Height="225">
+          <c:VideoSurface x:Name="MiniSurface" Frames="{Binding Frames}" />
+          <Border x:Name="MiniHit" Background="Transparent" ToolTip.Tip="Click to play or pause, double-click to edit" ToolTip.ShowDelay="1200" />
+          <Border IsVisible="{Binding Toast, Converter={x:Static ObjectConverters.IsNotNull}}" IsHitTestVisible="False"
+                  HorizontalAlignment="Center" VerticalAlignment="Top" Margin="10,10,48,0"
+                  Background="#E614151B" CornerRadius="8" Padding="10,5" BorderBrush="{DynamicResource Line}" BorderThickness="1">
+            <TextBlock Text="{Binding Toast}" FontSize="11" TextWrapping="Wrap" />
+          </Border>
+          <Button Classes="mini" Focusable="False" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="8" ToolTip.Tip="Close (Esc)"
+                  Command="{Binding #Root.((vm:MainViewModel)DataContext).CloseMiniPlayerCommand}">
+            <PathIcon Data="{StaticResource IcClose}" Width="12" Height="12" />
+          </Button>
+        </Panel>
+        <StackPanel Margin="10,0,10,10" Spacing="2">
+          <c:TrimTimeline Duration="{Binding Duration}" Position="{Binding Position}"
+                          InPoint="{Binding InPoint}" OutPoint="{Binding OutPoint}"
+                          SeekCommand="{Binding SeekCommand}" Accent="{DynamicResource Accent}" RangeBrush="{DynamicResource Cyan}"
+                          Segments="{Binding SegmentRanges}" Markers="{Binding Markers}" />
+          <Grid ColumnDefinitions="Auto,*,Auto">
+            <StackPanel Orientation="Horizontal" Spacing="0" VerticalAlignment="Center">
+              <Button Classes="ghost" Focusable="False" Command="{Binding SkipBackCommand}" ToolTip.Tip="Back 5 s (←)" Padding="6">
+                <PathIcon Data="{StaticResource IcRewind}" Width="15" Height="15" />
+              </Button>
+              <Button Classes="ghost" Focusable="False" Command="{Binding TogglePlayCommand}" ToolTip.Tip="Play / pause (Space)" Padding="6">
+                <Panel>
+                  <PathIcon Data="{StaticResource IcPlay}" Width="18" Height="18" IsVisible="{Binding !IsPlaying}" />
+                  <PathIcon Data="{StaticResource IcPause}" Width="18" Height="18" IsVisible="{Binding IsPlaying}" />
+                </Panel>
+              </Button>
+              <Button Classes="ghost" Focusable="False" Command="{Binding SkipForwardCommand}" ToolTip.Tip="Forward 5 s (→)" Padding="6">
+                <PathIcon Data="{StaticResource IcForward}" Width="15" Height="15" />
+              </Button>
+              <Button Classes="ghost" Focusable="False" Command="{Binding ToggleMuteCommand}" ToolTip.Tip="Mute (M)" Padding="6">
+                <Panel>
+                  <PathIcon Data="{StaticResource IcVolume}" Width="15" Height="15" IsVisible="{Binding !IsMuted}" />
+                  <PathIcon Data="{StaticResource IcMute}" Width="15" Height="15" IsVisible="{Binding IsMuted}" />
+                </Panel>
+              </Button>
+            </StackPanel>
+            <StackPanel Grid.Column="1" Margin="8,0" VerticalAlignment="Center" Spacing="1">
+              <TextBlock Text="{Binding Title}" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Title}" />
+              <StackPanel Orientation="Horizontal" Spacing="4">
+                <TextBlock Classes="dim mono" Text="{Binding PositionText}" FontSize="11" />
+                <TextBlock Classes="dim mono" Text="/" FontSize="11" />
+                <TextBlock Classes="dim mono" Text="{Binding DurationText}" FontSize="11" />
+                <TextBlock Classes="dim" Text="{Binding RateText}" FontSize="11" Margin="4,0,0,0" IsVisible="{Binding IsRateChanged}" />
+              </StackPanel>
+            </StackPanel>
+            <Button Grid.Column="2" Classes="accent" Focusable="False" Padding="12,6" VerticalAlignment="Center"
+                    ToolTip.Tip="Open in the editor: trim, export and share"
+                    Command="{Binding #Root.((vm:MainViewModel)DataContext).ExpandMiniPlayerCommand}">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <PathIcon Data="{StaticResource IcEdit}" Width="13" Height="13" Foreground="{DynamicResource OnAccent}" />
+                <TextBlock Text="Edit" FontSize="12" />
+              </StackPanel>
+            </Button>
+          </Grid>
+        </StackPanel>
+      </StackPanel>
+    </Border>
+
     <!-- ======================= EDIT DETAILS ======================= -->
     <Border x:Name="EditScrim" Background="#B3050609" IsVisible="{Binding IsEditing}">
       <Border Width="460" VerticalAlignment="Center" HorizontalAlignment="Center" Background="{DynamicResource Bg1}"
@@ -1089,6 +1155,22 @@
                       </StackPanel>
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureStats}" />
                     </Grid>
+                    <Border Classes="sep" />
+                    <Grid Classes="row" ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="2">
+                        <TextBlock Text="Mini player" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="Videos play in a small player over the library; Edit opens the full editor. Off, they open straight in the editor." />
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureMiniPlayer}" />
+                    </Grid>
+                    <Border Classes="sep" />
+                    <Grid Classes="row" ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="2">
+                        <TextBlock Text="Chapters from bookmarks" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="Bookmarks in a session recording become chapters: in the player, in the saved file and in exports." />
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureChapters}" />
+                    </Grid>
                   </StackPanel>
                 </Border>
               </StackPanel>
@@ -1362,13 +1444,23 @@
             <TextBlock Text="{Binding Title}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" MaxWidth="560" />
             <TextBlock Classes="dim" Text="{Binding Subtitle}" FontSize="12" VerticalAlignment="Center" />
           </StackPanel>
-          <Button Grid.Column="2" Classes="ghost" VerticalAlignment="Center" Margin="0,0,12,0" ToolTip.Tip="Use this frame as the thumbnail (T)"
-                  Command="{Binding #Root.((vm:MainViewModel)DataContext).UseFrameAsThumbnailCommand}">
-            <StackPanel Orientation="Horizontal" Spacing="6">
-              <PathIcon Data="{StaticResource IcImage}" Width="15" Height="15" />
-              <TextBlock Text="Set thumbnail" FontSize="12" VerticalAlignment="Center" />
-            </StackPanel>
-          </Button>
+          <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" Margin="0,0,12,0">
+            <Button Classes="ghost" ToolTip.Tip="Use this frame as the thumbnail (T)"
+                    Command="{Binding #Root.((vm:MainViewModel)DataContext).UseFrameAsThumbnailCommand}">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <PathIcon Data="{StaticResource IcImage}" Width="15" Height="15" />
+                <TextBlock Text="Set thumbnail" FontSize="12" VerticalAlignment="Center" />
+              </StackPanel>
+            </Button>
+            <Button Classes="ghost" ToolTip.Tip="Keep playing in a small player while you browse the library"
+                    IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).ShowMiniPlayerButton}"
+                    Command="{Binding #Root.((vm:MainViewModel)DataContext).ShrinkToMiniPlayerCommand}">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <PathIcon Data="{StaticResource IcMiniPlayer}" Width="15" Height="15" />
+                <TextBlock Text="Mini player" FontSize="12" VerticalAlignment="Center" />
+              </StackPanel>
+            </Button>
+          </StackPanel>
         </Grid>
       </Border>
 
@@ -1394,11 +1486,14 @@
 
           <!-- Transport row -->
           <Grid ColumnDefinitions="*,Auto,*">
-            <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-              <TextBlock Classes="mono" Text="{Binding PositionText}" FontSize="13" />
-              <TextBlock Classes="dim mono" Text="/" FontSize="13" Margin="4,0" />
-              <TextBlock Classes="dim mono" Text="{Binding DurationText}" FontSize="13" />
-            </StackPanel>
+            <Button Classes="ghost" Padding="4,2" Margin="-4,0,0,0" VerticalAlignment="Center" Command="{Binding ToggleClockCommand}"
+                    ToolTip.Tip="Click to switch between tenths of a second and frames">
+              <StackPanel Orientation="Horizontal" Spacing="4">
+                <TextBlock Classes="mono" Text="{Binding PositionText}" FontSize="13" />
+                <TextBlock Classes="dim mono" Text="/" FontSize="13" Margin="4,0" />
+                <TextBlock Classes="dim mono" Text="{Binding DurationText}" FontSize="13" />
+              </StackPanel>
+            </Button>
 
             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
               <Button Classes="ghost" Command="{Binding StepFrameBackCommand}" ToolTip.Tip="Previous frame (,)" VerticalAlignment="Center">
@@ -1422,8 +1517,63 @@
             </StackPanel>
 
             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right" VerticalAlignment="Center">
-              <Button Classes="ghost" Command="{Binding CycleRateCommand}" ToolTip.Tip="Playback speed" MinWidth="52">
-                <TextBlock Text="{Binding Rate, StringFormat='{}{0:0.##}×'}" FontSize="13" FontWeight="SemiBold" />
+              <Button Classes="ghost" IsVisible="{Binding HasChapters}" ToolTip.Tip="Chapters from bookmarks (Ctrl+← / Ctrl+→)">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <PathIcon Data="{StaticResource IcChapters}" Width="14" Height="14" />
+                  <TextBlock Text="{Binding ChapterText}" FontSize="12" MaxWidth="170" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                </StackPanel>
+                <Button.Flyout>
+                  <Flyout Placement="TopEdgeAlignedRight">
+                    <StackPanel Spacing="2" MinWidth="300">
+                      <TextBlock Classes="label" Text="CHAPTERS" Margin="8,0,0,6" />
+                      <ItemsControl ItemsSource="{Binding ChapterList}">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate x:DataType="vm:ChapterViewModel">
+                            <Grid ColumnDefinitions="*,Auto">
+                              <Button Classes="menurow" Classes.on="{Binding IsCurrent}" Click="OnFlyoutRowClick"
+                                      Command="{Binding #Root.((vm:MainViewModel)DataContext).Player.JumpToChapterCommand}" CommandParameter="{Binding}">
+                                <Grid ColumnDefinitions="56,*,Auto">
+                                  <TextBlock Classes="mono" Text="{Binding StartText}" FontSize="12" />
+                                  <TextBlock Grid.Column="1" Text="{Binding Title}" FontSize="12" TextTrimming="CharacterEllipsis" />
+                                  <TextBlock Grid.Column="2" Classes="dim mono" Text="{Binding LengthText}" FontSize="11" Margin="10,0,0,0" />
+                                </Grid>
+                              </Button>
+                              <Button Grid.Column="1" Classes="ghost" Padding="7" Margin="2,0,0,0" Click="OnFlyoutRowClick"
+                                      ToolTip.Tip="Select this chapter, to export or loop it"
+                                      Command="{Binding #Root.((vm:MainViewModel)DataContext).Player.SelectChapterCommand}" CommandParameter="{Binding}">
+                                <PathIcon Data="{StaticResource IcCut}" Width="12" Height="12" />
+                              </Button>
+                            </Grid>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </StackPanel>
+                  </Flyout>
+                </Button.Flyout>
+              </Button>
+              <Button Classes="ghost" Classes.on="{Binding LoopRange}" Command="{Binding AbLoopCommand}" ToolTip.Tip="{Binding AbTip}" MinWidth="54">
+                <StackPanel Orientation="Horizontal" Spacing="5">
+                  <PathIcon Data="{StaticResource IcLoop}" Width="13" Height="13" />
+                  <TextBlock Text="{Binding AbText}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
+                </StackPanel>
+              </Button>
+              <Button Classes="ghost" Classes.on="{Binding IsRateChanged}" ToolTip.Tip="Playback speed (Shift+, slower, Shift+. faster)" MinWidth="52">
+                <TextBlock Text="{Binding RateText}" FontSize="13" FontWeight="SemiBold" />
+                <Button.Flyout>
+                  <Flyout Placement="TopEdgeAlignedRight">
+                    <StackPanel Spacing="2" MinWidth="150">
+                      <TextBlock Classes="label" Text="SPEED" Margin="8,0,0,6" />
+                      <ItemsControl ItemsSource="{Binding RateOptions}">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate x:DataType="vm:RateOption">
+                            <Button Classes="menurow" Classes.on="{Binding IsCurrent}" Content="{Binding Label}" Click="OnFlyoutRowClick"
+                                    Command="{Binding #Root.((vm:MainViewModel)DataContext).Player.SetRateCommand}" CommandParameter="{Binding}" />
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </StackPanel>
+                  </Flyout>
+                </Button.Flyout>
               </Button>
               <Button Classes="ghost" Command="{Binding ToggleMuteCommand}" ToolTip.Tip="Mute (M)">
                 <Panel>

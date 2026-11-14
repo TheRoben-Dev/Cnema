@@ -22,6 +22,9 @@ public sealed partial class MainViewModel
     {
         VideoItemViewModel.HoverPreview = Features.HoverPreview;
         VideoItemViewModel.UnwatchedBadges = Features.Unwatched;
+        Chapters.Enabled = Features.Chapters;
+        Player.RefreshChapters();
+        if (IsMiniPlayerOpen && !UseMiniPlayer) ExpandMiniPlayer();
         foreach (var v in _items.Values) v.RefreshAll();
         if (!Features.Collections && SelectedCollection is not null) SelectedFolder = Folders.FirstOrDefault();
         if (!Features.Unwatched) FilterUnwatched = false;
@@ -29,6 +32,7 @@ public sealed partial class MainViewModel
                  {
                      nameof(ShowClipping), nameof(ShowSessionButton), nameof(ShowController), nameof(ShowCollections),
                      nameof(ShowCleanUp), nameof(ShowStats), nameof(ShowTools), nameof(ShowUnwatchedFilter),
+                     nameof(ShowMiniPlayerButton),
                  })
             OnPropertyChanged(name);
         AppearanceChanged?.Invoke();

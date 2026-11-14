@@ -20,7 +20,7 @@ public sealed class VideoFrameBuffer : IDisposable
     private IntPtr _vlcBuffer;
     private byte[]? _latest;
     private int _width, _height;
-    private long _frameId, _presentedId = -1;
+    private long _frameId;
 
     // Delegates must stay referenced for as long as native code may call them.
     private readonly MediaPlayer.LibVLCVideoFormatCb _format;
@@ -57,7 +57,7 @@ public sealed class VideoFrameBuffer : IDisposable
             var size = _width * 4 * _height;
             _vlcBuffer = Marshal.AllocHGlobal(size);
             _latest = new byte[size];
-            _presentedId = -1;
+            _frameId++; // a new size is always worth presenting
         }
         pitches = width * 4;
         lines = height;
@@ -83,12 +83,16 @@ public sealed class VideoFrameBuffer : IDisposable
         FrameReady?.Invoke();
     }
 
-    /// <summary>UI thread: copy the newest frame into <paramref name="bitmap"/>, (re)creating it if needed.</summary>
-    public bool Present(ref WriteableBitmap? bitmap)
+    /// <summary>
+    /// UI thread: copy the newest frame into <paramref name="bitmap"/>, (re)creating it if needed.
+    /// Each surface keeps its own <paramref name="presentedId"/>, so the mini player and the full
+    /// player can both draw from one buffer.
+    /// </summary>
+    public bool Present(ref WriteableBitmap? bitmap, ref long presentedId)
     {
         lock (_sync)
         {
-            if (_latest is null || _frameId == _presentedId) return false;
+            if (_latest is null || _frameId == presentedId) return false;
             if (bitmap is null || bitmap.PixelSize.Width != _width || bitmap.PixelSize.Height != _height)
             {
                 bitmap?.Dispose();
@@ -106,7 +110,7 @@ public sealed class VideoFrameBuffer : IDisposable
                 for (var y = 0; y < _height; y++)
                     Marshal.Copy(_latest, y * srcStride, fb.Address + y * fb.RowBytes, srcStride);
             }
-            _presentedId = _frameId;
+            presentedId = _frameId;
             return true;
         }
     }
@@ -119,7 +123,6 @@ public sealed class VideoFrameBuffer : IDisposable
         lock (_sync)
         {
             _latest = null;
-            _presentedId = _frameId;
         }
         Cleared?.Invoke();
     }

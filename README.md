@@ -87,7 +87,13 @@ Set `CNEMA_LIBVLC_PATH` to a folder containing libvlc + libvlccore to override.
 - **Stats**: totals, clips per week for the last 8 weeks, and clips per game tag.
 - **Delete**: right-click a video, press Delete on a focused card, or use the Edit panel. Files go to the system
   trash (Finder Trash, Recycle Bin, XDG trash), never straight off the disk.
-- **Player**: libVLC playback, frame stepping, speed, volume, fullscreen.
+- **Mini player**: a video opens in a small player over the library (play/pause, seek, mute; Space, ←/→, M,
+  Esc). *Edit* moves it into the full editor at the same position; the editor's *Mini player* button moves it
+  back. Off under Settings, Features, videos open straight in the editor. Controller mode always uses the editor.
+- **Player**: libVLC playback, frame stepping with a frame-number clock (click the time), speed menu
+  (0.25× to 4×, Shift+, / Shift+.), A-B loop (**B**), volume, fullscreen.
+- **Chapters**: bookmarks from a session recording become chapters, listed in the player (jump, or select one to
+  export it). Session files and exports get them as real chapters (ffmpeg metadata), so other players see them.
 - **Trim**: set in/out at the playhead or drag the brackets on the timeline, preview/loop the selection, export.
   - *Lossless* (default): stream copy. Instant, zero quality loss, keeps the container. The cut starts on the
     keyframe at or before the in point, so the clip can start up to a GOP earlier than marked.
@@ -138,8 +144,8 @@ are off by default. The check runs at launch, after each saved clip and when set
 ### Features, accessibility and shortcuts
 
 Nothing optional is forced on you. **Settings, Features** switches off background clipping, session recording,
-controller support, hover preview, loud moment markers, the hover glow, collections, unwatched dots, Clean up
-or Stats; their buttons and settings disappear and they stop running. **Settings, Accessibility** has an interface size (90 to 150 %), high contrast and
+controller support, hover preview, loud moment markers, the hover glow, collections, unwatched dots, Clean up,
+Stats, the mini player or chapters; their buttons and settings disappear and they stop running. **Settings, Accessibility** has an interface size (90 to 150 %), high contrast and
 reduce motion. Press **?** for the list of keyboard shortcuts; click a key to change it.
 
 **Settings, General, Backup** exports and imports all settings as one file. **Portable mode** creates a
@@ -210,7 +216,9 @@ H.264 at the same quality. Turning off "Use the graphics card" records H.264 wit
 | M | Mute | E | Export clip |
 | F | Fullscreen | Esc | Back to library |
 | A | Add selection as a part | N / Shift+N | Next / previous marker |
-| T | Use this frame as the thumbnail | ? | All shortcuts (and change them) |
+| B | A-B loop: start, end, stop | Shift+, / Shift+. | Slower / faster |
+| Ctrl+← / Ctrl+→ | Previous / next chapter | T | Use this frame as the thumbnail |
+| ? | All shortcuts (and change them) | | |
 
 ## Layout
 

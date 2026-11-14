@@ -32,7 +32,7 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
     private Task _pendingStop = Task.CompletedTask;
 
     public VideoFrameBuffer? Frames { get; }
-    public static double[] Rates { get; } = { 0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0 };
+    public static double[] Rates { get; } = { 0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 3.0, 4.0 };
 
     /// <summary>Set by the view: (suggested file name, start folder) -> chosen path or null.</summary>
     public Func<string, string, Task<string?>>? PickSavePath { get; set; }
@@ -188,7 +188,7 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
         _player.Playing += (_, _) => Ui(() => { IsPlaying = true; ApplyAudio(); LoadAudioTracks(); });
         _player.Paused += (_, _) => Ui(() => IsPlaying = false);
         _player.Stopped += (_, _) => Ui(() => IsPlaying = false);
-        _player.EndReached += (_, _) => Ui(() => { IsPlaying = false; Position = Duration; });
+        _player.EndReached += (_, _) => Ui(OnEndReached);
         _player.EncounteredError += (_, _) => Ui(() => ShowToast("Playback error: libVLC could not play this file."));
     }
 
@@ -201,19 +201,18 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
     public string InText => HasIn ? FormatPrecise(InPoint) : "--:--";
     public string OutText => HasOut ? FormatPrecise(OutPoint) : "--:--";
     public string RangeText => HasRange ? FormatPrecise(EffectiveOut - EffectiveIn) : "";
-    public string PositionText => FormatPrecise(Position);
+    public string PositionText => ShowFrames ? FormatFrames(Position) : FormatPrecise(Position);
     public string DurationText => TrimTimeline.FormatTime(Duration);
     public string Title => Current?.Title ?? "";
     public string Subtitle => Current?.Details ?? "";
     private double EffectiveIn => HasIn ? InPoint : 0;
     private double EffectiveOut => HasOut ? OutPoint : Duration;
 
-    partial void OnPositionChanged(double value) => OnPropertyChanged(nameof(PositionText));
-    partial void OnDurationChanged(double value) { OnPropertyChanged(nameof(DurationText)); OnPropertyChanged(nameof(RangeText)); }
+    partial void OnPositionChanged(double value) { OnPropertyChanged(nameof(PositionText)); UpdateCurrentChapter(); }
+    partial void OnDurationChanged(double value) { OnPropertyChanged(nameof(DurationText)); OnPropertyChanged(nameof(RangeText)); BuildChapters(); }
     partial void OnCurrentChanged(VideoItemViewModel? value) { OnPropertyChanged(nameof(Title)); OnPropertyChanged(nameof(Subtitle)); }
     partial void OnVolumeChanged(int value) { ApplyAudio(); _settings.Current.Volume = value; }
     partial void OnIsMutedChanged(bool value) => ApplyAudio();
-    partial void OnRateChanged(double value) => _player?.SetRate((float)value);
     partial void OnPreciseExportChanged(bool value) { _settings.Current.PreciseExport = value; _settings.Save(); }
 
     private void ApplyAudio()
@@ -226,10 +225,11 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
     private void OnTime(long t)
     {
         Position = t;
+        if (LoopRange && HasRange && LoopTick(t)) return;
         if (_stopAtOut && HasOut && t >= OutPoint)
         {
-            if (LoopRange) Seek(EffectiveIn);
-            else { _stopAtOut = false; _player?.SetPause(true); }
+            _stopAtOut = false;
+            _player?.SetPause(true);
         }
     }
 
@@ -241,6 +241,9 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
             ShowToast(VlcBootstrap.Error ?? "libVLC is not available.");
             return;
         }
+        // Switching videos in the mini player: remember where the last one was left.
+        if (_active && Current is { } previous && !ReferenceEquals(previous, item)) SaveProgress(previous);
+        _active = true;
         await _pendingStop;
         Frames?.Reset();
         Current = item;
@@ -248,12 +251,14 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
         Position = 0;
         Duration = item.Entry.DurationMs;
         Rate = 1.0;
+        LoopRange = false;
         _stopAtOut = false;
         Segments.Clear();
         SegmentsChanged();
         AudioTracks.Clear();
         OnPropertyChanged(nameof(HasAudioTracks));
         LoadMarkers(item);
+        BuildChapters();
 
         using var media = new Media(lib, item.Entry.Path, FromType.FromPath);
         var resume = item.Entry.LastPositionMs;
@@ -265,16 +270,22 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
         _player.Play(media);
     }
 
+    private bool _active;
+
+    private void SaveProgress(VideoItemViewModel item)
+    {
+        if (_player is null) return;
+        var pos = _player.Time;
+        var dur = Math.Max(Duration, 1);
+        item.Entry.LastPositionMs = pos / dur > 0.97 ? 0 : Math.Max(0, pos);
+        item.Entry.LastPlayedUtc = DateTime.UtcNow;
+        item.RefreshAll();
+    }
+
     public void Close()
     {
-        if (Current is { } cur && _player is not null)
-        {
-            var pos = _player.Time;
-            var dur = Math.Max(Duration, 1);
-            cur.Entry.LastPositionMs = pos / dur > 0.97 ? 0 : Math.Max(0, pos);
-            cur.Entry.LastPlayedUtc = DateTime.UtcNow;
-            cur.RefreshProgress();
-        }
+        if (Current is { } cur && _active) SaveProgress(cur);
+        _active = false;
         _exportCts?.Cancel();
         // Stop() blocks until the decoder threads exit; keep that off the UI thread.
         var p = _player;
@@ -306,6 +317,7 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
         if (_player.State == VLCState.Ended) { _player.Stop(); _player.Play(); }
         _player.Time = (long)ms;
         Position = ms;
+        _inLoop = LoopRange && ms >= EffectiveIn && ms < EffectiveOut;
     }
 
     [RelayCommand] private void SkipBack() => Seek(Position - 5000);
@@ -324,13 +336,6 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
 
     [RelayCommand] private void ToggleMute() => IsMuted = !IsMuted;
 
-    [RelayCommand]
-    private void CycleRate()
-    {
-        var i = Array.IndexOf(Rates, Rate);
-        Rate = Rates[(i + 1) % Rates.Length];
-        ShowToast($"Speed {Rate:0.##}×");
-    }
 
     // ---------- trimming ----------
     [RelayCommand]
@@ -413,7 +418,8 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
             if (parts.Count > 0)
                 await TrimService.ExportSegmentsAsync(src, target, parts, mode, progress, _exportCts.Token, AudioSelection);
             else
-                await TrimService.ExportAsync(src, target, start, end, mode, progress, _exportCts.Token, AudioSelection);
+                await TrimService.ExportAsync(src, target, start, end, mode, progress, _exportCts.Token, AudioSelection,
+                    ChaptersFor(start, end));
             ShowToast($"Exported {Path.GetFileName(target)}");
             Exported?.Invoke(target);
         }
