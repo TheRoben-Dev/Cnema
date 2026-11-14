@@ -1,291 +1,54 @@
 # Cnema
 
-A video library and player built on libVLC. Point it at folders, it scans them for videos, and you can
-play anything VLC can play and cut clips out of it without leaving the app.
+A clip library, player, editor and clipper for game footage, built on the VLC engine. Point it at your folders,
+watch anything VLC can play, cut and share clips, and save the last few seconds of gameplay with a hotkey.
 
-![Library](docs/library.png)
-![Player and trimmer](docs/player.png)
-![Rename, tag and move](docs/edit.png)
-![Background clipping](docs/clipping.png)
-![Settings](docs/settings.png)
-![Delete to trash](docs/delete.png)
-![Share presets](docs/share.png)
-![Storage limits](docs/storage.png)
-![Parts, audio tracks and markers](docs/parts.png)
-![Game profiles](docs/profiles.png)
-![Controller mode](docs/controller.png)
-
-Stack: C# / .NET 8, [Avalonia 11](https://avaloniaui.net) for UI, [LibVLCSharp](https://code.videolan.org/videolan/LibVLCSharp)
-for playback, ffmpeg for thumbnails, metadata and clip export. One codebase for macOS, Windows and Linux.
+![Editor](docs/editor.png)
 
 ## Download
 
-Grab a build from [Releases](https://github.com/TheRoben-Dev/Cnema-releases/releases). On macOS and Windows everything is
-inside the app: the .NET runtime, libVLC with its plugins, and ffmpeg. Nothing else to install.
+Get the latest build from **[Cnema releases](https://github.com/TheRoben-Dev/Cnema-releases/releases/latest)**
+(macOS Apple Silicon and Intel, Windows, Linux). Everything is bundled: the .NET runtime, libVLC and ffmpeg.
+Cnema updates itself after that.
 
-On Linux, ffmpeg and .NET are bundled but libVLC comes from your distro (VideoLAN publishes no Linux package):
-`sudo apt install libvlc5 vlc-plugin-base`.
+**First launch:** the builds aren't signed.
 
-The macOS app is not notarized, so the first launch needs either right-click → Open, or:
-
-```sh
-xattr -dr com.apple.quarantine /Applications/Cnema.app
-```
-
-## Run from source (macOS)
-
-```sh
-brew install --cask dotnet-sdk         # .NET 8+ SDK
-brew install ffmpeg                    # only needed when running from source
-dotnet run --project src/Cnema
-```
-
-libVLC is restored from NuGet, so VLC does not need to be installed.
-
-Build a real `Cnema.app` with the icon: `scripts/bundle-macos.sh` (output in `dist/`).
-
-Releases are built by GitHub Actions: run the **Release** workflow with a version number (or push a tag like
-`v0.2.0`) to publish macOS (Apple Silicon and Intel), Windows and Linux builds.
-
-| OS | libVLC comes from | Notes |
-| --- | --- | --- |
-| macOS | `VideoLAN.LibVLC.Mac` NuGet, copied into the app (`libvlc/osx-<arch>/`) | Falls back to an installed VLC.app if the bundled copy is missing. |
-| Windows | `VideoLAN.LibVLC.Windows` NuGet, copied into the app (`libvlc/win-x64/`) | |
-| Linux | system packages: `sudo apt install libvlc5 vlc-plugin-base` | |
-
-Set `CNEMA_LIBVLC_PATH` to a folder containing libvlc + libvlccore to override.
+- **macOS:** right-click Cnema.app and choose **Open** (or run `xattr -dr com.apple.quarantine /Applications/Cnema.app`).
+- **Windows:** if SmartScreen shows "Windows protected your PC", click **More info**, then **Run anyway**.
+- **Linux:** install libVLC from your distro first, e.g. `sudo apt install libvlc5 vlc-plugin-base`.
 
 ## Features
 
-- **Library**: add any number of folders; scanned recursively, watched for changes, cached so launch is instant.
-  Thumbnails, duration, resolution, codec, size. Search, sort, per-folder filtering, resume position.
-- **Organise**: tag videos and star favourites; both appear in the sidebar and in search (`#tag` searches tags only).
-  Rename files and move them between library folders from the app. Tags are stored in Cnema's library, not in
-  the files, and follow a file that is renamed or moved outside the app.
-- **Multi-part export**: mark a selection, press **A** (*Add part*), mark the next one, and Export joins all parts
-  in time order into one file. Lossless parts each start on a keyframe, as with a single trim.
-- **Audio tracks**: a video with several audio tracks (see *separate tracks* under clipping) gets a toggle per
-  track. Export keeps the tracks that are on; Share presets mix them into one. Playback uses the first one on.
-- **Markers**: loud moments in the audio are found when a video opens and shown as pink ticks on the timeline;
-  session bookmarks are amber. **N** and **Shift+N** jump between them.
-- **Hover scrub**: move the pointer across a card to flick through ten frames of the video. The filmstrip is
-  made the first time you hover and cached next to the thumbnail.
-- **Share presets** (player, *Share*): fit the selection in 10 MB or 50 MB for Discord (two-pass H.264, resolution
-  and frame rate drop only as far as the size needs), centre-cropped vertical 9:16, or a GIF of up to 20 seconds.
-  With no in/out points set, the whole video is converted. The result lands next to the source.
-- **Filters**: resolution, length, date added and unwatched, next to the search box; they combine with search,
-  folders, tags and collections.
-- **Collections**: playlists that pull videos from any folders. Right-click a video, *Add to collection*, or
-  select several and add them at once. Stored in `collections.json` next to the library cache.
-- **Select mode** (tick button or **S**): favourite, tag, add to a collection, mark watched/unwatched or delete
-  many videos at once. **Ctrl/⌘+A** selects all, **Esc** leaves select mode.
-- **Watched**: a dot marks videos you have not opened; the resume bar shows how far you got in the others.
-- **Thumbnail picker**: *Set thumbnail* (**T**) in the player uses the current frame; *Reset thumbnail* in the
-  card's menu returns to the automatic one.
-- **Clean up**: finds duplicate files (same size and same content samples; the oldest copy is kept) and empty,
-  unreadable or sub-2-second files. Nothing is removed until you confirm, and removal goes to the trash.
-- **Stats**: totals, clips per week for the last 8 weeks, and clips per game tag.
-- **Delete**: right-click a video, press Delete on a focused card, or use the Edit panel. Files go to the system
-  trash (Finder Trash, Recycle Bin, XDG trash), never straight off the disk.
-- **Quick player**: a video opens in a large player over the library (play/pause, previous / next video, seek,
-  mute; Space, ←/→, Shift+←/→, M, Esc, or click the dimmed edge to close). *Edit* moves it into the full editor at the same position; the
-  editor's *Quick player* button moves it back. Off under Settings, Features, videos open straight in the
-  editor. Controller mode always uses the editor.
-- **Player**: libVLC playback, frame stepping with a frame-number clock (click the time), speed menu
-  (0.25× to 4×, Shift+, / Shift+.), A-B loop (**B**), volume, fullscreen.
-- **Chapters**: bookmarks from a session recording become chapters, listed in the player (jump, or select one to
-  export it). Session files and exports get them as real chapters (ffmpeg metadata), so other players see them.
-- **Remember edits** (Settings, Features, off by default): trim marks, parts, captions and speed changes are kept
-  per video when the editor closes, in Cnema's data folder (`edits.json`), never in the video. *Start over* on the
-  Trim page clears them.
-- **Trim**: set in/out at the playhead or drag the brackets on the timeline, preview/loop the selection, export.
-  - *Lossless* (default): stream copy. Instant, zero quality loss, keeps the container. The cut starts on the
-    keyframe at or before the in point, so the clip can start up to a GOP earlier than marked.
-  - *Precise*: re-encodes to H.264/AAC MP4 (CRF 18). Frame-accurate, slower, slight generation loss.
-- **Editor layout**: a rail beside the video opens the tool pages (Trim, Captions, Speed, Sound, Brand, Export),
-  and a row of labelled buttons under the timeline covers in/out, play and loop the selection, parts, markers,
-  captions, slow motion, the thumbnail and saving a frame. Click the open page (or **Shift+E**) to fold the panel
-  for a bigger video; the page and the folded state are remembered.
-- **Save frame** (**G**): the frame on screen as a full-size PNG next to the video (or in Pictures if that
-  folder is read-only).
-- **Effects** (the Captions, Speed, Sound and Brand pages): everything here changes exports only, never the original file.
-  Effects re-encode, so an export with effects is always *Precise*.
-  - *Captions* (**C** adds one at the playhead): text at the top, middle or bottom, three sizes, white with an
-    outline or on a dark box. They show over the video while you edit, sized like the export, and are burned
-    in with libass (an ASS subtitle file and the bundled Inter font).
-  - *Slow motion and fast forward*: pick a stretch and a speed (¼× to 4×), with an optional ramp that eases in
-    and out. The player previews the speed; sound is time-stretched so it keeps its pitch.
-  - *Sound*: even out loudness (measured, then brought to −14 LUFS with a limiter), and with a separate voice
-    track, boost the voice and lower the game while you talk (sidechain ducking).
-  - *Watermark, intro and outro* (set up under **Settings, Editing**): an image in a corner at a size and
-    opacity you choose, and clips joined before and after, fitted to the export's size.
-- **Export queue**: exports and Share presets run in the background one after another; the *Exports* button
-  shows progress, and lets you cancel, open the folder or clear finished ones. Off, the editor waits for each.
+- **Library:** watched folders, thumbnails with hover scrub, search, filters, tags, favourites, collections,
+  bulk select, duplicate finder and stats.
+- **Quick player:** videos open in a large player over the library; **Edit** takes you to the full editor.
+- **Editor:** a tool rail with Trim, Captions, Speed, Sound, Brand and Export. Lossless or frame-accurate trims,
+  multi-part export, captions, slow-mo with ramps, loudness and voice tools, watermark and intro/outro,
+  and a background export queue. Optionally remembers your edits per video until you start over.
+- **Share:** one-click presets for Discord (10 / 50 MB), vertical 9:16 and GIF.
+- **Clipping:** a rolling replay buffer with GPU encoding (H.264, HEVC, AV1). Several hotkeys with their own
+  clip lengths, webcam overlay, session recording with bookmarks, separate game and mic tracks,
+  per-game profiles and storage limits.
+- **Make it yours:** everything optional can be switched off under **Settings, Features**. Color schemes,
+  rebindable shortcuts (press **?**), accessibility options, controller mode, portable mode and settings backup.
+- **Languages:** English and Swedish, following the system language by default. Translations are flat JSON
+  files in `src/Cnema/Assets/Lang/` (`"English": "translation"`); `scripts/check-translations.py` lists gaps.
 
-### Background clipping
+See [CHANGELOG.md](CHANGELOG.md) for what's new in each version.
 
-Turn on **Clipping** in the sidebar (or in Settings) and Cnema keeps recording the screen into a small
-rolling buffer. Press the hotkey (default `Ctrl+Alt+S`, `⌃⌥S` on macOS) and the last 30 seconds are
-written to your clips folder, which is a library folder, so the clip shows up in the app straight away.
+![Color schemes](docs/color-schemes.png)
 
-- **Runs in the background.** Closing the window leaves Cnema in the menu bar / system tray. Settings has
-  "Launch Cnema when I log in"; it then starts without a window.
-- **Light on resources.** One ffmpeg process encodes with the GPU where it can (VideoToolbox on macOS;
-  NVENC, AMF or Quick Sync on Windows) and falls back to x264. The buffer is 2-second segments in the temp
-  folder, capped at the longest clip length; saving is a stream copy, not a re-encode.
-- **Settings:** clip length (15 s to 10 min), resolution, frame rate, video bitrate, hardware encoding,
-  two audio devices (mixed), audio bitrate, hotkey, clips folder, webcam.
-- **Extra hotkeys** (Settings, Clipping, *Add hotkey*): up to four more hotkeys, each saving its own length,
-  say 15 seconds on one and 3 minutes on another. The buffer holds the longest of them.
-- **Webcam** (Settings, Clipping, Camera): puts a camera in a corner of every clip and session (small,
-  medium or large, any corner), sized against the picture so it looks the same at any resolution. The
-  camera stays on while clipping runs. If it can't be opened (another app has it, or no permission), clipping
-  carries on without it and the sidebar says why. macOS asks for camera access the first time.
+## Build from source
 
-Platform notes:
+Needs the .NET 8+ SDK and ffmpeg on your PATH. libVLC comes from NuGet on macOS and Windows.
 
-| | Screen | Audio |
-|---|---|---|
-| macOS | Needs the Screen Recording permission (asked on first use). | "System audio" (macOS 13+, via ScreenCaptureKit) records everything you hear; microphones work as they are. |
-| Windows | Desktop Duplication (`ddagrab`), `gdigrab` as fallback. | DirectShow devices. System sound needs "Stereo Mix" or a loopback device. |
-| Linux | X11 sessions only (`x11grab`); Wayland is not supported yet. | PulseAudio / PipeWire sources; `.monitor` sources record system sound. |
-
-### Session recording, separate tracks and game profiles
-
-- **Record session** (sidebar or tray, while clipping is on) keeps everything from that moment until you stop
-  and saves it as one video. During a session the clip hotkey adds a **bookmark** instead of cutting a clip.
-  It is the same capture as the replay buffer, so there is no second encoder; the session is held in the
-  temporary buffer until it is saved, which needs that much free space. Quitting or a capture restart saves
-  the session first.
-- **Separate tracks** (Settings, Audio): with two audio devices, record them as two tracks instead of one mix,
-  so the game or the microphone can be left out afterwards.
-- **Game profiles** (Settings): per game, a different clip length, bitrate or format. Cnema checks which app is
-  in front every few seconds while profiles exist. Changing bitrate or format restarts the capture, so the
-  profile stays on while you alt-tab and is only dropped after two minutes away from the game.
-
-### Storage limits
-
-Settings, Storage can keep the clips folder in check: remove clips older than a number of days, and keep the
-folder under a size cap by removing the oldest clips first. Removed clips go to the trash or to an archive
-folder of your choice. Favourites are never removed, other library folders are never touched, and both limits
-are off by default. The check runs at launch, after each saved clip and when settings change.
-
-### Features, accessibility and shortcuts
-
-Nothing optional is forced on you. **Settings, Features** switches off background clipping, session recording,
-controller support, hover preview, loud moment markers, the hover glow, collections, unwatched dots, Clean up,
-Stats, the quick player, chapters, captions, speed effects, sound tools, watermark and intro, or the export
-queue; their buttons and settings disappear and they stop running. **Settings, Accessibility** has an interface size (90 to 150 %), high contrast and
-reduce motion. Press **?** for the list of keyboard shortcuts; click a key to change it.
-
-**Settings, General, Backup** exports and imports all settings as one file. **Portable mode** creates a
-`Cnema Data` folder next to the app (next to `Cnema.app` on macOS) and keeps settings, library and thumbnails
-there from the next start; delete or rename the folder to go back.
-
-### Color schemes
-
-**Settings, Appearance** switches between a few flat color schemes (Violet, Graphite, Ember, Mint, Rose) and
-Aurora, the original look with gradients. The change shows at once and is kept when you press Save.
-
-### Updates and diagnostics
-
-Cnema checks the public releases page at launch and every 3 hours. At launch a newer version is installed
-straight away: Cnema downloads the build for your system, checks its size and SHA-256 against what GitHub
-published, swaps the app once it has quit and starts again. The old app is kept until the new one is in place.
-A session recording in progress is never interrupted, and each version is tried once, so a failed install
-leaves you with the "new version" card (click it to install) instead of a restart loop. After an update a
-"What's new" screen lists the changes since the version you had; **Settings, What's new** opens the whole
-list, which lives in [CHANGELOG.md](CHANGELOG.md). Both the check and the automatic install can be turned
-off in Settings.
-
-On macOS the builds are not signed with a Developer ID, so the system may ask for the Screen Recording
-permission again after an update.
-
-Warnings, capture errors and crashes are written to `logs/cnema.log` in Cnema's data folder (rotated at 512 KB).
-**Settings, Copy diagnostics** puts the version, OS, encoder list, capture setup and the end of the log on the
-clipboard, ready to paste into a bug report.
-
-Saved clips are named and tagged after the app that was in front when the hotkey was pressed (for example
-`Warframe 2026-11-14 21-03-10.mp4`, tagged `warframe`), and Cnema plays a short sound on save. Both can be
-turned off in Settings.
-
-### Controller mode
-
-Settings › Controller › **Controller mode** turns the same app into a couch / handheld layout: everything
-is scaled up, a button legend runs along the bottom, and an Xbox controller (or any pad SDL knows: PlayStation,
-Switch Pro, Steam Deck…) drives it. It can open full screen automatically.
-
-| | Library | Player |
-|---|---|---|
-| D-pad / left stick | Move between cards, sidebar and sort | Seek ±5 s (◀ ▶), volume (▲ ▼) |
-| A | Play / select | Play / pause |
-| B | Jump between sidebar and videos | Back to library |
-| X / Y | Favourite / rename & tag | Mark in / mark out |
-| LB / RB | Previous / next folder or tag | Step one frame |
-| LT / RT | | Seek ±10 s |
-| Menu ☰ | Settings | Export clip |
-| View ⧉ | Save clip | Save clip |
-
-Arrow keys, Enter and Esc work the same way, so a TV remote or keyboard is fine too.
-
-### Clip formats
-
-Settings › Video › **Format** lists only what this computer can encode in hardware: H.264 everywhere, HEVC
-on Macs and recent GPUs, AV1 on NVIDIA RTX 40+, AMD RDNA3+ and Intel Arc. HEVC is about half the size of
-H.264 at the same quality. Turning off "Use the graphics card" records H.264 with x264.
-
-### Shortcuts (player)
-
-| Key | Action | Key | Action |
-| --- | --- | --- | --- |
-| Space / K | Play / pause | I / O | Set in / out |
-| ← / → | Previous / next video | Shift+I / Shift+O | Jump to in / out |
-| Shift+← / Shift+→ | Seek 5 s (Alt / ⌥: 1 s) | | |
-| J | Back 10 s | P | Play selection |
-| , / . | Previous / next frame | L | Loop selection |
-| ↑ / ↓ | Volume | X | Clear selection |
-| M | Mute | E | Export clip |
-| F | Fullscreen | Esc | Back to library |
-| A | Add selection as a part | N / Shift+N | Next / previous marker |
-| B | A-B loop: start, end, stop | Shift+, / Shift+. | Slower / faster |
-| Ctrl+← / Ctrl+→ | Previous / next chapter | T | Use this frame as the thumbnail |
-| Shift+E | Show or hide the tool panel | C | Add a caption at the playhead |
-| G | Save this frame as an image | ? | All shortcuts (and change them) |
-
-## Languages
-
-English and Swedish. Settings, General, *Language* switches live; the default follows the system language and
-falls back to English. All UI text goes through `Loc` (`T("English text")` in code, `svc:Tr.Text="English text"`
-in XAML), with the English text as the key, so anything untranslated shows in English. A translation is a flat
-JSON file of `"English": "translation"` in `src/Cnema/Assets/Lang/`; add its code to `Loc.Languages` to offer it.
-
-## Layout
-
-```
-src/Cnema
-  Services/    VlcBootstrap (native lib loading per OS), LibraryService (scan/cache/watch),
-               MediaProbe, ThumbnailService, TrimService, RenderService + Effects (captions, speed,
-               sound, watermark, intro / outro), ToolLocator, PlatformShell, AppPaths
-  Controls/    VideoFrameBuffer + VideoSurface (libVLC -> bitmap), TrimTimeline (scrubber with in/out),
-               EffectsOverlay (caption and watermark preview)
-  ViewModels/  MainViewModel (library), PlayerViewModel (transport, trimming, effects), ExportQueueViewModel
-  Views/       MainWindow
+```sh
+dotnet run --project src/Cnema
 ```
 
-Data lives in `~/Library/Application Support/Cnema` (macOS), `%LOCALAPPDATA%\Cnema` (Windows),
-`~/.local/share/Cnema` (Linux).
+`scripts/bundle-macos.sh` builds a real `Cnema.app` in `dist/`. Releases are built by the **Release**
+GitHub Actions workflow.
 
-## Design notes
+## License
 
-- **Not a fork of VLC's source.** VLC itself is ~1M lines of C/C++/Obj-C with a separate UI per platform;
-  libVLC is the same engine exposed as a library, so playback is identical while the UI is ours.
-- **Video is rendered through libVLC's frame callbacks** into an Avalonia bitmap rather than handing VLC a
-  native window. It behaves the same on every OS and lets UI sit on top of the video. The cost is one CPU copy
-  per frame (and no zero-copy GPU path); fine through 4K, worth revisiting for 8K/high-fps HDR.
-- **All OS-specific code is in four places**: `VlcBootstrap`, `AppPaths`, `PlatformShell`, `ToolLocator`,
-  plus title-bar insets in `MainWindow.axaml.cs`.
-
-## Licensing
-
-Cnema is MIT licensed. Release builds bundle libVLC (LGPL, dynamically linked) and ffmpeg (GPL, run as a
-separate program); see [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
+MIT. Release builds bundle libVLC (LGPL) and ffmpeg (GPL); see [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
