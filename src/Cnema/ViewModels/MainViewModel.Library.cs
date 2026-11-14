@@ -438,5 +438,5 @@ public sealed partial class MainViewModel
 
     [RelayCommand] private void CloseStats() => Stats = null;
 
-    public bool ShowTools => Features.CleanUp || Features.Stats;
+    public bool ShowTools => Features.CleanUp || Features.Stats || Features.Recorders;
 }

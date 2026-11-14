@@ -21,6 +21,8 @@ public sealed class VideoEntry
     public List<long> Bookmarks { get; set; } = new();
     /// <summary>Where the user picked the thumbnail from, in ms; 0 = chosen automatically.</summary>
     public long ThumbAtMs { get; set; }
+    /// <summary>A line of text the user wrote about the video; search finds it.</summary>
+    public string? Note { get; set; }
 
     [System.Text.Json.Serialization.JsonIgnore]
     public string FileName => System.IO.Path.GetFileName(Path);
@@ -34,6 +36,7 @@ public sealed class VideoEntry
         Favorite = other.Favorite;
         Bookmarks = other.Bookmarks.ToList();
         ThumbAtMs = other.ThumbAtMs;
+        Note = other.Note;
     }
 }
 

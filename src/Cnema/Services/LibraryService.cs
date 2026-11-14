@@ -22,6 +22,9 @@ public sealed class LibraryService : IDisposable
     /// <summary>Raised (on a background thread) when watched folders change on disk.</summary>
     public event Action? FoldersChanged;
 
+    /// <summary>Names the game a newly found file belongs to (another recorder's folder), or null.</summary>
+    public Func<string, string?>? GameTagger { get; set; }
+
     public IReadOnlyCollection<VideoEntry> CachedEntries
     {
         get { lock (_cacheLock) return _cache.Entries.Values.ToList(); }
@@ -75,6 +78,7 @@ public sealed class LibraryService : IDisposable
                 }
                 var e = new VideoEntry { Path = f.FullName, Size = f.Length, ModifiedUtc = mtime };
                 if (hit is not null) e.CopyUserDataFrom(hit);
+                else if (GameTagger?.Invoke(f.FullName) is { } game) e.Tags.Add(game);
                 result.Add(e);
                 work.Add(e);
             }

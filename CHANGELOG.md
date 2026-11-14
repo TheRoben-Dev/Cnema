@@ -2,6 +2,14 @@
 
 What changed in each Cnema release. The app shows the entries you have not seen yet after it updates.
 
+## 0.18.0
+- Other recorders (sidebar, Tools): bring in videos from OBS, NVIDIA (ShadowPlay / NVIDIA app), Xbox Game Bar and Steam. Cnema finds their recording folders, adds them to your library and picks up new videos by themselves. Nothing is moved or changed. Use Change… if you record somewhere else.
+- Videos from other recorders are tagged with their game where the recorder tells: NVIDIA's game folders, Game Bar file names, Steam's game, and subfolders for OBS. Switch it off with Tag by game.
+- Steam keeps its clips in a streaming format other apps can't open, so Cnema copies new ones into MP4 files in a Steam folder next to your clips, at launch and with one click.
+- Notes: write a line about a video under Rename, tag or move. It shows on the card in place of the file details, and search finds it.
+- Drag out: drag a video from the library straight into Discord, a browser or a folder. With several videos selected, drag them all at once.
+- All three can be switched off under Settings, Features.
+
 ## 0.17.0
 - Cnema på svenska! Pick the language under Settings, General, or in the welcome setup. By default Cnema follows your system language, and anything not translated shows in English. The list of changes here stays in English.
 - Remember edits (Settings, Features, off by default): trim marks, parts, captions and speed changes are still there when you open a video again. The video file only changes when you export, and Start over on the Trim page clears it all.

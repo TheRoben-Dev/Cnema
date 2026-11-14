@@ -19,6 +19,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         ApplyTitleBarInsets();
+        SetUpDragOut();
 
         VideoGrid.ElementPrepared += (_, e) => (e.Element.DataContext as VideoItemViewModel)?.AcquireThumbnail();
         VideoGrid.ElementClearing += (_, e) => (e.Element.DataContext as VideoItemViewModel)?.ReleaseThumbnail();
@@ -215,6 +216,7 @@ public partial class MainWindow : Window
             : Vm?.IsShowingShortcuts == true ? ShortcutsScrim
             : Vm?.IsCleaningUp == true ? CleanupScrim
             : Vm?.IsShowingStats == true ? StatsScrim
+            : Vm?.IsShowingRecorders == true ? RecordersScrim
             : Vm?.IsConfirmingDelete == true ? DeleteScrim
             : Vm?.IsSettingsOpen == true ? SettingsScrim : EditScrim);
         if (focused is null || !scope.IsVisualAncestorOf(focused))
@@ -295,6 +297,13 @@ public partial class MainWindow : Window
         if (vm.IsShowingStats)
         {
             if (b is PadButton.B or PadButton.A) vm.CloseStatsCommand.Execute(null);
+            return;
+        }
+        if (vm.IsShowingRecorders)
+        {
+            if (b == PadButton.B) vm.CloseRecordersCommand.Execute(null);
+            else if (b == PadButton.A) SendKey(Focused is ToggleSwitch ? Key.Space : Key.Enter);
+            else if (direction) MoveInDialog(b);
             return;
         }
         if (vm.IsCleaningUp && !vm.IsConfirmingDelete)
@@ -796,6 +805,11 @@ public partial class MainWindow : Window
         if (vm.IsShowingStats)
         {
             if (e.Key == Key.Escape) { vm.CloseStatsCommand.Execute(null); e.Handled = true; }
+            return;
+        }
+        if (vm.IsShowingRecorders)
+        {
+            if (e.Key == Key.Escape) { vm.CloseRecordersCommand.Execute(null); e.Handled = true; }
             return;
         }
         if (vm.IsSelecting && !vm.IsPlayerOpen && e.Source is not TextBox)
