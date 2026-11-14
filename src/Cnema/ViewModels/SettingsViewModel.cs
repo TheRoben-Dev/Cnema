@@ -125,6 +125,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private bool _sound;
     [ObservableProperty] private bool _tagWithGame;
     [ObservableProperty] private bool _checkForUpdates;
+    [ObservableProperty] private bool _autoUpdate;
     [ObservableProperty] private bool _hotkeyCtrl;
     [ObservableProperty] private bool _hotkeyAlt;
     [ObservableProperty] private bool _hotkeyShift;
@@ -175,6 +176,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         _sound = c.Sound;
         _tagWithGame = c.TagWithGame;
         _checkForUpdates = settings.CheckForUpdates;
+        _autoUpdate = settings.AutoUpdate;
         _hotkeyCtrl = c.HotkeyCtrl;
         _hotkeyAlt = c.HotkeyAlt;
         _hotkeyShift = c.HotkeyShift;
@@ -278,6 +280,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         c.Sound = Sound;
         c.TagWithGame = TagWithGame;
         settings.CheckForUpdates = CheckForUpdates;
+        settings.AutoUpdate = AutoUpdate;
         c.HotkeyCtrl = HotkeyCtrl;
         c.HotkeyAlt = HotkeyAlt;
         c.HotkeyShift = HotkeyShift;

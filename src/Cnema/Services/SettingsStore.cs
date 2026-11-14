@@ -11,6 +11,12 @@ public sealed class AppSettings
     public bool KeepInBackground { get; set; }
     public ClipSettings Clip { get; set; } = new();
     public bool CheckForUpdates { get; set; } = true;
+    /// <summary>Download and install a newer version at launch, without asking.</summary>
+    public bool AutoUpdate { get; set; } = true;
+    /// <summary>The version an automatic install was last tried for, so a failing one is not retried forever.</summary>
+    public string? LastUpdateAttempt { get; set; }
+    /// <summary>The version that ran last time; a newer running version shows "What's new".</summary>
+    public string? LastRunVersion { get; set; }
 
     /// <summary>Bigger layout, gamepad navigation and on-screen button hints (handhelds, TV PCs).</summary>
     public bool ControllerMode { get; set; }
@@ -109,6 +115,8 @@ public sealed class ClipSettings
 
 public sealed class SettingsStore
 {
+    /// <summary>True when there was no settings file yet: a fresh install, nothing to compare versions with.</summary>
+    public bool IsFirstRun { get; } = !File.Exists(AppPaths.SettingsFile);
     public AppSettings Current { get; } = JsonStore.Load<AppSettings>(AppPaths.SettingsFile);
     public void Save() => JsonStore.Save(AppPaths.SettingsFile, Current);
 }

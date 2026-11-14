@@ -247,6 +247,11 @@ public partial class MainWindow : Window
         }
 
         // ----- dialogs -----
+        if (vm.IsShowingWhatsNew)
+        {
+            if (b is PadButton.B or PadButton.A) vm.CloseWhatsNewCommand.Execute(null);
+            return;
+        }
         if (vm.IsConfirmingDelete)
         {
             if (b == PadButton.B) vm.CancelDeleteCommand.Execute(null);
@@ -516,6 +521,11 @@ public partial class MainWindow : Window
         {
             OnPad(e.Key switch { Key.Up => PadButton.Up, Key.Down => PadButton.Down, Key.Left => PadButton.Left, _ => PadButton.Right });
             e.Handled = true;
+            return;
+        }
+        if (vm.IsShowingWhatsNew)
+        {
+            if (e.Key is Key.Escape or Key.Enter) { vm.CloseWhatsNewCommand.Execute(null); e.Handled = true; }
             return;
         }
         if (vm.IsConfirmingDelete)
