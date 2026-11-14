@@ -2,7 +2,8 @@ using System.Text.RegularExpressions;
 
 namespace Cnema.Services;
 
-public enum RecorderKind { Obs, Nvidia, XboxGameBar, Steam }
+// New kinds go at the end: settings store them as numbers.
+public enum RecorderKind { Obs, Nvidia, XboxGameBar, Steam, Medal, AmdRelive, Outplayed, Insights, SteelSeries, SnippingTool, MacScreen, Custom }
 
 /// <summary>A recording folder of another app that the user brought into the library.</summary>
 public sealed class RecorderImport
@@ -38,6 +39,14 @@ public static partial class RecorderService
         RecorderKind.Obs => "OBS Studio",
         RecorderKind.Nvidia => "NVIDIA",
         RecorderKind.XboxGameBar => "Xbox Game Bar",
+        RecorderKind.Medal => "Medal",
+        RecorderKind.AmdRelive => "AMD ReLive",
+        RecorderKind.Outplayed => "Outplayed",
+        RecorderKind.Insights => "Insights Capture",
+        RecorderKind.SteelSeries => "SteelSeries Moments",
+        RecorderKind.SnippingTool => "Snipping Tool",
+        RecorderKind.MacScreen => T("macOS screen recordings"),
+        RecorderKind.Custom => T("Another app"),
         _ => "Steam",
     };
 
@@ -47,7 +56,45 @@ public static partial class RecorderService
         new(RecorderKind.Nvidia, NameOf(RecorderKind.Nvidia), OperatingSystem.IsWindows() ? NvidiaFolder() : null, OperatingSystem.IsWindows()),
         new(RecorderKind.XboxGameBar, NameOf(RecorderKind.XboxGameBar), OperatingSystem.IsWindows() ? XboxFolder() : null, OperatingSystem.IsWindows()),
         new(RecorderKind.Steam, NameOf(RecorderKind.Steam), SteamClipsFolder(), true),
+        Win(RecorderKind.Medal, () => FirstDir(Path.Combine(Videos, "Medal"), @"C:\Medal\Clips", @"C:\Medal")),
+        Win(RecorderKind.AmdRelive, () => FirstDir(Path.Combine(Videos, "Radeon ReLive"), Path.Combine(Videos, "AMD"))),
+        Win(RecorderKind.Outplayed, () => FirstDir(Path.Combine(Videos, "Overwolf", "Outplayed"))),
+        Win(RecorderKind.Insights, () => FirstDir(Path.Combine(Videos, "Insights Capture"))),
+        Win(RecorderKind.SteelSeries, () => FirstDir(Path.Combine(Videos, "SteelSeries Moments"), Path.Combine(Videos, "SteelSeries", "Moments"),
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "SteelSeries", "GG", "apps", "moments", "clips"))),
+        Win(RecorderKind.SnippingTool, () => FirstDir(Path.Combine(Videos, "Screen Recordings"))),
+        new(RecorderKind.MacScreen, NameOf(RecorderKind.MacScreen), OperatingSystem.IsMacOS() ? MacScreenFolder() : null, OperatingSystem.IsMacOS()),
+        new(RecorderKind.Custom, NameOf(RecorderKind.Custom), null, true),
     };
+
+    private static RecorderInfo Win(RecorderKind k, Func<string?> find) =>
+        new(k, NameOf(k), OperatingSystem.IsWindows() ? find() : null, OperatingSystem.IsWindows());
+
+    private static string? FirstDir(params string[] candidates) => candidates.FirstOrDefault(Directory.Exists);
+
+    /// <summary>Where macOS saves screen recordings: the screencapture location if set, otherwise the Desktop.</summary>
+    private static string? MacScreenFolder()
+    {
+        try
+        {
+            var plist = Path.Combine(Home, "Library", "Preferences", "com.apple.screencapture.plist");
+            if (File.Exists(plist))
+            {
+                var psi = new System.Diagnostics.ProcessStartInfo("/usr/bin/defaults", "read com.apple.screencapture location")
+                    { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false };
+                using var p = System.Diagnostics.Process.Start(psi);
+                var output = p?.StandardOutput.ReadToEnd().Trim();
+                p?.WaitForExit(2000);
+                if (!string.IsNullOrEmpty(output))
+                {
+                    var dir = output.StartsWith('~') ? Home + output[1..] : output;
+                    if (Directory.Exists(dir)) return dir;
+                }
+            }
+        }
+        catch { /* fall back to the Desktop */ }
+        return FirstDir(Path.Combine(Home, "Desktop"));
+    }
 
     // ---------- finding the folders ----------
     /// <summary>OBS keeps the recording path per profile in basic.ini; the first one that exists wins.</summary>
@@ -153,9 +200,10 @@ public static partial class RecorderService
                 // "Game Name 2024-01-31 18-04-12" (Windows 11) or "Game Name 1_31_2024 6_04_12 PM" (older).
                 var m = XboxName().Match(name);
                 return m.Success ? Clean(m.Groups[1].Value) : null;
-            case RecorderKind.Nvidia:
-            case RecorderKind.Obs:
-            case RecorderKind.Steam:
+            case RecorderKind.SnippingTool:
+            case RecorderKind.MacScreen:
+                return null; // the desktop, not a game
+            default:
                 // NVIDIA files sit in a folder per game; OBS users often sort by game folders too.
                 var rel = System.IO.Path.GetRelativePath(import.Path, System.IO.Path.GetDirectoryName(file) ?? import.Path);
                 if (rel is "." || rel.StartsWith("..")) return null;
@@ -165,7 +213,6 @@ public static partial class RecorderService
                 if (import.Kind == RecorderKind.Steam && first.StartsWith("Steam ", StringComparison.Ordinal)) return null;
                 return Clean(first);
         }
-        return null;
     }
 
     private static string? Clean(string s)

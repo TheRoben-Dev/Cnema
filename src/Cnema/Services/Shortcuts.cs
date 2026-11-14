@@ -57,6 +57,8 @@ public static class Shortcuts
         new("caption", Player, "Add a caption at the playhead", "C"),
         new("thumb", Player, "Use this frame as the thumbnail", "T"),
         new("grab", Player, "Save this frame as an image", "G"),
+        new("punchIn", Player, "Zoom in here (punch in)", "Z"),
+        new("blur", Player, "Hide an area (blur)", "H"),
     };
 
     /// <summary>Keys that always work and can't be changed, shown in the shortcut sheet for reference.</summary>

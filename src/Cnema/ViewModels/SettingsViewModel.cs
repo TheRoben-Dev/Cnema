@@ -513,6 +513,7 @@ public sealed partial class SettingsViewModel : ObservableObject
             Captions = FeatureCaptions, SpeedEffects = FeatureSpeedEffects, AudioTools = FeatureAudioTools,
             Branding = FeatureBranding, ExportQueue = FeatureExportQueue, KeepEdits = FeatureKeepEdits,
             Notes = FeatureNotes, DragOut = FeatureDragOut, Recorders = FeatureRecorders,
+            ZoomPan = FeatureZoomPan, Blur = FeatureBlur,
         };
         WriteEditing(settings);
         // Switching a module off switches off what it was doing, not only its buttons.

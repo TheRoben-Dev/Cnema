@@ -689,6 +689,9 @@
     <Setter Property="CornerRadius" Value="10" />
     <Setter Property="Padding" Value="10" />
   </Style>
+  <Style Selector="Border.fxcard.picked">
+    <Setter Property="BorderBrush" Value="{DynamicResource Brand}" />
+  </Style>
   <Style Selector="Border.chipbar">
     <Setter Property="Background" Value="{DynamicResource Bg1}" />
     <Setter Property="CornerRadius" Value="7" />

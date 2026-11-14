@@ -108,6 +108,10 @@ public sealed class FeatureSettings
     public bool DragOut { get; set; } = true;
     /// <summary>Bring in videos from OBS, NVIDIA, Xbox Game Bar and Steam.</summary>
     public bool Recorders { get; set; } = true;
+    /// <summary>Zoom and pan with keyframes in the editor.</summary>
+    public bool ZoomPan { get; set; } = true;
+    /// <summary>Blur or pixelate parts of the picture (names, chat, HUD).</summary>
+    public bool Blur { get; set; } = true;
 
     public FeatureSettings Clone() => (FeatureSettings)MemberwiseClone();
 }

@@ -18,7 +18,8 @@ public sealed partial class RecorderRow : ObservableObject
     public bool IsSteam => Kind == RecorderKind.Steam;
     public bool CanAdd => !IsAdded && IsSupported && Path is not null;
     public bool HasPending => IsSteam && IsAdded && Pending > 0;
-    public string PathText => !IsSupported ? T("Windows only") : Path ?? T("Not found on this computer");
+    public string PathText => !IsSupported ? T("Windows only")
+        : Path ?? (Kind == RecorderKind.Custom ? T("Pick any folder with Change…") : T("Not found on this computer. Use Change… if it records somewhere else."));
     public string PendingText => P(Pending, "Copy {0} new clip", "Copy {0} new clips");
     public string StatusText => IsAdded ? T("In your library") : "";
 
@@ -27,7 +28,11 @@ public sealed partial class RecorderRow : ObservableObject
         RecorderKind.Obs => T("Recordings and replay buffer saves. Videos in a subfolder are tagged with the folder's name."),
         RecorderKind.Nvidia => T("ShadowPlay / NVIDIA app clips, tagged with the game from their folder."),
         RecorderKind.XboxGameBar => T("Game Bar captures, tagged with the game from their file name."),
-        _ => T("Steam keeps clips in a streaming format; Cnema copies them into MP4 files, tagged with the game."),
+        RecorderKind.Steam => T("Steam keeps clips in a streaming format; Cnema copies them into MP4 files, tagged with the game."),
+        RecorderKind.MacScreen => T("Recordings made with Screenshot (Shift-Command-5) or QuickTime."),
+        RecorderKind.SnippingTool => T("Screen recordings from the Snipping Tool."),
+        RecorderKind.Custom => T("Any other recorder or folder. Videos in a subfolder are tagged with the folder's name."),
+        _ => T("Clips sorted into a folder per game, tagged with the game."),
     };
 }
 
@@ -40,7 +45,8 @@ public sealed partial class RecordersViewModel : ObservableObject
     public RecordersViewModel(IReadOnlyList<RecorderImport> imports, bool tagByGame)
     {
         _tagByGame = tagByGame;
-        foreach (var info in RecorderService.Detect())
+        // Recorders that only exist on another system are left out.
+        foreach (var info in RecorderService.Detect().Where(i => i.Supported))
         {
             var added = imports.FirstOrDefault(i => i.Kind == info.Kind);
             Rows.Add(new RecorderRow

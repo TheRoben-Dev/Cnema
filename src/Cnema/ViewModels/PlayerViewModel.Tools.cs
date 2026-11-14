@@ -4,7 +4,7 @@ using CommunityToolkit.Mvvm.Input;
 namespace Cnema.ViewModels;
 
 /// <summary>The pages of the editor's tool panel, picked from the rail beside it.</summary>
-public enum ToolPage { Trim, Captions, Speed, Sound, Brand, Share }
+public enum ToolPage { Trim, Captions, Speed, Sound, Brand, Share, Zoom, Blur }
 
 // The editor's tool panel: a rail of labelled tools beside the video, and the page of the one picked.
 // Clicking the picked tool again folds the panel away for a bigger picture. Both are remembered.
@@ -19,9 +19,11 @@ public sealed partial class PlayerViewModel
     public bool IsSoundPage => IsToolsOpen && Page == ToolPage.Sound;
     public bool IsBrandPage => IsToolsOpen && Page == ToolPage.Brand;
     public bool IsSharePage => IsToolsOpen && Page == ToolPage.Share;
+    public bool IsZoomPage => IsToolsOpen && Page == ToolPage.Zoom;
+    public bool IsBlurPage => IsToolsOpen && Page == ToolPage.Blur;
 
     /// <summary>"Remove all captions and speed changes", under the pages it clears.</summary>
-    public bool ShowClearEffects => HasClearableEffects && (IsCaptionsPage || IsSpeedPage);
+    public bool ShowClearEffects => HasClearableEffects && (IsCaptionsPage || IsSpeedPage || IsZoomPage || IsBlurPage);
 
     /// <summary>The Sound page also holds the audio track switches, so it shows for either.</summary>
     public bool ShowSoundPage => ShowAudioTools || HasAudioTracks;
@@ -33,6 +35,8 @@ public sealed partial class PlayerViewModel
         ToolPage.Sound => T("Sound"),
         ToolPage.Brand => T("Watermark, intro and outro"),
         ToolPage.Share => T("Export and share"),
+        ToolPage.Zoom => T("Zoom and pan"),
+        ToolPage.Blur => T("Blur"),
         _ => T("Trim"),
     };
 
@@ -56,6 +60,8 @@ public sealed partial class PlayerViewModel
         ToolPage.Speed => ShowSpeedTools,
         ToolPage.Sound => ShowSoundPage,
         ToolPage.Brand => ShowBranding,
+        ToolPage.Zoom => ShowZoomTools,
+        ToolPage.Blur => ShowBlurTools,
         _ => true,
     };
 
@@ -75,8 +81,10 @@ public sealed partial class PlayerViewModel
                  {
                      nameof(IsTrimPage), nameof(IsCaptionsPage), nameof(IsSpeedPage), nameof(IsSoundPage),
                      nameof(IsBrandPage), nameof(IsSharePage), nameof(PageTitle), nameof(ShowClearEffects),
+                     nameof(IsZoomPage), nameof(IsBlurPage),
                  })
             OnPropertyChanged(name);
+        UpdateFramePreview();
         if (Fx.ToolsOpen == IsToolsOpen && Fx.ToolPage == Page.ToString()) return;
         Fx.ToolsOpen = IsToolsOpen;
         Fx.ToolPage = Page.ToString();

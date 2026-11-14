@@ -20,6 +20,8 @@ public partial class MainWindow : Window
         InitializeComponent();
         ApplyTitleBarInsets();
         SetUpDragOut();
+        FrameEdit.RegionChanged += (tag, area) => Vm?.Player.MoveFrameRegion(tag, area);
+        FrameEdit.RegionPicked += tag => Vm?.Player.PickFrameRegion(tag);
 
         VideoGrid.ElementPrepared += (_, e) => (e.Element.DataContext as VideoItemViewModel)?.AcquireThumbnail();
         VideoGrid.ElementClearing += (_, e) => (e.Element.DataContext as VideoItemViewModel)?.ReleaseThumbnail();
@@ -943,6 +945,8 @@ public partial class MainWindow : Window
             case "start": p.SeekCommand.Execute(0d); break;
             case "thumb": vm.UseFrameAsThumbnailCommand.Execute(null); break;
             case "grab": vm.SaveFrameCommand.Execute(null); break;
+            case "punchIn": p.PunchInCommand.Execute(null); break;
+            case "blur": p.AddBlurCommand.Execute(null); break;
             default: e.Handled = false; break;
         }
     }

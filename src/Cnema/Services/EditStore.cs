@@ -8,6 +8,8 @@ public sealed class SavedEdit
     public List<double[]> Parts { get; set; } = new();
     public List<CaptionSpec> Captions { get; set; } = new();
     public List<SpeedSpec> Speed { get; set; } = new();
+    public List<BlurSpec> Blurs { get; set; } = new();
+    public List<ZoomKey> Zoom { get; set; } = new();
     public DateTime SavedUtc { get; set; }
 }
 

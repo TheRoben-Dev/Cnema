@@ -75,7 +75,8 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(MarkerText))] private IReadOnlyList<TimelineMarker> _markers = Array.Empty<TimelineMarker>();
     public bool HasSegments => Segments.Count > 0;
     /// <summary>Work that opening another video would throw away: trim marks, parts, captions or speed changes.</summary>
-    public bool HasEdits => HasIn || HasOut || HasSegments || Captions.Count > 0 || SpeedSections.Count > 0;
+    public bool HasEdits => HasIn || HasOut || HasSegments || Captions.Count > 0 || SpeedSections.Count > 0 ||
+                            Blurs.Count > 0 || ZoomKeys.Count > 0;
     public bool HasAudioTracks => AudioTracks.Count > 1;
     public bool HasMarkers => Markers.Count > 0;
     public string ExportLabel => HasSegments ? P(Segments.Count + (HasRange ? 1 : 0), "Export {0} part", "Export {0} parts") : T("Export clip");
@@ -187,6 +188,7 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
         _volume = settings.Current.Volume;
         _preciseExport = settings.Current.PreciseExport;
         InitEffects();
+        InitFrameTools();
         InitTools();
         if (VlcBootstrap.LibVLC is not { } lib) return;
 
@@ -582,6 +584,8 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
             Parts = Segments.Select(s => new[] { s.Start, s.End }).ToList(),
             Captions = Captions.Select(c => c.ToSpec()).ToList(),
             Speed = SpeedSections.Select(s => s.ToSpec()).ToList(),
+            Blurs = Blurs.Select(b => b.ToSpec()).ToList(),
+            Zoom = ZoomKeys.Select(k => k.ToSpec()).ToList(),
         });
     }
 
@@ -608,6 +612,15 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
             s.Changed += EffectsChanged;
             SpeedSections.Add(s);
         }
+        foreach (var spec in e.Blurs)
+        {
+            var b = new BlurViewModel { Start = spec.Start, End = spec.End, Area = new Avalonia.Rect(spec.X, spec.Y, spec.W, spec.H) };
+            b.Look.Value = spec.Style;
+            b.Changed += EffectsChanged;
+            Blurs.Add(b);
+        }
+        foreach (var spec in e.Zoom)
+            AddKey(new ZoomKeyViewModel { At = spec.At, Zoom = spec.Zoom, X = spec.X, Y = spec.Y });
         EffectsChanged();
         return HasEdits;
     }
