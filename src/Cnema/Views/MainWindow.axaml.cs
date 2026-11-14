@@ -28,6 +28,8 @@ public partial class MainWindow : Window
         SurfaceHit.DoubleTapped += (_, _) => ToggleFullscreen();
         MiniHit.Tapped += (_, _) => Vm?.Player.TogglePlayCommand.Execute(null);
         MiniHit.DoubleTapped += (_, _) => Vm?.ExpandMiniPlayerCommand.Execute(null);
+        // Clicking the dimmed library around the quick player closes it, like Esc.
+        MiniScrim.Tapped += (_, _) => Vm?.CloseMiniPlayerCommand.Execute(null);
 
         // Tunnel so shortcuts work even when a button/slider has focus; skipped while typing.
         AddHandler(KeyDownEvent, OnPreviewKeyDown, RoutingStrategies.Tunnel);
@@ -630,7 +632,7 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// The mini player listens to a few player keys while the library has the keyboard: play/pause,
+    /// The quick player listens to a few player keys while the library has the keyboard: play/pause,
     /// seeking, mute and speed. Arrow keys up/down stay with the library lists. Esc closes it.
     /// </summary>
     private static bool HandleMiniPlayerKey(MainViewModel vm, KeyEventArgs e)
