@@ -1633,25 +1633,35 @@
       </StackPanel>
     </Border>
 
-    <!-- ======================= PLAYER ======================= -->
+    <!-- ======================= PLAYER (EDITOR) ======================= -->
+    <!-- Video on the left; a rail of labelled tools and the page of the picked one on the right; under it all,
+         the timeline, the transport and a bar with the everyday tools as buttons. -->
     <Grid x:Name="PlayerView" RowDefinitions="Auto,*,Auto" IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).IsPlayerOpen}" Background="Black"
           DataContext="{Binding Player}" x:DataType="vm:PlayerViewModel">
 
       <!-- Top bar -->
       <Border Grid.Row="0" Background="{DynamicResource Bg1}" Height="52" x:Name="PlayerTopBar">
-        <Grid x:Name="PlayerTopGrid" ColumnDefinitions="Auto,*,Auto">
+        <Grid x:Name="PlayerTopGrid" ColumnDefinitions="Auto,Auto,*,Auto">
           <Button Classes="ghost" Command="{Binding #Root.((vm:MainViewModel)DataContext).ClosePlayerCommand}"
-                  ToolTip.Tip="Back to library (Esc)" VerticalAlignment="Center" Margin="12,0,8,0">
+                  ToolTip.Tip="Back to library (Esc)" VerticalAlignment="Center" Margin="12,0,4,0">
             <StackPanel Orientation="Horizontal" Spacing="6">
               <PathIcon Data="{StaticResource IcBack}" Width="16" Height="16" />
               <TextBlock Text="Library" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
             </StackPanel>
           </Button>
-          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center" IsHitTestVisible="False">
-            <TextBlock Text="{Binding Title}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" MaxWidth="560" />
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center" Margin="0,0,10,0">
+            <Button Classes="ghost" Padding="6" Command="{Binding #Root.((vm:MainViewModel)DataContext).PreviousClipCommand}" ToolTip.Tip="Previous video (←)">
+              <PathIcon Data="{StaticResource IcChevronLeft}" Width="18" Height="18" />
+            </Button>
+            <Button Classes="ghost" Padding="6" Command="{Binding #Root.((vm:MainViewModel)DataContext).NextClipCommand}" ToolTip.Tip="Next video (→)">
+              <PathIcon Data="{StaticResource IcChevronRight}" Width="18" Height="18" />
+            </Button>
+          </StackPanel>
+          <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center" IsHitTestVisible="False">
+            <TextBlock Text="{Binding Title}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" MaxWidth="520" />
             <TextBlock Classes="dim" Text="{Binding Subtitle}" FontSize="12" VerticalAlignment="Center" />
           </StackPanel>
-          <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" Margin="0,0,12,0">
+          <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" Margin="0,0,12,0">
             <Button Classes="ghost" ToolTip.Tip="Exports running in the background"
                     IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).Exports.HasJobs}">
               <StackPanel Orientation="Horizontal" Spacing="6">
@@ -1664,20 +1674,6 @@
                 </Flyout>
               </Button.Flyout>
             </Button>
-            <Button Classes="ghost" Classes.on="{Binding IsEffectsOpen}" Command="{Binding ToggleEffectsCommand}"
-                    IsVisible="{Binding ShowEffectsButton}" ToolTip.Tip="Captions, slow motion, sound and watermark (Shift+E)">
-              <StackPanel Orientation="Horizontal" Spacing="6">
-                <PathIcon Data="{StaticResource IcSparkle}" Width="15" Height="15" />
-                <TextBlock Text="{Binding EffectsButtonText}" FontSize="12" VerticalAlignment="Center" />
-              </StackPanel>
-            </Button>
-            <Button Classes="ghost" ToolTip.Tip="Use this frame as the thumbnail (T)"
-                    Command="{Binding #Root.((vm:MainViewModel)DataContext).UseFrameAsThumbnailCommand}">
-              <StackPanel Orientation="Horizontal" Spacing="6">
-                <PathIcon Data="{StaticResource IcImage}" Width="15" Height="15" />
-                <TextBlock Text="Set thumbnail" FontSize="12" VerticalAlignment="Center" />
-              </StackPanel>
-            </Button>
             <Button Classes="ghost" ToolTip.Tip="Back to the quick player: plain playback over the library"
                     IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).ShowMiniPlayerButton}"
                     Command="{Binding #Root.((vm:MainViewModel)DataContext).ShrinkToMiniPlayerCommand}">
@@ -1686,12 +1682,43 @@
                 <TextBlock Text="Quick player" FontSize="12" VerticalAlignment="Center" />
               </StackPanel>
             </Button>
+            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Margin="10,0,0,0">
+              <Border Background="{DynamicResource Bg2}" CornerRadius="8" Padding="3" VerticalAlignment="Center" Margin="0,0,2,0">
+                <StackPanel Orientation="Horizontal">
+                  <RadioButton Classes="seg" GroupName="mode" Content="Lossless" IsChecked="{Binding !PreciseExport}"
+                               ToolTip.Tip="Stream copy: instant, no quality loss. Start snaps to the nearest earlier keyframe." />
+                  <RadioButton Classes="seg" GroupName="mode" Content="Precise" IsChecked="{Binding PreciseExport}"
+                               ToolTip.Tip="Re-encode to H.264/AAC MP4: frame-accurate cut, slower." />
+                </StackPanel>
+              </Border>
+              <Button Classes="soft" IsVisible="{Binding !IsExporting}" ToolTip.Tip="Share presets: Discord, vertical, GIF"
+                      Command="{Binding PickPageCommand}" CommandParameter="{x:Static vm:ToolPage.Share}">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <PathIcon Data="{StaticResource IcShare}" Width="14" Height="14" />
+                  <TextBlock Text="Share" />
+                </StackPanel>
+              </Button>
+              <Button Classes="accent" Command="{Binding ExportCommand}" IsVisible="{Binding !IsExporting}"
+                      ToolTip.Tip="Export clip (E)">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <PathIcon Data="{StaticResource IcExport}" Width="15" Height="15" />
+                  <TextBlock Text="{Binding ExportLabel}" />
+                </StackPanel>
+              </Button>
+              <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsExporting}">
+                <ProgressBar Width="150" Height="6" MinHeight="6" Value="{Binding ExportProgress}" VerticalAlignment="Center" CornerRadius="3" />
+                <TextBlock Classes="mono" FontSize="12" Text="{Binding ExportProgress, StringFormat='{}{0:0}%'}" VerticalAlignment="Center" />
+                <Button Classes="ghost" Command="{Binding CancelExportCommand}" ToolTip.Tip="Cancel export">
+                  <PathIcon Data="{StaticResource IcClose}" Width="14" Height="14" />
+                </Button>
+              </StackPanel>
+            </StackPanel>
           </StackPanel>
         </Grid>
       </Border>
 
-      <!-- Video, and the Effects panel beside it -->
-      <Grid Grid.Row="1" ColumnDefinitions="*,Auto">
+      <!-- Video | rail | tool page -->
+      <Grid Grid.Row="1" ColumnDefinitions="*,Auto,Auto">
       <Panel>
         <c:VideoSurface x:Name="Surface" Frames="{Binding Frames}"
                           SourceWidth="{Binding VideoWidth}" SourceHeight="{Binding VideoHeight}" />
@@ -1712,35 +1739,178 @@
         </Border>
       </Panel>
 
-      <!-- ===== EFFECTS PANEL ===== -->
-      <Border Grid.Column="1" Width="340" Background="{DynamicResource Bg1}" BorderBrush="{DynamicResource Line}" BorderThickness="1,0,0,0"
-              IsVisible="{Binding IsEffectsOpen}">
+      <!-- ===== TOOL RAIL ===== -->
+      <Border Grid.Column="1" Background="{DynamicResource Bg1}" BorderBrush="{DynamicResource Line}" BorderThickness="1,0,0,0" Padding="6,10">
+        <StackPanel Spacing="4">
+          <Button Classes="rail" Classes.on="{Binding IsTrimPage}" Command="{Binding PickPageCommand}" CommandParameter="{x:Static vm:ToolPage.Trim}"
+                  ToolTip.Tip="Selection, parts, markers and chapters">
+            <StackPanel Spacing="4"><PathIcon Data="{StaticResource IcCut}" /><TextBlock Text="Trim" /></StackPanel>
+          </Button>
+          <Button Classes="rail" Classes.on="{Binding IsCaptionsPage}" Command="{Binding PickPageCommand}" CommandParameter="{x:Static vm:ToolPage.Captions}"
+                  IsVisible="{Binding ShowCaptionTools}" ToolTip.Tip="Text over the video">
+            <StackPanel Spacing="4"><PathIcon Data="{StaticResource IcText}" /><TextBlock Text="Captions" /></StackPanel>
+          </Button>
+          <Button Classes="rail" Classes.on="{Binding IsSpeedPage}" Command="{Binding PickPageCommand}" CommandParameter="{x:Static vm:ToolPage.Speed}"
+                  IsVisible="{Binding ShowSpeedTools}" ToolTip.Tip="Slow motion and fast forward">
+            <StackPanel Spacing="4"><PathIcon Data="{StaticResource IcSpeed}" /><TextBlock Text="Speed" /></StackPanel>
+          </Button>
+          <Button Classes="rail" Classes.on="{Binding IsSoundPage}" Command="{Binding PickPageCommand}" CommandParameter="{x:Static vm:ToolPage.Sound}"
+                  IsVisible="{Binding ShowSoundPage}" ToolTip.Tip="Loudness, voice and audio tracks">
+            <StackPanel Spacing="4"><PathIcon Data="{StaticResource IcVolume}" /><TextBlock Text="Sound" /></StackPanel>
+          </Button>
+          <Button Classes="rail" Classes.on="{Binding IsBrandPage}" Command="{Binding PickPageCommand}" CommandParameter="{x:Static vm:ToolPage.Brand}"
+                  IsVisible="{Binding ShowBranding}" ToolTip.Tip="Watermark, intro and outro">
+            <StackPanel Spacing="4"><PathIcon Data="{StaticResource IcImage}" /><TextBlock Text="Brand" /></StackPanel>
+          </Button>
+          <Button Classes="rail" Classes.on="{Binding IsSharePage}" Command="{Binding PickPageCommand}" CommandParameter="{x:Static vm:ToolPage.Share}"
+                  ToolTip.Tip="Export modes and share presets">
+            <StackPanel Spacing="4"><PathIcon Data="{StaticResource IcShare}" /><TextBlock Text="Export" /></StackPanel>
+          </Button>
+        </StackPanel>
+      </Border>
+
+      <!-- ===== TOOL PAGE ===== -->
+      <Border Grid.Column="2" Width="330" Background="{DynamicResource Bg1}" BorderBrush="{DynamicResource Line}" BorderThickness="1,0,0,0"
+              IsVisible="{Binding IsToolsOpen}">
         <DockPanel>
-          <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="16,14,10,2">
-            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-              <PathIcon Data="{StaticResource IcSparkle}" Width="15" Height="15" Foreground="{DynamicResource Cyan}" />
-              <TextBlock Text="Effects" FontSize="15" FontWeight="Bold" />
-            </StackPanel>
-            <Button Grid.Column="1" Classes="ghost" Command="{Binding ToggleEffectsCommand}" ToolTip.Tip="Close (Shift+E)">
-              <PathIcon Data="{StaticResource IcClose}" Width="12" Height="12" />
+          <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="16,14,10,8">
+            <TextBlock Text="{Binding PageTitle}" FontSize="15" FontWeight="Bold" VerticalAlignment="Center" />
+            <Button Grid.Column="1" Classes="ghost" Command="{Binding ToggleToolsCommand}" ToolTip.Tip="Fold the panel away for a bigger picture (Shift+E)">
+              <PathIcon Data="{StaticResource IcChevronRight}" Width="16" Height="16" />
             </Button>
           </Grid>
-          <TextBlock DockPanel.Dock="Top" Classes="dim" FontSize="11" TextWrapping="Wrap" Margin="16,0,16,10" Text="{Binding EffectsNote}" />
           <ScrollViewer x:Name="EffectsScroll">
-            <StackPanel Spacing="16" Margin="12,0,12,18">
+            <StackPanel Spacing="14" Margin="12,0,12,18">
+
+              <!-- trim -->
+              <StackPanel Spacing="12" IsVisible="{Binding IsTrimPage}">
+                <Border Classes="fxcard">
+                  <StackPanel Spacing="8">
+                    <TextBlock Classes="label" Text="SELECTION" />
+                    <Grid ColumnDefinitions="40,*,Auto,Auto" RowDefinitions="Auto,Auto">
+                      <TextBlock Text="In" FontSize="12" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="1" Classes="mono" Text="{Binding InText}" Foreground="{DynamicResource Cyan}" FontSize="12" VerticalAlignment="Center" />
+                      <Button Grid.Column="2" Classes="ghost" Padding="7,4" Command="{Binding SetInCommand}" ToolTip.Tip="Set the start at the playhead (I)">
+                        <TextBlock Text="Set" FontSize="11" />
+                      </Button>
+                      <Button Grid.Column="3" Classes="ghost" Padding="7,4" Command="{Binding JumpToInCommand}" ToolTip.Tip="Go to the start (Shift+I)">
+                        <TextBlock Text="Go to" FontSize="11" />
+                      </Button>
+                      <TextBlock Grid.Row="1" Text="Out" FontSize="12" VerticalAlignment="Center" />
+                      <TextBlock Grid.Row="1" Grid.Column="1" Classes="mono" Text="{Binding OutText}" Foreground="{DynamicResource Cyan}" FontSize="12" VerticalAlignment="Center" />
+                      <Button Grid.Row="1" Grid.Column="2" Classes="ghost" Padding="7,4" Command="{Binding SetOutCommand}" ToolTip.Tip="Set the end at the playhead (O)">
+                        <TextBlock Text="Set" FontSize="11" />
+                      </Button>
+                      <Button Grid.Row="1" Grid.Column="3" Classes="ghost" Padding="7,4" Command="{Binding JumpToOutCommand}" ToolTip.Tip="Go to the end (Shift+O)">
+                        <TextBlock Text="Go to" FontSize="11" />
+                      </Button>
+                    </Grid>
+                    <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" IsVisible="{Binding !HasRange}"
+                               Text="Mark where the clip starts and ends: In and Out in the bar below, or drag the brackets on the timeline. Without a selection, Export saves the whole video." />
+                    <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding HasRange}">
+                      <TextBlock Classes="dim" Text="Length" FontSize="12" VerticalAlignment="Center" />
+                      <TextBlock Classes="mono" Text="{Binding RangeText}" FontSize="12" VerticalAlignment="Center" />
+                    </StackPanel>
+                  </StackPanel>
+                </Border>
+
+                <Border Classes="fxcard">
+                  <StackPanel Spacing="8">
+                    <TextBlock Classes="label" Text="PARTS" />
+                    <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap"
+                               Text="Keep several moments in one export: mark one, Add part, mark the next. Export joins them in order." />
+                    <Button Classes="soft" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Command="{Binding AddSegmentCommand}"
+                            IsEnabled="{Binding HasRange}" ToolTip.Tip="Keep this selection as one part (A)">
+                      <StackPanel Orientation="Horizontal" Spacing="8">
+                        <PathIcon Data="{StaticResource IcAdd}" Width="12" Height="12" />
+                        <TextBlock Text="Add the selection as a part" FontSize="12" />
+                        <TextBlock Classes="hint" Text="A" />
+                      </StackPanel>
+                    </Button>
+                    <ItemsControl ItemsSource="{Binding Segments}" IsVisible="{Binding HasSegments}">
+                      <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                      </ItemsControl.ItemsPanel>
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                          <Border Classes="part" Margin="0,0,6,6">
+                            <StackPanel Orientation="Horizontal" Spacing="2">
+                              <Button Classes="ghost" Padding="8,3" ToolTip.Tip="Jump to this part"
+                                      Command="{Binding #Root.((vm:MainViewModel)DataContext).Player.JumpToSegmentCommand}" CommandParameter="{Binding}">
+                                <TextBlock Classes="mono" FontSize="12" Text="{Binding Text}" />
+                              </Button>
+                              <Button Classes="ghost" Padding="5,3" ToolTip.Tip="Remove this part"
+                                      Command="{Binding #Root.((vm:MainViewModel)DataContext).Player.RemoveSegmentCommand}" CommandParameter="{Binding}">
+                                <PathIcon Data="{StaticResource IcClose}" Width="10" Height="10" />
+                              </Button>
+                            </StackPanel>
+                          </Border>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </StackPanel>
+                </Border>
+
+                <Border Classes="fxcard" IsVisible="{Binding HasMarkers}">
+                  <StackPanel Spacing="8">
+                    <TextBlock Classes="label" Text="MARKERS" />
+                    <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap"
+                               Text="Loud moments and bookmarks, shown as ticks on the timeline." />
+                    <Grid ColumnDefinitions="*,Auto,Auto">
+                      <TextBlock Text="{Binding MarkerText}" FontSize="12" VerticalAlignment="Center" />
+                      <Button Grid.Column="1" Classes="ghost" Padding="7,4" Command="{Binding PreviousMarkerCommand}" ToolTip.Tip="Previous marker (Shift+N)">
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                          <PathIcon Data="{StaticResource IcChevronLeft}" Width="12" Height="12" />
+                          <TextBlock Text="Previous" FontSize="11" />
+                        </StackPanel>
+                      </Button>
+                      <Button Grid.Column="2" Classes="ghost" Padding="7,4" Command="{Binding NextMarkerCommand}" ToolTip.Tip="Next marker (N)">
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                          <TextBlock Text="Next" FontSize="11" />
+                          <PathIcon Data="{StaticResource IcChevronRight}" Width="12" Height="12" />
+                        </StackPanel>
+                      </Button>
+                    </Grid>
+                  </StackPanel>
+                </Border>
+
+                <Border Classes="fxcard" IsVisible="{Binding HasChapters}">
+                  <StackPanel Spacing="6">
+                    <TextBlock Classes="label" Text="CHAPTERS" />
+                    <ItemsControl ItemsSource="{Binding ChapterList}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:ChapterViewModel">
+                          <Grid ColumnDefinitions="*,Auto">
+                            <Button Classes="menurow" Classes.on="{Binding IsCurrent}"
+                                    Command="{Binding #Root.((vm:MainViewModel)DataContext).Player.JumpToChapterCommand}" CommandParameter="{Binding}">
+                              <Grid ColumnDefinitions="52,*,Auto">
+                                <TextBlock Classes="mono" Text="{Binding StartText}" FontSize="11" />
+                                <TextBlock Grid.Column="1" Text="{Binding Title}" FontSize="12" TextTrimming="CharacterEllipsis" />
+                                <TextBlock Grid.Column="2" Classes="dim mono" Text="{Binding LengthText}" FontSize="11" Margin="8,0,0,0" />
+                              </Grid>
+                            </Button>
+                            <Button Grid.Column="1" Classes="ghost" Padding="7" Margin="2,0,0,0"
+                                    ToolTip.Tip="Select this chapter, to export or loop it"
+                                    Command="{Binding #Root.((vm:MainViewModel)DataContext).Player.SelectChapterCommand}" CommandParameter="{Binding}">
+                              <PathIcon Data="{StaticResource IcCut}" Width="12" Height="12" />
+                            </Button>
+                          </Grid>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </StackPanel>
+                </Border>
+              </StackPanel>
 
               <!-- captions -->
-              <StackPanel Spacing="8" IsVisible="{Binding ShowCaptionTools}">
-                <Grid ColumnDefinitions="Auto,*,Auto">
-                  <PathIcon Data="{StaticResource IcText}" Width="13" Height="13" Margin="4,0,8,0" Foreground="{DynamicResource TextDim}" />
-                  <TextBlock Grid.Column="1" Classes="label" Text="CAPTIONS" VerticalAlignment="Center" />
-                  <Button Grid.Column="2" Classes="soft" Padding="10,5" Command="{Binding AddCaptionCommand}" ToolTip.Tip="Add a caption at the playhead (C)">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                      <PathIcon Data="{StaticResource IcAdd}" Width="11" Height="11" />
-                      <TextBlock Text="Add caption" FontSize="12" />
-                    </StackPanel>
-                  </Button>
-                </Grid>
+              <StackPanel Spacing="8" IsVisible="{Binding IsCaptionsPage}">
+                <Button Classes="soft" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Command="{Binding AddCaptionCommand}" ToolTip.Tip="Add a caption at the playhead (C)">
+                  <StackPanel Orientation="Horizontal" Spacing="8">
+                    <PathIcon Data="{StaticResource IcAdd}" Width="12" Height="12" />
+                    <TextBlock Text="Add a caption at the playhead" FontSize="12" />
+                    <TextBlock Classes="hint" Text="C" />
+                  </StackPanel>
+                </Button>
                 <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Margin="4,0" IsVisible="{Binding !Captions.Count}"
                            Text="Text over the video, burned into exports. A new caption starts at the playhead and lasts 3 seconds." />
                 <ItemsControl x:Name="CaptionList" ItemsSource="{Binding Captions}">
@@ -1779,19 +1949,15 @@
                 </ItemsControl>
               </StackPanel>
 
+
               <!-- slow motion / fast forward -->
-              <StackPanel Spacing="8" IsVisible="{Binding ShowSpeedTools}">
-                <Grid ColumnDefinitions="Auto,*,Auto">
-                  <PathIcon Data="{StaticResource IcSpeed}" Width="13" Height="13" Margin="4,0,8,0" Foreground="{DynamicResource TextDim}" />
-                  <TextBlock Grid.Column="1" Classes="label" Text="SPEED" VerticalAlignment="Center" />
-                  <Button Grid.Column="2" Classes="soft" Padding="10,5" Command="{Binding AddSpeedSectionCommand}"
-                          ToolTip.Tip="Slow down or speed up part of the clip, starting at the playhead">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                      <PathIcon Data="{StaticResource IcAdd}" Width="11" Height="11" />
-                      <TextBlock Text="Add slow-mo" FontSize="12" />
-                    </StackPanel>
-                  </Button>
-                </Grid>
+              <StackPanel Spacing="8" IsVisible="{Binding IsSpeedPage}">
+                <Button Classes="soft" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Command="{Binding AddSpeedSectionCommand}" ToolTip.Tip="Slow down or speed up part of the clip, starting at the playhead">
+                  <StackPanel Orientation="Horizontal" Spacing="8">
+                    <PathIcon Data="{StaticResource IcAdd}" Width="12" Height="12" />
+                    <TextBlock Text="Add slow motion at the playhead" FontSize="12" />
+                  </StackPanel>
+                </Button>
                 <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Margin="4,0" IsVisible="{Binding !SpeedSections.Count}"
                            Text="Slow motion or fast forward for part of the clip; the player plays it at that speed so you can check it. Slow motion is smoothest on 60 fps recordings." />
                 <ItemsControl ItemsSource="{Binding SpeedSections}">
@@ -1830,12 +1996,11 @@
                 </ItemsControl>
               </StackPanel>
 
+
+              <!-- sound and audio tracks -->
+              <StackPanel Spacing="12" IsVisible="{Binding IsSoundPage}">
               <!-- sound -->
               <StackPanel Spacing="8" IsVisible="{Binding ShowAudioTools}">
-                <Grid ColumnDefinitions="Auto,*">
-                  <PathIcon Data="{StaticResource IcVolume}" Width="13" Height="13" Margin="4,0,8,0" Foreground="{DynamicResource TextDim}" />
-                  <TextBlock Grid.Column="1" Classes="label" Text="SOUND" VerticalAlignment="Center" />
-                </Grid>
                 <Border Classes="fxcard">
                   <StackPanel Spacing="10">
                     <Grid ColumnDefinitions="*,Auto">
@@ -1869,12 +2034,28 @@
                 </Border>
               </StackPanel>
 
+
+                <Border Classes="fxcard" IsVisible="{Binding HasAudioTracks}">
+                  <StackPanel Spacing="8">
+                    <TextBlock Classes="label" Text="AUDIO TRACKS" />
+                    <ItemsControl ItemsSource="{Binding AudioTracks}">
+                      <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                      </ItemsControl.ItemsPanel>
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                          <ToggleButton Classes="mod" IsChecked="{Binding Enabled}" Content="{Binding Label}" Margin="0,0,6,6"
+                                        ToolTip.Tip="Switched off: this track is left out of exports. Playback uses the first track that is on." />
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="Export keeps the tracks that are on. Share presets mix them into one." />
+                  </StackPanel>
+                </Border>
+              </StackPanel>
+
               <!-- watermark, intro, outro -->
-              <StackPanel Spacing="8" IsVisible="{Binding ShowBranding}">
-                <Grid ColumnDefinitions="Auto,*">
-                  <PathIcon Data="{StaticResource IcImage}" Width="13" Height="13" Margin="4,0,8,0" Foreground="{DynamicResource TextDim}" />
-                  <TextBlock Grid.Column="1" Classes="label" Text="WATERMARK AND INTRO" VerticalAlignment="Center" />
-                </Grid>
+              <StackPanel Spacing="8" IsVisible="{Binding IsBrandPage}">
                 <Border Classes="fxcard">
                   <StackPanel Spacing="10">
                     <Grid ColumnDefinitions="*,Auto">
@@ -1904,8 +2085,60 @@
                 </Border>
               </StackPanel>
 
+
+              <!-- export and share -->
+              <StackPanel Spacing="12" IsVisible="{Binding IsSharePage}">
+                <Border Classes="fxcard">
+                  <StackPanel Spacing="10">
+                    <TextBlock Classes="label" Text="EXPORT CLIP" />
+                    <RadioButton GroupName="exportmode" IsChecked="{Binding !PreciseExport}">
+                      <StackPanel Spacing="2">
+                        <TextBlock Text="Lossless" FontSize="12" FontWeight="SemiBold" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="Instant, no quality loss. The start snaps to the keyframe before your In point." />
+                      </StackPanel>
+                    </RadioButton>
+                    <RadioButton GroupName="exportmode" IsChecked="{Binding PreciseExport}">
+                      <StackPanel Spacing="2">
+                        <TextBlock Text="Precise" FontSize="12" FontWeight="SemiBold" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="Frame-accurate. Re-encodes to H.264, so it takes a little while. Effects always export this way." />
+                      </StackPanel>
+                    </RadioButton>
+                  </StackPanel>
+                </Border>
+                <Border Classes="fxcard">
+                  <StackPanel Spacing="8">
+                    <TextBlock Classes="label" Text="SHARE" />
+                    <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="Converts the selection (or the whole video) and saves it next to the original." />
+                    <Button Classes="preset" Command="{Binding ShareCommand}" CommandParameter="Discord10">
+                      <StackPanel Spacing="1">
+                        <TextBlock Text="Discord" FontSize="12" FontWeight="SemiBold" />
+                        <TextBlock Classes="dim" FontSize="11" Text="Fits in 10 MB" />
+                      </StackPanel>
+                    </Button>
+                    <Button Classes="preset" Command="{Binding ShareCommand}" CommandParameter="Discord50">
+                      <StackPanel Spacing="1">
+                        <TextBlock Text="Discord Nitro Basic" FontSize="12" FontWeight="SemiBold" />
+                        <TextBlock Classes="dim" FontSize="11" Text="Fits in 50 MB" />
+                      </StackPanel>
+                    </Button>
+                    <Button Classes="preset" Command="{Binding ShareCommand}" CommandParameter="Vertical">
+                      <StackPanel Spacing="1">
+                        <TextBlock Text="Vertical 9:16" FontSize="12" FontWeight="SemiBold" />
+                        <TextBlock Classes="dim" FontSize="11" Text="Shorts, Reels and TikTok" />
+                      </StackPanel>
+                    </Button>
+                    <Button Classes="preset" Command="{Binding ShareCommand}" CommandParameter="Gif">
+                      <StackPanel Spacing="1">
+                        <TextBlock Text="GIF" FontSize="12" FontWeight="SemiBold" />
+                        <TextBlock Classes="dim" FontSize="11" Text="Up to 20 seconds" />
+                      </StackPanel>
+                    </Button>
+                  </StackPanel>
+                </Border>
+              </StackPanel>
+
               <Button Classes="ghost" HorizontalAlignment="Center" FontSize="12" Content="Remove all captions and speed changes"
-                      Command="{Binding ClearEffectsCommand}" IsVisible="{Binding HasClearableEffects}" />
+                      Command="{Binding ClearEffectsCommand}" IsVisible="{Binding ShowClearEffects}" />
             </StackPanel>
           </ScrollViewer>
         </DockPanel>
@@ -1914,7 +2147,7 @@
 
       <!-- Controls -->
       <Border Grid.Row="2" Background="{DynamicResource Bg1}" BorderBrush="{DynamicResource Line}" BorderThickness="0,1,0,0"
-              Padding="18,4,18,14" x:Name="ControlsPanel">
+              Padding="18,4,18,10" x:Name="ControlsPanel">
         <StackPanel Spacing="6">
           <c:TrimTimeline Duration="{Binding Duration}" Position="{Binding Position}"
                           InPoint="{Binding InPoint}" OutPoint="{Binding OutPoint}"
@@ -1954,40 +2187,6 @@
             </StackPanel>
 
             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right" VerticalAlignment="Center">
-              <Button Classes="ghost" IsVisible="{Binding HasChapters}" ToolTip.Tip="Chapters from bookmarks (Ctrl+← / Ctrl+→)">
-                <StackPanel Orientation="Horizontal" Spacing="6">
-                  <PathIcon Data="{StaticResource IcChapters}" Width="14" Height="14" />
-                  <TextBlock Text="{Binding ChapterText}" FontSize="12" MaxWidth="170" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                </StackPanel>
-                <Button.Flyout>
-                  <Flyout Placement="TopEdgeAlignedRight">
-                    <StackPanel Spacing="2" MinWidth="300">
-                      <TextBlock Classes="label" Text="CHAPTERS" Margin="8,0,0,6" />
-                      <ItemsControl ItemsSource="{Binding ChapterList}">
-                        <ItemsControl.ItemTemplate>
-                          <DataTemplate x:DataType="vm:ChapterViewModel">
-                            <Grid ColumnDefinitions="*,Auto">
-                              <Button Classes="menurow" Classes.on="{Binding IsCurrent}" Click="OnFlyoutRowClick"
-                                      Command="{Binding #Root.((vm:MainViewModel)DataContext).Player.JumpToChapterCommand}" CommandParameter="{Binding}">
-                                <Grid ColumnDefinitions="56,*,Auto">
-                                  <TextBlock Classes="mono" Text="{Binding StartText}" FontSize="12" />
-                                  <TextBlock Grid.Column="1" Text="{Binding Title}" FontSize="12" TextTrimming="CharacterEllipsis" />
-                                  <TextBlock Grid.Column="2" Classes="dim mono" Text="{Binding LengthText}" FontSize="11" Margin="10,0,0,0" />
-                                </Grid>
-                              </Button>
-                              <Button Grid.Column="1" Classes="ghost" Padding="7" Margin="2,0,0,0" Click="OnFlyoutRowClick"
-                                      ToolTip.Tip="Select this chapter, to export or loop it"
-                                      Command="{Binding #Root.((vm:MainViewModel)DataContext).Player.SelectChapterCommand}" CommandParameter="{Binding}">
-                                <PathIcon Data="{StaticResource IcCut}" Width="12" Height="12" />
-                              </Button>
-                            </Grid>
-                          </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                      </ItemsControl>
-                    </StackPanel>
-                  </Flyout>
-                </Button.Flyout>
-              </Button>
               <Button Classes="ghost" Classes.on="{Binding LoopRange}" Command="{Binding AbLoopCommand}" ToolTip.Tip="{Binding AbTip}" MinWidth="54">
                 <StackPanel Orientation="Horizontal" Spacing="5">
                   <PathIcon Data="{StaticResource IcLoop}" Width="13" Height="13" />
@@ -2025,131 +2224,92 @@
             </StackPanel>
           </Grid>
 
-          <!-- Trim strip -->
-          <Border Background="{DynamicResource Bg2}" CornerRadius="12" Padding="12,8" Margin="0,4,0,0">
-           <StackPanel Spacing="8">
-            <Grid ColumnDefinitions="Auto,*,Auto">
-              <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                <PathIcon Data="{StaticResource IcCut}" Width="15" Height="15" Foreground="{DynamicResource Cyan}" />
-                <TextBlock Classes="label" Text="TRIM" VerticalAlignment="Center" Margin="0,0,8,0" />
 
-                <Button Classes="soft" Command="{Binding SetInCommand}" ToolTip.Tip="Set in point at playhead (I)">
-                  <StackPanel Orientation="Horizontal" Spacing="8">
-                    <Border Classes="key"><TextBlock Text="I" /></Border>
-                    <TextBlock Text="In" FontWeight="SemiBold" />
-                    <TextBlock Classes="mono" Text="{Binding InText}" Foreground="{DynamicResource Cyan}" />
-                  </StackPanel>
-                </Button>
-                <Button Classes="soft" Command="{Binding SetOutCommand}" ToolTip.Tip="Set out point at playhead (O)">
-                  <StackPanel Orientation="Horizontal" Spacing="8">
-                    <Border Classes="key"><TextBlock Text="O" /></Border>
-                    <TextBlock Text="Out" FontWeight="SemiBold" />
-                    <TextBlock Classes="mono" Text="{Binding OutText}" Foreground="{DynamicResource Cyan}" />
-                  </StackPanel>
-                </Button>
-                <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding HasRange}" VerticalAlignment="Center" Margin="6,0,0,0">
-                  <TextBlock Classes="dim" Text="Length" FontSize="12" VerticalAlignment="Center" />
-                  <TextBlock Classes="mono" Text="{Binding RangeText}" FontSize="12" VerticalAlignment="Center" />
-                  <Button Classes="ghost" Command="{Binding PreviewRangeCommand}" ToolTip.Tip="Play selection (P)" Margin="6,0,0,0">
-                    <PathIcon Data="{StaticResource IcPlay}" Width="15" Height="15" />
-                  </Button>
-                  <ToggleButton Classes="ghost" IsChecked="{Binding LoopRange}" ToolTip.Tip="Loop selection (L)">
-                    <PathIcon Data="{StaticResource IcLoop}" Width="15" Height="15" />
-                  </ToggleButton>
-                  <Button Classes="ghost" Command="{Binding ClearRangeCommand}" ToolTip.Tip="Clear in/out (X)">
-                    <PathIcon Data="{StaticResource IcClose}" Width="14" Height="14" />
-                  </Button>
-                  <Button Classes="soft" Command="{Binding AddSegmentCommand}" Padding="10,5"
-                          ToolTip.Tip="Keep this selection as one part and mark another; Export joins all parts (A)">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                      <Border Classes="key"><TextBlock Text="A" /></Border>
-                      <TextBlock Text="Add part" FontSize="12" FontWeight="SemiBold" />
-                    </StackPanel>
-                  </Button>
+          <!-- Tool bar: the everyday tools as buttons -->
+          <Grid Margin="0,2,0,0">
+            <WrapPanel Orientation="Horizontal" VerticalAlignment="Center">
+              <Button Classes="tool" Command="{Binding SetInCommand}" ToolTip.Tip="Start the selection at the playhead (I)">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <TextBlock Text="In" FontWeight="SemiBold" VerticalAlignment="Center" />
+                  <TextBlock Classes="mono" Text="{Binding InText}" Foreground="{DynamicResource Cyan}" FontSize="12" VerticalAlignment="Center" />
+                  <TextBlock Classes="hint" Text="I" />
                 </StackPanel>
-              </StackPanel>
-
-              <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                <Border Background="{DynamicResource Bg1}" CornerRadius="8" Padding="3">
-                  <StackPanel Orientation="Horizontal">
-                    <RadioButton Classes="seg" GroupName="mode" Content="Lossless" IsChecked="{Binding !PreciseExport}"
-                                 ToolTip.Tip="Stream copy: instant, no quality loss. Start snaps to the nearest earlier keyframe." />
-                    <RadioButton Classes="seg" GroupName="mode" Content="Precise" IsChecked="{Binding PreciseExport}"
-                                 ToolTip.Tip="Re-encode to H.264/AAC MP4: frame-accurate cut, slower." />
-                  </StackPanel>
-                </Border>
-                <Button Classes="accent" Command="{Binding ExportCommand}" IsVisible="{Binding !IsExporting}"
-                        ToolTip.Tip="Export clip (E)">
-                  <StackPanel Orientation="Horizontal" Spacing="8">
-                    <PathIcon Data="{StaticResource IcExport}" Width="15" Height="15" />
-                    <TextBlock Text="{Binding ExportLabel}" />
-                  </StackPanel>
-                </Button>
-                <Button Classes="soft" IsVisible="{Binding !IsExporting}" ToolTip.Tip="Convert the selection (or the whole video) for sharing">
-                  <StackPanel Orientation="Horizontal" Spacing="6">
-                    <TextBlock Text="Share" />
-                    <TextBlock Text="▾" Opacity="0.7" />
-                  </StackPanel>
-                  <Button.Flyout>
-                    <MenuFlyout Placement="TopEdgeAlignedRight">
-                      <MenuItem Header="Fit in 10 MB (Discord)" Command="{Binding ShareCommand}" CommandParameter="Discord10" />
-                      <MenuItem Header="Fit in 50 MB (Discord Nitro Basic)" Command="{Binding ShareCommand}" CommandParameter="Discord50" />
-                      <MenuItem Header="Vertical 9:16 (Shorts, Reels, TikTok)" Command="{Binding ShareCommand}" CommandParameter="Vertical" />
-                      <MenuItem Header="GIF (up to 20 seconds)" Command="{Binding ShareCommand}" CommandParameter="Gif" />
-                    </MenuFlyout>
-                  </Button.Flyout>
-                </Button>
-                <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsExporting}">
-                  <ProgressBar Width="150" Height="6" MinHeight="6" Value="{Binding ExportProgress}" VerticalAlignment="Center" CornerRadius="3" />
-                  <TextBlock Classes="mono" FontSize="12" Text="{Binding ExportProgress, StringFormat='{}{0:0}%'}" VerticalAlignment="Center" />
-                  <Button Classes="ghost" Command="{Binding CancelExportCommand}" ToolTip.Tip="Cancel export">
-                    <PathIcon Data="{StaticResource IcClose}" Width="14" Height="14" />
-                  </Button>
+              </Button>
+              <Button Classes="tool" Command="{Binding SetOutCommand}" ToolTip.Tip="End the selection at the playhead (O)">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <TextBlock Text="Out" FontWeight="SemiBold" VerticalAlignment="Center" />
+                  <TextBlock Classes="mono" Text="{Binding OutText}" Foreground="{DynamicResource Cyan}" FontSize="12" VerticalAlignment="Center" />
+                  <TextBlock Classes="hint" Text="O" />
                 </StackPanel>
-              </StackPanel>
-            </Grid>
-            <!-- parts of a multi-segment export, and audio tracks -->
-            <WrapPanel Orientation="Horizontal" IsVisible="{Binding HasSegments}">
-              <TextBlock Classes="label" Text="PARTS" VerticalAlignment="Center" Margin="0,0,10,0" />
-              <ItemsControl ItemsSource="{Binding Segments}">
-                <ItemsControl.ItemsPanel>
-                  <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
-                  <DataTemplate>
-                    <Border Classes="part" Margin="0,0,6,0">
-                      <StackPanel Orientation="Horizontal" Spacing="2">
-                        <Button Classes="ghost" Padding="8,3" ToolTip.Tip="Jump to this part"
-                                Command="{Binding #Root.((vm:MainViewModel)DataContext).Player.JumpToSegmentCommand}" CommandParameter="{Binding}">
-                          <TextBlock Classes="mono" FontSize="12" Text="{Binding Text}" />
-                        </Button>
-                        <Button Classes="ghost" Padding="5,3" ToolTip.Tip="Remove this part"
-                                Command="{Binding #Root.((vm:MainViewModel)DataContext).Player.RemoveSegmentCommand}" CommandParameter="{Binding}">
-                          <PathIcon Data="{StaticResource IcClose}" Width="10" Height="10" />
-                        </Button>
-                      </StackPanel>
-                    </Border>
-                  </DataTemplate>
-                </ItemsControl.ItemTemplate>
-              </ItemsControl>
+              </Button>
+              <Button Classes="tool" Command="{Binding PreviewRangeCommand}" ToolTip.Tip="Play the selection (P)" IsEnabled="{Binding HasRange}">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <PathIcon Data="{StaticResource IcPlay}" />
+                  <TextBlock Text="Play" VerticalAlignment="Center" />
+                  <TextBlock Classes="hint" Text="P" />
+                </StackPanel>
+              </Button>
+              <ToggleButton Classes="tool" IsChecked="{Binding LoopRange}" IsEnabled="{Binding HasRange}" ToolTip.Tip="Loop the selection (L)">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <PathIcon Data="{StaticResource IcLoop}" />
+                  <TextBlock Text="Loop" VerticalAlignment="Center" />
+                  <TextBlock Classes="hint" Text="L" />
+                </StackPanel>
+              </ToggleButton>
+              <Button Classes="tool" Command="{Binding ClearRangeCommand}" ToolTip.Tip="Clear In and Out (X)">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <PathIcon Data="{StaticResource IcClose}" />
+                  <TextBlock Text="Clear" VerticalAlignment="Center" />
+                  <TextBlock Classes="hint" Text="X" />
+                </StackPanel>
+              </Button>
+              <Button Classes="tool" Command="{Binding AddSegmentCommand}" ToolTip.Tip="Keep this selection as one part and mark another; Export joins all parts (A)" IsEnabled="{Binding HasRange}">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <PathIcon Data="{StaticResource IcAdd}" />
+                  <TextBlock Text="Add part" VerticalAlignment="Center" />
+                  <TextBlock Classes="hint" Text="A" />
+                </StackPanel>
+              </Button>
+              <Border Classes="toolsep" />
+              <Button Classes="tool" Command="{Binding NextMarkerCommand}" ToolTip.Tip="Jump to the next loud moment or bookmark (N; Shift+N goes back)" IsEnabled="{Binding HasMarkers}">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <PathIcon Data="{StaticResource IcMarker}" />
+                  <TextBlock Text="Next marker" VerticalAlignment="Center" />
+                  <TextBlock Classes="hint" Text="N" />
+                </StackPanel>
+              </Button>
+              <Border Classes="toolsep" />
+              <Button Classes="tool" Command="{Binding AddCaptionCommand}" ToolTip.Tip="Add a caption at the playhead (C)" IsVisible="{Binding ShowCaptionTools}">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <PathIcon Data="{StaticResource IcText}" />
+                  <TextBlock Text="Caption" VerticalAlignment="Center" />
+                  <TextBlock Classes="hint" Text="C" />
+                </StackPanel>
+              </Button>
+              <Button Classes="tool" Command="{Binding AddSpeedSectionCommand}" ToolTip.Tip="Slow down or speed up part of the clip, starting at the playhead" IsVisible="{Binding ShowSpeedTools}">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <PathIcon Data="{StaticResource IcSpeed}" />
+                  <TextBlock Text="Slow-mo" VerticalAlignment="Center" />
+                </StackPanel>
+              </Button>
+              <Border Classes="toolsep" />
+              <Button Classes="tool" Command="{Binding #Root.((vm:MainViewModel)DataContext).UseFrameAsThumbnailCommand}" ToolTip.Tip="Use this frame as the video's thumbnail in the library (T)">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <PathIcon Data="{StaticResource IcImage}" />
+                  <TextBlock Text="Thumbnail" VerticalAlignment="Center" />
+                  <TextBlock Classes="hint" Text="T" />
+                </StackPanel>
+              </Button>
+              <Button Classes="tool" Command="{Binding #Root.((vm:MainViewModel)DataContext).SaveFrameCommand}" ToolTip.Tip="Save this frame as a PNG next to the video (G)">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <PathIcon Data="{StaticResource IcCamera}" />
+                  <TextBlock Text="Save frame" VerticalAlignment="Center" />
+                  <TextBlock Classes="hint" Text="G" />
+                </StackPanel>
+              </Button>
             </WrapPanel>
-            <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding HasAudioTracks}">
-              <TextBlock Classes="label" Text="AUDIO TRACKS" VerticalAlignment="Center" Margin="0,0,2,0" />
-              <ItemsControl ItemsSource="{Binding AudioTracks}">
-                <ItemsControl.ItemsPanel>
-                  <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="6" /></ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
-                  <DataTemplate>
-                    <ToggleButton Classes="mod" IsChecked="{Binding Enabled}" Content="{Binding Label}"
-                                  ToolTip.Tip="Switched off: this track is left out of exports. Playback uses the first track that is on." />
-                  </DataTemplate>
-                </ItemsControl.ItemTemplate>
-              </ItemsControl>
-              <TextBlock Classes="dim" FontSize="11" VerticalAlignment="Center" Text="Export keeps the tracks that are on. Share presets mix them into one." />
-            </StackPanel>
-           </StackPanel>
-          </Border>
+
+          </Grid>
         </StackPanel>
       </Border>
     </Grid>

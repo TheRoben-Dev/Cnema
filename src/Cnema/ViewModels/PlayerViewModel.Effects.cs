@@ -58,12 +58,11 @@ public sealed partial class SpeedSectionViewModel : ObservableObject
     public SpeedSpec ToSpec() => new((long)Start, (long)End, (double)Rate.Value, Ramp);
 }
 
-// The Effects panel: captions, speed, sound tools and branding, previewed live and applied on export.
+// Effects in the tool panel: captions, speed, sound tools and branding, previewed live and applied on export.
 public sealed partial class PlayerViewModel
 {
     public ObservableCollection<CaptionViewModel> Captions { get; } = new();
     public ObservableCollection<SpeedSectionViewModel> SpeedSections { get; } = new();
-    [ObservableProperty] private bool _isEffectsOpen;
     [ObservableProperty] private IReadOnlyList<CaptionSpec> _previewCaptions = Array.Empty<CaptionSpec>();
     [ObservableProperty] private WatermarkSpec? _previewWatermark;
     [ObservableProperty] private IReadOnlyList<EffectRange> _effectRanges = Array.Empty<EffectRange>();
@@ -113,7 +112,7 @@ public sealed partial class PlayerViewModel
                      nameof(UseWatermark), nameof(UseIntro), nameof(UseOutro), nameof(WatermarkName), nameof(IntroName), nameof(OutroName),
                  })
             OnPropertyChanged(name);
-        if (!ShowEffectsButton) IsEffectsOpen = false;
+        RefreshToolPages();
         EffectsChanged();
     }
 
@@ -219,14 +218,13 @@ public sealed partial class PlayerViewModel
         OnPropertyChanged(nameof(EffectsButtonText));
         OnPropertyChanged(nameof(EffectsNote));
         OnPropertyChanged(nameof(HasClearableEffects));
+        OnPropertyChanged(nameof(ShowClearEffects));
         var ranges = new List<EffectRange>();
         if (ShowCaptionTools) ranges.AddRange(Captions.Select(c => new EffectRange(c.Start, c.End, false)));
         if (ShowSpeedTools) ranges.AddRange(SpeedSections.Select(s => new EffectRange(s.Start, s.End, true)));
         EffectRanges = ranges;
         UpdateEffectsPreview(force: true);
     }
-
-    partial void OnIsEffectsOpenChanged(bool value) => UpdateEffectsPreview(force: true);
 
     /// <summary>Captions and watermark over the picture, and speed sections played at their speed.</summary>
     private void UpdateEffectsPreview(bool force = false)
@@ -259,12 +257,6 @@ public sealed partial class PlayerViewModel
     }
 
     // ---------- commands ----------
-    [RelayCommand]
-    private void ToggleEffects()
-    {
-        if (ShowEffectsButton) IsEffectsOpen = !IsEffectsOpen;
-    }
-
     private (double Start, double End) NewRange(double length)
     {
         var start = Math.Max(0, Position);
@@ -281,7 +273,7 @@ public sealed partial class PlayerViewModel
         var c = new CaptionViewModel { Start = start, End = end };
         c.Changed += EffectsChanged;
         Captions.Add(c);
-        IsEffectsOpen = true;
+        ShowPage(ToolPage.Captions);
         CaptionAdded?.Invoke(c);
     }
 
@@ -323,7 +315,7 @@ public sealed partial class PlayerViewModel
         var s = new SpeedSectionViewModel { Start = start, End = end };
         s.Changed += EffectsChanged;
         SpeedSections.Add(s);
-        IsEffectsOpen = true;
+        ShowPage(ToolPage.Speed);
     }
 
     [RelayCommand]

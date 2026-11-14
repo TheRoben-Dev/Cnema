@@ -66,7 +66,7 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
     public System.Collections.ObjectModel.ObservableCollection<SegmentViewModel> Segments { get; } = new();
     public System.Collections.ObjectModel.ObservableCollection<AudioTrackViewModel> AudioTracks { get; } = new();
     [ObservableProperty] private IReadOnlyList<TimeRange> _segmentRanges = Array.Empty<TimeRange>();
-    [ObservableProperty] private IReadOnlyList<TimelineMarker> _markers = Array.Empty<TimelineMarker>();
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(MarkerText))] private IReadOnlyList<TimelineMarker> _markers = Array.Empty<TimelineMarker>();
     public bool HasSegments => Segments.Count > 0;
     /// <summary>Work that opening another video would throw away: trim marks, parts, captions or speed changes.</summary>
     public bool HasEdits => HasIn || HasOut || HasSegments || Captions.Count > 0 || SpeedSections.Count > 0;
@@ -143,6 +143,7 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
             AudioTracks.Add(track);
         }
         OnPropertyChanged(nameof(HasAudioTracks));
+        RefreshToolPages();
         BuildVoiceTrackChoice();
     }
 
@@ -180,6 +181,7 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
         _volume = settings.Current.Volume;
         _preciseExport = settings.Current.PreciseExport;
         InitEffects();
+        InitTools();
         if (VlcBootstrap.LibVLC is not { } lib) return;
 
         _player = new MediaPlayer(lib) { EnableHardwareDecoding = true };
@@ -273,6 +275,7 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
         SegmentsChanged();
         AudioTracks.Clear();
         OnPropertyChanged(nameof(HasAudioTracks));
+        RefreshToolPages();
         LoadMarkers(item);
         BuildChapters();
         ResetEffects();

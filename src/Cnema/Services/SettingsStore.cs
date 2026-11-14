@@ -46,6 +46,10 @@ public sealed class EffectSettings
     /// <summary>Lower the other tracks while the voice track is talking.</summary>
     public bool Duck { get; set; }
 
+    /// <summary>The editor's tool panel: open or folded away, and the page it shows.</summary>
+    public bool ToolsOpen { get; set; } = true;
+    public string ToolPage { get; set; } = "Trim";
+
     public string? WatermarkPath { get; set; }
     public Corner WatermarkCorner { get; set; } = Corner.BottomRight;
     /// <summary>Width as a share of the video's width.</summary>
