@@ -12,8 +12,9 @@ public sealed record UpdateInfo(Version Version, string Url);
 /// </summary>
 public static class UpdateService
 {
-    public const string ReleasesPage = "https://github.com/TheRoben-Dev/Cnema/releases/latest";
-    private const string Api = "https://api.github.com/repos/TheRoben-Dev/Cnema/releases/latest";
+    // The source repository is private; builds are mirrored to this public, releases-only repository.
+    public const string ReleasesPage = "https://github.com/TheRoben-Dev/Cnema-releases/releases/latest";
+    private const string Api = "https://api.github.com/repos/TheRoben-Dev/Cnema-releases/releases/latest";
 
     public static Version Current { get; } =
         Assembly.GetExecutingAssembly().GetName().Version is { } v ? new Version(v.Major, v.Minor, Math.Max(0, v.Build)) : new Version(0, 0, 0);

@@ -20,7 +20,7 @@ for playback, ffmpeg for thumbnails, metadata and clip export. One codebase for 
 
 ## Download
 
-Grab a build from [Releases](https://github.com/TheRoben-Dev/Cnema/releases). On macOS and Windows everything is
+Grab a build from [Releases](https://github.com/TheRoben-Dev/Cnema-releases/releases). On macOS and Windows everything is
 inside the app: the .NET runtime, libVLC with its plugins, and ffmpeg. Nothing else to install.
 
 On Linux, ffmpeg and .NET are bundled but libVLC comes from your distro (VideoLAN publishes no Linux package):
