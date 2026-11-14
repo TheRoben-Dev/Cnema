@@ -148,8 +148,17 @@ public sealed class ClipService : IDisposable
         try
         {
             var segments = Segments();
-            if (State == ClipState.Starting && segments.Count > 0 && new FileInfo(segments[^1]).Length > 0)
+            // The newest segment can read as empty while ffmpeg holds it open; any finished one counts.
+            if (State == ClipState.Starting && segments.Any(f => new FileInfo(f).Length > 0))
                 Set(ClipState.Recording, null);
+            if (State == ClipState.Recording && segments.Count > 0 &&
+                DateTime.UtcNow - _startedAt > TimeSpan.FromSeconds(SegmentSeconds * 6) &&
+                new FileInfo(segments[^1]).Length > (long)Math.Clamp(Cfg.BitrateMbps, 1, 100) * 125_000 * SegmentSeconds * 8)
+            {
+                // The newest segment is many times its expected size: segments are not rotating.
+                ThreadPool.QueueUserWorkItem(_ => FailStuck(generation));
+                return;
+            }
             var keep = SegmentsFor(Cfg.Seconds) + 2;
             if (!_gate.Wait(0)) return; // a save is reading the buffer right now
             try
@@ -163,6 +172,21 @@ public sealed class ClipService : IDisposable
             }
         }
         catch { /* next tick */ }
+    }
+
+    private async void FailStuck(int generation)
+    {
+        await _gate.WaitAsync();
+        try
+        {
+            if (generation != _generation) return;
+            StopCore();
+            Set(ClipState.Error, "The replay buffer stopped rotating, so capture was stopped to protect your disk.");
+        }
+        finally
+        {
+            _gate.Release();
+        }
     }
 
     private void OnExited(int generation)
@@ -267,15 +291,19 @@ public sealed class ClipService : IDisposable
             var skip = Math.Max(0, total - Cfg.Seconds - SegmentSeconds);
             var args = new List<string> { "-hide_banner", "-loglevel", "error", "-y", "-f", "concat", "-safe", "0" };
             if (skip > 0) args.AddRange(new[] { "-ss", skip.ToString("0.###", CultureInfo.InvariantCulture) });
-            args.AddRange(new[] { "-i", list, "-map", "0", "-c", "copy", "-movflags", "+faststart", output });
+            // Written next to the buffer and moved into place when complete: the clips folder is a
+            // watched library folder, and a half-written file would be scanned as a 0-second video.
+            var partial = Path.Combine(AppPaths.ClipBufferDir, "saving.mp4");
+            args.AddRange(new[] { "-i", list, "-map", "0", "-c", "copy", "-movflags", "+faststart", "-f", "mp4", partial });
 
             var r = await ProcessRunner.RunAsync(ffmpeg, args);
-            if (r.ExitCode != 0 || !File.Exists(output) || new FileInfo(output).Length == 0)
+            if (r.ExitCode != 0 || !File.Exists(partial) || new FileInfo(partial).Length == 0)
             {
-                try { File.Delete(output); } catch { /* nothing written */ }
+                try { File.Delete(partial); } catch { /* nothing written */ }
                 Console.Error.WriteLine($"[Cnema] Saving the clip failed: {r.StdErr}");
                 return null;
             }
+            File.Move(partial, output, overwrite: false);
             ClipSaved?.Invoke(output);
             return output;
         }
@@ -424,6 +452,10 @@ public sealed class ClipService : IDisposable
             a.AddRange(new[] { "-c:a", "aac", "-b:a", Math.Clamp(s.AudioBitrateKbps, 64, 320) + "k", "-ac", "2", "-ar", "48000" });
 
         // ---- rolling segments ----
+        // Constant frame rate output. Without it the segment muxer loses avfoundation's frame timing
+        // on macOS: every frame is stamped 1/90000 s apart, segments never rotate (one file grows
+        // forever) and saved clips claim to be 0 seconds long.
+        a.AddRange(new[] { "-fps_mode", "cfr", "-r", fps.ToString(inv) });
         a.AddRange(new[]
         {
             "-f", "segment", "-segment_time", SegmentSeconds.ToString(inv), "-segment_format", "mpegts",

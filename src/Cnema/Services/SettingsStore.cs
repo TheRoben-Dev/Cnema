@@ -20,7 +20,7 @@ public sealed class ClipSettings
     public int Seconds { get; set; } = 30;
     public int Fps { get; set; } = 60;
     /// <summary>Output height in pixels; 0 keeps the screen's native resolution.</summary>
-    public int Height { get; set; }
+    public int Height { get; set; } = 1080;
     public int BitrateMbps { get; set; } = 12;
     public int AudioBitrateKbps { get; set; } = 160;
     /// <summary>False forces the software (x264) encoder.</summary>

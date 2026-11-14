@@ -63,7 +63,7 @@ public sealed class GlobalHotkey : IDisposable
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     private delegate int CarbonHandler(IntPtr callRef, IntPtr eventRef, IntPtr userData);
 
-    [DllImport(Carbon)] private static extern IntPtr GetApplicationEventTarget();
+    [DllImport(Carbon)] private static extern IntPtr GetEventDispatcherTarget();
     [DllImport(Carbon)] private static extern int InstallEventHandler(IntPtr target, CarbonHandler handler,
         nuint numTypes, [In] EventTypeSpec[] types, IntPtr userData, out IntPtr handlerRef);
     [DllImport(Carbon)] private static extern int RemoveEventHandler(IntPtr handlerRef);
@@ -82,7 +82,9 @@ public sealed class GlobalHotkey : IDisposable
     {
         var code = IsFunctionKey(key, out var n) ? MacFunction[n - 1] : MacLetters[key[0] - 'A'];
         uint mods = (meta ? 0x0100u : 0) | (shift ? 0x0200u : 0) | (alt ? 0x0800u : 0) | (ctrl ? 0x1000u : 0);
-        var target = GetApplicationEventTarget();
+        // The dispatcher target, not the application target: in a Cocoa app (Avalonia runs on
+        // NSApplication) hot key events are only routed through the event dispatcher.
+        var target = GetEventDispatcherTarget();
         _macHandler = (_, _, _) =>
         {
             _pressed();
