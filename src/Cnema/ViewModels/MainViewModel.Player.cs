@@ -3,7 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace Cnema.ViewModels;
 
-// The mini player: plain playback in a small panel over the library, with Edit for the full editor.
+// The quick player: plain playback in a large panel over the library, with Edit for the full editor.
 public sealed partial class MainViewModel
 {
     [ObservableProperty] private bool _isMiniPlayerOpen;
@@ -28,6 +28,50 @@ public sealed partial class MainViewModel
         if (!IsPlayerOpen || !UseMiniPlayer) return;
         IsPlayerOpen = false;
         IsMiniPlayerOpen = true;
+    }
+
+    private bool _stepping;
+    private DateTime _lastStep;
+    private int _armedStep;
+    private DateTime _armedUntil;
+
+    /// <summary>
+    /// ← / →: the previous or next video in the library's current order, with its search, filters and
+    /// sort. In the editor, a video with trim marks or parts asks for a second press before they go.
+    /// </summary>
+    [RelayCommand]
+    private async Task StepClipAsync(int delta)
+    {
+        if (Player.Current is not { } current || _stepping) return;
+        // Holding the key flips through videos at a steady pace instead of queueing every repeat.
+        if (DateTime.UtcNow - _lastStep < TimeSpan.FromMilliseconds(180)) return;
+        var i = Videos.IndexOf(current);
+        if (i < 0) { Player.ShowToast("This video isn't in the library view right now."); return; }
+        var j = i + delta;
+        if (j < 0 || j >= Videos.Count)
+        {
+            Player.ShowToast(delta > 0 ? "That was the last video." : "This is the first video.");
+            return;
+        }
+        if (IsPlayerOpen && Player.HasEdits && !(_armedStep == delta && DateTime.UtcNow < _armedUntil))
+        {
+            _armedStep = delta;
+            _armedUntil = DateTime.UtcNow.AddSeconds(4);
+            Player.ShowToast($"Press again to open the {(delta > 0 ? "next" : "previous")} video. Your trim marks and parts here will be cleared.");
+            return;
+        }
+        _armedStep = 0;
+        _stepping = true;
+        try
+        {
+            await Player.OpenAsync(Videos[j]);
+            current.RefreshAll();
+        }
+        finally
+        {
+            _stepping = false;
+            _lastStep = DateTime.UtcNow;
+        }
     }
 
     [RelayCommand]

@@ -68,6 +68,8 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
     [ObservableProperty] private IReadOnlyList<TimeRange> _segmentRanges = Array.Empty<TimeRange>();
     [ObservableProperty] private IReadOnlyList<TimelineMarker> _markers = Array.Empty<TimelineMarker>();
     public bool HasSegments => Segments.Count > 0;
+    /// <summary>Work that opening another video would throw away: trim marks or parts.</summary>
+    public bool HasEdits => HasIn || HasOut || HasSegments;
     public bool HasAudioTracks => AudioTracks.Count > 1;
     public bool HasMarkers => Markers.Count > 0;
     public string ExportLabel => HasSegments ? $"Export {Segments.Count + (HasRange ? 1 : 0)} parts" : "Export clip";
@@ -241,7 +243,8 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
             ShowToast(VlcBootstrap.Error ?? "libVLC is not available.");
             return;
         }
-        // Switching videos in the mini player: remember where the last one was left.
+        HideToast();
+        // Switching videos in the quick player or with ← / →: remember where the last one was left.
         if (_active && Current is { } previous && !ReferenceEquals(previous, item)) SaveProgress(previous);
         _active = true;
         await _pendingStop;
@@ -477,6 +480,12 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
 
     // ---------- helpers ----------
     private CancellationTokenSource? _toastCts;
+
+    public void HideToast()
+    {
+        _toastCts?.Cancel();
+        Toast = null;
+    }
 
     public async void ShowToast(string message)
     {
