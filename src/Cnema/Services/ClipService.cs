@@ -34,7 +34,7 @@ public sealed class ClipService : IDisposable
     /// <summary>Raised on any thread when State/Error change.</summary>
     public event Action? Changed;
     /// <summary>Raised on any thread after a clip was written; the argument is its path.</summary>
-    public event Action<string>? ClipSaved;
+    public event Action<string, int>? ClipSaved;
 
     public ClipService(SettingsStore settings) => _settings = settings;
 
@@ -285,7 +285,7 @@ public sealed class ClipService : IDisposable
                 return;
             }
             if (IsSession) return; // a session keeps every segment until it is saved
-            var keep = SegmentsFor(Cfg.Seconds) + 2;
+            var keep = SegmentsFor(Cfg.BufferSeconds) + 2;
             if (!_gate.Wait(0)) return; // a save is reading the buffer right now
             try
             {
@@ -438,14 +438,15 @@ public sealed class ClipService : IDisposable
     }
 
     /// <summary>Writes the last N seconds to the clips folder. Returns the new file, or null.</summary>
-    public async Task<string?> SaveClipAsync(string? label = null)
+    public async Task<string?> SaveClipAsync(string? label = null, int? seconds = null)
     {
+        var length = seconds ?? Cfg.Seconds;
         if (State != ClipState.Recording) return null;
         await _gate.WaitAsync();
         try
         {
             var ffmpeg = await CaptureProbe.FindCaptureFfmpegAsync() ?? ToolLocator.Ffmpeg;
-            var segments = Segments().TakeLast(SegmentsFor(Cfg.Seconds) + 1).ToList();
+            var segments = Segments().TakeLast(SegmentsFor(length) + 1).ToList();
             if (ffmpeg is null || segments.Count == 0) return null;
 
             var folder = Cfg.ResolvedFolder;
@@ -458,7 +459,7 @@ public sealed class ClipService : IDisposable
             // The newest segment is still being written, so the clip runs right up to "now". Its
             // exact length is the requested one plus at most one segment.
             var total = segments.Count * (double)SegmentSeconds;
-            var skip = Math.Max(0, total - Cfg.Seconds - SegmentSeconds);
+            var skip = Math.Max(0, total - length - SegmentSeconds);
             var args = new List<string> { "-hide_banner", "-loglevel", "error", "-y", "-f", "concat", "-safe", "0" };
             if (skip > 0) args.AddRange(new[] { "-ss", skip.ToString("0.###", CultureInfo.InvariantCulture) });
             // Written next to the buffer and moved into place when complete: the clips folder is a
@@ -476,7 +477,7 @@ public sealed class ClipService : IDisposable
                 return null;
             }
             File.Move(partial, output, overwrite: false);
-            ClipSaved?.Invoke(output);
+            ClipSaved?.Invoke(output, length);
             return output;
         }
         catch (Exception ex)

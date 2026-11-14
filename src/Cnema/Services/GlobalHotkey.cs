@@ -13,7 +13,10 @@ public sealed class GlobalHotkey : IDisposable
         Enumerable.Range('A', 26).Select(c => ((char)c).ToString())
             .Concat(Enumerable.Range(1, 12).Select(n => "F" + n)).ToList();
 
+    private static int _lastId;
     private readonly Action _pressed;
+    // Tells this hotkey's macOS events apart from the other Cnema hotkeys'.
+    private readonly uint _id = (uint)Interlocked.Increment(ref _lastId);
     private Action? _unregister;
 
     public GlobalHotkey(Action pressed) => _pressed = pressed;
@@ -70,6 +73,8 @@ public sealed class GlobalHotkey : IDisposable
     [DllImport(Carbon)] private static extern int RegisterEventHotKey(uint keyCode, uint modifiers,
         EventHotKeyID id, IntPtr target, uint options, out IntPtr hotKeyRef);
     [DllImport(Carbon)] private static extern int UnregisterEventHotKey(IntPtr hotKeyRef);
+    [DllImport(Carbon)] private static extern int GetEventParameter(IntPtr eventRef, uint name, uint desiredType,
+        IntPtr actualType, nuint bufferSize, IntPtr actualSize, out EventHotKeyID data);
 
     // ANSI virtual key codes (Events.h), indexed A..Z, then F1..F12.
     private static readonly uint[] MacLetters =
@@ -85,15 +90,20 @@ public sealed class GlobalHotkey : IDisposable
         // The dispatcher target, not the application target: in a Cocoa app (Avalonia runs on
         // NSApplication) hot key events are only routed through the event dispatcher.
         var target = GetEventDispatcherTarget();
-        _macHandler = (_, _, _) =>
+        _macHandler = (_, eventRef, _) =>
         {
+            // Every Cnema hotkey's handler sees every Cnema hotkey press: pass on the ones that are
+            // not this hotkey's ('----' direct object of type 'hkid'), eventNotHandledErr.
+            if (GetEventParameter(eventRef, 0x2D2D2D2D, 0x686B6964, IntPtr.Zero,
+                    (nuint)Marshal.SizeOf<EventHotKeyID>(), IntPtr.Zero, out var pressed) == 0 && pressed.Id != _id)
+                return -9874;
             _pressed();
             return 0;
         };
         // 'keyb' / kEventHotKeyPressed
         var types = new[] { new EventTypeSpec { EventClass = 0x6B657962, EventKind = 5 } };
         if (InstallEventHandler(target, _macHandler, 1, types, IntPtr.Zero, out var handlerRef) != 0) return false;
-        var id = new EventHotKeyID { Signature = 0x436E656D /* 'Cnem' */, Id = 1 };
+        var id = new EventHotKeyID { Signature = 0x436E656D /* 'Cnem' */, Id = _id };
         if (RegisterEventHotKey(code, mods, id, target, 0, out var hotKeyRef) != 0)
         {
             RemoveEventHandler(handlerRef);
