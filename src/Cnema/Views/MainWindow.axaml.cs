@@ -923,11 +923,12 @@ public partial class MainWindow : Window
             case "nextMarker": p.NextMarkerCommand.Execute(null); break;
             case "preview": p.PreviewRangeCommand.Execute(null); break;
             case "export": p.ExportCommand.Execute(null); break;
-            case "effects": p.ToggleEffectsCommand.Execute(null); break;
+            case "effects": p.ToggleToolsCommand.Execute(null); break;
             case "caption": p.AddCaptionCommand.Execute(null); break;
             case "fullscreen": ToggleFullscreen(); break;
             case "start": p.SeekCommand.Execute(0d); break;
             case "thumb": vm.UseFrameAsThumbnailCommand.Execute(null); break;
+            case "grab": vm.SaveFrameCommand.Execute(null); break;
             default: e.Handled = false; break;
         }
     }

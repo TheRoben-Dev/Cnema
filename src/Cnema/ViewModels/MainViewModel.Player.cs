@@ -75,6 +75,12 @@ public sealed partial class MainViewModel
     }
 
     [RelayCommand]
+    private Task PreviousClip() => StepClipAsync(-1);
+
+    [RelayCommand]
+    private Task NextClip() => StepClipAsync(1);
+
+    [RelayCommand]
     private void CloseMiniPlayer()
     {
         if (!IsMiniPlayerOpen) return;

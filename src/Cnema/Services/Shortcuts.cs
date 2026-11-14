@@ -53,9 +53,10 @@ public static class Shortcuts
         new("prevChapter", Player, "Previous chapter", "Ctrl+Left"),
         new("nextChapter", Player, "Next chapter", "Ctrl+Right"),
         new("export", Player, "Export", "E"),
-        new("effects", Player, "Show or hide the Effects panel", "Shift+E"),
+        new("effects", Player, "Show or hide the tool panel", "Shift+E"),
         new("caption", Player, "Add a caption at the playhead", "C"),
         new("thumb", Player, "Use this frame as the thumbnail", "T"),
+        new("grab", Player, "Save this frame as an image", "G"),
     };
 
     /// <summary>Keys that always work and can't be changed, shown in the shortcut sheet for reference.</summary>

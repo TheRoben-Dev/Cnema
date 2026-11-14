@@ -97,6 +97,32 @@ public sealed partial class MainViewModel
         Player.ShowToast("Thumbnail set to this frame");
     }
 
+    /// <summary>Frame grab: the frame at the playhead, full size, as a PNG next to the video.</summary>
+    [RelayCommand]
+    private async Task SaveFrameAsync()
+    {
+        if (Player.Current is not { } item) return;
+        if (ToolLocator.Ffmpeg is not { } ffmpeg) { Player.ShowToast("Saving a frame needs ffmpeg, which wasn't found."); return; }
+        var at = Math.Max(0, Player.Position);
+        var t = TimeSpan.FromMilliseconds(at);
+        var name = $"{Path.GetFileNameWithoutExtension(item.Entry.Path)} {(int)t.TotalMinutes}m{t.Seconds:00}.{t.Milliseconds / 100}s";
+        var seek = (at / 1000.0).ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
+        // Next to the video, or in Pictures when that folder can't be written to.
+        foreach (var dir in new[] { Path.GetDirectoryName(item.Entry.Path), Environment.GetFolderPath(Environment.SpecialFolder.MyPictures) })
+        {
+            if (string.IsNullOrEmpty(dir) || !Directory.Exists(dir)) continue;
+            var target = Path.Combine(dir, name + ".png");
+            for (var n = 2; File.Exists(target); n++) target = Path.Combine(dir, $"{name} {n}.png");
+            var r = await ProcessRunner.RunAsync(ffmpeg, new[] { "-v", "error", "-ss", seek, "-i", item.Entry.Path, "-frames:v", "1", "-y", target });
+            if (r.ExitCode == 0 && File.Exists(target))
+            {
+                Player.ShowToast($"Saved {Path.GetFileName(target)} in {Path.GetFileName(dir)}");
+                return;
+            }
+        }
+        Player.ShowToast("Couldn't save the frame.");
+    }
+
     [RelayCommand]
     private async Task ResetThumbnailAsync(VideoItemViewModel? item)
     {

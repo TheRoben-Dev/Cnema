@@ -99,7 +99,13 @@ Set `CNEMA_LIBVLC_PATH` to a folder containing libvlc + libvlccore to override.
   - *Lossless* (default): stream copy. Instant, zero quality loss, keeps the container. The cut starts on the
     keyframe at or before the in point, so the clip can start up to a GOP earlier than marked.
   - *Precise*: re-encodes to H.264/AAC MP4 (CRF 18). Frame-accurate, slower, slight generation loss.
-- **Effects** (editor, *Effects* or **Shift+E**): everything here changes exports only, never the original file.
+- **Editor layout**: a rail beside the video opens the tool pages (Trim, Captions, Speed, Sound, Brand, Export),
+  and a row of labelled buttons under the timeline covers in/out, play and loop the selection, parts, markers,
+  captions, slow motion, the thumbnail and saving a frame. Click the open page (or **Shift+E**) to fold the panel
+  for a bigger video; the page and the folded state are remembered.
+- **Save frame** (**G**): the frame on screen as a full-size PNG next to the video (or in Pictures if that
+  folder is read-only).
+- **Effects** (the Captions, Speed, Sound and Brand pages): everything here changes exports only, never the original file.
   Effects re-encode, so an export with effects is always *Precise*.
   - *Captions* (**C** adds one at the playhead): text at the top, middle or bottom, three sizes, white with an
     outline or on a dark box. They show over the video while you edit, sized like the export, and are burned
@@ -234,8 +240,8 @@ H.264 at the same quality. Turning off "Use the graphics card" records H.264 wit
 | A | Add selection as a part | N / Shift+N | Next / previous marker |
 | B | A-B loop: start, end, stop | Shift+, / Shift+. | Slower / faster |
 | Ctrl+← / Ctrl+→ | Previous / next chapter | T | Use this frame as the thumbnail |
-| Shift+E | Show or hide the Effects panel | C | Add a caption at the playhead |
-| ? | All shortcuts (and change them) | | |
+| Shift+E | Show or hide the tool panel | C | Add a caption at the playhead |
+| G | Save this frame as an image | ? | All shortcuts (and change them) |
 
 ## Layout
 

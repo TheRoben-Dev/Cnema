@@ -2,6 +2,13 @@
 
 What changed in each Cnema release. The app shows the entries you have not seen yet after it updates.
 
+## 0.15.0
+- The editor is laid out around its tools now. A rail beside the video holds Trim, Captions, Speed, Sound, Brand and Export, and each opens a page with everything for that job: in and out points, parts, markers and chapters on Trim, the share presets on Export, and so on.
+- A row of labelled buttons under the timeline covers what used to need a key: In, Out, Play and Loop the selection, Clear, Add part, Next marker, Caption, Slow-mo, Thumbnail and Save frame. Each one shows its key.
+- Click the open page in the rail again (or press Shift+E) to fold the panel away for a bigger picture. Cnema remembers which page you had open and whether the panel was folded.
+- Save frame (G) saves the frame on screen as a full-size PNG next to the video.
+- ‹ and › buttons next to the title go to the previous and next video, like ← and →.
+
 ## 0.14.0
 - Effects panel in the editor (Effects button, or Shift+E). Everything in it changes exports only; your original file stays as it is.
 - Captions: press C to add text at the playhead, then pick top, middle or bottom, a size, and white text with an outline or on a dark box. You see them over the video while you edit, at the size the export will have.
