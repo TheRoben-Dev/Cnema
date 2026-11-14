@@ -101,6 +101,13 @@ public static class RenderService
                 inputs.AddRange(new[] { "-i", wm.Path });
                 wmInput = next++;
             }
+            int? musicInput = null;
+            if (fx.Music is { } music && !gif)
+            {
+                if (!File.Exists(music.Path)) throw new FileNotFoundException(Loc.F("The music file is missing: {0}", music.Path));
+                inputs.AddRange(new[] { "-stream_loop", "-1", "-i", music.Path });
+                musicInput = next++;
+            }
             var bumperInputs = new List<int>();
             foreach (var b in bumpers)
             {
@@ -203,6 +210,9 @@ public static class RenderService
                         aMain.Add($"[amain{k}]");
                     }
                 }
+
+                if (withAudio && musicInput is { } mi && fx.Music is { } mu)
+                    aMain = AddMusic(g, aMain, mi, mu, map.OutputMs);
 
                 // intro and outro, fitted to the stage
                 var vOut = "[vmain]";
@@ -353,6 +363,35 @@ public static class RenderService
             try { File.Delete(temp); } catch { /* moved, or never written */ }
             try { Directory.Delete(work, recursive: true); } catch { /* temp */ }
         }
+    }
+
+    /// <summary>
+    /// Mixes a music input under the first audio output (or makes it the only one). Returns the new outputs.
+    /// </summary>
+    internal static List<string> AddMusic(List<string> g, List<string> outputs, int input, MusicSpec music, double lengthMs, string tag = "")
+    {
+        var fadeOut = Math.Max(0, lengthMs - 2000);
+        g.Add($"[{input}:a:0]aformat=sample_rates=48000:channel_layouts=stereo,atrim=duration={S(lengthMs)},asetpts=PTS-STARTPTS," +
+              $"volume={F(music.VolumeDb)}dB,afade=t=in:d=0.8,afade=t=out:st={S(fadeOut)}:d=2,apad=whole_dur={S(lengthMs)}[mus{tag}]");
+        var result = outputs.ToList();
+        if (result.Count == 0)
+        {
+            result.Add($"[mus{tag}]");
+            return result;
+        }
+        var under = $"[mus{tag}]";
+        var main = result[0];
+        if (music.Duck)
+        {
+            // The clip's own sound pushes the music down while it's loud (shots, voices) and lets it back up after.
+            g.Add($"{main}asplit[mmain{tag}][msc{tag}]");
+            g.Add($"[mus{tag}][msc{tag}]sidechaincompress=threshold=0.03:ratio=6:attack=40:release=600[musd{tag}]");
+            main = $"[mmain{tag}]";
+            under = $"[musd{tag}]";
+        }
+        g.Add($"{main}{under}amix=inputs=2:duration=first:normalize=0[amus{tag}]");
+        result[0] = $"[amus{tag}]";
+        return result;
     }
 
     /// <summary>

@@ -22,6 +22,8 @@ public sealed partial class SettingsViewModel
     [ObservableProperty] private bool _featureRecorders;
     [ObservableProperty] private bool _featureZoomPan;
     [ObservableProperty] private bool _featureBlur;
+    [ObservableProperty] private bool _featureMusic;
+    [ObservableProperty] private bool _featureMontage;
     public bool ShowBrandingOffNotice => !FeatureBranding;
 
     // ---------- watermark ----------
@@ -61,6 +63,8 @@ public sealed partial class SettingsViewModel
         FeatureRecorders = f.Recorders;
         FeatureZoomPan = f.ZoomPan;
         FeatureBlur = f.Blur;
+        FeatureMusic = f.Music;
+        FeatureMontage = f.Montage;
         var e = settings.Effects;
         WatermarkPath = e.WatermarkPath;
         WatermarkCorner = new ChipGroup(e.WatermarkCorner,

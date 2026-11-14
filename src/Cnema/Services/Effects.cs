@@ -67,6 +67,9 @@ public readonly record struct ZoomView(double Zoom, double X, double Y)
     private static ZoomView From(ZoomKey k) => new(k.Zoom, k.X, k.Y);
 }
 
+/// <summary>A song under the clip: looped if it's shorter, faded in and out, lowered while the clip is loud if Duck.</summary>
+public sealed record MusicSpec(string Path, double VolumeDb, bool Duck);
+
 /// <summary>An image in a corner; Width is a fraction of the video's width.</summary>
 public sealed record WatermarkSpec(string Path, Corner Corner, double Width, double Opacity);
 
@@ -98,9 +101,11 @@ public sealed record EffectsSpec(
     /// <summary>Zoom and pan keyframes (Zoom page). One key at 1× or none means no zoom.</summary>
     public IReadOnlyList<ZoomKey> Zoom { get; init; } = Array.Empty<ZoomKey>();
     public bool HasZoom => Zoom.Any(k => k.Zoom > 1.001);
+    /// <summary>A music track under the export (Sound page).</summary>
+    public MusicSpec? Music { get; init; }
 
     public bool IsEmpty => Captions.Count == 0 && Speed.Count == 0 && Audio.IsEmpty &&
-                           Watermark is null && Intro is null && Outro is null && Blurs.Count == 0 && !HasZoom;
+                           Watermark is null && Intro is null && Outro is null && Blurs.Count == 0 && !HasZoom && Music is null;
 }
 
 /// <summary>A stretch of the source played at one speed. Times in milliseconds.</summary>

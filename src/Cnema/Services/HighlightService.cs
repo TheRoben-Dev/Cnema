@@ -29,6 +29,25 @@ public static class HighlightService
         return found;
     }
 
+    /// <summary>The middle of the loudest few seconds, in milliseconds; null when there is no audio to go by.</summary>
+    public static async Task<double?> BestMomentAsync(string path, double windowSeconds, CancellationToken ct)
+    {
+        if (ToolLocator.Ffmpeg is not { } ffmpeg) return null;
+        var levels = await Task.Run(() => ReadLevels(ffmpeg, path, ct), ct);
+        var n = Math.Max(1, (int)(windowSeconds / WindowSeconds));
+        if (levels.Count < 2 || levels.Max() < -45) return null;
+        double best = double.MinValue;
+        var at = 0;
+        for (var i = 0; i + n <= levels.Count; i++)
+        {
+            // Mean power (not mean dB), so one loud bang counts for what it is.
+            var power = 0.0;
+            for (var k = i; k < i + n; k++) power += Math.Pow(10, levels[k] / 10);
+            if (power > best) { best = power; at = i; }
+        }
+        return (at + n / 2.0) * WindowSeconds * 1000;
+    }
+
     /// <summary>RMS level in dB for every half second of audio.</summary>
     private static List<double> ReadLevels(string ffmpeg, string path, CancellationToken ct)
     {
