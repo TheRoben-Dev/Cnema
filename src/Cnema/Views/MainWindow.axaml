@@ -226,6 +226,9 @@
                       </ContextMenu>
                     </Button.ContextMenu>
                     <StackPanel Spacing="9">
+                      <Panel>
+                      <!-- soft glow in the scheme's accent behind the thumbnail; it fades with Opacity, which animates smoothly -->
+                      <Border Classes="glow" CornerRadius="9" Background="{DynamicResource Bg2}" BoxShadow="{DynamicResource CardGlow}" IsHitTestVisible="False" />
                       <Border Classes="thumb" CornerRadius="9" ClipToBounds="True" Background="{DynamicResource Bg2}"
                               PointerEntered="OnThumbPointerEntered" PointerMoved="OnThumbPointerMoved" PointerExited="OnThumbPointerExited"
                               Height="{Binding $parent[Button].Bounds.Width, Converter={x:Static c:Converters.SixteenByNine}}">
@@ -279,6 +282,7 @@
                           </StackPanel>
                         </Panel>
                       </Border>
+                      </Panel>
                       <StackPanel Spacing="3" Margin="2,0,2,4">
                         <TextBlock Text="{Binding Title}" ToolTip.Tip="{Binding Entry.Path}" ToolTip.ShowDelay="900" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
                         <TextBlock Classes="dim" Text="{Binding Details}" FontSize="11" TextTrimming="CharacterEllipsis" />

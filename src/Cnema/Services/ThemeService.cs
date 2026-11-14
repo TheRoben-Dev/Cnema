@@ -59,7 +59,7 @@ public static class ThemeService
         r["TagText"] = new SolidColorBrush(Mix(accent, C(s.Text), 0.55));
         r["PartFill"] = new SolidColorBrush(second, 0.13);
         r["PartLine"] = new SolidColorBrush(second, 0.33);
-        r["CardGlow"] = new BoxShadows(new BoxShadow { Blur = 26, Color = Color.FromArgb(0x59, accent.R, accent.G, accent.B) });
+        r["CardGlow"] = new BoxShadows(new BoxShadow { Blur = 22, Color = Color.FromArgb(0x4D, accent.R, accent.G, accent.B) });
         r["Overlay"] = new SolidColorBrush(C(s.Bg0), 0.88);
 
         if (s.Gradients)
