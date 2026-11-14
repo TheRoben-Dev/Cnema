@@ -50,7 +50,7 @@ public static class AutostartService
     public static string? Set(bool enabled)
     {
         var exe = Environment.ProcessPath;
-        if (enabled && string.IsNullOrEmpty(exe)) return "Could not work out where Cnema is installed.";
+        if (enabled && string.IsNullOrEmpty(exe)) return T("Could not work out where Cnema is installed.");
         try
         {
             if (OperatingSystem.IsMacOS())
@@ -92,7 +92,7 @@ public static class AutostartService
         }
         catch (Exception ex)
         {
-            return "Could not change the login item: " + ex.Message;
+            return T("Could not change the login item: ") + ex.Message;
         }
     }
 

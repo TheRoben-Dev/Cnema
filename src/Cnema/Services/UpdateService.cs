@@ -77,7 +77,7 @@ public static class UpdateService
         {
             // GitHub answers 404 for a repository that is private or has no published release.
             Log.Warn("Update check failed: the release list is not public (404)");
-            return (null, "the release list is not publicly readable");
+            return (null, T("the release list is not publicly readable"));
         }
         catch (Exception ex)
         {
@@ -117,10 +117,10 @@ public static class UpdateService
     /// <summary>Null when Cnema can replace itself here; otherwise the reason it can't.</summary>
     public static string? WhyNoSelfUpdate()
     {
-        if (InstallRoot is not { } root) return "this copy was not installed from a release build";
+        if (InstallRoot is not { } root) return T("this copy was not installed from a release build");
         // A quarantined app on macOS runs from a read-only, randomised copy of itself.
         if (root.Contains("/AppTranslocation/", StringComparison.Ordinal))
-            return "macOS is running Cnema from a temporary location; move Cnema.app to Applications and open it from there";
+            return T("macOS is running Cnema from a temporary location; move Cnema.app to Applications and open it from there");
         try
         {
             var parent = Path.GetDirectoryName(root)!;
@@ -131,7 +131,7 @@ public static class UpdateService
         }
         catch
         {
-            return "Cnema is not allowed to write to the folder it is installed in";
+            return T("Cnema is not allowed to write to the folder it is installed in");
         }
     }
 
@@ -143,7 +143,7 @@ public static class UpdateService
     /// </summary>
     public static async Task<string> DownloadAsync(UpdateInfo info, IProgress<double>? progress, CancellationToken ct)
     {
-        if (info.AssetUrl is null) throw new InvalidOperationException("This release has no build for this system.");
+        if (info.AssetUrl is null) throw new InvalidOperationException(T("This release has no build for this system."));
         try { if (Directory.Exists(StageDir)) Directory.Delete(StageDir, true); } catch { /* reused below */ }
         Directory.CreateDirectory(StageDir);
         var archive = Path.Combine(StageDir, "download" + (AssetSuffix.EndsWith(".zip") ? ".zip" : ".tar.gz"));
@@ -168,13 +168,13 @@ public static class UpdateService
 
         var length = new FileInfo(archive).Length;
         if (info.AssetSize > 0 && length != info.AssetSize)
-            throw new InvalidOperationException($"The download is incomplete ({length} of {info.AssetSize} bytes).");
+            throw new InvalidOperationException(F("The download is incomplete ({0} of {1} bytes).", length, info.AssetSize));
         if (info.Sha256 is { } expected)
         {
             await using var fs = File.OpenRead(archive);
             var actual = Convert.ToHexString(await SHA256.HashDataAsync(fs, ct));
             if (!actual.Equals(expected, StringComparison.OrdinalIgnoreCase))
-                throw new InvalidOperationException("The download does not match the checksum GitHub published for it.");
+                throw new InvalidOperationException(T("The download does not match the checksum GitHub published for it."));
         }
 
         var unpacked = Path.Combine(StageDir, "new");
@@ -188,14 +188,14 @@ public static class UpdateService
                 ? ("/usr/bin/ditto", new[] { "-x", "-k", archive, unpacked })
                 : ("tar", new[] { "-xzf", archive, "-C", unpacked });
             var r = await ProcessRunner.RunAsync(tool, args, ct: ct);
-            if (r.ExitCode != 0) throw new InvalidOperationException("Could not unpack the update: " + r.StdErr.Trim());
+            if (r.ExitCode != 0) throw new InvalidOperationException(T("Could not unpack the update: ") + r.StdErr.Trim());
         }
         try { File.Delete(archive); } catch { /* removed with the stage folder later */ }
 
         var app = Path.Combine(unpacked, OperatingSystem.IsMacOS() ? "Cnema.app" : "Cnema");
         var exe = OperatingSystem.IsMacOS() ? Path.Combine(app, "Contents", "MacOS", "Cnema")
             : Path.Combine(app, OperatingSystem.IsWindows() ? "Cnema.exe" : "Cnema");
-        if (!File.Exists(exe)) throw new InvalidOperationException("The update did not contain the app.");
+        if (!File.Exists(exe)) throw new InvalidOperationException(T("The update did not contain the app."));
         return app;
     }
 

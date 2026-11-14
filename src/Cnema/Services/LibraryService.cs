@@ -128,30 +128,31 @@ public sealed class LibraryService : IDisposable
     public string Relocate(VideoEntry entry, string newFileNameWithoutExtension, string? newDirectory)
     {
         var name = newFileNameWithoutExtension.Trim();
-        if (name.Length == 0) throw new InvalidOperationException("The name can't be empty.");
+        if (name.Length == 0) throw new InvalidOperationException(T("The name can't be empty."));
         if (name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 || name.Contains('/') || name.Contains('\\'))
-            throw new InvalidOperationException("The name contains characters that aren't allowed in file names.");
+            throw new InvalidOperationException(T("The name contains characters that aren't allowed in file names."));
         if (name is "." or ".." || name.EndsWith('.') )
-            throw new InvalidOperationException("That name isn't allowed.");
+            throw new InvalidOperationException(T("That name isn't allowed."));
 
         var oldPath = entry.Path;
         var dir = string.IsNullOrEmpty(newDirectory) ? Path.GetDirectoryName(oldPath)! : newDirectory;
         var newPath = Path.Combine(dir, name + Path.GetExtension(oldPath));
         if (string.Equals(newPath, oldPath, StringComparison.Ordinal)) return oldPath;
 
-        if (!File.Exists(oldPath)) throw new InvalidOperationException("The file no longer exists on disk.");
+        if (!File.Exists(oldPath)) throw new InvalidOperationException(T("The file no longer exists on disk."));
         // Allow case-only renames on case-insensitive filesystems; otherwise never overwrite.
         var caseOnly = string.Equals(newPath, oldPath, StringComparison.OrdinalIgnoreCase);
         if (!caseOnly && (File.Exists(newPath) || Directory.Exists(newPath)))
-            throw new InvalidOperationException("A file with that name already exists there.");
+            throw new InvalidOperationException(T("A file with that name already exists there."));
 
         try
         {
             File.Move(oldPath, newPath);
+            EditStore.Move(oldPath, newPath);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            throw new InvalidOperationException("Couldn't rename the file: " + ex.Message);
+            throw new InvalidOperationException(T("Couldn't rename the file: ") + ex.Message);
         }
 
         lock (_cacheLock)

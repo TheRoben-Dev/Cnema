@@ -10,9 +10,9 @@ namespace Cnema.ViewModels;
 public sealed partial class MainViewModel
 {
     // ---------- filters ----------
-    public static string[] ResolutionFilters { get; } = { "Any resolution", "720p and up", "1080p and up", "4K" };
-    public static string[] LengthFilters { get; } = { "Any length", "Under 30 seconds", "30 seconds to 5 minutes", "Over 5 minutes" };
-    public static string[] DateFilters { get; } = { "Any date", "Today", "Past 7 days", "Past 30 days" };
+    public static LocalizedText[] ResolutionFilters { get; } = LocalizedText.List("Any resolution", "720p and up", "1080p and up", "4K");
+    public static LocalizedText[] LengthFilters { get; } = LocalizedText.List("Any length", "Under 30 seconds", "30 seconds to 5 minutes", "Over 5 minutes");
+    public static LocalizedText[] DateFilters { get; } = LocalizedText.List("Any date", "Today", "Past 7 days", "Past 30 days");
 
     [ObservableProperty] private int _filterResolution;
     [ObservableProperty] private int _filterLength;
@@ -26,7 +26,7 @@ public sealed partial class MainViewModel
     public int ActiveFilterCount =>
         (FilterResolution > 0 ? 1 : 0) + (FilterLength > 0 ? 1 : 0) + (FilterDate > 0 ? 1 : 0) + (FilterUnwatched ? 1 : 0);
     public bool HasFilters => ActiveFilterCount > 0;
-    public string FilterButtonText => HasFilters ? $"Filters · {ActiveFilterCount}" : "Filters";
+    public string FilterButtonText => HasFilters ? F("Filters · {0}", ActiveFilterCount) : T("Filters");
 
     private void FiltersChanged()
     {
@@ -94,7 +94,7 @@ public sealed partial class MainViewModel
         if (Player.Current is not { } item) return;
         var at = Math.Max(1, (long)Player.Position);
         await SetThumbnailAsync(item, at);
-        Player.ShowToast("Thumbnail set to this frame");
+        Player.ShowToast(T("Thumbnail set to this frame"));
     }
 
     /// <summary>Frame grab: the frame at the playhead, full size, as a PNG next to the video.</summary>
@@ -102,7 +102,7 @@ public sealed partial class MainViewModel
     private async Task SaveFrameAsync()
     {
         if (Player.Current is not { } item) return;
-        if (ToolLocator.Ffmpeg is not { } ffmpeg) { Player.ShowToast("Saving a frame needs ffmpeg, which wasn't found."); return; }
+        if (ToolLocator.Ffmpeg is not { } ffmpeg) { Player.ShowToast(T("Saving a frame needs ffmpeg, which wasn't found.")); return; }
         var at = Math.Max(0, Player.Position);
         var t = TimeSpan.FromMilliseconds(at);
         var name = $"{Path.GetFileNameWithoutExtension(item.Entry.Path)} {(int)t.TotalMinutes}m{t.Seconds:00}.{t.Milliseconds / 100}s";
@@ -116,11 +116,11 @@ public sealed partial class MainViewModel
             var r = await ProcessRunner.RunAsync(ffmpeg, new[] { "-v", "error", "-ss", seek, "-i", item.Entry.Path, "-frames:v", "1", "-y", target });
             if (r.ExitCode == 0 && File.Exists(target))
             {
-                Player.ShowToast($"Saved {Path.GetFileName(target)} in {Path.GetFileName(dir)}");
+                Player.ShowToast(F("Saved {0} in {1}", Path.GetFileName(target), Path.GetFileName(dir)));
                 return;
             }
         }
-        Player.ShowToast("Couldn't save the frame.");
+        Player.ShowToast(T("Couldn't save the frame."));
     }
 
     [RelayCommand]
@@ -239,7 +239,7 @@ public sealed partial class MainViewModel
         SaveCollections();
         RebuildCollections();
         OnPropertyChanged(nameof(HeaderTitle));
-        if (added > 0) ShowToast($"Added {added} video{(added == 1 ? "" : "s")} to {name}");
+        if (added > 0) ShowToast(F(added == 1 ? "Added {0} video to {1}" : "Added {0} videos to {1}", added, name));
     }
 
     public void AddToCollection(IEnumerable<VideoItemViewModel> items, FolderViewModel row)
@@ -255,7 +255,7 @@ public sealed partial class MainViewModel
         SaveCollections();
         UpdateCollectionCounts();
         if (ActiveNav == row) RefreshView();
-        ShowToast(n == 0 ? "Already in " + c.Name : $"Added {n} video{(n == 1 ? "" : "s")} to {c.Name}");
+        ShowToast(n == 0 ? F("Already in {0}", c.Name) : F(n == 1 ? "Added {0} video to {1}" : "Added {0} videos to {1}", n, c.Name));
     }
 
     public void RemoveFromCollection(VideoItemViewModel item)
@@ -276,7 +276,7 @@ public sealed partial class MainViewModel
         _collections.Collections.Remove(c);
         SaveCollections();
         RebuildCollections();
-        ShowToast($"Removed the collection {c.Name}. The videos are still in your library.");
+        ShowToast(F("Removed the collection {0}. The videos are still in your library.", c.Name));
     }
 
     /// <summary>Keeps collections pointing at a video after it was renamed or moved.</summary>
@@ -293,7 +293,7 @@ public sealed partial class MainViewModel
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(SelectionText))] private bool _isSelecting;
     [ObservableProperty] private string _bulkTag = "";
     public int SelectedCount => _items.Values.Count(v => v.IsSelected);
-    public string SelectionText => SelectedCount switch { 0 => "Click videos to select them", 1 => "1 selected", var n => $"{n} selected" };
+    public string SelectionText => SelectedCount switch { 0 => T("Click videos to select them"), var n => F("{0} selected", n) };
     private IEnumerable<VideoItemViewModel> Selection => _items.Values.Where(v => v.IsSelected).ToList();
 
     partial void OnIsSelectingChanged(bool value)
@@ -354,7 +354,7 @@ public sealed partial class MainViewModel
         BulkTag = "";
         _library.SaveCache();
         UpdateCounts();
-        ShowToast($"Tagged {items.Count} video{(items.Count == 1 ? "" : "s")} #{tag}");
+        ShowToast(F(items.Count == 1 ? "Tagged {0} video #{1}" : "Tagged {0} videos #{1}", items.Count, tag));
     }
 
     [RelayCommand] private void BulkAddToCollection(FolderViewModel? row) { if (row is not null) AddToCollection(Selection, row); }
@@ -373,11 +373,11 @@ public sealed partial class MainViewModel
 
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(IsConfirmingDelete), nameof(DeletePrompt), nameof(DeleteTitle), nameof(DeleteHint))]
     private IReadOnlyList<VideoItemViewModel>? _pendingBulkDelete;
-    public string DeleteTitle => PendingBulkDelete is { Count: > 1 } ? "Delete videos" : "Delete video";
+    public string DeleteTitle => PendingBulkDelete is { Count: > 1 } ? T("Delete videos") : T("Delete video");
     public string DeleteHint => PendingBulkDelete is { Count: > 1 }
-        ? "You can restore them from the trash if you change your mind."
-        : "You can restore it from the trash if you change your mind.";
-    private static string TrashName => OperatingSystem.IsWindows() ? "Recycle Bin" : "Trash";
+        ? F("You can restore them from the {0} if you change your mind.", TrashName)
+        : F("You can restore it from the {0} if you change your mind.", TrashName);
+    private static string TrashName => T(OperatingSystem.IsWindows() ? "Recycle Bin" : "Trash");
 
     /// <summary>Moves several videos to the trash; returns how many could not be moved.</summary>
     private int DeleteMany(IReadOnlyList<VideoItemViewModel> items)
@@ -423,8 +423,8 @@ public sealed partial class MainViewModel
         var failed = DeleteMany(chosen);
         Cleanup = null;
         RefreshView();
-        ShowToast(failed == 0 ? $"Moved {chosen.Count} file{(chosen.Count == 1 ? "" : "s")} to the {TrashName}"
-            : $"Moved {chosen.Count - failed} to the {TrashName}; {failed} could not be moved");
+        ShowToast(failed == 0 ? F(chosen.Count == 1 ? "Moved {0} file to the {1}" : "Moved {0} files to the {1}", chosen.Count, TrashName)
+            : F("Moved {0} to the {1}; {2} could not be moved", chosen.Count - failed, TrashName, failed));
     }
 
     // ---------- stats ----------

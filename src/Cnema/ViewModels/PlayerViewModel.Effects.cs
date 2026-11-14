@@ -45,7 +45,7 @@ public sealed partial class SpeedSectionViewModel : ObservableObject
         ("¼×", 0.25, "Quarter speed"), ("½×", 0.5, "Half speed"), ("¾×", 0.75, "Three quarters"),
         ("1.5×", 1.5, "One and a half times"), ("2×", 2.0, "Double speed"), ("4×", 4.0, "Four times"));
     public string RangeText => $"{PlayerViewModel.FormatPrecise(Start)} – {PlayerViewModel.FormatPrecise(End)}";
-    public string Title => (double)Rate.Value < 1 ? "Slow motion" : "Fast forward";
+    public string Title => (double)Rate.Value < 1 ? T("Slow motion") : T("Fast forward");
 
     public event Action? Changed;
 
@@ -148,9 +148,9 @@ public sealed partial class PlayerViewModel
     public bool HasWatermark => File.Exists(Fx.WatermarkPath);
     public bool HasIntro => File.Exists(Fx.IntroPath);
     public bool HasOutro => File.Exists(Fx.OutroPath);
-    public string WatermarkName => HasWatermark ? Path.GetFileName(Fx.WatermarkPath!) : "Pick an image in Settings, Editing";
-    public string IntroName => HasIntro ? Path.GetFileName(Fx.IntroPath!) : "Pick a clip in Settings, Editing";
-    public string OutroName => HasOutro ? Path.GetFileName(Fx.OutroPath!) : "Pick a clip in Settings, Editing";
+    public string WatermarkName => HasWatermark ? Path.GetFileName(Fx.WatermarkPath!) : T("Pick an image in Settings, Editing");
+    public string IntroName => HasIntro ? Path.GetFileName(Fx.IntroPath!) : T("Pick a clip in Settings, Editing");
+    public string OutroName => HasOutro ? Path.GetFileName(Fx.OutroPath!) : T("Pick a clip in Settings, Editing");
 
     public bool UseWatermark
     {
@@ -206,10 +206,10 @@ public sealed partial class PlayerViewModel
     }
 
     public bool HasEffects => EffectsCount > 0;
-    public string EffectsButtonText => EffectsCount is var n && n > 0 ? $"Effects · {n}" : "Effects";
+    public string EffectsButtonText => EffectsCount is var n && n > 0 ? F("Effects · {0}", n) : T("Effects");
     public string EffectsNote => HasEffects
-        ? "Exports and Share re-encode the clip to apply these, so Lossless is skipped."
-        : "Nothing added yet. Effects only change exports; the original video stays as it is.";
+        ? T("Exports and Share re-encode the clip to apply these, so Lossless is skipped.")
+        : T("Nothing added yet. Effects only change exports; the original video stays as it is.");
 
     private void EffectsChanged()
     {
@@ -243,7 +243,7 @@ public sealed partial class PlayerViewModel
         if (Math.Abs(rate - _previewRate) < 0.01) return;
         _previewRate = rate;
         _player?.SetRate((float)(Rate * rate));
-        SpeedPreviewText = Math.Abs(rate - 1) < 0.01 ? null : rate < 1 ? $"Slow motion {rate:0.##}×" : $"Fast forward {rate:0.##}×";
+        SpeedPreviewText = Math.Abs(rate - 1) < 0.01 ? null : rate < 1 ? F("Slow motion {0:0.##}×", rate) : F("Fast forward {0:0.##}×", rate);
     }
 
     private void ResetEffects()
@@ -297,7 +297,7 @@ public sealed partial class PlayerViewModel
     private void CaptionEndHere(CaptionViewModel? c)
     {
         if (c is null) return;
-        if (Position <= c.Start + 100) { ShowToast("The caption has to end after it starts."); return; }
+        if (Position <= c.Start + 100) { ShowToast(T("The caption has to end after it starts.")); return; }
         c.End = Position;
     }
 
@@ -338,7 +338,7 @@ public sealed partial class PlayerViewModel
     private void SpeedEndHere(SpeedSectionViewModel? s)
     {
         if (s is null) return;
-        if (Position <= s.Start + 100) { ShowToast("The section has to end after it starts."); return; }
+        if (Position <= s.Start + 100) { ShowToast(T("The section has to end after it starts.")); return; }
         s.End = Position;
     }
 
@@ -357,6 +357,6 @@ public sealed partial class PlayerViewModel
         foreach (var s in SpeedSections) s.Changed -= EffectsChanged;
         Captions.Clear();
         SpeedSections.Clear();
-        ShowToast("Captions and speed sections removed.");
+        ShowToast(T("Captions and speed sections removed."));
     }
 }

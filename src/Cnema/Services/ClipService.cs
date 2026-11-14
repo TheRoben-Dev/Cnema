@@ -193,7 +193,7 @@ public sealed class ClipService : IDisposable
                 StringComparison.OrdinalIgnoreCase);
             if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DISPLAY")) || wayland)
             {
-                Set(ClipState.Error, "Screen capture needs an X11 session; Wayland is not supported yet.");
+                Set(ClipState.Error, T("Screen capture needs an X11 session; Wayland is not supported yet."));
                 return;
             }
         }
@@ -202,15 +202,15 @@ public sealed class ClipService : IDisposable
         if (ffmpeg is null)
         {
             Set(ClipState.Error, OperatingSystem.IsLinux()
-                ? "Screen capture needs ffmpeg from your distribution (sudo apt install ffmpeg)."
-                : "No ffmpeg with screen capture support was found.");
+                ? T("Screen capture needs ffmpeg from your distribution (sudo apt install ffmpeg).")
+                : T("No ffmpeg with screen capture support was found."));
             return;
         }
 
         if (OperatingSystem.IsMacOS() && !PlatformShell.EnsureScreenCaptureAccess())
         {
             Set(ClipState.Error,
-                "Allow Cnema under System Settings › Privacy & Security › Screen Recording, then restart Cnema.");
+                T("Allow Cnema under System Settings › Privacy & Security › Screen Recording, then restart Cnema."));
             return;
         }
 
@@ -235,7 +235,7 @@ public sealed class ClipService : IDisposable
         var cfg = _withoutCamera ? Cfg.WithoutCamera() : Cfg;
         _cameraUsed = !string.IsNullOrWhiteSpace(cfg.Camera) && devices?.Cameras.Contains(cfg.Camera) == true;
         if (!string.IsNullOrWhiteSpace(cfg.Camera) && !_cameraUsed)
-            CameraNote = $"{cfg.Camera} isn't connected, so clips are recorded without the camera.";
+            CameraNote = F("{0} isn't connected, so clips are recorded without the camera.", cfg.Camera);
         var args = BuildArguments(cfg, encoder, ddagrab, devices, AppPaths.ClipBufferDir,
             Environment.GetEnvironmentVariable("DISPLAY"));
         if (!StartSystemAudio(devices)) return;
@@ -270,7 +270,7 @@ public sealed class ClipService : IDisposable
         }
         catch (Exception ex)
         {
-            Set(ClipState.Error, "Could not start capture: " + ex.Message);
+            Set(ClipState.Error, T("Could not start capture: ") + ex.Message);
             return;
         }
         _process = p;
@@ -321,7 +321,7 @@ public sealed class ClipService : IDisposable
             if (generation != _generation) return;
             StopCore();
             await FinishSessionCoreAsync();
-            Set(ClipState.Error, "The replay buffer stopped rotating, so capture was stopped to protect your disk.");
+            Set(ClipState.Error, T("The replay buffer stopped rotating, so capture was stopped to protect your disk."));
         }
         finally
         {
@@ -344,9 +344,9 @@ public sealed class ClipService : IDisposable
         if (_cameraUsed && ranFor < TimeSpan.FromSeconds(30) && Cfg.Enabled)
         {
             _withoutCamera = true;
-            CameraNote = "The camera could not be opened, so clips are recorded without it. " +
-                         "Check that no other app is using it" +
-                         (OperatingSystem.IsMacOS() ? " and that Cnema may use it (System Settings › Privacy & Security › Camera)." : ".");
+            CameraNote = T(OperatingSystem.IsMacOS()
+                ? "The camera could not be opened, so clips are recorded without it. Check that no other app is using it and that Cnema may use it (System Settings › Privacy & Security › Camera)."
+                : "The camera could not be opened, so clips are recorded without it. Check that no other app is using it.");
             _ = Task.Run(async () =>
             {
                 await _gate.WaitAsync();
@@ -382,7 +382,7 @@ public sealed class ClipService : IDisposable
             Set(ClipState.Starting, null);
             return;
         }
-        Set(ClipState.Error, tail.Length > 0 ? "Capture stopped: " + Shorten(tail) : "Capture stopped unexpectedly.");
+        Set(ClipState.Error, tail.Length > 0 ? T("Capture stopped: ") + Shorten(tail) : T("Capture stopped unexpectedly."));
     }
 
     private Process? _audioHelper;
@@ -411,7 +411,7 @@ public sealed class ClipService : IDisposable
         }
         catch (Exception ex)
         {
-            Set(ClipState.Error, "System audio could not start: " + ex.Message);
+            Set(ClipState.Error, T("System audio could not start: ") + ex.Message);
             return false;
         }
     }

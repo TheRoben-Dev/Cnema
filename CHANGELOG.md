@@ -2,6 +2,12 @@
 
 What changed in each Cnema release. The app shows the entries you have not seen yet after it updates.
 
+## 0.17.0
+- Cnema på svenska! Pick the language under Settings, General, or in the welcome setup. By default Cnema follows your system language, and anything not translated shows in English. The list of changes here stays in English.
+- Remember edits (Settings, Features, off by default): trim marks, parts, captions and speed changes are still there when you open a video again. The video file only changes when you export, and Start over on the Trim page clears it all.
+- Run the welcome setup again from Settings, General. It starts from your current choices and leaves your folders, hotkeys and other settings alone.
+- "Export 1 parts" now says "Export 1 part".
+
 ## 0.16.0
 - More save-clip hotkeys, each with its own length: say Ctrl+Alt+S for the last 15 seconds and Ctrl+Alt+D for the last 3 minutes. Add them under Settings, Clipping. The sidebar lists them all.
 - Clip length now goes up to 10 minutes.

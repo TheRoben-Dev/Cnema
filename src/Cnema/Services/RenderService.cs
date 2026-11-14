@@ -30,15 +30,15 @@ public static class RenderService
 
     public static async Task RenderAsync(RenderJob job, IProgress<double>? progress, CancellationToken ct)
     {
-        var ffmpeg = ToolLocator.Ffmpeg ?? throw new InvalidOperationException("ffmpeg not found.");
-        var info = await MediaProbe.InfoAsync(job.Source, ct) ?? throw new InvalidOperationException("Cnema couldn't read this video.");
-        if (info.Width <= 0 || info.Height <= 0) throw new InvalidOperationException("This file has no picture to add effects to.");
+        var ffmpeg = ToolLocator.Ffmpeg ?? throw new InvalidOperationException(T("ffmpeg not found."));
+        var info = await MediaProbe.InfoAsync(job.Source, ct) ?? throw new InvalidOperationException(T("Cnema couldn't read this video."));
+        if (info.Width <= 0 || info.Height <= 0) throw new InvalidOperationException(T("This file has no picture to add effects to."));
 
         var fx = job.Effects;
         var share = job.Share;
         var gif = share == SharePreset.Gif;
         var parts = job.Parts.Where(p => p.Out - p.In >= 100).OrderBy(p => p.In).ToList();
-        if (parts.Count == 0) throw new ArgumentException("Nothing to export.");
+        if (parts.Count == 0) throw new ArgumentException(T("Nothing to export."));
         if (gif) parts = Cap(parts, TrimService.GifMaxMs);
 
         // The input is read from the first kept moment, so every time below is relative to it.
@@ -47,7 +47,7 @@ public static class RenderService
         var map = TimeMap.Build(
             parts.Select(p => (p.In - origin, p.Out - origin)).ToList(),
             fx.Speed.Select(s => s with { Start = s.Start - origin, End = s.End - origin }).ToList());
-        if (map.Pieces.Count == 0) throw new ArgumentException("Nothing to export.");
+        if (map.Pieces.Count == 0) throw new ArgumentException(T("Nothing to export."));
 
         var tracks = gif ? new List<int>()
             : (job.AudioTracks ?? Enumerable.Range(0, info.AudioStreams)).Where(i => i >= 0 && i < info.AudioStreams).Distinct().ToList();
@@ -68,10 +68,9 @@ public static class RenderService
         foreach (var (path, before) in new[] { (fx.Intro, true), (fx.Outro, false) })
         {
             if (string.IsNullOrWhiteSpace(path)) continue;
-            var what = before ? "intro" : "outro";
-            if (!File.Exists(path)) throw new FileNotFoundException($"The {what} clip is missing: {path}");
+            if (!File.Exists(path)) throw new FileNotFoundException(Loc.F(before ? "The intro clip is missing: {0}" : "The outro clip is missing: {0}", path));
             var bi = await MediaProbe.InfoAsync(path, ct);
-            if (bi is null || bi.DurationMs <= 0 || bi.Width <= 0) throw new InvalidOperationException($"Cnema couldn't read the {what} clip.");
+            if (bi is null || bi.DurationMs <= 0 || bi.Width <= 0) throw new InvalidOperationException(T(before ? "Cnema couldn't read the intro clip." : "Cnema couldn't read the outro clip."));
             bumpers.Add((path, bi, before));
         }
         var introMs = bumpers.Where(b => b.Before).Sum(b => b.Info.DurationMs);
@@ -98,7 +97,7 @@ public static class RenderService
             int? wmInput = null;
             if (fx.Watermark is { } wm)
             {
-                if (!File.Exists(wm.Path)) throw new FileNotFoundException($"The watermark image is missing: {wm.Path}");
+                if (!File.Exists(wm.Path)) throw new FileNotFoundException(Loc.F("The watermark image is missing: {0}", wm.Path));
                 inputs.AddRange(new[] { "-i", wm.Path });
                 wmInput = next++;
             }
@@ -382,7 +381,7 @@ public static class RenderService
             starts.RemoveAll(s => Math.Abs(s.Start - start) < 500);
             starts.Add((start, c.Title));
         }
-        if (starts.Count > 0 && introMs > 0) starts.Insert(0, (0, "Intro"));
+        if (starts.Count > 0 && introMs > 0) starts.Insert(0, (0, T("Intro")));
         var result = new List<Chapter>();
         for (var i = 0; i < starts.Count; i++)
         {

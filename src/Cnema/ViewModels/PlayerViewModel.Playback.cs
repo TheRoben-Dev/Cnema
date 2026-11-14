@@ -10,7 +10,7 @@ namespace Cnema.ViewModels;
 public sealed partial class RateOption : ObservableObject
 {
     public double Value { get; }
-    public string Label => Value == 1 ? "Normal" : $"{Value:0.##}×";
+    public string Label => Value == 1 ? T("Normal") : $"{Value:0.##}×";
     [ObservableProperty] private bool _isCurrent;
     public RateOption(double value) => Value = value;
 }
@@ -47,7 +47,7 @@ public sealed partial class PlayerViewModel
     {
         if (option is null) return;
         Rate = option.Value;
-        ShowToast(option.Value == 1 ? "Normal speed" : $"Speed {Rate:0.##}×");
+        ShowToast(option.Value == 1 ? T("Normal speed") : F("Speed {0:0.##}×", Rate));
     }
 
     [RelayCommand]
@@ -62,18 +62,18 @@ public sealed partial class PlayerViewModel
         if (i < 0) i = Array.IndexOf(Rates, 1.0);
         var next = Math.Clamp(i + direction, 0, Rates.Length - 1);
         Rate = Rates[next];
-        ShowToast(Rate == 1 ? "Normal speed" : $"Speed {Rate:0.##}×");
+        ShowToast(Rate == 1 ? T("Normal speed") : F("Speed {0:0.##}×", Rate));
     }
 
     // ---------- A-B loop ----------
     // The loop region is the in/out selection, so a loop can be exported as it is.
     private bool _inLoop;
 
-    public string AbText => LoopRange && HasRange ? "A-B on" : HasIn && !HasOut ? "A ··· B" : "A-B";
-    public string AbTip => LoopRange && HasRange ? "Stop looping (B)"
-        : HasIn && !HasOut ? "Set the end of the loop here (B)"
-        : HasRange ? "Loop the selection (B)"
-        : "Loop part of the video: press at the start, then at the end (B)";
+    public string AbText => LoopRange && HasRange ? T("A-B on") : HasIn && !HasOut ? "A ··· B" : "A-B";
+    public string AbTip => LoopRange && HasRange ? T("Stop looping (B)")
+        : HasIn && !HasOut ? T("Set the end of the loop here (B)")
+        : HasRange ? T("Loop the selection (B)")
+        : T("Loop part of the video: press at the start, then at the end (B)");
 
     partial void OnInPointChanged(double value) => RaiseAb();
     partial void OnOutPointChanged(double value) => RaiseAb();
@@ -100,31 +100,31 @@ public sealed partial class PlayerViewModel
         if (LoopRange && HasRange)
         {
             LoopRange = false;
-            ShowToast("Loop off. The selection stays for trimming; X clears it.");
+            ShowToast(T("Loop off. The selection stays for trimming; X clears it."));
             return;
         }
         if (HasIn && !HasOut)
         {
-            if (Position <= InPoint + 100) { ShowToast("The end of the loop has to come after its start."); return; }
+            if (Position <= InPoint + 100) { ShowToast(T("The end of the loop has to come after its start.")); return; }
             OutPoint = Position;
             LoopRange = true;
-            ShowToast("Looping. Press B again to stop.");
+            ShowToast(T("Looping. Press B again to stop."));
             return;
         }
         if (HasRange)
         {
             LoopRange = true;
-            ShowToast("Looping the selection. Press B again to stop.");
+            ShowToast(T("Looping the selection. Press B again to stop."));
             return;
         }
         InPoint = Position;
-        ShowToast("Loop start set. Press B again at the end.");
+        ShowToast(T("Loop start set. Press B again at the end."));
     }
 
     [RelayCommand]
     private void ToggleLoop()
     {
-        if (!HasRange) { ShowToast("Mark a selection first (I / O), or press B to set a loop."); return; }
+        if (!HasRange) { ShowToast(T("Mark a selection first (I / O), or press B to set a loop.")); return; }
         LoopRange = !LoopRange;
     }
 
@@ -180,7 +180,7 @@ public sealed partial class PlayerViewModel
             c.IsCurrent = on && current is null;
             if (c.IsCurrent) current = c;
         }
-        ChapterText = current is null ? $"{ChapterList.Count} chapters" : $"{current.Title} · {current.Chapter.Number}/{ChapterList.Count}";
+        ChapterText = current is null ? F("{0} chapters", ChapterList.Count) : $"{current.Title} · {current.Chapter.Number}/{ChapterList.Count}";
     }
 
     [RelayCommand]
@@ -199,7 +199,7 @@ public sealed partial class PlayerViewModel
         InPoint = chapter.Chapter.Start;
         OutPoint = chapter.Chapter.End;
         Seek(InPoint);
-        ShowToast($"{chapter.Title} selected. Export saves just this chapter.");
+        ShowToast(F("{0} selected. Export saves just this chapter.", chapter.Title));
     }
 
     [RelayCommand]
@@ -210,7 +210,7 @@ public sealed partial class PlayerViewModel
 
     private void StepChapter(int direction)
     {
-        if (ChapterList.Count < 2) { ShowToast("This video has no chapters."); return; }
+        if (ChapterList.Count < 2) { ShowToast(T("This video has no chapters.")); return; }
         var target = direction > 0
             ? ChapterList.FirstOrDefault(c => c.Chapter.Start > Position + 500)
             : ChapterList.LastOrDefault(c => c.Chapter.Start < Position - 1500);

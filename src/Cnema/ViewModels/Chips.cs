@@ -7,17 +7,20 @@ namespace Cnema.ViewModels;
 public sealed partial class OptionChip : ObservableObject
 {
     private readonly ChipGroup _group;
-    public string Label { get; }
-    public string? Tip { get; }
+    private readonly string _label;
+    private readonly string? _tip;
+    /// <summary>Translated when read, so the chips follow a language change.</summary>
+    public string Label => T(_label);
+    public string? Tip => _tip is null ? null : T(_tip);
     public object Value { get; }
     [ObservableProperty] private bool _isOn;
 
     internal OptionChip(ChipGroup group, string label, object value, string? tip)
     {
         _group = group;
-        Label = label;
+        _label = label;
         Value = value;
-        Tip = tip;
+        _tip = tip;
     }
 
     [RelayCommand]
@@ -46,4 +49,22 @@ public sealed partial class ChipGroup : ObservableObject
     {
         foreach (var c in Chips) c.IsOn = Equals(c.Value, Value);
     }
+}
+
+/// <summary>A fixed list entry (sort order, filter, tab) whose text follows the language setting live.</summary>
+public sealed class LocalizedText : ObservableObject
+{
+    public string English { get; }
+    public string Text => T(English);
+
+    public LocalizedText(string english)
+    {
+        English = english;
+        // These lists live as long as the app, so a plain subscription is fine.
+        Cnema.Services.Loc.Changed += () => OnPropertyChanged(nameof(Text));
+    }
+
+    public override string ToString() => Text;
+
+    public static LocalizedText[] List(params string[] english) => english.Select(e => new LocalizedText(e)).ToArray();
 }

@@ -68,12 +68,12 @@ public sealed partial class MainViewModel
         {
             _settings.Save();
             File.Copy(AppPaths.SettingsFile, path, overwrite: true);
-            ShowToast("Settings exported");
+            ShowToast(T("Settings exported"));
         }
         catch (Exception ex)
         {
             Log.Warn("Exporting settings failed: " + ex.Message);
-            ShowToast("Could not export the settings: " + ex.Message);
+            ShowToast(T("Could not export the settings: ") + ex.Message);
         }
     }
 
@@ -88,7 +88,7 @@ public sealed partial class MainViewModel
         }
         catch (Exception ex)
         {
-            ShowToast("That file is not a Cnema settings file.");
+            ShowToast(T("That file is not a Cnema settings file."));
             Log.Warn("Importing settings failed: " + ex.Message);
             return;
         }
@@ -98,7 +98,7 @@ public sealed partial class MainViewModel
         RebuildFolders(SelectedFolder?.Path);
         _ = RescanAsync();
         await ApplyClipSettingsAsync();
-        ShowToast("Settings imported");
+        ShowToast(T("Settings imported"));
     }
 
     /// <summary>Puts look, keys, features and controller mode in line with the stored settings.</summary>
@@ -116,6 +116,9 @@ public sealed partial class MainViewModel
     public IReadOnlyList<ColorScheme> ColorSchemes => ThemeService.Schemes;
     [ObservableProperty] private ColorScheme _setupScheme = ThemeService.Current;
     partial void OnSetupSchemeChanged(ColorScheme value) { if (value is not null) ThemeService.Apply(value.Id, Accessibility.HighContrast); }
+    public IReadOnlyList<LanguageOption> SetupLanguages { get; } = Loc.Languages.Select(l => new LanguageOption(l.Code, l.Name)).ToList();
+    [ObservableProperty] private LanguageOption? _setupLanguage;
+    partial void OnSetupLanguageChanged(LanguageOption? value) { if (value is not null) Loc.Apply(value.Code); }
     [ObservableProperty] private bool _setupClipping = true;
     [ObservableProperty] private bool _setupSessions = true;
     [ObservableProperty] private bool _setupController = true;
@@ -124,9 +127,9 @@ public sealed partial class MainViewModel
     [ObservableProperty] private bool _setupHoverGlow = true;
     public string SetupFolders => _settings.Current.Folders.Count switch
     {
-        0 => "No folders yet. Cnema only shows videos from folders you add.",
-        1 => "1 folder: " + _settings.Current.Folders[0],
-        var n => $"{n} folders added.",
+        0 => T("No folders yet. Cnema only shows videos from folders you add."),
+        1 => T("1 folder: ") + _settings.Current.Folders[0],
+        var n => F("{0} folders added.", n),
     };
 
     [RelayCommand]
@@ -141,13 +144,32 @@ public sealed partial class MainViewModel
     {
         var s = _settings.Current;
         s.ColorScheme = SetupScheme.Id;
-        s.Features = new FeatureSettings
-        {
-            Clipping = SetupClipping, Sessions = SetupSessions, Controller = SetupController,
-            HoverPreview = SetupHoverPreview, LoudMarkers = SetupLoudMarkers, HoverGlow = SetupHoverGlow,
-        };
+        // Picking the system's own language keeps following the system.
+        if (SetupLanguage is { } lang) s.Language = lang.Code == Loc.SystemLanguage ? "" : lang.Code;
+        // Only the switches shown in setup; everything else (other features, folders, hotkeys) stays.
+        var f = s.Features;
+        f.Clipping = SetupClipping; f.Sessions = SetupSessions; f.Controller = SetupController;
+        f.HoverPreview = SetupHoverPreview; f.LoudMarkers = SetupLoudMarkers; f.HoverGlow = SetupHoverGlow;
         _settings.Save();
         IsSetupOpen = false;
         ApplyAllSettings();
+    }
+
+    /// <summary>
+    /// Settings, General: go through the welcome setup again. It starts from the current choices,
+    /// and folders, hotkeys and everything it doesn't show are left alone.
+    /// </summary>
+    [RelayCommand]
+    private void RestartSetup()
+    {
+        CancelSettings();
+        var s = _settings.Current;
+        var f = s.Features;
+        SetupScheme = ThemeService.Find(s.ColorScheme);
+        SetupLanguage = SetupLanguages.FirstOrDefault(l => l.Code == Loc.Current);
+        SetupClipping = f.Clipping; SetupSessions = f.Sessions; SetupController = f.Controller;
+        SetupHoverPreview = f.HoverPreview; SetupLoudMarkers = f.LoudMarkers; SetupHoverGlow = f.HoverGlow;
+        OnPropertyChanged(nameof(SetupFolders));
+        IsSetupOpen = true;
     }
 }

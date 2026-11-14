@@ -39,8 +39,8 @@
     <DataTemplate DataType="vm:ExportQueueViewModel" x:DataType="vm:ExportQueueViewModel">
       <StackPanel Width="380" Spacing="6">
         <Grid ColumnDefinitions="*,Auto">
-          <TextBlock Classes="label" Text="EXPORTS" VerticalAlignment="Center" Margin="4,0,0,0" />
-          <Button Grid.Column="1" Classes="ghost" FontSize="11" Content="Clear finished" Padding="8,3"
+          <TextBlock Classes="label" svc:Tr.Text="EXPORTS" VerticalAlignment="Center" Margin="4,0,0,0" />
+          <Button Grid.Column="1" Classes="ghost" FontSize="11" svc:Tr.Content="Clear finished" Padding="8,3"
                   IsVisible="{Binding HasFinished}" Command="{Binding ClearFinishedCommand}" />
         </Grid>
         <ScrollViewer MaxHeight="420">
@@ -56,15 +56,15 @@
                       <TextBlock Text="{Binding Status}" FontSize="11" TextWrapping="Wrap" Classes.err="{Binding IsFailed}" Classes.dim="{Binding !IsFailed}" />
                     </StackPanel>
                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top" Margin="6,0,0,0">
-                      <Button Classes="ghost" Padding="6" ToolTip.Tip="Show in folder" IsVisible="{Binding IsDone}"
+                      <Button Classes="ghost" Padding="6" svc:Tr.Tip="Show in folder" IsVisible="{Binding IsDone}"
                               Command="{Binding #Root.((vm:MainViewModel)DataContext).Exports.RevealCommand}" CommandParameter="{Binding}">
                         <PathIcon Data="{StaticResource IcFolder}" Width="13" Height="13" />
                       </Button>
-                      <Button Classes="ghost" Padding="6" ToolTip.Tip="Cancel this export" IsVisible="{Binding CanCancel}"
+                      <Button Classes="ghost" Padding="6" svc:Tr.Tip="Cancel this export" IsVisible="{Binding CanCancel}"
                               Command="{Binding #Root.((vm:MainViewModel)DataContext).Exports.CancelCommand}" CommandParameter="{Binding}">
                         <PathIcon Data="{StaticResource IcClose}" Width="11" Height="11" />
                       </Button>
-                      <Button Classes="ghost" Padding="6" ToolTip.Tip="Remove from the list" IsVisible="{Binding IsFinished}"
+                      <Button Classes="ghost" Padding="6" svc:Tr.Tip="Remove from the list" IsVisible="{Binding IsFinished}"
                               Command="{Binding #Root.((vm:MainViewModel)DataContext).Exports.RemoveCommand}" CommandParameter="{Binding}">
                         <PathIcon Data="{StaticResource IcClose}" Width="11" Height="11" />
                       </Button>
@@ -76,7 +76,7 @@
           </ItemsControl>
         </ScrollViewer>
         <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Margin="4,0"
-                   Text="Exports run one at a time while you keep working. Quitting Cnema stops them." />
+                   svc:Tr.Text="Exports run one at a time while you keep working. Quitting Cnema stops them." />
       </StackPanel>
     </DataTemplate>
   </Window.DataTemplates>
@@ -126,10 +126,10 @@
               <StackPanel Spacing="4">
                 <StackPanel Orientation="Horizontal" Spacing="6">
                   <PathIcon Data="{StaticResource IcWarn}" Width="13" Height="13" Foreground="{DynamicResource Accent}" />
-                  <TextBlock Text="ffmpeg not found" FontWeight="SemiBold" FontSize="12" />
+                  <TextBlock svc:Tr.Text="ffmpeg not found" FontWeight="SemiBold" FontSize="12" />
                 </StackPanel>
                 <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap"
-                           Text="Thumbnails and clip export need it. Install, then restart:" />
+                           svc:Tr.Text="Thumbnails and clip export need it. Install, then restart:" />
                 <SelectableTextBlock Classes="mono" FontSize="11" Text="{Binding FfmpegHint}" Foreground="{DynamicResource Accent}" />
               </StackPanel>
             </Border>
@@ -152,7 +152,7 @@
                   <Ellipse Classes="clipdot" Width="8" Height="8" VerticalAlignment="Center" Margin="2,0,8,0" />
                   <TextBlock Grid.Column="1" Text="{Binding ClipTitle}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
                   <ToggleSwitch x:Name="ClipToggle" Grid.Column="2" IsChecked="{Binding IsClipEnabled, Mode=OneWay}" Command="{Binding ToggleClippingCommand}"
-                                OnContent="" OffContent="" MinWidth="0" Margin="0,-6,-6,-6" ToolTip.Tip="Turn background clipping on or off" />
+                                OnContent="" OffContent="" MinWidth="0" Margin="0,-6,-6,-6" svc:Tr.Tip="Turn background clipping on or off" />
                 </Grid>
                 <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="{Binding ClipDetail}" IsVisible="{Binding HasClipDetail}" />
                 <Button x:Name="SaveClipButton" Classes="accent" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Padding="10,7"
@@ -164,7 +164,7 @@
                 </Button>
                 <Button x:Name="SessionButton" Classes="soft" Classes.rec="{Binding IsSession}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Padding="10,7"
                         Command="{Binding ToggleSessionCommand}" IsVisible="{Binding ShowSessionButton}"
-                        ToolTip.Tip="Record everything from now until you stop, as one video. The clip hotkey adds bookmarks.">
+                        svc:Tr.Tip="Record everything from now until you stop, as one video. The clip hotkey adds bookmarks.">
                   <StackPanel Orientation="Horizontal" Spacing="7">
                     <Ellipse Width="8" Height="8" Fill="#FF4D6D" VerticalAlignment="Center" />
                     <TextBlock Text="{Binding SessionLabel}" FontWeight="SemiBold" FontSize="12" />
@@ -177,11 +177,11 @@
                       Command="{Binding AddFolderCommand}">
                 <StackPanel Orientation="Horizontal" Spacing="8">
                   <PathIcon Data="{StaticResource IcAdd}" Width="14" Height="14" />
-                  <TextBlock Text="Add folder" FontWeight="SemiBold" />
+                  <TextBlock svc:Tr.Text="Add folder" FontWeight="SemiBold" />
                 </StackPanel>
               </Button>
               <Button x:Name="SettingsButton" Grid.Column="1" Classes="soft" Margin="8,0,0,0" Padding="10" VerticalAlignment="Stretch"
-                      Command="{Binding OpenSettingsCommand}" ToolTip.Tip="Settings">
+                      Command="{Binding OpenSettingsCommand}" svc:Tr.Tip="Settings">
                 <PathIcon Data="{StaticResource IcSettings}" Width="15" Height="15" />
               </Button>
             </Grid>
@@ -189,15 +189,15 @@
 
           <ScrollViewer VerticalScrollBarVisibility="Auto">
             <StackPanel>
-              <TextBlock Classes="label" Text="LIBRARY" Margin="10,0,0,8" />
+              <TextBlock Classes="label" svc:Tr.Text="LIBRARY" Margin="10,0,0,8" />
           <ListBox x:Name="FolderList" Classes="nav" ItemsSource="{Binding Folders}" SelectedItem="{Binding SelectedFolder}">
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="vm:FolderViewModel">
                 <Grid ColumnDefinitions="Auto,*,Auto,Auto" ToolTip.Tip="{Binding Tooltip}" Background="Transparent">
                   <Grid.ContextMenu>
                     <ContextMenu IsVisible="{Binding IsRemovable}">
-                      <MenuItem Header="Show in file manager" Click="OnRevealFolderClick" />
-                      <MenuItem Header="Remove from library" Click="OnRemoveFolderClick" />
+                      <MenuItem svc:Tr.Header="Show in file manager" Click="OnRevealFolderClick" />
+                      <MenuItem svc:Tr.Header="Remove from library" Click="OnRemoveFolderClick" />
                     </ContextMenu>
                   </Grid.ContextMenu>
                   <PathIcon Classes="navicon" Grid.Column="0" Width="15" Height="15" Margin="0,0,10,0"
@@ -206,7 +206,7 @@
                   <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="13" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                   <TextBlock Grid.Column="2" Classes="dim" Text="{Binding Count}" FontSize="11" VerticalAlignment="Center" Margin="6,0,0,0" />
                   <Button Grid.Column="3" Classes="ghost remove" Padding="3" Margin="4,-4,-4,-4"
-                          IsVisible="{Binding IsRemovable}" ToolTip.Tip="Remove folder"
+                          IsVisible="{Binding IsRemovable}" svc:Tr.Tip="Remove folder"
                           Command="{Binding #Root.((vm:MainViewModel)DataContext).RemoveFolderCommand}"
                           CommandParameter="{Binding}">
                     <PathIcon Data="{StaticResource IcClose}" Width="11" Height="11" Foreground="{DynamicResource TextDim}" />
@@ -217,23 +217,23 @@
           </ListBox>
               <StackPanel IsVisible="{Binding ShowCollections}">
                 <Grid ColumnDefinitions="*,Auto" Margin="10,22,0,4">
-                  <TextBlock Classes="label" Text="COLLECTIONS" VerticalAlignment="Center" />
-                  <Button Grid.Column="1" Classes="ghost" Padding="4" ToolTip.Tip="New collection" Command="{Binding NewCollectionCommand}">
+                  <TextBlock Classes="label" svc:Tr.Text="COLLECTIONS" VerticalAlignment="Center" />
+                  <Button Grid.Column="1" Classes="ghost" Padding="4" svc:Tr.Tip="New collection" Command="{Binding NewCollectionCommand}">
                     <PathIcon Data="{StaticResource IcAdd}" Width="12" Height="12" Foreground="{DynamicResource TextDim}" />
                   </Button>
                 </Grid>
-                <TextBox x:Name="CollectionNameBox" Margin="4,2,4,6" CornerRadius="8" FontSize="12" Watermark="Collection name, then Enter"
+                <TextBox x:Name="CollectionNameBox" Margin="4,2,4,6" CornerRadius="8" FontSize="12" svc:Tr.Watermark="Collection name, then Enter"
                          Text="{Binding CollectionName}" IsVisible="{Binding IsNamingCollection}" KeyDown="OnCollectionNameKeyDown" />
                 <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Margin="10,0,8,4"
-                           IsVisible="{Binding !HasCollections}" Text="Group videos from any folders. Right-click a video to add it." />
+                           IsVisible="{Binding !HasCollections}" svc:Tr.Text="Group videos from any folders. Right-click a video to add it." />
                 <ListBox x:Name="CollectionList" Classes="nav" ItemsSource="{Binding Collections}" SelectedItem="{Binding SelectedCollection}">
                   <ListBox.ItemTemplate>
                     <DataTemplate x:DataType="vm:FolderViewModel">
                       <Grid ColumnDefinitions="Auto,*,Auto" ToolTip.Tip="{Binding Tooltip}" Background="Transparent">
                         <Grid.ContextMenu>
                           <ContextMenu>
-                            <MenuItem Header="Rename…" Click="OnRenameCollectionClick" />
-                            <MenuItem Header="Delete collection" Click="OnDeleteCollectionClick" />
+                            <MenuItem svc:Tr.Header="Rename…" Click="OnRenameCollectionClick" />
+                            <MenuItem svc:Tr.Header="Delete collection" Click="OnDeleteCollectionClick" />
                           </ContextMenu>
                         </Grid.ContextMenu>
                         <PathIcon Classes="navicon" Grid.Column="0" Width="15" Height="15" Margin="0,0,10,0"
@@ -246,23 +246,23 @@
                 </ListBox>
               </StackPanel>
               <StackPanel IsVisible="{Binding ShowTools}" Margin="0,22,0,0">
-                <TextBlock Classes="label" Text="TOOLS" Margin="10,0,0,8" />
+                <TextBlock Classes="label" svc:Tr.Text="TOOLS" Margin="10,0,0,8" />
                 <Button x:Name="CleanupButton" Classes="navbutton" IsVisible="{Binding ShowCleanUp}" Command="{Binding OpenCleanupCommand}"
-                        ToolTip.Tip="Find duplicates and broken, empty or very short files">
+                        svc:Tr.Tip="Find duplicates and broken, empty or very short files">
                   <StackPanel Orientation="Horizontal" Spacing="10">
                     <PathIcon Data="{StaticResource IcBroom}" Width="15" Height="15" Foreground="{DynamicResource TextDim}" />
-                    <TextBlock Text="Clean up" FontSize="13" VerticalAlignment="Center" />
+                    <TextBlock svc:Tr.Text="Clean up" FontSize="13" VerticalAlignment="Center" />
                   </StackPanel>
                 </Button>
                 <Button x:Name="StatsButton" Classes="navbutton" IsVisible="{Binding ShowStats}" Command="{Binding OpenStatsCommand}"
-                        ToolTip.Tip="Numbers about your library and clips">
+                        svc:Tr.Tip="Numbers about your library and clips">
                   <StackPanel Orientation="Horizontal" Spacing="10">
                     <PathIcon Data="{StaticResource IcStats}" Width="15" Height="15" Foreground="{DynamicResource TextDim}" />
-                    <TextBlock Text="Stats" FontSize="13" VerticalAlignment="Center" />
+                    <TextBlock svc:Tr.Text="Stats" FontSize="13" VerticalAlignment="Center" />
                   </StackPanel>
                 </Button>
               </StackPanel>
-              <TextBlock Classes="label" Text="TAGS" Margin="10,22,0,8" IsVisible="{Binding HasTags}" />
+              <TextBlock Classes="label" svc:Tr.Text="TAGS" Margin="10,22,0,8" IsVisible="{Binding HasTags}" />
               <ListBox x:Name="TagList" Classes="nav" ItemsSource="{Binding Tags}" SelectedItem="{Binding SelectedTag}" IsVisible="{Binding HasTags}">
                 <ListBox.ItemTemplate>
                   <DataTemplate x:DataType="vm:FolderViewModel">
@@ -291,7 +291,7 @@
             <TextBlock Classes="dim" Text="{Binding HeaderCount}" FontSize="12" />
           </StackPanel>
           <Button Grid.Column="1" Classes="soft" VerticalAlignment="Center" Margin="0,0,10,0" Padding="12,8"
-                  IsVisible="{Binding Exports.HasJobs}" ToolTip.Tip="Exports running in the background">
+                  IsVisible="{Binding Exports.HasJobs}" svc:Tr.Tip="Exports running in the background">
             <StackPanel Orientation="Horizontal" Spacing="7">
               <PathIcon Data="{StaticResource IcExport}" Width="14" Height="14" />
               <TextBlock Text="{Binding Exports.ButtonText}" FontSize="13" />
@@ -303,12 +303,12 @@
             </Button.Flyout>
           </Button>
           <Panel Grid.Column="2" Width="260" VerticalAlignment="Center" Margin="0,0,10,0">
-            <TextBox Classes="search" Watermark="Search names or #tags" Text="{Binding SearchText}" x:Name="SearchBox" />
+            <TextBox Classes="search" svc:Tr.Watermark="Search names or #tags" Text="{Binding SearchText}" x:Name="SearchBox" />
             <PathIcon Data="{StaticResource IcSearch}" Width="15" Height="15" Foreground="{DynamicResource TextDim}"
                       HorizontalAlignment="Left" Margin="12,0,0,0" IsHitTestVisible="False" />
           </Panel>
           <Button Grid.Column="3" Classes="soft" Classes.on="{Binding HasFilters}" VerticalAlignment="Center" Margin="0,0,8,0" Padding="12,8"
-                  ToolTip.Tip="Filter by resolution, length, date or watched">
+                  svc:Tr.Tip="Filter by resolution, length, date or watched">
             <StackPanel Orientation="Horizontal" Spacing="7">
               <PathIcon Data="{StaticResource IcFilter}" Width="14" Height="14" />
               <TextBlock Text="{Binding FilterButtonText}" FontSize="13" />
@@ -316,24 +316,32 @@
             <Button.Flyout>
               <Flyout Placement="BottomEdgeAlignedRight">
                 <StackPanel Spacing="10" Width="250" Margin="4">
-                  <TextBlock Classes="label" Text="FILTERS" />
-                  <ComboBox Classes="field" HorizontalAlignment="Stretch" ItemsSource="{x:Static vm:MainViewModel.ResolutionFilters}" SelectedIndex="{Binding FilterResolution}" />
-                  <ComboBox Classes="field" HorizontalAlignment="Stretch" ItemsSource="{x:Static vm:MainViewModel.LengthFilters}" SelectedIndex="{Binding FilterLength}" />
-                  <ComboBox Classes="field" HorizontalAlignment="Stretch" ItemsSource="{x:Static vm:MainViewModel.DateFilters}" SelectedIndex="{Binding FilterDate}" />
-                  <CheckBox Content="Only videos I haven't watched" IsChecked="{Binding FilterUnwatched}" IsVisible="{Binding ShowUnwatchedFilter}" />
-                  <Button Classes="ghost" Content="Clear filters" HorizontalAlignment="Right" Command="{Binding ClearFiltersCommand}" IsEnabled="{Binding HasFilters}" />
+                  <TextBlock Classes="label" svc:Tr.Text="FILTERS" />
+                  <ComboBox Classes="field" HorizontalAlignment="Stretch" ItemsSource="{x:Static vm:MainViewModel.ResolutionFilters}" SelectedIndex="{Binding FilterResolution}">
+                    <ComboBox.ItemTemplate><DataTemplate x:DataType="vm:LocalizedText"><TextBlock Text="{Binding Text}" /></DataTemplate></ComboBox.ItemTemplate>
+                  </ComboBox>
+                  <ComboBox Classes="field" HorizontalAlignment="Stretch" ItemsSource="{x:Static vm:MainViewModel.LengthFilters}" SelectedIndex="{Binding FilterLength}">
+                    <ComboBox.ItemTemplate><DataTemplate x:DataType="vm:LocalizedText"><TextBlock Text="{Binding Text}" /></DataTemplate></ComboBox.ItemTemplate>
+                  </ComboBox>
+                  <ComboBox Classes="field" HorizontalAlignment="Stretch" ItemsSource="{x:Static vm:MainViewModel.DateFilters}" SelectedIndex="{Binding FilterDate}">
+                    <ComboBox.ItemTemplate><DataTemplate x:DataType="vm:LocalizedText"><TextBlock Text="{Binding Text}" /></DataTemplate></ComboBox.ItemTemplate>
+                  </ComboBox>
+                  <CheckBox svc:Tr.Content="Only videos I haven't watched" IsChecked="{Binding FilterUnwatched}" IsVisible="{Binding ShowUnwatchedFilter}" />
+                  <Button Classes="ghost" svc:Tr.Content="Clear filters" HorizontalAlignment="Right" Command="{Binding ClearFiltersCommand}" IsEnabled="{Binding HasFilters}" />
                 </StackPanel>
               </Flyout>
             </Button.Flyout>
           </Button>
           <ComboBox x:Name="SortBox" Grid.Column="4" VerticalAlignment="Center" MinWidth="170" Margin="0,0,6,0"
                     ItemsSource="{x:Static vm:MainViewModel.SortModes}" SelectedIndex="{Binding SortIndex}"
-                    CornerRadius="10" Background="{DynamicResource Bg2}" BorderBrush="{DynamicResource Line}" />
-          <ToggleButton Grid.Column="5" Classes="ghost" VerticalAlignment="Center" ToolTip.Tip="Select several videos"
+                    CornerRadius="10" Background="{DynamicResource Bg2}" BorderBrush="{DynamicResource Line}">
+            <ComboBox.ItemTemplate><DataTemplate x:DataType="vm:LocalizedText"><TextBlock Text="{Binding Text}" /></DataTemplate></ComboBox.ItemTemplate>
+          </ComboBox>
+          <ToggleButton Grid.Column="5" Classes="ghost" VerticalAlignment="Center" svc:Tr.Tip="Select several videos"
                         IsChecked="{Binding IsSelecting}">
             <PathIcon Data="{StaticResource IcSelect}" />
           </ToggleButton>
-          <Button Grid.Column="6" Classes="ghost" VerticalAlignment="Center" ToolTip.Tip="Rescan folders"
+          <Button Grid.Column="6" Classes="ghost" VerticalAlignment="Center" svc:Tr.Tip="Rescan folders"
                   Command="{Binding RescanCommand}">
             <PathIcon Data="{StaticResource IcRefresh}" />
           </Button>
@@ -363,16 +371,16 @@
                           CommandParameter="{Binding}">
                     <Button.ContextMenu>
                       <ContextMenu>
-                        <MenuItem Header="Play" Click="OnPlayItemClick" />
-                        <MenuItem Header="Rename, tag or move…" Click="OnEditItemClick" />
-                        <MenuItem Header="Add to / remove from favourites" Click="OnFavoriteItemClick" />
+                        <MenuItem svc:Tr.Header="Play" Click="OnPlayItemClick" />
+                        <MenuItem svc:Tr.Header="Rename, tag or move…" Click="OnEditItemClick" />
+                        <MenuItem svc:Tr.Header="Add to / remove from favourites" Click="OnFavoriteItemClick" />
                         <MenuItem Header="{Binding WatchedMenuText}" Click="OnWatchedItemClick" Tag="watched" />
-                        <MenuItem Header="Add to collection" Tag="collections" />
-                        <MenuItem Header="Remove from this collection" Click="OnRemoveFromCollectionClick" Tag="uncollect" />
-                        <MenuItem Header="Reset thumbnail" Click="OnResetThumbnailClick" IsVisible="{Binding HasCustomThumbnail}" />
+                        <MenuItem svc:Tr.Header="Add to collection" Tag="collections" />
+                        <MenuItem svc:Tr.Header="Remove from this collection" Click="OnRemoveFromCollectionClick" Tag="uncollect" />
+                        <MenuItem svc:Tr.Header="Reset thumbnail" Click="OnResetThumbnailClick" IsVisible="{Binding HasCustomThumbnail}" />
                         <Separator />
-                        <MenuItem Header="Show in file manager" Click="OnRevealItemClick" />
-                        <MenuItem Header="Delete…" Click="OnDeleteItemClick" />
+                        <MenuItem svc:Tr.Header="Show in file manager" Click="OnRevealItemClick" />
+                        <MenuItem svc:Tr.Header="Delete…" Click="OnDeleteItemClick" />
                       </ContextMenu>
                     </Button.ContextMenu>
                     <StackPanel Spacing="9">
@@ -416,11 +424,11 @@
                             <PathIcon Data="{StaticResource IcStar}" Width="12" Height="12" Foreground="#FFD166" />
                           </Border>
                           <StackPanel Classes="actions" Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="6" IsVisible="{Binding !ShowSelectBox}">
-                            <Button Classes="mini" Focusable="False" ToolTip.Tip="Rename, tag or move"
+                            <Button Classes="mini" Focusable="False" svc:Tr.Tip="Rename, tag or move"
                                     Command="{Binding #Root.((vm:MainViewModel)DataContext).BeginEditCommand}" CommandParameter="{Binding}">
                               <PathIcon Data="{StaticResource IcEdit}" Width="13" Height="13" />
                             </Button>
-                            <Button Classes="mini" Focusable="False" ToolTip.Tip="Favourite"
+                            <Button Classes="mini" Focusable="False" svc:Tr.Tip="Favourite"
                                     Command="{Binding #Root.((vm:MainViewModel)DataContext).ToggleFavoriteCommand}" CommandParameter="{Binding}">
                               <Panel>
                                 <PathIcon Data="{StaticResource IcStarOutline}" Width="13" Height="13" IsVisible="{Binding !IsFavorite}" />
@@ -429,7 +437,7 @@
                             </Button>
                           </StackPanel>
                           <StackPanel Classes="actions" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="6,6,6,8" IsVisible="{Binding !ShowSelectBox}">
-                            <Button Classes="mini del" Focusable="False" ToolTip.Tip="Delete"
+                            <Button Classes="mini del" Focusable="False" svc:Tr.Tip="Delete"
                                     Command="{Binding #Root.((vm:MainViewModel)DataContext).RequestDeleteCommand}" CommandParameter="{Binding}">
                               <PathIcon Data="{StaticResource IcDelete}" Width="13" Height="13" />
                             </Button>
@@ -440,7 +448,7 @@
                       <StackPanel Spacing="3" Margin="2,0,2,4">
                         <Grid ColumnDefinitions="Auto,*">
                           <Ellipse Width="7" Height="7" Fill="{DynamicResource Accent}" Margin="0,0,7,0" VerticalAlignment="Center"
-                                   IsVisible="{Binding ShowUnwatched}" ToolTip.Tip="Not watched yet" />
+                                   IsVisible="{Binding ShowUnwatched}" svc:Tr.Tip="Not watched yet" />
                           <TextBlock Grid.Column="1" Text="{Binding Title}" ToolTip.Tip="{Binding Entry.Path}" ToolTip.ShowDelay="900" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
                         </Grid>
                         <TextBlock Classes="dim" Text="{Binding Details}" FontSize="11" TextTrimming="CharacterEllipsis" />
@@ -468,22 +476,22 @@
             <Border Width="72" Height="72" CornerRadius="20" Background="{DynamicResource Bg2}" HorizontalAlignment="Center">
               <PathIcon Data="{StaticResource IcLibrary}" Width="32" Height="32" Foreground="{DynamicResource Cyan}" />
             </Border>
-            <TextBlock Text="Build your library" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center" />
+            <TextBlock svc:Tr.Text="Build your library" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center" />
             <TextBlock Classes="dim" TextAlignment="Center" TextWrapping="Wrap" FontSize="13"
-                       Text="Add the folders where you keep videos. Cnema scans them (including subfolders), builds thumbnails, and keeps watching for new files." />
+                       svc:Tr.Text="Add the folders where you keep videos. Cnema scans them (including subfolders), builds thumbnails, and keeps watching for new files." />
             <Button Classes="accent" HorizontalAlignment="Center" Command="{Binding AddFolderCommand}" Margin="0,6,0,0">
               <StackPanel Orientation="Horizontal" Spacing="8">
                 <PathIcon Data="{StaticResource IcAdd}" Width="14" Height="14" />
-                <TextBlock Text="Add a folder" />
+                <TextBlock svc:Tr.Text="Add a folder" />
               </StackPanel>
             </Button>
           </StackPanel>
 
           <!-- Empty: nothing matches -->
           <StackPanel IsVisible="{Binding HasNoResults}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="6" Margin="0,0,0,60">
-            <TextBlock Text="No videos here" FontSize="17" FontWeight="SemiBold" HorizontalAlignment="Center" />
-            <TextBlock Classes="dim" Text="Try another folder or search term." FontSize="13" HorizontalAlignment="Center" />
-            <Button Classes="soft" Content="Clear filters" HorizontalAlignment="Center" Margin="0,8,0,0"
+            <TextBlock svc:Tr.Text="No videos here" FontSize="17" FontWeight="SemiBold" HorizontalAlignment="Center" />
+            <TextBlock Classes="dim" svc:Tr.Text="Try another folder or search term." FontSize="13" HorizontalAlignment="Center" />
+            <Button Classes="soft" svc:Tr.Content="Clear filters" HorizontalAlignment="Center" Margin="0,8,0,0"
                     IsVisible="{Binding HasFilters}" Command="{Binding ClearFiltersCommand}" />
           </StackPanel>
 
@@ -491,22 +499,22 @@
           <Border Classes="bulkbar" IsVisible="{Binding IsSelecting}" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,22">
             <StackPanel Orientation="Horizontal" Spacing="6">
               <TextBlock Text="{Binding SelectionText}" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center" Margin="6,0,10,0" MinWidth="70" />
-              <Button Classes="ghost" Content="Select all" Command="{Binding SelectAllCommand}" />
+              <Button Classes="ghost" svc:Tr.Content="Select all" Command="{Binding SelectAllCommand}" />
               <Border Width="1" Background="{DynamicResource Line}" Margin="4,6" />
-              <Button Classes="ghost" ToolTip.Tip="Favourite" Command="{Binding BulkFavoriteCommand}">
+              <Button Classes="ghost" svc:Tr.Tip="Favourite" Command="{Binding BulkFavoriteCommand}">
                 <PathIcon Data="{StaticResource IcStarOutline}" Width="15" Height="15" />
               </Button>
-              <Button x:Name="BulkTagButton" Classes="ghost" Content="Tag…">
+              <Button x:Name="BulkTagButton" Classes="ghost" svc:Tr.Content="Tag…">
                 <Button.Flyout>
                   <Flyout Placement="Top">
                     <StackPanel Orientation="Horizontal" Spacing="6" Margin="2">
-                      <TextBox Text="{Binding BulkTag}" Watermark="Tag" Width="160" CornerRadius="8" KeyDown="OnBulkTagKeyDown" />
-                      <Button Classes="accent" Content="Add" Command="{Binding BulkAddTagCommand}" Click="OnBulkFlyoutDone" />
+                      <TextBox Text="{Binding BulkTag}" svc:Tr.Watermark="Tag" Width="160" CornerRadius="8" KeyDown="OnBulkTagKeyDown" />
+                      <Button Classes="accent" svc:Tr.Content="Add" Command="{Binding BulkAddTagCommand}" Click="OnBulkFlyoutDone" />
                     </StackPanel>
                   </Flyout>
                 </Button.Flyout>
               </Button>
-              <Button x:Name="BulkCollectionButton" Classes="ghost" Content="Collection…" IsVisible="{Binding ShowCollections}">
+              <Button x:Name="BulkCollectionButton" Classes="ghost" svc:Tr.Content="Collection…" IsVisible="{Binding ShowCollections}">
                 <Button.Flyout>
                   <Flyout Placement="Top">
                     <StackPanel Spacing="2" MinWidth="200" Margin="2">
@@ -518,25 +526,25 @@
                           </DataTemplate>
                         </ItemsControl.ItemTemplate>
                       </ItemsControl>
-                      <Button Classes="ghost" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Content="New collection…"
+                      <Button Classes="ghost" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" svc:Tr.Content="New collection…"
                               Command="{Binding BulkNewCollectionCommand}" Click="OnBulkFlyoutDone" />
                     </StackPanel>
                   </Flyout>
                 </Button.Flyout>
               </Button>
-              <Button Classes="ghost" Content="Watched…" IsVisible="{Binding ShowUnwatchedFilter}">
+              <Button Classes="ghost" svc:Tr.Content="Watched…" IsVisible="{Binding ShowUnwatchedFilter}">
                 <Button.Flyout>
                   <MenuFlyout Placement="Top">
-                    <MenuItem Header="Mark as watched" Command="{Binding BulkMarkWatchedCommand}" />
-                    <MenuItem Header="Mark as unwatched" Command="{Binding BulkMarkUnwatchedCommand}" />
+                    <MenuItem svc:Tr.Header="Mark as watched" Command="{Binding BulkMarkWatchedCommand}" />
+                    <MenuItem svc:Tr.Header="Mark as unwatched" Command="{Binding BulkMarkUnwatchedCommand}" />
                   </MenuFlyout>
                 </Button.Flyout>
               </Button>
-              <Button Classes="ghost" ToolTip.Tip="Delete" Command="{Binding BulkDeleteCommand}">
+              <Button Classes="ghost" svc:Tr.Tip="Delete" Command="{Binding BulkDeleteCommand}">
                 <PathIcon Data="{StaticResource IcDelete}" Width="15" Height="15" Foreground="{DynamicResource Danger}" />
               </Button>
               <Border Width="1" Background="{DynamicResource Line}" Margin="4,6" />
-              <Button Classes="accent" Content="Done" Command="{Binding ToggleSelectModeCommand}" />
+              <Button Classes="accent" svc:Tr.Content="Done" Command="{Binding ToggleSelectModeCommand}" />
             </StackPanel>
           </Border>
         </Panel>
@@ -558,19 +566,19 @@
                             Segments="{Binding SegmentRanges}" Markers="{Binding Markers}" />
             <Grid ColumnDefinitions="Auto,*,Auto">
               <StackPanel Orientation="Horizontal" Spacing="0" VerticalAlignment="Center">
-                <Button Classes="ghost" Focusable="False" Command="{Binding SkipBackCommand}" ToolTip.Tip="Back 5 s (Shift+←)" Padding="6">
+                <Button Classes="ghost" Focusable="False" Command="{Binding SkipBackCommand}" svc:Tr.Tip="Back 5 s (Shift+←)" Padding="6">
                   <PathIcon Data="{StaticResource IcRewind}" Width="15" Height="15" />
                 </Button>
-                <Button Classes="ghost" Focusable="False" Command="{Binding TogglePlayCommand}" ToolTip.Tip="Play / pause (Space)" Padding="6">
+                <Button Classes="ghost" Focusable="False" Command="{Binding TogglePlayCommand}" svc:Tr.Tip="Play / pause (Space)" Padding="6">
                   <Panel>
                     <PathIcon Data="{StaticResource IcPlay}" Width="18" Height="18" IsVisible="{Binding !IsPlaying}" />
                     <PathIcon Data="{StaticResource IcPause}" Width="18" Height="18" IsVisible="{Binding IsPlaying}" />
                   </Panel>
                 </Button>
-                <Button Classes="ghost" Focusable="False" Command="{Binding SkipForwardCommand}" ToolTip.Tip="Forward 5 s (Shift+→)" Padding="6">
+                <Button Classes="ghost" Focusable="False" Command="{Binding SkipForwardCommand}" svc:Tr.Tip="Forward 5 s (Shift+→)" Padding="6">
                   <PathIcon Data="{StaticResource IcForward}" Width="15" Height="15" />
                 </Button>
-                <Button Classes="ghost" Focusable="False" Command="{Binding ToggleMuteCommand}" ToolTip.Tip="Mute (M)" Padding="6">
+                <Button Classes="ghost" Focusable="False" Command="{Binding ToggleMuteCommand}" svc:Tr.Tip="Mute (M)" Padding="6">
                   <Panel>
                     <PathIcon Data="{StaticResource IcVolume}" Width="15" Height="15" IsVisible="{Binding !IsMuted}" />
                     <PathIcon Data="{StaticResource IcMute}" Width="15" Height="15" IsVisible="{Binding IsMuted}" />
@@ -587,11 +595,11 @@
                 </StackPanel>
               </StackPanel>
               <Button Grid.Column="2" Classes="accent" Focusable="False" Padding="14,7" VerticalAlignment="Center"
-                      ToolTip.Tip="Open in the editor: trim, export and share"
+                      svc:Tr.Tip="Open in the editor: trim, export and share"
                       Command="{Binding #Root.((vm:MainViewModel)DataContext).ExpandMiniPlayerCommand}">
                 <StackPanel Orientation="Horizontal" Spacing="6">
                   <PathIcon Data="{StaticResource IcEdit}" Width="13" Height="13" Foreground="{DynamicResource OnAccent}" />
-                  <TextBlock Text="Edit" FontSize="12" />
+                  <TextBlock svc:Tr.Text="Edit" FontSize="12" />
                 </StackPanel>
               </Button>
             </Grid>
@@ -599,13 +607,13 @@
           <Panel Background="Black">
             <c:VideoSurface x:Name="MiniSurface" Frames="{Binding Frames}"
                           SourceWidth="{Binding VideoWidth}" SourceHeight="{Binding VideoHeight}" />
-            <Border x:Name="MiniHit" Background="Transparent" ToolTip.Tip="Click to play or pause, double-click to edit" ToolTip.ShowDelay="1200" />
+            <Border x:Name="MiniHit" Background="Transparent" svc:Tr.Tip="Click to play or pause, double-click to edit" ToolTip.ShowDelay="1200" />
             <Border IsVisible="{Binding Toast, Converter={x:Static ObjectConverters.IsNotNull}}" IsHitTestVisible="False"
                     HorizontalAlignment="Center" VerticalAlignment="Top" Margin="48,16,48,0"
                     Background="#E614151B" CornerRadius="10" Padding="14,8" BorderBrush="{DynamicResource Line}" BorderThickness="1">
               <TextBlock Text="{Binding Toast}" FontSize="13" TextWrapping="Wrap" />
             </Border>
-            <Button Classes="mini" Focusable="False" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="10" ToolTip.Tip="Close (Esc)"
+            <Button Classes="mini" Focusable="False" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="10" svc:Tr.Tip="Close (Esc)"
                     Command="{Binding #Root.((vm:MainViewModel)DataContext).CloseMiniPlayerCommand}">
               <PathIcon Data="{StaticResource IcClose}" Width="12" Height="12" />
             </Button>
@@ -621,26 +629,26 @@
               BoxShadow="0 18 60 0 #80000000" DataContext="{Binding Editor}" x:DataType="vm:EditViewModel" x:Name="EditCard">
         <StackPanel Spacing="14">
           <Grid ColumnDefinitions="*,Auto">
-            <TextBlock Text="Edit details" FontSize="17" FontWeight="Bold" VerticalAlignment="Center" />
-            <ToggleButton Grid.Column="1" Classes="ghost" IsChecked="{Binding Favorite}" ToolTip.Tip="Favourite">
+            <TextBlock svc:Tr.Text="Edit details" FontSize="17" FontWeight="Bold" VerticalAlignment="Center" />
+            <ToggleButton Grid.Column="1" Classes="ghost" IsChecked="{Binding Favorite}" svc:Tr.Tip="Favourite">
               <StackPanel Orientation="Horizontal" Spacing="6">
                 <PathIcon Data="{StaticResource IcStar}" Width="14" Height="14" />
-                <TextBlock Text="Favourite" FontSize="12" FontWeight="SemiBold" />
+                <TextBlock svc:Tr.Text="Favourite" FontSize="12" FontWeight="SemiBold" />
               </StackPanel>
             </ToggleButton>
           </Grid>
 
           <StackPanel Spacing="6">
-            <TextBlock Classes="label" Text="FILE NAME" />
+            <TextBlock Classes="label" svc:Tr.Text="FILE NAME" />
             <Grid ColumnDefinitions="*,Auto">
               <TextBox x:Name="EditName" Text="{Binding Name}" CornerRadius="8" />
               <TextBlock Grid.Column="1" Classes="dim mono" Text="{Binding Extension}" VerticalAlignment="Center" Margin="8,0,0,0" />
             </Grid>
-            <TextBlock Classes="dim" FontSize="11" Text="Renames the actual file on disk." />
+            <TextBlock Classes="dim" FontSize="11" svc:Tr.Text="Renames the actual file on disk." />
           </StackPanel>
 
           <StackPanel Spacing="6" IsVisible="{Binding CanMove}">
-            <TextBlock Classes="label" Text="LIBRARY FOLDER" />
+            <TextBlock Classes="label" svc:Tr.Text="LIBRARY FOLDER" />
             <ComboBox ItemsSource="{Binding Folders}" SelectedItem="{Binding Folder}" HorizontalAlignment="Stretch" CornerRadius="8">
               <ComboBox.ItemTemplate>
                 <DataTemplate x:DataType="vm:FolderViewModel">
@@ -648,11 +656,11 @@
                 </DataTemplate>
               </ComboBox.ItemTemplate>
             </ComboBox>
-            <TextBlock Classes="dim" FontSize="11" Text="Picking another folder moves the file there." />
+            <TextBlock Classes="dim" FontSize="11" svc:Tr.Text="Picking another folder moves the file there." />
           </StackPanel>
 
           <StackPanel Spacing="8">
-            <TextBlock Classes="label" Text="TAGS" />
+            <TextBlock Classes="label" svc:Tr.Text="TAGS" />
             <ItemsControl ItemsSource="{Binding Tags}">
               <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
@@ -662,7 +670,7 @@
                   <Border Classes="tag big">
                     <StackPanel Orientation="Horizontal" Spacing="4">
                       <TextBlock Text="{Binding}" VerticalAlignment="Center" />
-                      <Button Classes="ghost" Padding="2" Click="OnRemoveTagClick" ToolTip.Tip="Remove tag">
+                      <Button Classes="ghost" Padding="2" Click="OnRemoveTagClick" svc:Tr.Tip="Remove tag">
                         <PathIcon Data="{StaticResource IcClose}" Width="9" Height="9" />
                       </Button>
                     </StackPanel>
@@ -670,7 +678,7 @@
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
-            <TextBox x:Name="EditTagInput" Text="{Binding TagInput}" Watermark="Add a tag and press Enter" CornerRadius="8" />
+            <TextBox x:Name="EditTagInput" Text="{Binding TagInput}" svc:Tr.Watermark="Add a tag and press Enter" CornerRadius="8" />
             <ItemsControl ItemsSource="{Binding Suggestions}" IsVisible="{Binding HasSuggestions}">
               <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
@@ -689,11 +697,11 @@
                      IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
 
           <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,4,0,0">
-            <Button Classes="ghost" Content="Delete…" FontSize="12" Foreground="{DynamicResource Danger}"
+            <Button Classes="ghost" svc:Tr.Content="Delete…" FontSize="12" Foreground="{DynamicResource Danger}"
                     Command="{Binding #Root.((vm:MainViewModel)DataContext).RequestDeleteCommand}" CommandParameter="{Binding Item}" />
             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
-              <Button Classes="soft" Content="Cancel" Command="{Binding #Root.((vm:MainViewModel)DataContext).CancelEditCommand}" />
-              <Button Classes="accent" Content="Save" Command="{Binding #Root.((vm:MainViewModel)DataContext).SaveEditCommand}" />
+              <Button Classes="soft" svc:Tr.Content="Cancel" Command="{Binding #Root.((vm:MainViewModel)DataContext).CancelEditCommand}" />
+              <Button Classes="accent" svc:Tr.Content="Save" Command="{Binding #Root.((vm:MainViewModel)DataContext).SaveEditCommand}" />
             </StackPanel>
           </Grid>
         </StackPanel>
@@ -711,8 +719,8 @@
           <TextBlock Text="{Binding DeleteError}" Foreground="{DynamicResource Danger}" FontSize="12" TextWrapping="Wrap"
                      IsVisible="{Binding DeleteError, Converter={x:Static ObjectConverters.IsNotNull}}" />
           <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" Margin="0,4,0,0">
-            <Button x:Name="DeleteCancel" Classes="soft" Content="Cancel" Command="{Binding CancelDeleteCommand}" />
-            <Button Classes="danger" Content="Move to trash" Command="{Binding ConfirmDeleteCommand}" />
+            <Button x:Name="DeleteCancel" Classes="soft" svc:Tr.Content="Cancel" Command="{Binding CancelDeleteCommand}" />
+            <Button Classes="danger" svc:Tr.Content="Move to trash" Command="{Binding ConfirmDeleteCommand}" />
           </StackPanel>
         </StackPanel>
       </Border>
@@ -724,7 +732,7 @@
               BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="16" Padding="22" BoxShadow="0 18 60 0 #80000000">
         <DockPanel>
           <TextBlock DockPanel.Dock="Top" Text="{Binding WhatsNewTitle}" FontSize="17" FontWeight="Bold" Margin="0,0,0,12" />
-          <Button x:Name="WhatsNewClose" DockPanel.Dock="Bottom" Classes="accent" Content="Got it" HorizontalAlignment="Right"
+          <Button x:Name="WhatsNewClose" DockPanel.Dock="Bottom" Classes="accent" svc:Tr.Content="Got it" HorizontalAlignment="Right"
                   Margin="0,14,0,0" Command="{Binding CloseWhatsNewCommand}" />
           <ScrollViewer VerticalScrollBarVisibility="Auto">
             <ItemsControl ItemsSource="{Binding WhatsNew}">
@@ -758,7 +766,7 @@
               DataContext="{Binding Cleanup}" x:DataType="vm:CleanupViewModel">
         <DockPanel>
           <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="24,22,24,12">
-            <TextBlock Text="Clean up" FontSize="17" FontWeight="Bold" />
+            <TextBlock svc:Tr.Text="Clean up" FontSize="17" FontWeight="Bold" />
             <StackPanel Orientation="Horizontal" Spacing="8">
               <ProgressBar IsIndeterminate="True" Width="80" Height="3" MinHeight="3" VerticalAlignment="Center" IsVisible="{Binding IsScanning}" />
               <TextBlock Classes="dim" FontSize="12" TextWrapping="Wrap" MaxWidth="560" Text="{Binding Summary}" />
@@ -766,7 +774,7 @@
           </StackPanel>
           <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Line}" BorderThickness="0,1,0,0" Padding="24,14">
             <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-              <Button x:Name="CleanupClose" Classes="soft" Content="Close" Command="{Binding #Root.((vm:MainViewModel)DataContext).CloseCleanupCommand}" />
+              <Button x:Name="CleanupClose" Classes="soft" svc:Tr.Content="Close" Command="{Binding #Root.((vm:MainViewModel)DataContext).CloseCleanupCommand}" />
               <!-- TextBlock content: a bound string Content kept its first measured width when the text grew -->
               <Button Classes="danger" IsEnabled="{Binding CanRemove}"
                       Command="{Binding #Root.((vm:MainViewModel)DataContext).RemoveCleanupCommand}">
@@ -804,7 +812,7 @@
               DataContext="{Binding Stats}" x:DataType="vm:StatsViewModel">
         <DockPanel>
           <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="24,22,24,12">
-            <TextBlock Text="Stats" FontSize="17" FontWeight="Bold" VerticalAlignment="Center" />
+            <TextBlock svc:Tr.Text="Stats" FontSize="17" FontWeight="Bold" VerticalAlignment="Center" />
             <Button x:Name="StatsClose" Grid.Column="1" Classes="ghost" Padding="6" Command="{Binding #Root.((vm:MainViewModel)DataContext).CloseStatsCommand}">
               <PathIcon Data="{StaticResource IcClose}" Width="13" Height="13" />
             </Button>
@@ -828,7 +836,7 @@
               </ItemsControl>
 
               <StackPanel Spacing="8">
-                <TextBlock Classes="label" Text="CLIPS PER WEEK" />
+                <TextBlock Classes="label" svc:Tr.Text="CLIPS PER WEEK" />
                 <Border Classes="group" Padding="16,14">
                   <ItemsControl ItemsSource="{Binding Weeks}">
                     <ItemsControl.ItemsPanel>
@@ -848,7 +856,7 @@
               </StackPanel>
 
               <StackPanel Spacing="8" IsVisible="{Binding HasGames}">
-                <TextBlock Classes="label" Text="CLIPS PER GAME" />
+                <TextBlock Classes="label" svc:Tr.Text="CLIPS PER GAME" />
                 <Border Classes="group" Padding="16,12">
                   <ItemsControl ItemsSource="{Binding Games}">
                     <ItemsControl.ItemTemplate>
@@ -877,15 +885,15 @@
               DataContext="{Binding ShortcutSheet}" x:DataType="vm:ShortcutsViewModel">
         <DockPanel>
           <StackPanel DockPanel.Dock="Top" Spacing="4" Margin="24,22,24,12">
-            <TextBlock Text="Keyboard shortcuts" FontSize="17" FontWeight="Bold" />
-            <TextBlock Classes="dim" FontSize="12" TextWrapping="Wrap" Text="Click a key to change it." />
+            <TextBlock svc:Tr.Text="Keyboard shortcuts" FontSize="17" FontWeight="Bold" />
+            <TextBlock Classes="dim" FontSize="12" TextWrapping="Wrap" svc:Tr.Text="Click a key to change it." />
           </StackPanel>
           <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Line}" BorderThickness="0,1,0,0" Padding="24,14">
             <Grid ColumnDefinitions="Auto,*,Auto">
-              <Button Classes="ghost" Content="Reset all" FontSize="12" Command="{Binding ResetAllCommand}" />
+              <Button Classes="ghost" svc:Tr.Content="Reset all" FontSize="12" Command="{Binding ResetAllCommand}" />
               <TextBlock Grid.Column="1" Text="{Binding Message}" Foreground="{DynamicResource Cyan}" FontSize="12" TextWrapping="Wrap"
                          VerticalAlignment="Center" Margin="12,0" />
-              <Button x:Name="ShortcutsClose" Grid.Column="2" Classes="accent" Content="Done"
+              <Button x:Name="ShortcutsClose" Grid.Column="2" Classes="accent" svc:Tr.Content="Done"
                       Command="{Binding #Root.((vm:MainViewModel)DataContext).CloseShortcutsCommand}" />
             </Grid>
           </Border>
@@ -904,7 +912,7 @@
                               <Button Grid.Column="1" Classes="keychip" Classes.capturing="{Binding IsCapturing}" Classes.custom="{Binding IsCustom}"
                                       Content="{Binding Keys}" IsEnabled="{Binding !IsFixed}"
                                       Command="{Binding #Root.((vm:MainViewModel)DataContext).ShortcutSheet.CaptureCommand}" CommandParameter="{Binding}" />
-                              <Button Grid.Column="2" Classes="ghost" Margin="4,0,0,0" Padding="6" ToolTip.Tip="Back to the default key"
+                              <Button Grid.Column="2" Classes="ghost" Margin="4,0,0,0" Padding="6" svc:Tr.Tip="Back to the default key"
                                       IsVisible="{Binding IsCustom}"
                                       Command="{Binding #Root.((vm:MainViewModel)DataContext).ShortcutSheet.ResetCommand}" CommandParameter="{Binding}">
                                 <PathIcon Data="{StaticResource IcRefresh}" Width="12" Height="12" />
@@ -931,19 +939,31 @@
           <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Line}" BorderThickness="0,1,0,0" Padding="24,14">
             <Grid ColumnDefinitions="*,Auto">
               <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" VerticalAlignment="Center"
-                         Text="You can change all of this later in Settings." />
-              <Button x:Name="SetupDone" Grid.Column="1" Classes="accent" Content="Start using Cnema" Command="{Binding FinishSetupCommand}" />
+                         svc:Tr.Text="You can change all of this later in Settings." />
+              <Button x:Name="SetupDone" Grid.Column="1" Classes="accent" svc:Tr.Content="Start using Cnema" Command="{Binding FinishSetupCommand}" />
             </Grid>
           </Border>
           <ScrollViewer VerticalScrollBarVisibility="Auto">
             <StackPanel Spacing="12" Margin="24,24,24,18">
               <StackPanel Spacing="4">
-                <TextBlock Text="Welcome to Cnema" FontSize="22" FontWeight="Bold" />
+                <TextBlock svc:Tr.Text="Welcome to Cnema" FontSize="22" FontWeight="Bold" />
                 <TextBlock Classes="dim" FontSize="13" TextWrapping="Wrap"
-                           Text="A few choices to make it yours. Nothing here is required." />
+                           svc:Tr.Text="A few choices to make it yours. Nothing here is required." />
               </StackPanel>
 
-              <TextBlock Classes="label" Text="LOOK" Margin="0,6,0,0" />
+              <TextBlock Classes="label" svc:Tr.Text="LANGUAGE" Margin="0,6,0,0" />
+              <ListBox Classes="swatches" ItemsSource="{Binding SetupLanguages}" SelectedItem="{Binding SetupLanguage}">
+                <ListBox.ItemsPanel>
+                  <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                </ListBox.ItemsPanel>
+                <ListBox.ItemTemplate>
+                  <DataTemplate x:DataType="vm:LanguageOption">
+                    <TextBlock Text="{Binding Name}" VerticalAlignment="Center" FontSize="12" />
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+
+              <TextBlock Classes="label" svc:Tr.Text="LOOK" Margin="0,6,0,0" />
               <ListBox Classes="swatches" ItemsSource="{Binding ColorSchemes}" SelectedItem="{Binding SetupScheme}">
                 <ListBox.ItemsPanel>
                   <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
@@ -958,23 +978,23 @@
                 </ListBox.ItemTemplate>
               </ListBox>
 
-              <TextBlock Classes="label" Text="YOUR VIDEOS" Margin="0,6,0,0" />
+              <TextBlock Classes="label" svc:Tr.Text="YOUR VIDEOS" Margin="0,6,0,0" />
               <Border Classes="group">
                 <Grid Classes="row" ColumnDefinitions="*,Auto">
                   <TextBlock Text="{Binding SetupFolders}" TextWrapping="Wrap" FontSize="12" VerticalAlignment="Center" />
-                  <Button Grid.Column="1" Classes="soft" Content="Add a folder…" Margin="10,0,0,0" Command="{Binding SetupAddFolderCommand}" />
+                  <Button Grid.Column="1" Classes="soft" svc:Tr.Content="Add a folder…" Margin="10,0,0,0" Command="{Binding SetupAddFolderCommand}" />
                 </Grid>
               </Border>
 
-              <TextBlock Classes="label" Text="FEATURES" Margin="0,6,0,0" />
+              <TextBlock Classes="label" svc:Tr.Text="FEATURES" Margin="0,6,0,0" />
               <Border Classes="group">
                 <StackPanel Margin="14,8" Spacing="2">
-                  <CheckBox IsChecked="{Binding SetupClipping}" Content="Background clipping: save past moments with a hotkey" />
-                  <CheckBox IsChecked="{Binding SetupSessions}" IsEnabled="{Binding SetupClipping}" Content="Session recording: record a whole session as one video" />
-                  <CheckBox IsChecked="{Binding SetupController}" Content="Controller support, for handhelds and TVs" />
-                  <CheckBox IsChecked="{Binding SetupHoverPreview}" Content="Hover preview: skim a video by moving the pointer over it" />
-                  <CheckBox IsChecked="{Binding SetupLoudMarkers}" Content="Loud moment markers on the timeline" />
-                  <CheckBox IsChecked="{Binding SetupHoverGlow}" Content="Hover glow around videos" />
+                  <CheckBox IsChecked="{Binding SetupClipping}" svc:Tr.Content="Background clipping: save past moments with a hotkey" />
+                  <CheckBox IsChecked="{Binding SetupSessions}" IsEnabled="{Binding SetupClipping}" svc:Tr.Content="Session recording: record a whole session as one video" />
+                  <CheckBox IsChecked="{Binding SetupController}" svc:Tr.Content="Controller support, for handhelds and TVs" />
+                  <CheckBox IsChecked="{Binding SetupHoverPreview}" svc:Tr.Content="Hover preview: skim a video by moving the pointer over it" />
+                  <CheckBox IsChecked="{Binding SetupLoudMarkers}" svc:Tr.Content="Loud moment markers on the timeline" />
+                  <CheckBox IsChecked="{Binding SetupHoverGlow}" svc:Tr.Content="Hover glow around videos" />
                 </StackPanel>
               </Border>
             </StackPanel>
@@ -990,27 +1010,29 @@
               BoxShadow="0 18 60 0 #80000000" DataContext="{Binding SettingsEditor}" x:DataType="vm:SettingsViewModel">
         <DockPanel>
           <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="24,22,24,10">
-            <TextBlock Text="Settings" FontSize="17" FontWeight="Bold" />
+            <TextBlock svc:Tr.Text="Settings" FontSize="17" FontWeight="Bold" />
             <TextBlock Grid.Column="1" Classes="dim" FontSize="11" VerticalAlignment="Center"
                        Text="{Binding #Root.((vm:MainViewModel)DataContext).VersionText}" />
           </Grid>
           <ListBox DockPanel.Dock="Top" Classes="tabs" Margin="20,0,20,8" ItemsSource="{x:Static vm:SettingsViewModel.PageNames}"
-                   SelectedIndex="{Binding Page}" />
+                   SelectedIndex="{Binding Page}">
+            <ListBox.ItemTemplate><DataTemplate x:DataType="vm:LocalizedText"><TextBlock Text="{Binding Text}" /></DataTemplate></ListBox.ItemTemplate>
+          </ListBox>
 
           <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Line}" BorderThickness="0,1,0,0" Padding="24,14">
             <Grid ColumnDefinitions="Auto,*,Auto">
               <StackPanel Orientation="Horizontal" Spacing="4">
-                <Button Classes="ghost" Content="Quit Cnema" Click="OnQuitClick" FontSize="12"
-                        ToolTip.Tip="Stops clipping and closes Cnema completely" />
-                <Button Classes="ghost" Content="Copy diagnostics" FontSize="12"
+                <Button Classes="ghost" svc:Tr.Content="Quit Cnema" Click="OnQuitClick" FontSize="12"
+                        svc:Tr.Tip="Stops clipping and closes Cnema completely" />
+                <Button Classes="ghost" svc:Tr.Content="Copy diagnostics" FontSize="12"
                         Command="{Binding #Root.((vm:MainViewModel)DataContext).CopyDiagnosticsCommand}"
-                        ToolTip.Tip="Copies version, hardware, settings and the recent log, for reporting a problem" />
+                        svc:Tr.Tip="Copies version, hardware, settings and the recent log, for reporting a problem" />
               </StackPanel>
               <TextBlock Grid.Column="1" Text="{Binding Error}" Foreground="{DynamicResource Danger}" FontSize="12" TextWrapping="Wrap"
                          VerticalAlignment="Center" Margin="12,0" />
               <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
-                <Button Classes="soft" Content="Cancel" Command="{Binding #Root.((vm:MainViewModel)DataContext).CancelSettingsCommand}" />
-                <Button Classes="accent" Content="Save" Command="{Binding #Root.((vm:MainViewModel)DataContext).SaveSettingsCommand}" />
+                <Button Classes="soft" svc:Tr.Content="Cancel" Command="{Binding #Root.((vm:MainViewModel)DataContext).CancelSettingsCommand}" />
+                <Button Classes="accent" svc:Tr.Content="Save" Command="{Binding #Root.((vm:MainViewModel)DataContext).SaveSettingsCommand}" />
               </StackPanel>
             </Grid>
           </Border>
@@ -1020,12 +1042,21 @@
 
               <!-- ==== General ==== -->
               <StackPanel Spacing="12" IsVisible="{Binding IsGeneralPage}">
-              <TextBlock Classes="label" Text="APPEARANCE" />
+              <TextBlock Classes="label" svc:Tr.Text="APPEARANCE" />
               <Border Classes="group">
+                <StackPanel>
                 <Grid Classes="row" ColumnDefinitions="*,Auto">
                   <StackPanel Spacing="2">
-                    <TextBlock Text="Color scheme" />
-                    <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="Aurora is the original look with gradients." />
+                    <TextBlock svc:Tr.Text="Language" />
+                    <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Changes right away. A few lists switch over after Cnema restarts." />
+                  </StackPanel>
+                  <ComboBox Grid.Column="1" MinWidth="190" CornerRadius="8" ItemsSource="{Binding LanguageOptions}" SelectedItem="{Binding Language}" />
+                </Grid>
+                <Border Classes="sep" />
+                <Grid Classes="row" ColumnDefinitions="*,Auto">
+                  <StackPanel Spacing="2">
+                    <TextBlock svc:Tr.Text="Color scheme" />
+                    <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Aurora is the original look with gradients." />
                   </StackPanel>
                   <ComboBox Grid.Column="1" MinWidth="190" CornerRadius="8" ItemsSource="{Binding ColorSchemes}" SelectedItem="{Binding ColorScheme}">
                     <ComboBox.ItemTemplate>
@@ -1038,25 +1069,26 @@
                     </ComboBox.ItemTemplate>
                   </ComboBox>
                 </Grid>
+                </StackPanel>
               </Border>
 
-              <TextBlock Classes="label" Text="STARTUP" Margin="0,8,0,0" />
+              <TextBlock Classes="label" svc:Tr.Text="STARTUP" Margin="0,8,0,0" />
               <Border Classes="group">
                 <StackPanel>
                   <Grid Classes="row" ColumnDefinitions="*,Auto">
-                    <TextBlock Text="Launch Cnema when I log in" />
+                    <TextBlock svc:Tr.Text="Launch Cnema when I log in" />
                     <ToggleSwitch x:Name="SettingsFirst" Grid.Column="1" Classes="bare" IsChecked="{Binding LaunchAtLogin}" />
                   </Grid>
                   <Border Classes="sep" />
                   <Grid Classes="row" ColumnDefinitions="*,Auto">
-                    <TextBlock Text="Tell me when a new version is out" />
+                    <TextBlock svc:Tr.Text="Tell me when a new version is out" />
                     <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding CheckForUpdates}" />
                   </Grid>
                   <Border Classes="sep" />
                   <Grid Classes="row" ColumnDefinitions="*,Auto" IsEnabled="{Binding CheckForUpdates}">
                     <StackPanel Spacing="2">
-                      <TextBlock Text="Install updates automatically" />
-                      <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="When Cnema starts and finds a newer version, it installs it and restarts." />
+                      <TextBlock svc:Tr.Text="Install updates automatically" />
+                      <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="When Cnema starts and finds a newer version, it installs it and restarts." />
                     </StackPanel>
                     <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding AutoUpdate}" />
                   </Grid>
@@ -1071,30 +1103,30 @@
                             Content="{Binding #Root.((vm:MainViewModel)DataContext).UpdateAction}"
                             IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).HasUpdate}"
                             Command="{Binding #Root.((vm:MainViewModel)DataContext).OpenUpdateCommand}" />
-                    <Button Grid.Column="2" Classes="soft" Content="What's new" Margin="0,0,8,0"
+                    <Button Grid.Column="2" Classes="soft" svc:Tr.Content="What's new" Margin="0,0,8,0"
                             Command="{Binding #Root.((vm:MainViewModel)DataContext).ShowChangelogCommand}" />
-                    <Button Grid.Column="3" Classes="soft" Content="Check now"
+                    <Button Grid.Column="3" Classes="soft" svc:Tr.Content="Check now"
                             Command="{Binding #Root.((vm:MainViewModel)DataContext).CheckForUpdatesNowCommand}" />
                   </Grid>
                   <Border Classes="sep" />
                   <Grid Classes="row" ColumnDefinitions="*,Auto">
                     <StackPanel Spacing="2">
                       <TextBlock Text="{Binding BackgroundLabel}" TextWrapping="Wrap" />
-                      <TextBlock Classes="dim" FontSize="11" Text="Always on while clipping is enabled." />
+                      <TextBlock Classes="dim" FontSize="11" svc:Tr.Text="Always on while clipping is enabled." />
                     </StackPanel>
                     <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding KeepInBackground}" />
                   </Grid>
                 </StackPanel>
               </Border>
 
-              <TextBlock Classes="label" Text="CONTROLLER" Margin="0,8,0,0" IsVisible="{Binding FeatureController}" />
+              <TextBlock Classes="label" svc:Tr.Text="CONTROLLER" Margin="0,8,0,0" IsVisible="{Binding FeatureController}" />
               <Border Classes="group" IsVisible="{Binding FeatureController}">
                 <StackPanel>
                   <Grid Classes="row" ColumnDefinitions="*,Auto">
                     <StackPanel Spacing="2">
-                      <TextBlock Text="Controller mode" />
+                      <TextBlock svc:Tr.Text="Controller mode" />
                       <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap"
-                                 Text="Bigger layout and full gamepad navigation, for handhelds and TVs." />
+                                 svc:Tr.Text="Bigger layout and full gamepad navigation, for handhelds and TVs." />
                       <TextBlock FontSize="11" TextWrapping="Wrap" Foreground="{DynamicResource Cyan}"
                                  Text="{Binding #Root.((vm:MainViewModel)DataContext).PadStatus}"
                                  IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).IsControllerMode}" />
@@ -1103,198 +1135,219 @@
                   </Grid>
                   <Border Classes="sep" />
                   <Grid Classes="row" ColumnDefinitions="*,Auto">
-                    <TextBlock Text="Open full screen in Controller mode" />
+                    <TextBlock svc:Tr.Text="Open full screen in Controller mode" />
                     <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding ControllerFullscreen}" />
                   </Grid>
                 </StackPanel>
               </Border>
 
-              <TextBlock Classes="label" Text="KEYBOARD" Margin="0,8,0,0" />
+              <TextBlock Classes="label" svc:Tr.Text="KEYBOARD" Margin="0,8,0,0" />
               <Border Classes="group">
                 <Grid Classes="row" ColumnDefinitions="*,Auto">
                   <StackPanel Spacing="2">
-                    <TextBlock Text="Keyboard shortcuts" />
-                    <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="See every shortcut and change any of them. Press ? anywhere to open the list." />
+                    <TextBlock svc:Tr.Text="Keyboard shortcuts" />
+                    <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="See every shortcut and change any of them. Press ? anywhere to open the list." />
                   </StackPanel>
-                  <Button Grid.Column="1" Classes="soft" Content="Shortcuts…"
+                  <Button Grid.Column="1" Classes="soft" svc:Tr.Content="Shortcuts…"
                           Command="{Binding #Root.((vm:MainViewModel)DataContext).ShowShortcutsCommand}" />
                 </Grid>
               </Border>
 
-              <TextBlock Classes="label" Text="BACKUP" Margin="0,8,0,0" />
+              <TextBlock Classes="label" svc:Tr.Text="BACKUP" Margin="0,8,0,0" />
               <Border Classes="group">
                 <StackPanel>
                   <Grid Classes="row" ColumnDefinitions="*,Auto,Auto">
                     <StackPanel Spacing="2">
-                      <TextBlock Text="Settings file" />
-                      <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="Save all settings to a file, or load them on another computer." />
+                      <TextBlock svc:Tr.Text="Settings file" />
+                      <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Save all settings to a file, or load them on another computer." />
                     </StackPanel>
-                    <Button Grid.Column="1" Classes="soft" Content="Export…" Margin="0,0,8,0"
+                    <Button Grid.Column="1" Classes="soft" svc:Tr.Content="Export…" Margin="0,0,8,0"
                             Command="{Binding #Root.((vm:MainViewModel)DataContext).ExportSettingsCommand}" />
-                    <Button Grid.Column="2" Classes="soft" Content="Import…"
+                    <Button Grid.Column="2" Classes="soft" svc:Tr.Content="Import…"
                             Command="{Binding #Root.((vm:MainViewModel)DataContext).ImportSettingsCommand}" />
                   </Grid>
                   <Border Classes="sep" />
                   <Grid Classes="row" ColumnDefinitions="*,Auto">
                     <StackPanel Spacing="2">
-                      <TextBlock Text="Portable mode" />
+                      <TextBlock svc:Tr.Text="Portable mode" />
                       <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="{Binding PortableStatus}" />
                       <TextBlock FontSize="11" TextWrapping="Wrap" Foreground="{DynamicResource Cyan}" Text="{Binding PortableMessage}"
                                  IsVisible="{Binding PortableMessage, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     </StackPanel>
                     <Panel Grid.Column="1">
-                      <Button Classes="soft" Content="Make portable" Command="{Binding MakePortableCommand}" IsVisible="{Binding !IsPortable}" />
-                      <Button Classes="soft" Content="Show folder" Command="{Binding ShowPortableFolderCommand}" IsVisible="{Binding IsPortable}" />
+                      <Button Classes="soft" svc:Tr.Content="Make portable" Command="{Binding MakePortableCommand}" IsVisible="{Binding !IsPortable}" />
+                      <Button Classes="soft" svc:Tr.Content="Show folder" Command="{Binding ShowPortableFolderCommand}" IsVisible="{Binding IsPortable}" />
                     </Panel>
                   </Grid>
                 </StackPanel>
+              </Border>
+
+              <TextBlock Classes="label" svc:Tr.Text="WELCOME SETUP" Margin="0,8,0,0" />
+              <Border Classes="group">
+                <Grid Classes="row" ColumnDefinitions="*,Auto">
+                  <StackPanel Spacing="2">
+                    <TextBlock svc:Tr.Text="Run the welcome setup again" />
+                    <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap"
+                               svc:Tr.Text="Starts from your current choices. Folders, hotkeys and everything else stay as they are." />
+                  </StackPanel>
+                  <Button Grid.Column="1" Classes="soft" svc:Tr.Content="Start setup"
+                          Command="{Binding #Root.((vm:MainViewModel)DataContext).RestartSetupCommand}" />
+                </Grid>
               </Border>
               </StackPanel>
 
               <!-- ==== Features ==== -->
               <StackPanel Spacing="12" IsVisible="{Binding IsFeaturesPage}">
                 <TextBlock Classes="dim" FontSize="12" TextWrapping="Wrap" Margin="4,0"
-                           Text="Switch off anything you don't use. Its buttons and settings disappear, and it stops running." />
+                           svc:Tr.Text="Switch off anything you don't use. Its buttons and settings disappear, and it stops running." />
                 <Border Classes="group">
                   <StackPanel>
                     <Grid Classes="row" ColumnDefinitions="*,Auto">
                       <StackPanel Spacing="2">
-                        <TextBlock Text="Background clipping" />
-                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="Keep the last moments of your screen and save them with a hotkey." />
+                        <TextBlock svc:Tr.Text="Background clipping" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Keep the last moments of your screen and save them with a hotkey." />
                       </StackPanel>
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureClipping}" />
                     </Grid>
                     <Border Classes="sep" />
                     <Grid Classes="row" ColumnDefinitions="*,Auto" IsEnabled="{Binding FeatureClipping}">
                       <StackPanel Spacing="2">
-                        <TextBlock Text="Session recording" />
-                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="Record a whole session as one video, with bookmarks from the clip hotkey." />
+                        <TextBlock svc:Tr.Text="Session recording" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Record a whole session as one video, with bookmarks from the clip hotkey." />
                       </StackPanel>
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureSessions}" />
                     </Grid>
                     <Border Classes="sep" />
                     <Grid Classes="row" ColumnDefinitions="*,Auto">
                       <StackPanel Spacing="2">
-                        <TextBlock Text="Controller support" />
-                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="Controller mode, for handhelds and TVs." />
+                        <TextBlock svc:Tr.Text="Controller support" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Controller mode, for handhelds and TVs." />
                       </StackPanel>
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureController}" />
                     </Grid>
                     <Border Classes="sep" />
                     <Grid Classes="row" ColumnDefinitions="*,Auto">
                       <StackPanel Spacing="2">
-                        <TextBlock Text="Hover preview" />
-                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="Move the pointer across a video to skim through it." />
+                        <TextBlock svc:Tr.Text="Hover preview" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Move the pointer across a video to skim through it." />
                       </StackPanel>
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureHoverPreview}" />
                     </Grid>
                     <Border Classes="sep" />
                     <Grid Classes="row" ColumnDefinitions="*,Auto">
                       <StackPanel Spacing="2">
-                        <TextBlock Text="Loud moment markers" />
-                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="Mark loud moments on the timeline so you can jump between them." />
+                        <TextBlock svc:Tr.Text="Loud moment markers" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Mark loud moments on the timeline so you can jump between them." />
                       </StackPanel>
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureLoudMarkers}" />
                     </Grid>
                     <Border Classes="sep" />
                     <Grid Classes="row" ColumnDefinitions="*,Auto">
                       <StackPanel Spacing="2">
-                        <TextBlock Text="Hover glow" />
-                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="A soft glow in your color scheme around the video under the pointer." />
+                        <TextBlock svc:Tr.Text="Hover glow" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="A soft glow in your color scheme around the video under the pointer." />
                       </StackPanel>
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureHoverGlow}" />
                     </Grid>
                     <Border Classes="sep" />
                     <Grid Classes="row" ColumnDefinitions="*,Auto">
                       <StackPanel Spacing="2">
-                        <TextBlock Text="Collections" />
-                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="Group videos from any folders, like playlists." />
+                        <TextBlock svc:Tr.Text="Collections" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Group videos from any folders, like playlists." />
                       </StackPanel>
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureCollections}" />
                     </Grid>
                     <Border Classes="sep" />
                     <Grid Classes="row" ColumnDefinitions="*,Auto">
                       <StackPanel Spacing="2">
-                        <TextBlock Text="Unwatched dots" />
-                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="A dot next to videos you haven't opened yet, and an Unwatched filter." />
+                        <TextBlock svc:Tr.Text="Unwatched dots" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="A dot next to videos you haven't opened yet, and an Unwatched filter." />
                       </StackPanel>
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureUnwatched}" />
                     </Grid>
                     <Border Classes="sep" />
                     <Grid Classes="row" ColumnDefinitions="*,Auto">
                       <StackPanel Spacing="2">
-                        <TextBlock Text="Clean up" />
-                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="Find duplicates and broken, empty or very short files." />
+                        <TextBlock svc:Tr.Text="Clean up" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Find duplicates and broken, empty or very short files." />
                       </StackPanel>
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureCleanUp}" />
                     </Grid>
                     <Border Classes="sep" />
                     <Grid Classes="row" ColumnDefinitions="*,Auto">
                       <StackPanel Spacing="2">
-                        <TextBlock Text="Stats" />
-                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="Numbers about your library and clips: per week, per game, totals." />
+                        <TextBlock svc:Tr.Text="Stats" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Numbers about your library and clips: per week, per game, totals." />
                       </StackPanel>
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureStats}" />
                     </Grid>
                     <Border Classes="sep" />
                     <Grid Classes="row" ColumnDefinitions="*,Auto">
                       <StackPanel Spacing="2">
-                        <TextBlock Text="Quick player" />
-                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="Videos open in a large player over the library; Edit opens the full editor. Off, they open straight in the editor." />
+                        <TextBlock svc:Tr.Text="Quick player" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Videos open in a large player over the library; Edit opens the full editor. Off, they open straight in the editor." />
                       </StackPanel>
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureMiniPlayer}" />
                     </Grid>
                     <Border Classes="sep" />
                     <Grid Classes="row" ColumnDefinitions="*,Auto">
                       <StackPanel Spacing="2">
-                        <TextBlock Text="Chapters from bookmarks" />
-                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="Bookmarks in a session recording become chapters: in the player, in the saved file and in exports." />
+                        <TextBlock svc:Tr.Text="Chapters from bookmarks" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Bookmarks in a session recording become chapters: in the player, in the saved file and in exports." />
                       </StackPanel>
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureChapters}" />
                     </Grid>
                   </StackPanel>
                 </Border>
-                <TextBlock Classes="label" Text="EDITING AND EXPORT" Margin="0,8,0,0" />
+                <TextBlock Classes="label" svc:Tr.Text="EDITING AND EXPORT" Margin="0,8,0,0" />
                 <Border Classes="group">
                   <StackPanel>
                     <Grid Classes="row" ColumnDefinitions="*,Auto">
                       <StackPanel Spacing="2">
-                        <TextBlock Text="Captions" />
-                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="Text over the video in the editor, burned into exports." />
+                        <TextBlock svc:Tr.Text="Captions" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Text over the video in the editor, burned into exports." />
                       </StackPanel>
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureCaptions}" />
                     </Grid>
                     <Border Classes="sep" />
                     <Grid Classes="row" ColumnDefinitions="*,Auto">
                       <StackPanel Spacing="2">
-                        <TextBlock Text="Slow motion and speed ramps" />
-                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="Slow down or speed up part of a clip, easing in and out." />
+                        <TextBlock svc:Tr.Text="Slow motion and speed ramps" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Slow down or speed up part of a clip, easing in and out." />
                       </StackPanel>
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureSpeedEffects}" />
                     </Grid>
                     <Border Classes="sep" />
                     <Grid Classes="row" ColumnDefinitions="*,Auto">
                       <StackPanel Spacing="2">
-                        <TextBlock Text="Sound tools" />
-                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="Even out loudness, boost your voice and lower the game while you talk." />
+                        <TextBlock svc:Tr.Text="Sound tools" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Even out loudness, boost your voice and lower the game while you talk." />
                       </StackPanel>
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureAudioTools}" />
                     </Grid>
                     <Border Classes="sep" />
                     <Grid Classes="row" ColumnDefinitions="*,Auto">
                       <StackPanel Spacing="2">
-                        <TextBlock Text="Watermark and intro" />
-                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="Your logo in a corner, and an intro or outro clip around exports." />
+                        <TextBlock svc:Tr.Text="Watermark and intro" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Your logo in a corner, and an intro or outro clip around exports." />
                       </StackPanel>
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureBranding}" />
                     </Grid>
                     <Border Classes="sep" />
                     <Grid Classes="row" ColumnDefinitions="*,Auto">
                       <StackPanel Spacing="2">
-                        <TextBlock Text="Export queue" />
-                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="Exports run in the background one after another, so you can keep editing. Off, the editor waits for each export." />
+                        <TextBlock svc:Tr.Text="Export queue" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Exports run in the background one after another, so you can keep editing. Off, the editor waits for each export." />
                       </StackPanel>
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureExportQueue}" />
+                    </Grid>
+                    <Border Classes="sep" />
+                    <Grid Classes="row" ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="2">
+                        <TextBlock svc:Tr.Text="Remember edits" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Trim marks, parts, captions and speed changes are still there when you open a video again. The video file itself only changes when you export, and Start over clears them." />
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureKeepEdits}" />
                     </Grid>
                   </StackPanel>
                 </Border>
@@ -1303,82 +1356,82 @@
               <!-- ==== Editing ==== -->
               <StackPanel Spacing="12" IsVisible="{Binding IsEditingPage}">
                 <TextBlock Classes="dim" FontSize="12" TextWrapping="Wrap" Margin="4,0"
-                           Text="Your watermark and intro / outro clips. Switch them on per export in the editor's Effects panel; they stay on until you switch them off." />
+                           svc:Tr.Text="Your watermark and intro / outro clips. Switch them on per export in the editor's Effects panel; they stay on until you switch them off." />
                 <Border Classes="group" IsVisible="{Binding ShowBrandingOffNotice}">
                   <Grid Classes="row" ColumnDefinitions="*,Auto">
-                    <TextBlock Text="Watermark and intro is switched off under Features." TextWrapping="Wrap" />
-                    <Button Grid.Column="1" Classes="soft" Content="Switch on" Command="{Binding EnableBrandingCommand}" />
+                    <TextBlock svc:Tr.Text="Watermark and intro is switched off under Features." TextWrapping="Wrap" />
+                    <Button Grid.Column="1" Classes="soft" svc:Tr.Content="Switch on" Command="{Binding EnableBrandingCommand}" />
                   </Grid>
                 </Border>
                 <StackPanel Spacing="12" IsVisible="{Binding FeatureBranding}">
-                <TextBlock Classes="label" Text="WATERMARK" />
+                <TextBlock Classes="label" svc:Tr.Text="WATERMARK" />
                 <Border Classes="group">
                   <StackPanel>
                     <Grid Classes="row" ColumnDefinitions="*,Auto,Auto">
                       <StackPanel Spacing="2">
-                        <TextBlock Text="Image" />
+                        <TextBlock svc:Tr.Text="Image" />
                         <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="{Binding WatermarkName}" />
                       </StackPanel>
-                      <Button Grid.Column="1" Classes="soft" Content="Choose…" Margin="0,0,8,0" Command="{Binding ChooseWatermarkCommand}" />
-                      <Button Grid.Column="2" Classes="ghost" Content="Remove" Command="{Binding RemoveWatermarkCommand}" IsVisible="{Binding HasWatermarkImage}" />
+                      <Button Grid.Column="1" Classes="soft" svc:Tr.Content="Choose…" Margin="0,0,8,0" Command="{Binding ChooseWatermarkCommand}" />
+                      <Button Grid.Column="2" Classes="ghost" svc:Tr.Content="Remove" Command="{Binding RemoveWatermarkCommand}" IsVisible="{Binding HasWatermarkImage}" />
                     </Grid>
                     <StackPanel IsVisible="{Binding HasWatermarkImage}">
                       <Border Classes="sep" />
                       <Grid Classes="row" ColumnDefinitions="*,Auto">
-                        <TextBlock Text="Corner" />
+                        <TextBlock svc:Tr.Text="Corner" />
                         <ContentControl Grid.Column="1" Content="{Binding WatermarkCorner}" />
                       </Grid>
                       <Border Classes="sep" />
                       <Grid Classes="row" ColumnDefinitions="*,Auto,Auto">
-                        <TextBlock Text="Size (share of the video's width)" />
+                        <TextBlock svc:Tr.Text="Size (share of the video's width)" />
                         <Slider Grid.Column="1" Width="180" Minimum="5" Maximum="40" TickFrequency="1" IsSnapToTickEnabled="True"
                                 Value="{Binding WatermarkSize}" VerticalAlignment="Center" Margin="0,-6,10,-6" />
                         <TextBlock Grid.Column="2" Classes="mono" Width="44" TextAlignment="Right" Text="{Binding WatermarkSizeText}" />
                       </Grid>
                       <Border Classes="sep" />
                       <Grid Classes="row" ColumnDefinitions="*,Auto,Auto">
-                        <TextBlock Text="Opacity" />
+                        <TextBlock svc:Tr.Text="Opacity" />
                         <Slider Grid.Column="1" Width="180" Minimum="20" Maximum="100" TickFrequency="5" IsSnapToTickEnabled="True"
                                 Value="{Binding WatermarkOpacity}" VerticalAlignment="Center" Margin="0,-6,10,-6" />
                         <TextBlock Grid.Column="2" Classes="mono" Width="44" TextAlignment="Right" Text="{Binding WatermarkOpacityText}" />
                       </Grid>
                       <Border Classes="sep" />
                       <Grid Classes="row" ColumnDefinitions="*,Auto">
-                        <TextBlock Text="Add it to exports" />
+                        <TextBlock svc:Tr.Text="Add it to exports" />
                         <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding UseWatermark}" />
                       </Grid>
                     </StackPanel>
                   </StackPanel>
                 </Border>
 
-                <TextBlock Classes="label" Text="INTRO AND OUTRO" Margin="0,8,0,0" />
+                <TextBlock Classes="label" svc:Tr.Text="INTRO AND OUTRO" Margin="0,8,0,0" />
                 <Border Classes="group">
                   <StackPanel>
                     <Grid Classes="row" ColumnDefinitions="*,Auto,Auto,Auto">
                       <StackPanel Spacing="2">
-                        <TextBlock Text="Intro clip" />
+                        <TextBlock svc:Tr.Text="Intro clip" />
                         <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="{Binding IntroName}" />
                       </StackPanel>
-                      <Button Grid.Column="1" Classes="soft" Content="Choose…" Margin="0,0,8,0" Command="{Binding ChooseIntroCommand}" />
-                      <Button Grid.Column="2" Classes="ghost" Content="Remove" Margin="0,0,8,0" Command="{Binding RemoveIntroCommand}" IsVisible="{Binding HasIntroClip}" />
+                      <Button Grid.Column="1" Classes="soft" svc:Tr.Content="Choose…" Margin="0,0,8,0" Command="{Binding ChooseIntroCommand}" />
+                      <Button Grid.Column="2" Classes="ghost" svc:Tr.Content="Remove" Margin="0,0,8,0" Command="{Binding RemoveIntroCommand}" IsVisible="{Binding HasIntroClip}" />
                       <ToggleSwitch Grid.Column="3" Classes="bare" IsChecked="{Binding UseIntro}" IsEnabled="{Binding HasIntroClip}"
-                                    ToolTip.Tip="Add it to exports" />
+                                    svc:Tr.Tip="Add it to exports" />
                     </Grid>
                     <Border Classes="sep" />
                     <Grid Classes="row" ColumnDefinitions="*,Auto,Auto,Auto">
                       <StackPanel Spacing="2">
-                        <TextBlock Text="Outro clip" />
+                        <TextBlock svc:Tr.Text="Outro clip" />
                         <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="{Binding OutroName}" />
                       </StackPanel>
-                      <Button Grid.Column="1" Classes="soft" Content="Choose…" Margin="0,0,8,0" Command="{Binding ChooseOutroCommand}" />
-                      <Button Grid.Column="2" Classes="ghost" Content="Remove" Margin="0,0,8,0" Command="{Binding RemoveOutroCommand}" IsVisible="{Binding HasOutroClip}" />
+                      <Button Grid.Column="1" Classes="soft" svc:Tr.Content="Choose…" Margin="0,0,8,0" Command="{Binding ChooseOutroCommand}" />
+                      <Button Grid.Column="2" Classes="ghost" svc:Tr.Content="Remove" Margin="0,0,8,0" Command="{Binding RemoveOutroCommand}" IsVisible="{Binding HasOutroClip}" />
                       <ToggleSwitch Grid.Column="3" Classes="bare" IsChecked="{Binding UseOutro}" IsEnabled="{Binding HasOutroClip}"
-                                    ToolTip.Tip="Add it to exports" />
+                                    svc:Tr.Tip="Add it to exports" />
                     </Grid>
                   </StackPanel>
                 </Border>
                 <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Margin="4,0"
-                           Text="Intro and outro clips are fitted to each export's size, with black bars if the shape differs. Exports and Share presets both use them." />
+                           svc:Tr.Text="Intro and outro clips are fitted to each export's size, with black bars if the shape differs. Exports and Share presets both use them." />
                 </StackPanel>
               </StackPanel>
 
@@ -1388,24 +1441,24 @@
                   <StackPanel>
                     <Grid Classes="row" ColumnDefinitions="*,Auto">
                       <StackPanel Spacing="2">
-                        <TextBlock Text="Interface size" />
-                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="Makes text, buttons and videos bigger or smaller." />
+                        <TextBlock svc:Tr.Text="Interface size" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Makes text, buttons and videos bigger or smaller." />
                       </StackPanel>
                       <ComboBox Grid.Column="1" Classes="field" MinWidth="120" ItemsSource="{x:Static vm:SettingsViewModel.UiScales}" SelectedItem="{Binding UiScale}" />
                     </Grid>
                     <Border Classes="sep" />
                     <Grid Classes="row" ColumnDefinitions="*,Auto">
                       <StackPanel Spacing="2">
-                        <TextBlock Text="High contrast" />
-                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="Black background, white text and clearer lines, with your scheme's accent color." />
+                        <TextBlock svc:Tr.Text="High contrast" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Black background, white text and clearer lines, with your scheme's accent color." />
                       </StackPanel>
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding HighContrast}" />
                     </Grid>
                     <Border Classes="sep" />
                     <Grid Classes="row" ColumnDefinitions="*,Auto">
                       <StackPanel Spacing="2">
-                        <TextBlock Text="Reduce motion" />
-                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="No animations, zooming or glow." />
+                        <TextBlock svc:Tr.Text="Reduce motion" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="No animations, zooming or glow." />
                       </StackPanel>
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding ReducedMotion}" />
                     </Grid>
@@ -1416,27 +1469,27 @@
               <!-- ==== Clipping ==== -->
               <Border Classes="group" IsVisible="{Binding ShowClippingOffNotice}" Padding="16,14">
                 <TextBlock Classes="dim" FontSize="12" TextWrapping="Wrap"
-                           Text="Background clipping is switched off. Switch it on under Features to set it up." />
+                           svc:Tr.Text="Background clipping is switched off. Switch it on under Features to set it up." />
               </Border>
               <StackPanel Spacing="12" IsVisible="{Binding ShowClippingSettings}">
-              <TextBlock Classes="label" Text="CLIPPING" />
+              <TextBlock Classes="label" svc:Tr.Text="CLIPPING" />
               <Border Classes="group">
                 <StackPanel>
                   <Grid Classes="row" ColumnDefinitions="*,Auto">
                     <StackPanel Spacing="2">
-                      <TextBlock Text="Background clipping" />
+                      <TextBlock svc:Tr.Text="Background clipping" />
                       <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="{Binding Footprint}" />
                     </StackPanel>
                     <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding ClipEnabled}" />
                   </Grid>
                   <Border Classes="sep" />
                   <Grid Classes="row" ColumnDefinitions="*,220">
-                    <TextBlock Text="Clip length" />
+                    <TextBlock svc:Tr.Text="Clip length" />
                     <ComboBox Grid.Column="1" Classes="field" ItemsSource="{x:Static vm:SettingsViewModel.Lengths}" SelectedItem="{Binding Length}" />
                   </Grid>
                   <Border Classes="sep" />
                   <Grid Classes="row" ColumnDefinitions="*,Auto">
-                    <TextBlock Text="Save clip hotkey" />
+                    <TextBlock svc:Tr.Text="Save clip hotkey" />
                     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
                       <ToggleButton Classes="mod" IsChecked="{Binding HotkeyCtrl}" Content="{Binding CtrlLabel}" />
                       <ToggleButton Classes="mod" IsChecked="{Binding HotkeyAlt}" Content="{Binding AltLabel}" />
@@ -1451,7 +1504,7 @@
                         <StackPanel>
                           <Border Classes="sep" />
                           <Grid Classes="row" ColumnDefinitions="*,Auto">
-                            <TextBlock Text="Extra hotkey" VerticalAlignment="Center" />
+                            <TextBlock svc:Tr.Text="Extra hotkey" VerticalAlignment="Center" />
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
                               <ToggleButton Classes="mod" IsChecked="{Binding Ctrl}" Content="{Binding #Root.((vm:MainViewModel)DataContext).SettingsEditor.CtrlLabel}" />
                               <ToggleButton Classes="mod" IsChecked="{Binding Alt}" Content="{Binding #Root.((vm:MainViewModel)DataContext).SettingsEditor.AltLabel}" />
@@ -1461,9 +1514,9 @@
                             </StackPanel>
                           </Grid>
                           <Grid Classes="row" ColumnDefinitions="*,Auto,Auto" Margin="14,0,14,10">
-                            <TextBlock Classes="dim" Text="It saves the last" VerticalAlignment="Center" />
+                            <TextBlock Classes="dim" svc:Tr.Text="It saves the last" VerticalAlignment="Center" />
                             <ComboBox Grid.Column="1" Classes="field" Width="180" ItemsSource="{x:Static vm:SettingsViewModel.Lengths}" SelectedItem="{Binding Length}" />
-                            <Button Grid.Column="2" Classes="ghost" Margin="6,0,0,0" ToolTip.Tip="Remove this hotkey"
+                            <Button Grid.Column="2" Classes="ghost" Margin="6,0,0,0" svc:Tr.Tip="Remove this hotkey"
                                     Command="{Binding #Root.((vm:MainViewModel)DataContext).SettingsEditor.RemoveHotkeyCommand}" CommandParameter="{Binding}">
                               <PathIcon Data="{StaticResource IcClose}" Width="12" Height="12" />
                             </Button>
@@ -1475,52 +1528,52 @@
                   <Border Classes="sep" IsVisible="{Binding CanAddHotkey}" />
                   <Grid Classes="row" ColumnDefinitions="*,Auto" IsVisible="{Binding CanAddHotkey}">
                     <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" VerticalAlignment="Center"
-                               Text="Another hotkey can save a different length, say a short one for a quick play and a long one for a whole round. The buffer keeps the longest." />
-                    <Button Grid.Column="1" Classes="soft" Content="Add hotkey" Command="{Binding AddHotkeyCommand}" Margin="10,0,0,0" />
+                               svc:Tr.Text="Another hotkey can save a different length, say a short one for a quick play and a long one for a whole round. The buffer keeps the longest." />
+                    <Button Grid.Column="1" Classes="soft" svc:Tr.Content="Add hotkey" Command="{Binding AddHotkeyCommand}" Margin="10,0,0,0" />
                   </Grid>
                   <Border Classes="sep" />
                   <Grid Classes="row" ColumnDefinitions="*,Auto">
                     <StackPanel Spacing="2">
-                      <TextBlock Text="Save clips to" />
+                      <TextBlock svc:Tr.Text="Save clips to" />
                       <TextBlock Classes="dim mono" FontSize="11" Text="{Binding Folder}" TextTrimming="PathSegmentEllipsis" MaxWidth="360" HorizontalAlignment="Left" />
                     </StackPanel>
-                    <Button Grid.Column="1" Classes="soft" Content="Choose…" Command="{Binding BrowseFolderCommand}" />
+                    <Button Grid.Column="1" Classes="soft" svc:Tr.Content="Choose…" Command="{Binding BrowseFolderCommand}" />
                   </Grid>
                   <Border Classes="sep" />
                   <Grid Classes="row" ColumnDefinitions="*,Auto">
-                    <TextBlock Text="Notify me when a clip is saved" />
+                    <TextBlock svc:Tr.Text="Notify me when a clip is saved" />
                     <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding Notify}" />
                   </Grid>
                   <Border Classes="sep" />
                   <Grid Classes="row" ColumnDefinitions="*,Auto">
-                    <TextBlock Text="Play a sound when a clip is saved" />
+                    <TextBlock svc:Tr.Text="Play a sound when a clip is saved" />
                     <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding Sound}" />
                   </Grid>
                   <Border Classes="sep" />
                   <Grid Classes="row" ColumnDefinitions="*,Auto">
                     <StackPanel Spacing="2">
-                      <TextBlock Text="Name and tag clips after the game" />
-                      <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="Uses the app that is in front when you save." />
+                      <TextBlock svc:Tr.Text="Name and tag clips after the game" />
+                      <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Uses the app that is in front when you save." />
                     </StackPanel>
                     <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding TagWithGame}" />
                   </Grid>
                 </StackPanel>
               </Border>
 
-              <TextBlock Classes="label" Text="STORAGE" Margin="0,8,0,0" />
+              <TextBlock Classes="label" svc:Tr.Text="STORAGE" Margin="0,8,0,0" />
               <Border Classes="group">
                 <StackPanel>
                   <Grid Classes="row" ColumnDefinitions="*,220">
                     <StackPanel Spacing="2">
-                      <TextBlock Text="Remove clips older than" />
-                      <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="Favourites are never removed." />
+                      <TextBlock svc:Tr.Text="Remove clips older than" />
+                      <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Favourites are never removed." />
                     </StackPanel>
                     <ComboBox Grid.Column="1" Classes="field" ItemsSource="{x:Static vm:SettingsViewModel.KeepDaysOptions}" SelectedItem="{Binding KeepDays}" />
                   </Grid>
                   <Border Classes="sep" />
                   <Grid Classes="row" ColumnDefinitions="*,220">
                     <StackPanel Spacing="2">
-                      <TextBlock Text="Keep the clips folder under" />
+                      <TextBlock svc:Tr.Text="Keep the clips folder under" />
                       <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="{Binding StorageUsage}" />
                     </StackPanel>
                     <ComboBox Grid.Column="1" Classes="field" ItemsSource="{x:Static vm:SettingsViewModel.FolderCaps}" SelectedItem="{Binding FolderCap}" />
@@ -1528,48 +1581,48 @@
                   <Border Classes="sep" />
                   <Grid Classes="row" ColumnDefinitions="*,220">
                     <StackPanel Spacing="2">
-                      <TextBlock Text="Removed clips go to the" />
-                      <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="Oldest clips go first once a limit is passed." />
+                      <TextBlock svc:Tr.Text="Removed clips go to the" />
+                      <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Oldest clips go first once a limit is passed." />
                     </StackPanel>
                     <ComboBox Grid.Column="1" Classes="field" ItemsSource="{x:Static vm:SettingsViewModel.CleanupTargets}" SelectedItem="{Binding CleanupTarget}" />
                   </Grid>
                   <Border Classes="sep" IsVisible="{Binding UsesArchive}" />
                   <Grid Classes="row" ColumnDefinitions="*,Auto" IsVisible="{Binding UsesArchive}">
                     <StackPanel Spacing="2">
-                      <TextBlock Text="Archive folder" />
+                      <TextBlock svc:Tr.Text="Archive folder" />
                       <TextBlock Classes="dim mono" FontSize="11" Text="{Binding ArchiveFolder}" TextTrimming="PathSegmentEllipsis" MaxWidth="360" HorizontalAlignment="Left" />
                     </StackPanel>
-                    <Button Grid.Column="1" Classes="soft" Content="Choose…" Command="{Binding BrowseArchiveCommand}" />
+                    <Button Grid.Column="1" Classes="soft" svc:Tr.Content="Choose…" Command="{Binding BrowseArchiveCommand}" />
                   </Grid>
                 </StackPanel>
               </Border>
 
-              <TextBlock Classes="label" Text="VIDEO" Margin="0,8,0,0" />
+              <TextBlock Classes="label" svc:Tr.Text="VIDEO" Margin="0,8,0,0" />
               <Border Classes="group">
                 <StackPanel>
                   <Grid Classes="row" ColumnDefinitions="*,220" IsVisible="{Binding HasSeveralScreens}">
-                    <TextBlock Text="Screen" />
+                    <TextBlock svc:Tr.Text="Screen" />
                     <ComboBox Grid.Column="1" Classes="field" ItemsSource="{Binding Screens}" SelectedIndex="{Binding ScreenIndex}" />
                   </Grid>
                   <Border Classes="sep" IsVisible="{Binding HasSeveralScreens}" />
                   <Grid Classes="row" ColumnDefinitions="*,220">
-                    <TextBlock Text="Resolution" />
+                    <TextBlock svc:Tr.Text="Resolution" />
                     <ComboBox Grid.Column="1" Classes="field" ItemsSource="{x:Static vm:SettingsViewModel.Resolutions}" SelectedItem="{Binding Resolution}" />
                   </Grid>
                   <Border Classes="sep" />
                   <Grid Classes="row" ColumnDefinitions="*,220">
-                    <TextBlock Text="Frame rate" />
+                    <TextBlock svc:Tr.Text="Frame rate" />
                     <ComboBox Grid.Column="1" Classes="field" ItemsSource="{x:Static vm:SettingsViewModel.FrameRates}" SelectedItem="{Binding FrameRate}" />
                   </Grid>
                   <Border Classes="sep" />
                   <Grid Classes="row" ColumnDefinitions="*,220">
-                    <TextBlock Text="Video bitrate" />
+                    <TextBlock svc:Tr.Text="Video bitrate" />
                     <ComboBox Grid.Column="1" Classes="field" ItemsSource="{x:Static vm:SettingsViewModel.Bitrates}" SelectedItem="{Binding Bitrate}" />
                   </Grid>
                   <Border Classes="sep" />
                   <Grid Classes="row" ColumnDefinitions="*,260">
                     <StackPanel Spacing="2">
-                      <TextBlock Text="Format" />
+                      <TextBlock svc:Tr.Text="Format" />
                       <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="{Binding CodecDetail}" />
                     </StackPanel>
                     <ComboBox Grid.Column="1" Classes="field" ItemsSource="{Binding Codecs}" SelectedItem="{Binding Codec}" />
@@ -1577,75 +1630,75 @@
                   <Border Classes="sep" />
                   <Grid Classes="row" ColumnDefinitions="*,Auto">
                     <StackPanel Spacing="2">
-                      <TextBlock Text="Use the graphics card to encode" />
+                      <TextBlock svc:Tr.Text="Use the graphics card to encode" />
                       <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap"
-                                 Text="Much lighter on the CPU while gaming. Off records H.264 in software." />
+                                 svc:Tr.Text="Much lighter on the CPU while gaming. Off records H.264 in software." />
                     </StackPanel>
                     <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding HardwareEncoder}" />
                   </Grid>
                 </StackPanel>
               </Border>
 
-              <TextBlock Classes="label" Text="AUDIO" Margin="0,8,0,0" />
+              <TextBlock Classes="label" svc:Tr.Text="AUDIO" Margin="0,8,0,0" />
               <Border Classes="group">
                 <StackPanel>
                   <Grid Classes="row" ColumnDefinitions="*,260">
-                    <TextBlock Text="Audio device" />
+                    <TextBlock svc:Tr.Text="Audio device" />
                     <ComboBox Grid.Column="1" Classes="field" ItemsSource="{Binding AudioDevices}" SelectedItem="{Binding Audio1}" />
                   </Grid>
                   <Border Classes="sep" />
                   <Grid Classes="row" ColumnDefinitions="*,260">
                     <StackPanel Spacing="2">
-                      <TextBlock Text="Second device" />
-                      <TextBlock Classes="dim" FontSize="11" Text="Mixed in, e.g. your microphone." />
+                      <TextBlock svc:Tr.Text="Second device" />
+                      <TextBlock Classes="dim" FontSize="11" svc:Tr.Text="Mixed in, e.g. your microphone." />
                     </StackPanel>
                     <ComboBox Grid.Column="1" Classes="field" ItemsSource="{Binding AudioDevices}" SelectedItem="{Binding Audio2}" />
                   </Grid>
                   <Border Classes="sep" />
                   <Grid Classes="row" ColumnDefinitions="*,Auto">
                     <StackPanel Spacing="2">
-                      <TextBlock Text="Keep the two devices as separate tracks" />
+                      <TextBlock svc:Tr.Text="Keep the two devices as separate tracks" />
                       <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap"
-                                 Text="Lets you mute the game or the microphone afterwards in the player. Some players and Discord only play the first track, so use a Share preset to mix them back together." />
+                                 svc:Tr.Text="Lets you mute the game or the microphone afterwards in the player. Some players and Discord only play the first track, so use a Share preset to mix them back together." />
                     </StackPanel>
                     <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding SeparateTracks}" />
                   </Grid>
                   <Border Classes="sep" />
                   <Grid Classes="row" ColumnDefinitions="*,220">
-                    <TextBlock Text="Audio bitrate" />
+                    <TextBlock svc:Tr.Text="Audio bitrate" />
                     <ComboBox Grid.Column="1" Classes="field" ItemsSource="{x:Static vm:SettingsViewModel.AudioBitrates}" SelectedItem="{Binding AudioBitrate}" />
                   </Grid>
                 </StackPanel>
               </Border>
               <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="{Binding AudioHint}" Margin="4,0" />
 
-              <TextBlock Classes="label" Text="CAMERA" Margin="0,8,0,0" />
+              <TextBlock Classes="label" svc:Tr.Text="CAMERA" Margin="0,8,0,0" />
               <Border Classes="group">
                 <StackPanel>
                   <Grid Classes="row" ColumnDefinitions="*,220">
                     <StackPanel Spacing="2" Margin="0,0,12,0">
-                      <TextBlock Text="Webcam in the corner" />
+                      <TextBlock svc:Tr.Text="Webcam in the corner" />
                       <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap"
-                                 Text="Puts you in every clip and session, like a facecam. The camera stays on while clipping is on." />
+                                 svc:Tr.Text="Puts you in every clip and session, like a facecam. The camera stays on while clipping is on." />
                     </StackPanel>
                     <ComboBox Grid.Column="1" Classes="field" ItemsSource="{Binding Cameras}" SelectedItem="{Binding Camera}" />
                   </Grid>
                   <StackPanel IsVisible="{Binding HasCamera}">
                     <Border Classes="sep" />
                     <Grid Classes="row" ColumnDefinitions="*,220">
-                      <TextBlock Text="Corner" />
+                      <TextBlock svc:Tr.Text="Corner" />
                       <ComboBox Grid.Column="1" Classes="field" ItemsSource="{x:Static vm:SettingsViewModel.CameraCorners}" SelectedItem="{Binding CameraCorner}" />
                     </Grid>
                     <Border Classes="sep" />
                     <Grid Classes="row" ColumnDefinitions="*,220">
-                      <TextBlock Text="Size" />
+                      <TextBlock svc:Tr.Text="Size" />
                       <ComboBox Grid.Column="1" Classes="field" ItemsSource="{x:Static vm:SettingsViewModel.CameraSizes}" SelectedItem="{Binding CameraSize}" />
                     </Grid>
                   </StackPanel>
                 </StackPanel>
               </Border>
 
-              <TextBlock Classes="label" Text="GAME PROFILES" Margin="0,8,0,0" />
+              <TextBlock Classes="label" svc:Tr.Text="GAME PROFILES" Margin="0,8,0,0" />
               <Border Classes="group">
                 <StackPanel>
                   <ItemsControl ItemsSource="{Binding Profiles}">
@@ -1653,11 +1706,11 @@
                       <DataTemplate>
                         <StackPanel>
                           <Grid Classes="row" ColumnDefinitions="*,Auto,Auto,Auto,Auto">
-                            <TextBox Text="{Binding Game}" Watermark="Game or app name" CornerRadius="8" Margin="0,0,8,0" />
+                            <TextBox Text="{Binding Game}" svc:Tr.Watermark="Game or app name" CornerRadius="8" Margin="0,0,8,0" />
                             <ComboBox Grid.Column="1" Classes="field" Width="118" Margin="0,0,6,0" ItemsSource="{x:Static vm:ProfileRow.Lengths}" SelectedItem="{Binding Length}" />
                             <ComboBox Grid.Column="2" Classes="field" Width="120" Margin="0,0,6,0" ItemsSource="{x:Static vm:ProfileRow.Bitrates}" SelectedItem="{Binding Bitrate}" />
                             <ComboBox Grid.Column="3" Classes="field" Width="116" Margin="0,0,4,0" ItemsSource="{x:Static vm:ProfileRow.Formats}" SelectedItem="{Binding Format}" />
-                            <Button Grid.Column="4" Classes="ghost" ToolTip.Tip="Remove this profile"
+                            <Button Grid.Column="4" Classes="ghost" svc:Tr.Tip="Remove this profile"
                                     Command="{Binding #Root.((vm:MainViewModel)DataContext).SettingsEditor.RemoveProfileCommand}" CommandParameter="{Binding}">
                               <PathIcon Data="{StaticResource IcClose}" Width="12" Height="12" />
                             </Button>
@@ -1669,8 +1722,8 @@
                   </ItemsControl>
                   <Grid Classes="row" ColumnDefinitions="*,Auto">
                     <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" VerticalAlignment="Center"
-                               Text="While that game is in front, clips use its length, bitrate and format. The name is the one clips get tagged with; part of it is enough." />
-                    <Button Grid.Column="1" Classes="soft" Content="Add profile" Command="{Binding AddProfileCommand}" Margin="10,0,0,0" />
+                               svc:Tr.Text="While that game is in front, clips use its length, bitrate and format. The name is the one clips get tagged with; part of it is enough." />
+                    <Button Grid.Column="1" Classes="soft" svc:Tr.Content="Add profile" Command="{Binding AddProfileCommand}" Margin="10,0,0,0" />
                   </Grid>
                 </StackPanel>
               </Border>
@@ -1702,17 +1755,17 @@
       <Border Grid.Row="0" Background="{DynamicResource Bg1}" Height="52" x:Name="PlayerTopBar">
         <Grid x:Name="PlayerTopGrid" ColumnDefinitions="Auto,Auto,*,Auto">
           <Button Classes="ghost" Command="{Binding #Root.((vm:MainViewModel)DataContext).ClosePlayerCommand}"
-                  ToolTip.Tip="Back to library (Esc)" VerticalAlignment="Center" Margin="12,0,4,0">
+                  svc:Tr.Tip="Back to library (Esc)" VerticalAlignment="Center" Margin="12,0,4,0">
             <StackPanel Orientation="Horizontal" Spacing="6">
               <PathIcon Data="{StaticResource IcBack}" Width="16" Height="16" />
-              <TextBlock Text="Library" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
+              <TextBlock svc:Tr.Text="Library" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
             </StackPanel>
           </Button>
           <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center" Margin="0,0,10,0">
-            <Button Classes="ghost" Padding="6" Command="{Binding #Root.((vm:MainViewModel)DataContext).PreviousClipCommand}" ToolTip.Tip="Previous video (←)">
+            <Button Classes="ghost" Padding="6" Command="{Binding #Root.((vm:MainViewModel)DataContext).PreviousClipCommand}" svc:Tr.Tip="Previous video (←)">
               <PathIcon Data="{StaticResource IcChevronLeft}" Width="18" Height="18" />
             </Button>
-            <Button Classes="ghost" Padding="6" Command="{Binding #Root.((vm:MainViewModel)DataContext).NextClipCommand}" ToolTip.Tip="Next video (→)">
+            <Button Classes="ghost" Padding="6" Command="{Binding #Root.((vm:MainViewModel)DataContext).NextClipCommand}" svc:Tr.Tip="Next video (→)">
               <PathIcon Data="{StaticResource IcChevronRight}" Width="18" Height="18" />
             </Button>
           </StackPanel>
@@ -1721,7 +1774,7 @@
             <TextBlock Classes="dim" Text="{Binding Subtitle}" FontSize="12" VerticalAlignment="Center" />
           </StackPanel>
           <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" Margin="0,0,12,0">
-            <Button Classes="ghost" ToolTip.Tip="Exports running in the background"
+            <Button Classes="ghost" svc:Tr.Tip="Exports running in the background"
                     IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).Exports.HasJobs}">
               <StackPanel Orientation="Horizontal" Spacing="6">
                 <PathIcon Data="{StaticResource IcExport}" Width="15" Height="15" />
@@ -1733,32 +1786,32 @@
                 </Flyout>
               </Button.Flyout>
             </Button>
-            <Button Classes="ghost" ToolTip.Tip="Back to the quick player: plain playback over the library"
+            <Button Classes="ghost" svc:Tr.Tip="Back to the quick player: plain playback over the library"
                     IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).ShowMiniPlayerButton}"
                     Command="{Binding #Root.((vm:MainViewModel)DataContext).ShrinkToMiniPlayerCommand}">
               <StackPanel Orientation="Horizontal" Spacing="6">
                 <PathIcon Data="{StaticResource IcMiniPlayer}" Width="15" Height="15" />
-                <TextBlock Text="Quick player" FontSize="12" VerticalAlignment="Center" />
+                <TextBlock svc:Tr.Text="Quick player" FontSize="12" VerticalAlignment="Center" />
               </StackPanel>
             </Button>
             <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Margin="10,0,0,0">
               <Border Background="{DynamicResource Bg2}" CornerRadius="8" Padding="3" VerticalAlignment="Center" Margin="0,0,2,0">
                 <StackPanel Orientation="Horizontal">
-                  <RadioButton Classes="seg" GroupName="mode" Content="Lossless" IsChecked="{Binding !PreciseExport}"
-                               ToolTip.Tip="Stream copy: instant, no quality loss. Start snaps to the nearest earlier keyframe." />
-                  <RadioButton Classes="seg" GroupName="mode" Content="Precise" IsChecked="{Binding PreciseExport}"
-                               ToolTip.Tip="Re-encode to H.264/AAC MP4: frame-accurate cut, slower." />
+                  <RadioButton Classes="seg" GroupName="mode" svc:Tr.Content="Lossless" IsChecked="{Binding !PreciseExport}"
+                               svc:Tr.Tip="Stream copy: instant, no quality loss. Start snaps to the nearest earlier keyframe." />
+                  <RadioButton Classes="seg" GroupName="mode" svc:Tr.Content="Precise" IsChecked="{Binding PreciseExport}"
+                               svc:Tr.Tip="Re-encode to H.264/AAC MP4: frame-accurate cut, slower." />
                 </StackPanel>
               </Border>
-              <Button Classes="soft" IsVisible="{Binding !IsExporting}" ToolTip.Tip="Share presets: Discord, vertical, GIF"
+              <Button Classes="soft" IsVisible="{Binding !IsExporting}" svc:Tr.Tip="Share presets: Discord, vertical, GIF"
                       Command="{Binding PickPageCommand}" CommandParameter="{x:Static vm:ToolPage.Share}">
                 <StackPanel Orientation="Horizontal" Spacing="6">
                   <PathIcon Data="{StaticResource IcShare}" Width="14" Height="14" />
-                  <TextBlock Text="Share" />
+                  <TextBlock svc:Tr.Text="Share" />
                 </StackPanel>
               </Button>
               <Button Classes="accent" Command="{Binding ExportCommand}" IsVisible="{Binding !IsExporting}"
-                      ToolTip.Tip="Export clip (E)">
+                      svc:Tr.Tip="Export clip (E)">
                 <StackPanel Orientation="Horizontal" Spacing="8">
                   <PathIcon Data="{StaticResource IcExport}" Width="15" Height="15" />
                   <TextBlock Text="{Binding ExportLabel}" />
@@ -1767,7 +1820,7 @@
               <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsExporting}">
                 <ProgressBar Width="150" Height="6" MinHeight="6" Value="{Binding ExportProgress}" VerticalAlignment="Center" CornerRadius="3" />
                 <TextBlock Classes="mono" FontSize="12" Text="{Binding ExportProgress, StringFormat='{}{0:0}%'}" VerticalAlignment="Center" />
-                <Button Classes="ghost" Command="{Binding CancelExportCommand}" ToolTip.Tip="Cancel export">
+                <Button Classes="ghost" Command="{Binding CancelExportCommand}" svc:Tr.Tip="Cancel export">
                   <PathIcon Data="{StaticResource IcClose}" Width="14" Height="14" />
                 </Button>
               </StackPanel>
@@ -1802,28 +1855,28 @@
       <Border Grid.Column="1" Background="{DynamicResource Bg1}" BorderBrush="{DynamicResource Line}" BorderThickness="1,0,0,0" Padding="6,10">
         <StackPanel Spacing="4">
           <Button Classes="rail" Classes.on="{Binding IsTrimPage}" Command="{Binding PickPageCommand}" CommandParameter="{x:Static vm:ToolPage.Trim}"
-                  ToolTip.Tip="Selection, parts, markers and chapters">
-            <StackPanel Spacing="4"><PathIcon Data="{StaticResource IcCut}" /><TextBlock Text="Trim" /></StackPanel>
+                  svc:Tr.Tip="Selection, parts, markers and chapters">
+            <StackPanel Spacing="4"><PathIcon Data="{StaticResource IcCut}" /><TextBlock svc:Tr.Text="Trim" /></StackPanel>
           </Button>
           <Button Classes="rail" Classes.on="{Binding IsCaptionsPage}" Command="{Binding PickPageCommand}" CommandParameter="{x:Static vm:ToolPage.Captions}"
-                  IsVisible="{Binding ShowCaptionTools}" ToolTip.Tip="Text over the video">
-            <StackPanel Spacing="4"><PathIcon Data="{StaticResource IcText}" /><TextBlock Text="Captions" /></StackPanel>
+                  IsVisible="{Binding ShowCaptionTools}" svc:Tr.Tip="Text over the video">
+            <StackPanel Spacing="4"><PathIcon Data="{StaticResource IcText}" /><TextBlock svc:Tr.Text="Captions" /></StackPanel>
           </Button>
           <Button Classes="rail" Classes.on="{Binding IsSpeedPage}" Command="{Binding PickPageCommand}" CommandParameter="{x:Static vm:ToolPage.Speed}"
-                  IsVisible="{Binding ShowSpeedTools}" ToolTip.Tip="Slow motion and fast forward">
-            <StackPanel Spacing="4"><PathIcon Data="{StaticResource IcSpeed}" /><TextBlock Text="Speed" /></StackPanel>
+                  IsVisible="{Binding ShowSpeedTools}" svc:Tr.Tip="Slow motion and fast forward">
+            <StackPanel Spacing="4"><PathIcon Data="{StaticResource IcSpeed}" /><TextBlock svc:Tr.Text="Speed" /></StackPanel>
           </Button>
           <Button Classes="rail" Classes.on="{Binding IsSoundPage}" Command="{Binding PickPageCommand}" CommandParameter="{x:Static vm:ToolPage.Sound}"
-                  IsVisible="{Binding ShowSoundPage}" ToolTip.Tip="Loudness, voice and audio tracks">
-            <StackPanel Spacing="4"><PathIcon Data="{StaticResource IcVolume}" /><TextBlock Text="Sound" /></StackPanel>
+                  IsVisible="{Binding ShowSoundPage}" svc:Tr.Tip="Loudness, voice and audio tracks">
+            <StackPanel Spacing="4"><PathIcon Data="{StaticResource IcVolume}" /><TextBlock svc:Tr.Text="Sound" /></StackPanel>
           </Button>
           <Button Classes="rail" Classes.on="{Binding IsBrandPage}" Command="{Binding PickPageCommand}" CommandParameter="{x:Static vm:ToolPage.Brand}"
-                  IsVisible="{Binding ShowBranding}" ToolTip.Tip="Watermark, intro and outro">
-            <StackPanel Spacing="4"><PathIcon Data="{StaticResource IcImage}" /><TextBlock Text="Brand" /></StackPanel>
+                  IsVisible="{Binding ShowBranding}" svc:Tr.Tip="Watermark, intro and outro">
+            <StackPanel Spacing="4"><PathIcon Data="{StaticResource IcImage}" /><TextBlock svc:Tr.Text="Brand" /></StackPanel>
           </Button>
           <Button Classes="rail" Classes.on="{Binding IsSharePage}" Command="{Binding PickPageCommand}" CommandParameter="{x:Static vm:ToolPage.Share}"
-                  ToolTip.Tip="Export modes and share presets">
-            <StackPanel Spacing="4"><PathIcon Data="{StaticResource IcShare}" /><TextBlock Text="Export" /></StackPanel>
+                  svc:Tr.Tip="Export modes and share presets">
+            <StackPanel Spacing="4"><PathIcon Data="{StaticResource IcShare}" /><TextBlock svc:Tr.Text="Export" /></StackPanel>
           </Button>
         </StackPanel>
       </Border>
@@ -1834,7 +1887,7 @@
         <DockPanel>
           <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="16,14,10,8">
             <TextBlock Text="{Binding PageTitle}" FontSize="15" FontWeight="Bold" VerticalAlignment="Center" />
-            <Button Grid.Column="1" Classes="ghost" Command="{Binding ToggleToolsCommand}" ToolTip.Tip="Fold the panel away for a bigger picture (Shift+E)">
+            <Button Grid.Column="1" Classes="ghost" Command="{Binding ToggleToolsCommand}" svc:Tr.Tip="Fold the panel away for a bigger picture (Shift+E)">
               <PathIcon Data="{StaticResource IcChevronRight}" Width="16" Height="16" />
             </Button>
           </Grid>
@@ -1845,29 +1898,29 @@
               <StackPanel Spacing="12" IsVisible="{Binding IsTrimPage}">
                 <Border Classes="fxcard">
                   <StackPanel Spacing="8">
-                    <TextBlock Classes="label" Text="SELECTION" />
+                    <TextBlock Classes="label" svc:Tr.Text="SELECTION" />
                     <Grid ColumnDefinitions="40,*,Auto,Auto" RowDefinitions="Auto,Auto">
-                      <TextBlock Text="In" FontSize="12" VerticalAlignment="Center" />
+                      <TextBlock svc:Tr.Text="In" FontSize="12" VerticalAlignment="Center" />
                       <TextBlock Grid.Column="1" Classes="mono" Text="{Binding InText}" Foreground="{DynamicResource Cyan}" FontSize="12" VerticalAlignment="Center" />
-                      <Button Grid.Column="2" Classes="ghost" Padding="7,4" Command="{Binding SetInCommand}" ToolTip.Tip="Set the start at the playhead (I)">
-                        <TextBlock Text="Set" FontSize="11" />
+                      <Button Grid.Column="2" Classes="ghost" Padding="7,4" Command="{Binding SetInCommand}" svc:Tr.Tip="Set the start at the playhead (I)">
+                        <TextBlock svc:Tr.Text="Set" FontSize="11" />
                       </Button>
-                      <Button Grid.Column="3" Classes="ghost" Padding="7,4" Command="{Binding JumpToInCommand}" ToolTip.Tip="Go to the start (Shift+I)">
-                        <TextBlock Text="Go to" FontSize="11" />
+                      <Button Grid.Column="3" Classes="ghost" Padding="7,4" Command="{Binding JumpToInCommand}" svc:Tr.Tip="Go to the start (Shift+I)">
+                        <TextBlock svc:Tr.Text="Go to" FontSize="11" />
                       </Button>
-                      <TextBlock Grid.Row="1" Text="Out" FontSize="12" VerticalAlignment="Center" />
+                      <TextBlock Grid.Row="1" svc:Tr.Text="Out" FontSize="12" VerticalAlignment="Center" />
                       <TextBlock Grid.Row="1" Grid.Column="1" Classes="mono" Text="{Binding OutText}" Foreground="{DynamicResource Cyan}" FontSize="12" VerticalAlignment="Center" />
-                      <Button Grid.Row="1" Grid.Column="2" Classes="ghost" Padding="7,4" Command="{Binding SetOutCommand}" ToolTip.Tip="Set the end at the playhead (O)">
-                        <TextBlock Text="Set" FontSize="11" />
+                      <Button Grid.Row="1" Grid.Column="2" Classes="ghost" Padding="7,4" Command="{Binding SetOutCommand}" svc:Tr.Tip="Set the end at the playhead (O)">
+                        <TextBlock svc:Tr.Text="Set" FontSize="11" />
                       </Button>
-                      <Button Grid.Row="1" Grid.Column="3" Classes="ghost" Padding="7,4" Command="{Binding JumpToOutCommand}" ToolTip.Tip="Go to the end (Shift+O)">
-                        <TextBlock Text="Go to" FontSize="11" />
+                      <Button Grid.Row="1" Grid.Column="3" Classes="ghost" Padding="7,4" Command="{Binding JumpToOutCommand}" svc:Tr.Tip="Go to the end (Shift+O)">
+                        <TextBlock svc:Tr.Text="Go to" FontSize="11" />
                       </Button>
                     </Grid>
                     <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" IsVisible="{Binding !HasRange}"
-                               Text="Mark where the clip starts and ends: In and Out in the bar below, or drag the brackets on the timeline. Without a selection, Export saves the whole video." />
+                               svc:Tr.Text="Mark where the clip starts and ends: In and Out in the bar below, or drag the brackets on the timeline. Without a selection, Export saves the whole video." />
                     <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding HasRange}">
-                      <TextBlock Classes="dim" Text="Length" FontSize="12" VerticalAlignment="Center" />
+                      <TextBlock Classes="dim" svc:Tr.Text="Length" FontSize="12" VerticalAlignment="Center" />
                       <TextBlock Classes="mono" Text="{Binding RangeText}" FontSize="12" VerticalAlignment="Center" />
                     </StackPanel>
                   </StackPanel>
@@ -1875,14 +1928,14 @@
 
                 <Border Classes="fxcard">
                   <StackPanel Spacing="8">
-                    <TextBlock Classes="label" Text="PARTS" />
+                    <TextBlock Classes="label" svc:Tr.Text="PARTS" />
                     <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap"
-                               Text="Keep several moments in one export: mark one, Add part, mark the next. Export joins them in order." />
+                               svc:Tr.Text="Keep several moments in one export: mark one, Add part, mark the next. Export joins them in order." />
                     <Button Classes="soft" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Command="{Binding AddSegmentCommand}"
-                            IsEnabled="{Binding HasRange}" ToolTip.Tip="Keep this selection as one part (A)">
+                            IsEnabled="{Binding HasRange}" svc:Tr.Tip="Keep this selection as one part (A)">
                       <StackPanel Orientation="Horizontal" Spacing="8">
                         <PathIcon Data="{StaticResource IcAdd}" Width="12" Height="12" />
-                        <TextBlock Text="Add the selection as a part" FontSize="12" />
+                        <TextBlock svc:Tr.Text="Add the selection as a part" FontSize="12" />
                         <TextBlock Classes="hint" Text="A" />
                       </StackPanel>
                     </Button>
@@ -1894,11 +1947,11 @@
                         <DataTemplate>
                           <Border Classes="part" Margin="0,0,6,6">
                             <StackPanel Orientation="Horizontal" Spacing="2">
-                              <Button Classes="ghost" Padding="8,3" ToolTip.Tip="Jump to this part"
+                              <Button Classes="ghost" Padding="8,3" svc:Tr.Tip="Jump to this part"
                                       Command="{Binding #Root.((vm:MainViewModel)DataContext).Player.JumpToSegmentCommand}" CommandParameter="{Binding}">
                                 <TextBlock Classes="mono" FontSize="12" Text="{Binding Text}" />
                               </Button>
-                              <Button Classes="ghost" Padding="5,3" ToolTip.Tip="Remove this part"
+                              <Button Classes="ghost" Padding="5,3" svc:Tr.Tip="Remove this part"
                                       Command="{Binding #Root.((vm:MainViewModel)DataContext).Player.RemoveSegmentCommand}" CommandParameter="{Binding}">
                                 <PathIcon Data="{StaticResource IcClose}" Width="10" Height="10" />
                               </Button>
@@ -1912,20 +1965,20 @@
 
                 <Border Classes="fxcard" IsVisible="{Binding HasMarkers}">
                   <StackPanel Spacing="8">
-                    <TextBlock Classes="label" Text="MARKERS" />
+                    <TextBlock Classes="label" svc:Tr.Text="MARKERS" />
                     <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap"
-                               Text="Loud moments and bookmarks, shown as ticks on the timeline." />
+                               svc:Tr.Text="Loud moments and bookmarks, shown as ticks on the timeline." />
                     <Grid ColumnDefinitions="*,Auto,Auto">
                       <TextBlock Text="{Binding MarkerText}" FontSize="12" VerticalAlignment="Center" />
-                      <Button Grid.Column="1" Classes="ghost" Padding="7,4" Command="{Binding PreviousMarkerCommand}" ToolTip.Tip="Previous marker (Shift+N)">
+                      <Button Grid.Column="1" Classes="ghost" Padding="7,4" Command="{Binding PreviousMarkerCommand}" svc:Tr.Tip="Previous marker (Shift+N)">
                         <StackPanel Orientation="Horizontal" Spacing="4">
                           <PathIcon Data="{StaticResource IcChevronLeft}" Width="12" Height="12" />
-                          <TextBlock Text="Previous" FontSize="11" />
+                          <TextBlock svc:Tr.Text="Previous" FontSize="11" />
                         </StackPanel>
                       </Button>
-                      <Button Grid.Column="2" Classes="ghost" Padding="7,4" Command="{Binding NextMarkerCommand}" ToolTip.Tip="Next marker (N)">
+                      <Button Grid.Column="2" Classes="ghost" Padding="7,4" Command="{Binding NextMarkerCommand}" svc:Tr.Tip="Next marker (N)">
                         <StackPanel Orientation="Horizontal" Spacing="4">
-                          <TextBlock Text="Next" FontSize="11" />
+                          <TextBlock svc:Tr.Text="Next" FontSize="11" />
                           <PathIcon Data="{StaticResource IcChevronRight}" Width="12" Height="12" />
                         </StackPanel>
                       </Button>
@@ -1935,7 +1988,7 @@
 
                 <Border Classes="fxcard" IsVisible="{Binding HasChapters}">
                   <StackPanel Spacing="6">
-                    <TextBlock Classes="label" Text="CHAPTERS" />
+                    <TextBlock Classes="label" svc:Tr.Text="CHAPTERS" />
                     <ItemsControl ItemsSource="{Binding ChapterList}">
                       <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="vm:ChapterViewModel">
@@ -1949,7 +2002,7 @@
                               </Grid>
                             </Button>
                             <Button Grid.Column="1" Classes="ghost" Padding="7" Margin="2,0,0,0"
-                                    ToolTip.Tip="Select this chapter, to export or loop it"
+                                    svc:Tr.Tip="Select this chapter, to export or loop it"
                                     Command="{Binding #Root.((vm:MainViewModel)DataContext).Player.SelectChapterCommand}" CommandParameter="{Binding}">
                               <PathIcon Data="{StaticResource IcCut}" Width="12" Height="12" />
                             </Button>
@@ -1959,39 +2012,44 @@
                     </ItemsControl>
                   </StackPanel>
                 </Border>
+
+                <Button Classes="ghost" HorizontalAlignment="Left" Padding="10,6" Command="{Binding StartOverCommand}"
+                        svc:Tr.Tip="Remove trim marks, parts, captions and speed changes from this video">
+                  <TextBlock svc:Tr.Text="Start over" FontSize="12" />
+                </Button>
               </StackPanel>
 
               <!-- captions -->
               <StackPanel Spacing="8" IsVisible="{Binding IsCaptionsPage}">
-                <Button Classes="soft" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Command="{Binding AddCaptionCommand}" ToolTip.Tip="Add a caption at the playhead (C)">
+                <Button Classes="soft" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Command="{Binding AddCaptionCommand}" svc:Tr.Tip="Add a caption at the playhead (C)">
                   <StackPanel Orientation="Horizontal" Spacing="8">
                     <PathIcon Data="{StaticResource IcAdd}" Width="12" Height="12" />
-                    <TextBlock Text="Add a caption at the playhead" FontSize="12" />
+                    <TextBlock svc:Tr.Text="Add a caption at the playhead" FontSize="12" />
                     <TextBlock Classes="hint" Text="C" />
                   </StackPanel>
                 </Button>
                 <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Margin="4,0" IsVisible="{Binding !Captions.Count}"
-                           Text="Text over the video, burned into exports. A new caption starts at the playhead and lasts 3 seconds." />
+                           svc:Tr.Text="Text over the video, burned into exports. A new caption starts at the playhead and lasts 3 seconds." />
                 <ItemsControl x:Name="CaptionList" ItemsSource="{Binding Captions}">
                   <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:CaptionViewModel">
                       <Border Classes="fxcard" Margin="0,0,0,8">
                         <StackPanel Spacing="8">
-                          <TextBox Classes="fx" Text="{Binding Text}" Watermark="Caption text" AcceptsReturn="True" TextWrapping="Wrap" MaxHeight="96" />
+                          <TextBox Classes="fx" Text="{Binding Text}" svc:Tr.Watermark="Caption text" AcceptsReturn="True" TextWrapping="Wrap" MaxHeight="96" />
                           <Grid ColumnDefinitions="*,Auto,Auto,Auto">
-                            <Button Classes="ghost" Padding="4,3" HorizontalAlignment="Left" ToolTip.Tip="Jump to this caption"
+                            <Button Classes="ghost" Padding="4,3" HorizontalAlignment="Left" svc:Tr.Tip="Jump to this caption"
                                     Command="{Binding #Root.((vm:MainViewModel)DataContext).Player.JumpToCaptionCommand}" CommandParameter="{Binding}">
                               <TextBlock Classes="mono" FontSize="11" Text="{Binding RangeText}" />
                             </Button>
-                            <Button Grid.Column="1" Classes="ghost" Padding="7,3" ToolTip.Tip="Start the caption at the playhead"
+                            <Button Grid.Column="1" Classes="ghost" Padding="7,3" svc:Tr.Tip="Start the caption at the playhead"
                                     Command="{Binding #Root.((vm:MainViewModel)DataContext).Player.CaptionStartHereCommand}" CommandParameter="{Binding}">
-                              <TextBlock Text="Start here" FontSize="11" />
+                              <TextBlock svc:Tr.Text="Start here" FontSize="11" />
                             </Button>
-                            <Button Grid.Column="2" Classes="ghost" Padding="7,3" ToolTip.Tip="End the caption at the playhead"
+                            <Button Grid.Column="2" Classes="ghost" Padding="7,3" svc:Tr.Tip="End the caption at the playhead"
                                     Command="{Binding #Root.((vm:MainViewModel)DataContext).Player.CaptionEndHereCommand}" CommandParameter="{Binding}">
-                              <TextBlock Text="End here" FontSize="11" />
+                              <TextBlock svc:Tr.Text="End here" FontSize="11" />
                             </Button>
-                            <Button Grid.Column="3" Classes="ghost" Padding="6" ToolTip.Tip="Remove this caption"
+                            <Button Grid.Column="3" Classes="ghost" Padding="6" svc:Tr.Tip="Remove this caption"
                                     Command="{Binding #Root.((vm:MainViewModel)DataContext).Player.RemoveCaptionCommand}" CommandParameter="{Binding}">
                               <PathIcon Data="{StaticResource IcDelete}" Width="13" Height="13" />
                             </Button>
@@ -2011,14 +2069,14 @@
 
               <!-- slow motion / fast forward -->
               <StackPanel Spacing="8" IsVisible="{Binding IsSpeedPage}">
-                <Button Classes="soft" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Command="{Binding AddSpeedSectionCommand}" ToolTip.Tip="Slow down or speed up part of the clip, starting at the playhead">
+                <Button Classes="soft" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Command="{Binding AddSpeedSectionCommand}" svc:Tr.Tip="Slow down or speed up part of the clip, starting at the playhead">
                   <StackPanel Orientation="Horizontal" Spacing="8">
                     <PathIcon Data="{StaticResource IcAdd}" Width="12" Height="12" />
-                    <TextBlock Text="Add slow motion at the playhead" FontSize="12" />
+                    <TextBlock svc:Tr.Text="Add slow motion at the playhead" FontSize="12" />
                   </StackPanel>
                 </Button>
                 <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Margin="4,0" IsVisible="{Binding !SpeedSections.Count}"
-                           Text="Slow motion or fast forward for part of the clip; the player plays it at that speed so you can check it. Slow motion is smoothest on 60 fps recordings." />
+                           svc:Tr.Text="Slow motion or fast forward for part of the clip; the player plays it at that speed so you can check it. Slow motion is smoothest on 60 fps recordings." />
                 <ItemsControl ItemsSource="{Binding SpeedSections}">
                   <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:SpeedSectionViewModel">
@@ -2027,27 +2085,27 @@
                           <Grid ColumnDefinitions="*,Auto,Auto,Auto">
                             <StackPanel Spacing="0">
                               <TextBlock Text="{Binding Title}" FontSize="12" FontWeight="SemiBold" Margin="4,0,0,0" />
-                              <Button Classes="ghost" Padding="4,2" HorizontalAlignment="Left" ToolTip.Tip="Play this part"
+                              <Button Classes="ghost" Padding="4,2" HorizontalAlignment="Left" svc:Tr.Tip="Play this part"
                                       Command="{Binding #Root.((vm:MainViewModel)DataContext).Player.JumpToSpeedSectionCommand}" CommandParameter="{Binding}">
                                 <TextBlock Classes="mono" FontSize="11" Text="{Binding RangeText}" />
                               </Button>
                             </StackPanel>
-                            <Button Grid.Column="1" Classes="ghost" Padding="7,3" VerticalAlignment="Center" ToolTip.Tip="Start at the playhead"
+                            <Button Grid.Column="1" Classes="ghost" Padding="7,3" VerticalAlignment="Center" svc:Tr.Tip="Start at the playhead"
                                     Command="{Binding #Root.((vm:MainViewModel)DataContext).Player.SpeedStartHereCommand}" CommandParameter="{Binding}">
-                              <TextBlock Text="Start here" FontSize="11" />
+                              <TextBlock svc:Tr.Text="Start here" FontSize="11" />
                             </Button>
-                            <Button Grid.Column="2" Classes="ghost" Padding="7,3" VerticalAlignment="Center" ToolTip.Tip="End at the playhead"
+                            <Button Grid.Column="2" Classes="ghost" Padding="7,3" VerticalAlignment="Center" svc:Tr.Tip="End at the playhead"
                                     Command="{Binding #Root.((vm:MainViewModel)DataContext).Player.SpeedEndHereCommand}" CommandParameter="{Binding}">
-                              <TextBlock Text="End here" FontSize="11" />
+                              <TextBlock svc:Tr.Text="End here" FontSize="11" />
                             </Button>
-                            <Button Grid.Column="3" Classes="ghost" Padding="6" VerticalAlignment="Center" ToolTip.Tip="Remove"
+                            <Button Grid.Column="3" Classes="ghost" Padding="6" VerticalAlignment="Center" svc:Tr.Tip="Remove"
                                     Command="{Binding #Root.((vm:MainViewModel)DataContext).Player.RemoveSpeedSectionCommand}" CommandParameter="{Binding}">
                               <PathIcon Data="{StaticResource IcDelete}" Width="13" Height="13" />
                             </Button>
                           </Grid>
                           <ContentControl Content="{Binding Rate}" />
-                          <CheckBox IsChecked="{Binding Ramp}" FontSize="12" Content="Ease in and out (speed ramp)"
-                                    ToolTip.Tip="Change speed gradually over 0.6 s at each end instead of in one jump" />
+                          <CheckBox IsChecked="{Binding Ramp}" FontSize="12" svc:Tr.Content="Ease in and out (speed ramp)"
+                                    svc:Tr.Tip="Change speed gradually over 0.6 s at each end instead of in one jump" />
                         </StackPanel>
                       </Border>
                     </DataTemplate>
@@ -2064,31 +2122,31 @@
                   <StackPanel Spacing="10">
                     <Grid ColumnDefinitions="*,Auto">
                       <StackPanel Spacing="2">
-                        <TextBlock Text="Even out loudness" FontSize="12" />
-                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="Brings exports to the same loudness YouTube and Twitch use (−14 LUFS), so quiet clips aren't too quiet." />
+                        <TextBlock svc:Tr.Text="Even out loudness" FontSize="12" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Brings exports to the same loudness YouTube and Twitch use (−14 LUFS), so quiet clips aren't too quiet." />
                       </StackPanel>
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding Normalize}" />
                     </Grid>
                     <StackPanel Spacing="10" IsVisible="{Binding HasVoiceTrackChoice}">
                       <Border Classes="sep" />
                       <StackPanel Spacing="6">
-                        <TextBlock Text="Voice track" FontSize="12" />
+                        <TextBlock svc:Tr.Text="Voice track" FontSize="12" />
                         <ContentControl Content="{Binding VoiceTrack}" />
                       </StackPanel>
                       <StackPanel Spacing="6">
-                        <TextBlock Text="Voice boost" FontSize="12" />
+                        <TextBlock svc:Tr.Text="Voice boost" FontSize="12" />
                         <ContentControl Content="{Binding VoiceBoost}" />
                       </StackPanel>
                       <Grid ColumnDefinitions="*,Auto">
                         <StackPanel Spacing="2">
-                          <TextBlock Text="Lower the game while you talk" FontSize="12" />
-                          <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="The other tracks duck under your voice, then come back." />
+                          <TextBlock svc:Tr.Text="Lower the game while you talk" FontSize="12" />
+                          <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="The other tracks duck under your voice, then come back." />
                         </StackPanel>
                         <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding Duck}" />
                       </Grid>
                     </StackPanel>
                     <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" IsVisible="{Binding !HasVoiceTrackChoice}"
-                               Text="Voice boost and lowering the game need the microphone on its own track: Settings, Clipping, two audio devices with Separate tracks." />
+                               svc:Tr.Text="Voice boost and lowering the game need the microphone on its own track: Settings, Clipping, two audio devices with Separate tracks." />
                   </StackPanel>
                 </Border>
               </StackPanel>
@@ -2096,7 +2154,7 @@
 
                 <Border Classes="fxcard" IsVisible="{Binding HasAudioTracks}">
                   <StackPanel Spacing="8">
-                    <TextBlock Classes="label" Text="AUDIO TRACKS" />
+                    <TextBlock Classes="label" svc:Tr.Text="AUDIO TRACKS" />
                     <ItemsControl ItemsSource="{Binding AudioTracks}">
                       <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
@@ -2104,11 +2162,11 @@
                       <ItemsControl.ItemTemplate>
                         <DataTemplate>
                           <ToggleButton Classes="mod" IsChecked="{Binding Enabled}" Content="{Binding Label}" Margin="0,0,6,6"
-                                        ToolTip.Tip="Switched off: this track is left out of exports. Playback uses the first track that is on." />
+                                        svc:Tr.Tip="Switched off: this track is left out of exports. Playback uses the first track that is on." />
                         </DataTemplate>
                       </ItemsControl.ItemTemplate>
                     </ItemsControl>
-                    <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="Export keeps the tracks that are on. Share presets mix them into one." />
+                    <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Export keeps the tracks that are on. Share presets mix them into one." />
                   </StackPanel>
                 </Border>
               </StackPanel>
@@ -2119,26 +2177,26 @@
                   <StackPanel Spacing="10">
                     <Grid ColumnDefinitions="*,Auto">
                       <StackPanel Spacing="2">
-                        <TextBlock Text="Watermark" FontSize="12" />
+                        <TextBlock svc:Tr.Text="Watermark" FontSize="12" />
                         <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="{Binding WatermarkName}" />
                       </StackPanel>
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding UseWatermark}" IsEnabled="{Binding HasWatermark}" />
                     </Grid>
                     <Grid ColumnDefinitions="*,Auto">
                       <StackPanel Spacing="2">
-                        <TextBlock Text="Intro clip" FontSize="12" />
+                        <TextBlock svc:Tr.Text="Intro clip" FontSize="12" />
                         <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="{Binding IntroName}" />
                       </StackPanel>
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding UseIntro}" IsEnabled="{Binding HasIntro}" />
                     </Grid>
                     <Grid ColumnDefinitions="*,Auto">
                       <StackPanel Spacing="2">
-                        <TextBlock Text="Outro clip" FontSize="12" />
+                        <TextBlock svc:Tr.Text="Outro clip" FontSize="12" />
                         <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="{Binding OutroName}" />
                       </StackPanel>
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding UseOutro}" IsEnabled="{Binding HasOutro}" />
                     </Grid>
-                    <Button Classes="soft" HorizontalAlignment="Left" Padding="10,5" FontSize="12" Content="Set up in Settings…"
+                    <Button Classes="soft" HorizontalAlignment="Left" Padding="10,5" FontSize="12" svc:Tr.Content="Set up in Settings…"
                             Command="{Binding #Root.((vm:MainViewModel)DataContext).OpenEditingSettingsCommand}" />
                   </StackPanel>
                 </Border>
@@ -2149,54 +2207,54 @@
               <StackPanel Spacing="12" IsVisible="{Binding IsSharePage}">
                 <Border Classes="fxcard">
                   <StackPanel Spacing="10">
-                    <TextBlock Classes="label" Text="EXPORT CLIP" />
+                    <TextBlock Classes="label" svc:Tr.Text="EXPORT CLIP" />
                     <RadioButton GroupName="exportmode" IsChecked="{Binding !PreciseExport}">
                       <StackPanel Spacing="2">
-                        <TextBlock Text="Lossless" FontSize="12" FontWeight="SemiBold" />
-                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="Instant, no quality loss. The start snaps to the keyframe before your In point." />
+                        <TextBlock svc:Tr.Text="Lossless" FontSize="12" FontWeight="SemiBold" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Instant, no quality loss. The start snaps to the keyframe before your In point." />
                       </StackPanel>
                     </RadioButton>
                     <RadioButton GroupName="exportmode" IsChecked="{Binding PreciseExport}">
                       <StackPanel Spacing="2">
-                        <TextBlock Text="Precise" FontSize="12" FontWeight="SemiBold" />
-                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="Frame-accurate. Re-encodes to H.264, so it takes a little while. Effects always export this way." />
+                        <TextBlock svc:Tr.Text="Precise" FontSize="12" FontWeight="SemiBold" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Frame-accurate. Re-encodes to H.264, so it takes a little while. Effects always export this way." />
                       </StackPanel>
                     </RadioButton>
                   </StackPanel>
                 </Border>
                 <Border Classes="fxcard">
                   <StackPanel Spacing="8">
-                    <TextBlock Classes="label" Text="SHARE" />
-                    <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="Converts the selection (or the whole video) and saves it next to the original." />
+                    <TextBlock Classes="label" svc:Tr.Text="SHARE" />
+                    <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Converts the selection (or the whole video) and saves it next to the original." />
                     <Button Classes="preset" Command="{Binding ShareCommand}" CommandParameter="Discord10">
                       <StackPanel Spacing="1">
-                        <TextBlock Text="Discord" FontSize="12" FontWeight="SemiBold" />
-                        <TextBlock Classes="dim" FontSize="11" Text="Fits in 10 MB" />
+                        <TextBlock svc:Tr.Text="Discord" FontSize="12" FontWeight="SemiBold" />
+                        <TextBlock Classes="dim" FontSize="11" svc:Tr.Text="Fits in 10 MB" />
                       </StackPanel>
                     </Button>
                     <Button Classes="preset" Command="{Binding ShareCommand}" CommandParameter="Discord50">
                       <StackPanel Spacing="1">
-                        <TextBlock Text="Discord Nitro Basic" FontSize="12" FontWeight="SemiBold" />
-                        <TextBlock Classes="dim" FontSize="11" Text="Fits in 50 MB" />
+                        <TextBlock svc:Tr.Text="Discord Nitro Basic" FontSize="12" FontWeight="SemiBold" />
+                        <TextBlock Classes="dim" FontSize="11" svc:Tr.Text="Fits in 50 MB" />
                       </StackPanel>
                     </Button>
                     <Button Classes="preset" Command="{Binding ShareCommand}" CommandParameter="Vertical">
                       <StackPanel Spacing="1">
-                        <TextBlock Text="Vertical 9:16" FontSize="12" FontWeight="SemiBold" />
-                        <TextBlock Classes="dim" FontSize="11" Text="Shorts, Reels and TikTok" />
+                        <TextBlock svc:Tr.Text="Vertical 9:16" FontSize="12" FontWeight="SemiBold" />
+                        <TextBlock Classes="dim" FontSize="11" svc:Tr.Text="Shorts, Reels and TikTok" />
                       </StackPanel>
                     </Button>
                     <Button Classes="preset" Command="{Binding ShareCommand}" CommandParameter="Gif">
                       <StackPanel Spacing="1">
-                        <TextBlock Text="GIF" FontSize="12" FontWeight="SemiBold" />
-                        <TextBlock Classes="dim" FontSize="11" Text="Up to 20 seconds" />
+                        <TextBlock svc:Tr.Text="GIF" FontSize="12" FontWeight="SemiBold" />
+                        <TextBlock Classes="dim" FontSize="11" svc:Tr.Text="Up to 20 seconds" />
                       </StackPanel>
                     </Button>
                   </StackPanel>
                 </Border>
               </StackPanel>
 
-              <Button Classes="ghost" HorizontalAlignment="Center" FontSize="12" Content="Remove all captions and speed changes"
+              <Button Classes="ghost" HorizontalAlignment="Center" FontSize="12" svc:Tr.Content="Remove all captions and speed changes"
                       Command="{Binding ClearEffectsCommand}" IsVisible="{Binding ShowClearEffects}" />
             </StackPanel>
           </ScrollViewer>
@@ -2216,7 +2274,7 @@
           <!-- Transport row -->
           <Grid ColumnDefinitions="*,Auto,*">
             <Button Classes="ghost" Padding="4,2" Margin="-4,0,0,0" VerticalAlignment="Center" Command="{Binding ToggleClockCommand}"
-                    ToolTip.Tip="Click to switch between tenths of a second and frames">
+                    svc:Tr.Tip="Click to switch between tenths of a second and frames">
               <StackPanel Orientation="Horizontal" Spacing="4">
                 <TextBlock Classes="mono" Text="{Binding PositionText}" FontSize="13" />
                 <TextBlock Classes="dim mono" Text="/" FontSize="13" Margin="4,0" />
@@ -2225,22 +2283,22 @@
             </Button>
 
             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
-              <Button Classes="ghost" Command="{Binding StepFrameBackCommand}" ToolTip.Tip="Previous frame (,)" VerticalAlignment="Center">
+              <Button Classes="ghost" Command="{Binding StepFrameBackCommand}" svc:Tr.Tip="Previous frame (,)" VerticalAlignment="Center">
                 <PathIcon Data="{StaticResource IcFramePrev}" />
               </Button>
-              <Button Classes="ghost" Command="{Binding SkipBackCommand}" ToolTip.Tip="Back 5 s (Shift+←)" VerticalAlignment="Center">
+              <Button Classes="ghost" Command="{Binding SkipBackCommand}" svc:Tr.Tip="Back 5 s (Shift+←)" VerticalAlignment="Center">
                 <PathIcon Data="{StaticResource IcRewind}" />
               </Button>
-              <Button Classes="play" Command="{Binding TogglePlayCommand}" ToolTip.Tip="Play / pause (Space)" Margin="6,0">
+              <Button Classes="play" Command="{Binding TogglePlayCommand}" svc:Tr.Tip="Play / pause (Space)" Margin="6,0">
                 <Panel>
                   <PathIcon Data="{StaticResource IcPlay}" Width="20" Height="20" Margin="3,0,0,0" Foreground="{DynamicResource Bg0}" IsVisible="{Binding !IsPlaying}" />
                   <PathIcon Data="{StaticResource IcPause}" Width="20" Height="20" Foreground="{DynamicResource Bg0}" IsVisible="{Binding IsPlaying}" />
                 </Panel>
               </Button>
-              <Button Classes="ghost" Command="{Binding SkipForwardCommand}" ToolTip.Tip="Forward 5 s (Shift+→)" VerticalAlignment="Center">
+              <Button Classes="ghost" Command="{Binding SkipForwardCommand}" svc:Tr.Tip="Forward 5 s (Shift+→)" VerticalAlignment="Center">
                 <PathIcon Data="{StaticResource IcForward}" />
               </Button>
-              <Button Classes="ghost" Command="{Binding StepFrameCommand}" ToolTip.Tip="Next frame (.)" VerticalAlignment="Center">
+              <Button Classes="ghost" Command="{Binding StepFrameCommand}" svc:Tr.Tip="Next frame (.)" VerticalAlignment="Center">
                 <PathIcon Data="{StaticResource IcFrameNext}" />
               </Button>
             </StackPanel>
@@ -2252,12 +2310,12 @@
                   <TextBlock Text="{Binding AbText}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
                 </StackPanel>
               </Button>
-              <Button Classes="ghost" Classes.on="{Binding IsRateChanged}" ToolTip.Tip="Playback speed (Shift+, slower, Shift+. faster)" MinWidth="52">
+              <Button Classes="ghost" Classes.on="{Binding IsRateChanged}" svc:Tr.Tip="Playback speed (Shift+, slower, Shift+. faster)" MinWidth="52">
                 <TextBlock Text="{Binding RateText}" FontSize="13" FontWeight="SemiBold" />
                 <Button.Flyout>
                   <Flyout Placement="TopEdgeAlignedRight">
                     <StackPanel Spacing="2" MinWidth="150">
-                      <TextBlock Classes="label" Text="SPEED" Margin="8,0,0,6" />
+                      <TextBlock Classes="label" svc:Tr.Text="SPEED" Margin="8,0,0,6" />
                       <ItemsControl ItemsSource="{Binding RateOptions}">
                         <ItemsControl.ItemTemplate>
                           <DataTemplate x:DataType="vm:RateOption">
@@ -2270,14 +2328,14 @@
                   </Flyout>
                 </Button.Flyout>
               </Button>
-              <Button Classes="ghost" Command="{Binding ToggleMuteCommand}" ToolTip.Tip="Mute (M)">
+              <Button Classes="ghost" Command="{Binding ToggleMuteCommand}" svc:Tr.Tip="Mute (M)">
                 <Panel>
                   <PathIcon Data="{StaticResource IcVolume}" IsVisible="{Binding !IsMuted}" />
                   <PathIcon Data="{StaticResource IcMute}" IsVisible="{Binding IsMuted}" />
                 </Panel>
               </Button>
               <Slider Width="110" Minimum="0" Maximum="125" Value="{Binding Volume}" VerticalAlignment="Center" Margin="0,-6,8,-6" />
-              <Button Classes="ghost" Click="OnFullscreenClick" ToolTip.Tip="Fullscreen (F)">
+              <Button Classes="ghost" Click="OnFullscreenClick" svc:Tr.Tip="Fullscreen (F)">
                 <PathIcon Data="{StaticResource IcFullscreen}" />
               </Button>
             </StackPanel>
@@ -2287,82 +2345,82 @@
           <!-- Tool bar: the everyday tools as buttons -->
           <Grid Margin="0,2,0,0">
             <WrapPanel Orientation="Horizontal" VerticalAlignment="Center">
-              <Button Classes="tool" Command="{Binding SetInCommand}" ToolTip.Tip="Start the selection at the playhead (I)">
+              <Button Classes="tool" Command="{Binding SetInCommand}" svc:Tr.Tip="Start the selection at the playhead (I)">
                 <StackPanel Orientation="Horizontal" Spacing="6">
-                  <TextBlock Text="In" FontWeight="SemiBold" VerticalAlignment="Center" />
+                  <TextBlock svc:Tr.Text="In" FontWeight="SemiBold" VerticalAlignment="Center" />
                   <TextBlock Classes="mono" Text="{Binding InText}" Foreground="{DynamicResource Cyan}" FontSize="12" VerticalAlignment="Center" />
                   <TextBlock Classes="hint" Text="I" />
                 </StackPanel>
               </Button>
-              <Button Classes="tool" Command="{Binding SetOutCommand}" ToolTip.Tip="End the selection at the playhead (O)">
+              <Button Classes="tool" Command="{Binding SetOutCommand}" svc:Tr.Tip="End the selection at the playhead (O)">
                 <StackPanel Orientation="Horizontal" Spacing="6">
-                  <TextBlock Text="Out" FontWeight="SemiBold" VerticalAlignment="Center" />
+                  <TextBlock svc:Tr.Text="Out" FontWeight="SemiBold" VerticalAlignment="Center" />
                   <TextBlock Classes="mono" Text="{Binding OutText}" Foreground="{DynamicResource Cyan}" FontSize="12" VerticalAlignment="Center" />
                   <TextBlock Classes="hint" Text="O" />
                 </StackPanel>
               </Button>
-              <Button Classes="tool" Command="{Binding PreviewRangeCommand}" ToolTip.Tip="Play the selection (P)" IsEnabled="{Binding HasRange}">
+              <Button Classes="tool" Command="{Binding PreviewRangeCommand}" svc:Tr.Tip="Play the selection (P)" IsEnabled="{Binding HasRange}">
                 <StackPanel Orientation="Horizontal" Spacing="6">
                   <PathIcon Data="{StaticResource IcPlay}" />
-                  <TextBlock Text="Play" VerticalAlignment="Center" />
+                  <TextBlock svc:Tr.Text="Play" VerticalAlignment="Center" />
                   <TextBlock Classes="hint" Text="P" />
                 </StackPanel>
               </Button>
-              <ToggleButton Classes="tool" IsChecked="{Binding LoopRange}" IsEnabled="{Binding HasRange}" ToolTip.Tip="Loop the selection (L)">
+              <ToggleButton Classes="tool" IsChecked="{Binding LoopRange}" IsEnabled="{Binding HasRange}" svc:Tr.Tip="Loop the selection (L)">
                 <StackPanel Orientation="Horizontal" Spacing="6">
                   <PathIcon Data="{StaticResource IcLoop}" />
-                  <TextBlock Text="Loop" VerticalAlignment="Center" />
+                  <TextBlock svc:Tr.Text="Loop" VerticalAlignment="Center" />
                   <TextBlock Classes="hint" Text="L" />
                 </StackPanel>
               </ToggleButton>
-              <Button Classes="tool" Command="{Binding ClearRangeCommand}" ToolTip.Tip="Clear In and Out (X)">
+              <Button Classes="tool" Command="{Binding ClearRangeCommand}" svc:Tr.Tip="Clear In and Out (X)">
                 <StackPanel Orientation="Horizontal" Spacing="6">
                   <PathIcon Data="{StaticResource IcClose}" />
-                  <TextBlock Text="Clear" VerticalAlignment="Center" />
+                  <TextBlock svc:Tr.Text="Clear" VerticalAlignment="Center" />
                   <TextBlock Classes="hint" Text="X" />
                 </StackPanel>
               </Button>
-              <Button Classes="tool" Command="{Binding AddSegmentCommand}" ToolTip.Tip="Keep this selection as one part and mark another; Export joins all parts (A)" IsEnabled="{Binding HasRange}">
+              <Button Classes="tool" Command="{Binding AddSegmentCommand}" svc:Tr.Tip="Keep this selection as one part and mark another; Export joins all parts (A)" IsEnabled="{Binding HasRange}">
                 <StackPanel Orientation="Horizontal" Spacing="6">
                   <PathIcon Data="{StaticResource IcAdd}" />
-                  <TextBlock Text="Add part" VerticalAlignment="Center" />
+                  <TextBlock svc:Tr.Text="Add part" VerticalAlignment="Center" />
                   <TextBlock Classes="hint" Text="A" />
                 </StackPanel>
               </Button>
               <Border Classes="toolsep" />
-              <Button Classes="tool" Command="{Binding NextMarkerCommand}" ToolTip.Tip="Jump to the next loud moment or bookmark (N; Shift+N goes back)" IsEnabled="{Binding HasMarkers}">
+              <Button Classes="tool" Command="{Binding NextMarkerCommand}" svc:Tr.Tip="Jump to the next loud moment or bookmark (N; Shift+N goes back)" IsEnabled="{Binding HasMarkers}">
                 <StackPanel Orientation="Horizontal" Spacing="6">
                   <PathIcon Data="{StaticResource IcMarker}" />
-                  <TextBlock Text="Next marker" VerticalAlignment="Center" />
+                  <TextBlock svc:Tr.Text="Next marker" VerticalAlignment="Center" />
                   <TextBlock Classes="hint" Text="N" />
                 </StackPanel>
               </Button>
               <Border Classes="toolsep" />
-              <Button Classes="tool" Command="{Binding AddCaptionCommand}" ToolTip.Tip="Add a caption at the playhead (C)" IsVisible="{Binding ShowCaptionTools}">
+              <Button Classes="tool" Command="{Binding AddCaptionCommand}" svc:Tr.Tip="Add a caption at the playhead (C)" IsVisible="{Binding ShowCaptionTools}">
                 <StackPanel Orientation="Horizontal" Spacing="6">
                   <PathIcon Data="{StaticResource IcText}" />
-                  <TextBlock Text="Caption" VerticalAlignment="Center" />
+                  <TextBlock svc:Tr.Text="Caption" VerticalAlignment="Center" />
                   <TextBlock Classes="hint" Text="C" />
                 </StackPanel>
               </Button>
-              <Button Classes="tool" Command="{Binding AddSpeedSectionCommand}" ToolTip.Tip="Slow down or speed up part of the clip, starting at the playhead" IsVisible="{Binding ShowSpeedTools}">
+              <Button Classes="tool" Command="{Binding AddSpeedSectionCommand}" svc:Tr.Tip="Slow down or speed up part of the clip, starting at the playhead" IsVisible="{Binding ShowSpeedTools}">
                 <StackPanel Orientation="Horizontal" Spacing="6">
                   <PathIcon Data="{StaticResource IcSpeed}" />
-                  <TextBlock Text="Slow-mo" VerticalAlignment="Center" />
+                  <TextBlock svc:Tr.Text="Slow-mo" VerticalAlignment="Center" />
                 </StackPanel>
               </Button>
               <Border Classes="toolsep" />
-              <Button Classes="tool" Command="{Binding #Root.((vm:MainViewModel)DataContext).UseFrameAsThumbnailCommand}" ToolTip.Tip="Use this frame as the video's thumbnail in the library (T)">
+              <Button Classes="tool" Command="{Binding #Root.((vm:MainViewModel)DataContext).UseFrameAsThumbnailCommand}" svc:Tr.Tip="Use this frame as the video's thumbnail in the library (T)">
                 <StackPanel Orientation="Horizontal" Spacing="6">
                   <PathIcon Data="{StaticResource IcImage}" />
-                  <TextBlock Text="Thumbnail" VerticalAlignment="Center" />
+                  <TextBlock svc:Tr.Text="Thumbnail" VerticalAlignment="Center" />
                   <TextBlock Classes="hint" Text="T" />
                 </StackPanel>
               </Button>
-              <Button Classes="tool" Command="{Binding #Root.((vm:MainViewModel)DataContext).SaveFrameCommand}" ToolTip.Tip="Save this frame as a PNG next to the video (G)">
+              <Button Classes="tool" Command="{Binding #Root.((vm:MainViewModel)DataContext).SaveFrameCommand}" svc:Tr.Tip="Save this frame as a PNG next to the video (G)">
                 <StackPanel Orientation="Horizontal" Spacing="6">
                   <PathIcon Data="{StaticResource IcCamera}" />
-                  <TextBlock Text="Save frame" VerticalAlignment="Center" />
+                  <TextBlock svc:Tr.Text="Save frame" VerticalAlignment="Center" />
                   <TextBlock Classes="hint" Text="G" />
                 </StackPanel>
               </Button>

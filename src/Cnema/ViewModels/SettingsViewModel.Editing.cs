@@ -16,6 +16,7 @@ public sealed partial class SettingsViewModel
     [ObservableProperty] private bool _featureAudioTools;
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(ShowBrandingOffNotice))] private bool _featureBranding;
     [ObservableProperty] private bool _featureExportQueue;
+    [ObservableProperty] private bool _featureKeepEdits;
     public bool ShowBrandingOffNotice => !FeatureBranding;
 
     // ---------- watermark ----------
@@ -27,7 +28,7 @@ public sealed partial class SettingsViewModel
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(WatermarkOpacityText))] private double _watermarkOpacity;
     [ObservableProperty] private bool _useWatermark;
     public bool HasWatermarkImage => !string.IsNullOrWhiteSpace(WatermarkPath);
-    public string WatermarkName => HasWatermarkImage ? Path.GetFileName(WatermarkPath!) : "No image yet. A PNG with a transparent background works best.";
+    public string WatermarkName => HasWatermarkImage ? Path.GetFileName(WatermarkPath!) : T("No image yet. A PNG with a transparent background works best.");
     public string WatermarkSizeText => $"{WatermarkSize:0} %";
     public string WatermarkOpacityText => $"{WatermarkOpacity:0} %";
 
@@ -38,8 +39,8 @@ public sealed partial class SettingsViewModel
     [ObservableProperty] private bool _useOutro;
     public bool HasIntroClip => !string.IsNullOrWhiteSpace(IntroPath);
     public bool HasOutroClip => !string.IsNullOrWhiteSpace(OutroPath);
-    public string IntroName => HasIntroClip ? Path.GetFileName(IntroPath!) : "None";
-    public string OutroName => HasOutroClip ? Path.GetFileName(OutroPath!) : "None";
+    public string IntroName => HasIntroClip ? Path.GetFileName(IntroPath!) : T("None");
+    public string OutroName => HasOutroClip ? Path.GetFileName(OutroPath!) : T("None");
 
     private void LoadEditing(AppSettings settings)
     {
@@ -49,6 +50,7 @@ public sealed partial class SettingsViewModel
         FeatureAudioTools = f.AudioTools;
         FeatureBranding = f.Branding;
         FeatureExportQueue = f.ExportQueue;
+        FeatureKeepEdits = f.KeepEdits;
         var e = settings.Effects;
         WatermarkPath = e.WatermarkPath;
         WatermarkCorner = new ChipGroup(e.WatermarkCorner,
@@ -84,7 +86,7 @@ public sealed partial class SettingsViewModel
     private async Task ChooseWatermarkAsync()
     {
         if (PickFile is null) return;
-        var picked = await PickFile("Pick a watermark image", true);
+        var picked = await PickFile(T("Pick a watermark image"), true);
         if (string.IsNullOrWhiteSpace(picked)) return;
         WatermarkPath = picked;
         UseWatermark = true;
@@ -101,7 +103,7 @@ public sealed partial class SettingsViewModel
     private async Task ChooseIntroAsync()
     {
         if (PickFile is null) return;
-        var picked = await PickFile("Pick an intro clip", false);
+        var picked = await PickFile(T("Pick an intro clip"), false);
         if (string.IsNullOrWhiteSpace(picked)) return;
         IntroPath = picked;
         UseIntro = true;
@@ -118,7 +120,7 @@ public sealed partial class SettingsViewModel
     private async Task ChooseOutroAsync()
     {
         if (PickFile is null) return;
-        var picked = await PickFile("Pick an outro clip", false);
+        var picked = await PickFile(T("Pick an outro clip"), false);
         if (string.IsNullOrWhiteSpace(picked)) return;
         OutroPath = picked;
         UseOutro = true;

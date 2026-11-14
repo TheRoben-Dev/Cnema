@@ -15,6 +15,8 @@ public sealed class AppSettings
     public bool CheckForUpdates { get; set; } = true;
     /// <summary>Id of the colour scheme, see ThemeService.</summary>
     public string ColorScheme { get; set; } = ThemeService.DefaultId;
+    /// <summary>UI language code ("en", "sv"), or "" to follow the system language.</summary>
+    public string Language { get; set; } = "";
     /// <summary>Download and install a newer version at launch, without asking.</summary>
     public bool AutoUpdate { get; set; } = true;
     /// <summary>The version an automatic install was last tried for, so a failing one is not retried forever.</summary>
@@ -94,6 +96,8 @@ public sealed class FeatureSettings
     public bool Branding { get; set; } = true;
     /// <summary>Exports run one after another in the background while you keep working.</summary>
     public bool ExportQueue { get; set; } = true;
+    /// <summary>Trim marks, parts and effects are kept when the editor closes (until you start over).</summary>
+    public bool KeepEdits { get; set; }
 
     public FeatureSettings Clone() => (FeatureSettings)MemberwiseClone();
 }

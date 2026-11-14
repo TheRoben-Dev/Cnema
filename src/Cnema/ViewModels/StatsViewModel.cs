@@ -26,12 +26,12 @@ public sealed class StatsViewModel
         var weekStart = DateTime.Today.AddDays(-(((int)DateTime.Today.DayOfWeek + 6) % 7)); // Monday
         Tiles = new[]
         {
-            new StatTile(all.Count.ToString("N0", CultureInfo.CurrentCulture), all.Count == 1 ? "video" : "videos"),
-            new StatTile(Hours(all.Sum(e => e.DurationMs)), "of video"),
-            new StatTile(VideoItemViewModel.FormatSize(all.Sum(e => e.Size)), "on disk"),
-            new StatTile(clips.Count(e => e.ModifiedUtc.ToLocalTime() >= weekStart).ToString(CultureInfo.CurrentCulture), "clips this week"),
-            new StatTile(clips.Count.ToString("N0", CultureInfo.CurrentCulture), "clips in total"),
-            new StatTile(all.Count(e => e.LastPlayedUtc is null).ToString("N0", CultureInfo.CurrentCulture), "not watched yet"),
+            new StatTile(all.Count.ToString("N0", CultureInfo.CurrentCulture), all.Count == 1 ? T("video") : T("videos")),
+            new StatTile(Hours(all.Sum(e => e.DurationMs)), T("of video")),
+            new StatTile(VideoItemViewModel.FormatSize(all.Sum(e => e.Size)), T("on disk")),
+            new StatTile(clips.Count(e => e.ModifiedUtc.ToLocalTime() >= weekStart).ToString(CultureInfo.CurrentCulture), T("clips this week")),
+            new StatTile(clips.Count.ToString("N0", CultureInfo.CurrentCulture), T("clips in total")),
+            new StatTile(all.Count(e => e.LastPlayedUtc is null).ToString("N0", CultureInfo.CurrentCulture), T("not watched yet")),
         };
 
         // Clips per week, the last eight weeks, oldest first.

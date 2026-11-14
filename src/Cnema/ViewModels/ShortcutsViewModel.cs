@@ -31,11 +31,11 @@ public sealed partial class ShortcutsViewModel : ObservableObject
         _save = save;
         var groups = new List<ShortcutGroup>();
         foreach (var name in Shortcuts.Fixed.Select(f => f.Group).Distinct())
-            groups.Add(new ShortcutGroup(name, Shortcuts.Fixed.Where(f => f.Group == name)
-                .Select(f => new ShortcutRow { Label = f.Label, Keys = f.Keys }).ToList()));
+            groups.Add(new ShortcutGroup(T(name), Shortcuts.Fixed.Where(f => f.Group == name)
+                .Select(f => new ShortcutRow { Label = T(f.Label), Keys = f.Keys }).ToList()));
         foreach (var name in new[] { Shortcuts.Library, Shortcuts.Player })
-            groups.Add(new ShortcutGroup(name, Shortcuts.All.Where(a => a.Group == name)
-                .Select(a => new ShortcutRow { Id = a.Id, Label = a.Label }).ToList()));
+            groups.Add(new ShortcutGroup(T(name), Shortcuts.All.Where(a => a.Group == name)
+                .Select(a => new ShortcutRow { Id = a.Id, Label = T(a.Label) }).ToList()));
         Groups = groups;
         Refresh();
     }
@@ -56,8 +56,8 @@ public sealed partial class ShortcutsViewModel : ObservableObject
         if (Capturing is { } old) old.IsCapturing = false;
         Capturing = row;
         row.IsCapturing = true;
-        row.Keys = "Press a key…";
-        Message = "Press the new key for \"" + row.Label + "\". Esc cancels, Backspace removes the key.";
+        row.Keys = T("Press a key…");
+        Message = F("Press the new key for \"{0}\". Esc cancels, Backspace removes the key.", row.Label);
     }
 
     /// <summary>While waiting for a key, every key press comes here first. Returns true when used.</summary>
@@ -74,13 +74,13 @@ public sealed partial class ShortcutsViewModel : ObservableObject
         else if (e.Key is Key.Back or Key.Delete && e.KeyModifiers == KeyModifiers.None)
         {
             Shortcuts.Unbind(id);
-            Message = "\"" + row.Label + "\" has no key now.";
+            Message = F("\"{0}\" has no key now.", row.Label);
             _save();
         }
         else
         {
             var bumped = Shortcuts.Assign(id, new KeyGesture(e.Key, e.KeyModifiers));
-            Message = bumped is null ? null : $"That key was used for \"{bumped}\", which has no key now.";
+            Message = bumped is null ? null : F("That key was used for \"{0}\", which has no key now.", bumped);
             _save();
         }
         Refresh();
@@ -100,7 +100,7 @@ public sealed partial class ShortcutsViewModel : ObservableObject
     private void ResetAll()
     {
         Shortcuts.ResetAll();
-        Message = "All shortcuts are back to their defaults.";
+        Message = T("All shortcuts are back to their defaults.");
         _save();
         Refresh();
     }

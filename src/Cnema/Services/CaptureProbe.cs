@@ -13,9 +13,9 @@ public sealed record CodecOption(string Codec, string Encoder, bool Hardware)
 {
     public string Label => Codec switch
     {
-        "hevc" => "HEVC / H.265 · half the size",
-        "av1" => "AV1 · smallest files",
-        _ => Hardware ? "H.264 · plays everywhere" : "H.264 (software) · plays everywhere",
+        "hevc" => T("HEVC / H.265 · half the size"),
+        "av1" => T("AV1 · smallest files"),
+        _ => Hardware ? T("H.264 · plays everywhere") : T("H.264 (software) · plays everywhere"),
     };
     public override string ToString() => Label;
 }
