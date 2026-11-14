@@ -1445,6 +1445,39 @@
                       <ComboBox Classes="field" Width="74" ItemsSource="{x:Static vm:SettingsViewModel.Keys}" SelectedItem="{Binding HotkeyKey}" />
                     </StackPanel>
                   </Grid>
+                  <ItemsControl ItemsSource="{Binding ExtraHotkeys}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:HotkeyRow">
+                        <StackPanel>
+                          <Border Classes="sep" />
+                          <Grid Classes="row" ColumnDefinitions="*,Auto">
+                            <TextBlock Text="Extra hotkey" VerticalAlignment="Center" />
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
+                              <ToggleButton Classes="mod" IsChecked="{Binding Ctrl}" Content="{Binding #Root.((vm:MainViewModel)DataContext).SettingsEditor.CtrlLabel}" />
+                              <ToggleButton Classes="mod" IsChecked="{Binding Alt}" Content="{Binding #Root.((vm:MainViewModel)DataContext).SettingsEditor.AltLabel}" />
+                              <ToggleButton Classes="mod" IsChecked="{Binding Shift}" Content="{Binding #Root.((vm:MainViewModel)DataContext).SettingsEditor.ShiftLabel}" />
+                              <ToggleButton Classes="mod" IsChecked="{Binding Meta}" Content="{Binding #Root.((vm:MainViewModel)DataContext).SettingsEditor.MetaLabel}" />
+                              <ComboBox Classes="field" Width="74" ItemsSource="{x:Static vm:SettingsViewModel.Keys}" SelectedItem="{Binding Key}" />
+                            </StackPanel>
+                          </Grid>
+                          <Grid Classes="row" ColumnDefinitions="*,Auto,Auto" Margin="14,0,14,10">
+                            <TextBlock Classes="dim" Text="It saves the last" VerticalAlignment="Center" />
+                            <ComboBox Grid.Column="1" Classes="field" Width="180" ItemsSource="{x:Static vm:SettingsViewModel.Lengths}" SelectedItem="{Binding Length}" />
+                            <Button Grid.Column="2" Classes="ghost" Margin="6,0,0,0" ToolTip.Tip="Remove this hotkey"
+                                    Command="{Binding #Root.((vm:MainViewModel)DataContext).SettingsEditor.RemoveHotkeyCommand}" CommandParameter="{Binding}">
+                              <PathIcon Data="{StaticResource IcClose}" Width="12" Height="12" />
+                            </Button>
+                          </Grid>
+                        </StackPanel>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                  <Border Classes="sep" IsVisible="{Binding CanAddHotkey}" />
+                  <Grid Classes="row" ColumnDefinitions="*,Auto" IsVisible="{Binding CanAddHotkey}">
+                    <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" VerticalAlignment="Center"
+                               Text="Another hotkey can save a different length, say a short one for a quick play and a long one for a whole round. The buffer keeps the longest." />
+                    <Button Grid.Column="1" Classes="soft" Content="Add hotkey" Command="{Binding AddHotkeyCommand}" Margin="10,0,0,0" />
+                  </Grid>
                   <Border Classes="sep" />
                   <Grid Classes="row" ColumnDefinitions="*,Auto">
                     <StackPanel Spacing="2">

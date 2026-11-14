@@ -53,6 +53,35 @@ public sealed partial class ProfileRow : ObservableObject
     };
 }
 
+/// <summary>One extra save-clip hotkey in Settings: its keys and the length it saves.</summary>
+public sealed partial class HotkeyRow : ObservableObject
+{
+    [ObservableProperty] private bool _ctrl;
+    [ObservableProperty] private bool _alt;
+    [ObservableProperty] private bool _shift;
+    [ObservableProperty] private bool _meta;
+    [ObservableProperty] private string _key;
+    [ObservableProperty] private Choice _length;
+
+    public HotkeyRow(ClipHotkey h)
+    {
+        _ctrl = h.Ctrl;
+        _alt = h.Alt;
+        _shift = h.Shift;
+        _meta = h.Meta;
+        _key = GlobalHotkey.Keys.Contains(h.Key) ? h.Key : "D";
+        _length = SettingsViewModel.Lengths.OrderBy(c => Math.Abs(c.Value - h.Seconds)).First();
+    }
+
+    public ClipHotkey ToHotkey() => new()
+    {
+        Ctrl = Ctrl, Alt = Alt, Shift = Shift, Meta = Meta, Key = Key, Seconds = Length.Value,
+    };
+
+    public string Combo => ClipSettings.FormatHotkey(Ctrl, Alt, Shift, Meta, Key);
+    public bool HasModifier => Ctrl || Alt || Shift || Meta;
+}
+
 /// <summary>Editable copy of the background + clipping settings; nothing changes until Save.</summary>
 public sealed partial class SettingsViewModel : ObservableObject
 {
@@ -61,7 +90,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     public static Choice[] Lengths { get; } =
     {
         new("15 seconds", 15), new("30 seconds", 30), new("1 minute", 60), new("1.5 minutes", 90),
-        new("2 minutes", 120), new("3 minutes", 180), new("5 minutes", 300),
+        new("2 minutes", 120), new("3 minutes", 180), new("5 minutes", 300), new("10 minutes", 600),
     };
     public static Choice[] Resolutions { get; } =
     {
@@ -90,6 +119,45 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private bool _separateTracks;
 
     [RelayCommand] private void AddProfile() => Profiles.Add(new ProfileRow());
+
+    /// <summary>More save-clip hotkeys, each with its own length.</summary>
+    public ObservableCollection<HotkeyRow> ExtraHotkeys { get; } = new();
+    public const int MaxExtraHotkeys = 4;
+    public bool CanAddHotkey => ExtraHotkeys.Count < MaxExtraHotkeys;
+
+    [RelayCommand]
+    private void AddHotkey()
+    {
+        if (!CanAddHotkey) return;
+        // Suggest a free letter next to the main one, and a longer length than the main clip.
+        var used = ExtraHotkeys.Select(h => h.Key).Append(HotkeyKey).ToHashSet();
+        var key = new[] { "D", "F", "G", "H", "A", "W", "E", "R" }.FirstOrDefault(k => !used.Contains(k)) ?? "D";
+        var longer = Lengths.FirstOrDefault(c => c.Value > Length.Value) ?? Lengths[^1];
+        AddHotkeyRow(new HotkeyRow(new ClipHotkey
+        {
+            Ctrl = HotkeyCtrl, Alt = HotkeyAlt, Shift = HotkeyShift, Meta = HotkeyMeta, Key = key, Seconds = longer.Value,
+        }));
+    }
+
+    [RelayCommand]
+    private void RemoveHotkey(HotkeyRow? row)
+    {
+        if (row is null) return;
+        ExtraHotkeys.Remove(row);
+        OnPropertyChanged(nameof(CanAddHotkey));
+        OnPropertyChanged(nameof(Footprint));
+    }
+
+    private void AddHotkeyRow(HotkeyRow row)
+    {
+        row.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(HotkeyRow.Length)) OnPropertyChanged(nameof(Footprint));
+        };
+        ExtraHotkeys.Add(row);
+        OnPropertyChanged(nameof(CanAddHotkey));
+        OnPropertyChanged(nameof(Footprint));
+    }
     [RelayCommand] private void RemoveProfile(ProfileRow? row) { if (row is not null) Profiles.Remove(row); }
 
     /// <summary>Set by the view: opens a native folder picker.</summary>
@@ -218,9 +286,15 @@ public sealed partial class SettingsViewModel : ObservableObject
             : "Sources ending in \".monitor\" record what the speakers play.";
 
     /// <summary>Temp disk the rolling buffer needs; nothing else is written until a clip is saved.</summary>
-    public string Footprint =>
-        $"Keeps the last {Length.Label} in a temporary buffer of about {Bitrate.Value * (Length.Value + 6) / 8:N0} MB. " +
-        "Nothing is kept unless you save a clip.";
+    public string Footprint
+    {
+        get
+        {
+            var longest = ExtraHotkeys.Select(h => h.Length).Append(Length).MaxBy(c => c.Value)!;
+            return $"Keeps the last {longest.Label} in a temporary buffer of about {Bitrate.Value * (longest.Value + 6) / 8:N0} MB. " +
+                   "Nothing is kept unless you save a clip.";
+        }
+    }
 
     public SettingsViewModel(AppSettings settings)
     {
@@ -270,6 +344,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         _folder = c.ResolvedFolder;
         _separateTracks = c.SeparateTracks;
         foreach (var profile in c.Profiles) Profiles.Add(new ProfileRow(profile));
+        foreach (var extra in c.ExtraHotkeys.Take(MaxExtraHotkeys)) AddHotkeyRow(new HotkeyRow(extra));
         _keepDays = Nearest(KeepDaysOptions, c.KeepDays);
         _folderCap = Nearest(FolderCaps, c.MaxFolderGb);
         _cleanupTarget = CleanupTargets[c.CleanupArchive ? 1 : 0];
@@ -346,6 +421,12 @@ public sealed partial class SettingsViewModel : ObservableObject
     {
         if (ClipEnabled && !(HotkeyCtrl || HotkeyAlt || HotkeyShift || HotkeyMeta) && HotkeyKey.Length == 1)
             return "Add at least one modifier to the hotkey, or a plain letter would stop working everywhere else.";
+        if (ClipEnabled && ExtraHotkeys.Any(h => !h.HasModifier && h.Key.Length == 1))
+            return "Add at least one modifier to each extra hotkey, or a plain letter would stop working everywhere else.";
+        var combos = ExtraHotkeys.Select(h => h.Combo)
+            .Prepend(ClipSettings.FormatHotkey(HotkeyCtrl, HotkeyAlt, HotkeyShift, HotkeyMeta, HotkeyKey)).ToList();
+        if (combos.Distinct().Count() != combos.Count)
+            return "Two save-clip hotkeys use the same keys. Give each one its own.";
         var c = settings.Clip;
         settings.KeepInBackground = KeepInBackground;
         settings.ControllerMode = ControllerMode;
@@ -393,6 +474,7 @@ public sealed partial class SettingsViewModel : ObservableObject
             return "The archive folder has to be a different folder from the clips folder.";
         c.SeparateTracks = SeparateTracks;
         c.Profiles = Profiles.Where(p => p.Game.Trim().Length > 0).Select(p => p.ToProfile()).ToList();
+        c.ExtraHotkeys = ExtraHotkeys.Select(h => h.ToHotkey()).ToList();
         c.KeepDays = KeepDays.Value;
         c.MaxFolderGb = FolderCap.Value;
         c.CleanupArchive = UsesArchive;
