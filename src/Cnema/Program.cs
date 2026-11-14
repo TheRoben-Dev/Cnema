@@ -9,6 +9,8 @@ internal static class Program
     public static int Main(string[] args)
     {
         if (args.Contains("--selftest")) return SelfTest();
+        Log.HookUnhandled();
+        Log.Info($"Cnema {UpdateService.CurrentText} starting on {System.Runtime.InteropServices.RuntimeInformation.OSDescription}");
         // Cnema can live in the tray: a second launch just brings the running copy forward.
         if (SingleInstance.SignalExisting()) return 0;
         return BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);

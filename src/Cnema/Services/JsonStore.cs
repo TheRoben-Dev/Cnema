@@ -16,7 +16,7 @@ public static class JsonStore
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"[Cnema] Could not read {path}: {ex.Message}");
+            Log.Warn($"Could not read {path}: {ex.Message}");
         }
         return new T();
     }

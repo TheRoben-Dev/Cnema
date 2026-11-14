@@ -165,6 +165,19 @@ public sealed class LibraryService : IDisposable
         return newPath;
     }
 
+    /// <summary>Moves a video to the trash and drops it from the library. Throws if that fails.</summary>
+    public void Delete(VideoEntry entry)
+    {
+        PlatformShell.MoveToTrash(entry.Path);
+        lock (_cacheLock) _cache.Entries.Remove(entry.Path);
+        try
+        {
+            if (entry.ThumbPath is { Length: > 0 } thumb && File.Exists(thumb)) File.Delete(thumb);
+        }
+        catch { /* an orphaned thumbnail is harmless */ }
+        SaveCache();
+    }
+
     public void SaveCache()
     {
         lock (_cacheLock) JsonStore.Save(AppPaths.LibraryFile, _cache);
@@ -186,7 +199,7 @@ public sealed class LibraryService : IDisposable
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"[Cnema] Cannot watch {folder}: {ex.Message}");
+                Log.Warn($"Cannot watch {folder}: {ex.Message}");
             }
         }
     }

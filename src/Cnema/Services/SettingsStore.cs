@@ -10,6 +10,7 @@ public sealed class AppSettings
     /// <summary>Stay alive in the tray / menu bar when the window is closed.</summary>
     public bool KeepInBackground { get; set; }
     public ClipSettings Clip { get; set; } = new();
+    public bool CheckForUpdates { get; set; } = true;
 
     /// <summary>Bigger layout, gamepad navigation and on-screen button hints (handhelds, TV PCs).</summary>
     public bool ControllerMode { get; set; }
@@ -38,6 +39,9 @@ public sealed class ClipSettings
     public string? Audio2 { get; set; }
     public string? Folder { get; set; }
     public bool Notify { get; set; } = true;
+    public bool Sound { get; set; } = true;
+    /// <summary>Name and tag each clip after the app that was in front when it was saved.</summary>
+    public bool TagWithGame { get; set; } = true;
 
     public bool HotkeyCtrl { get; set; } = true;
     public bool HotkeyAlt { get; set; } = true;

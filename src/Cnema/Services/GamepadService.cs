@@ -103,7 +103,7 @@ public sealed class GamepadService : IDisposable
         {
             _failed = true;
             Error = "Controller support could not be loaded: " + ex.Message;
-            Console.Error.WriteLine("[Cnema] " + Error);
+            Log.Warn($"" + Error);
             return false;
         }
     }
@@ -151,7 +151,7 @@ public sealed class GamepadService : IDisposable
         {
             _failed = true;
             _timer.Stop();
-            Console.Error.WriteLine($"[Cnema] Controller polling stopped: {ex.Message}");
+            Log.Warn($"Controller polling stopped: {ex.Message}");
         }
     }
 

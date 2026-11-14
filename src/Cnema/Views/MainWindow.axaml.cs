@@ -107,7 +107,7 @@ public partial class MainWindow : Window
 
     private bool FocusCard(int index)
     {
-        if (Vm is not { IsPlayerOpen: false, IsEditing: false, IsSettingsOpen: false } vm || vm.Videos.Count == 0) return false;
+        if (Vm is not { IsPlayerOpen: false, IsEditing: false, IsSettingsOpen: false, IsConfirmingDelete: false } vm || vm.Videos.Count == 0) return false;
         index = Math.Clamp(index, 0, vm.Videos.Count - 1);
         // The grid is virtualized: ask for the card, which creates it if it is scrolled out of view.
         var card = VideoGrid.GetOrCreateElement(index);
@@ -190,7 +190,7 @@ public partial class MainWindow : Window
         if (IsDropDownOpen(focused)) { SendKey(ArrowFor(b)); return; }
         if (b is PadButton.Left or PadButton.Right && focused is TextBox or Slider) { SendKey(ArrowFor(b)); return; }
         var forward = b is PadButton.Down or PadButton.Right;
-        var scope = (Control)(Vm?.IsSettingsOpen == true ? SettingsScrim : EditScrim);
+        var scope = (Control)(Vm?.IsConfirmingDelete == true ? DeleteScrim : Vm?.IsSettingsOpen == true ? SettingsScrim : EditScrim);
         if (focused is null || !scope.IsVisualAncestorOf(focused))
         {
             scope.GetVisualDescendants().OfType<Control>()
@@ -247,6 +247,13 @@ public partial class MainWindow : Window
         }
 
         // ----- dialogs -----
+        if (vm.IsConfirmingDelete)
+        {
+            if (b == PadButton.B) vm.CancelDeleteCommand.Execute(null);
+            else if (b == PadButton.A) SendKey(Key.Enter);
+            else if (direction) MoveInDialog(b);
+            return;
+        }
         if (vm.IsSettingsOpen || vm.IsEditing)
         {
             if (b == PadButton.B)
@@ -324,6 +331,7 @@ public partial class MainWindow : Window
         _pad.Pressed += OnPad;
         _pad.ConnectionChanged += UpdatePadStatus;
         ApplyControllerMode();
+        vm.CopyText = async text => { if (Clipboard is { } clipboard) await clipboard.SetTextAsync(text); };
         vm.PickFolder = PickFolderAsync;
         vm.Player.PickSavePath = PickSavePathAsync;
         vm.PropertyChanged += (_, e) =>
@@ -428,6 +436,9 @@ public partial class MainWindow : Window
     private void OnEditItemClick(object? sender, RoutedEventArgs e) =>
         Vm?.BeginEditCommand.Execute((sender as Control)?.DataContext as VideoItemViewModel);
 
+    private void OnDeleteItemClick(object? sender, RoutedEventArgs e) =>
+        Vm?.RequestDeleteCommand.Execute((sender as Control)?.DataContext as VideoItemViewModel);
+
     private void OnFavoriteItemClick(object? sender, RoutedEventArgs e) =>
         Vm?.ToggleFavoriteCommand.Execute((sender as Control)?.DataContext as VideoItemViewModel);
 
@@ -483,6 +494,17 @@ public partial class MainWindow : Window
             e.Source is not TextBox && !IsDropDownOpen(Focused) && e.Source is not Slider)
         {
             OnPad(e.Key switch { Key.Up => PadButton.Up, Key.Down => PadButton.Down, Key.Left => PadButton.Left, _ => PadButton.Right });
+            e.Handled = true;
+            return;
+        }
+        if (vm.IsConfirmingDelete)
+        {
+            if (e.Key == Key.Escape) { vm.CancelDeleteCommand.Execute(null); e.Handled = true; }
+            return;
+        }
+        if (e.Key is Key.Delete or Key.Back && e.Source is Button { DataContext: VideoItemViewModel victim } && !vm.IsPlayerOpen)
+        {
+            vm.RequestDeleteCommand.Execute(victim);
             e.Handled = true;
             return;
         }

@@ -8,6 +8,7 @@ play anything VLC can play and cut clips out of it without leaving the app.
 ![Rename, tag and move](docs/edit.png)
 ![Background clipping](docs/clipping.png)
 ![Settings](docs/settings.png)
+![Delete to trash](docs/delete.png)
 ![Controller mode](docs/controller.png)
 
 Stack: C# / .NET 8, [Avalonia 11](https://avaloniaui.net) for UI, [LibVLCSharp](https://code.videolan.org/videolan/LibVLCSharp)
@@ -57,6 +58,8 @@ Set `CNEMA_LIBVLC_PATH` to a folder containing libvlc + libvlccore to override.
 - **Organise**: tag videos and star favourites; both appear in the sidebar and in search (`#tag` searches tags only).
   Rename files and move them between library folders from the app. Tags are stored in Cnema's library, not in
   the files, and follow a file that is renamed or moved outside the app.
+- **Delete**: right-click a video, press Delete on a focused card, or use the Edit panel. Files go to the system
+  trash (Finder Trash, Recycle Bin, XDG trash), never straight off the disk.
 - **Player**: libVLC playback, frame stepping, speed, volume, fullscreen.
 - **Trim**: set in/out at the playhead or drag the brackets on the timeline, preview/loop the selection, export.
   - *Lossless* (default): stream copy. Instant, zero quality loss, keeps the container. The cut starts on the
@@ -84,6 +87,19 @@ Platform notes:
 | macOS | Needs the Screen Recording permission (asked on first use). | "System audio" (macOS 13+, via ScreenCaptureKit) records everything you hear; microphones work as they are. |
 | Windows | Desktop Duplication (`ddagrab`), `gdigrab` as fallback. | DirectShow devices. System sound needs "Stereo Mix" or a loopback device. |
 | Linux | X11 sessions only (`x11grab`); Wayland is not supported yet. | PulseAudio / PipeWire sources; `.monitor` sources record system sound. |
+
+### Updates and diagnostics
+
+Cnema checks GitHub Releases once at launch and shows a "new version" card above the clipping panel; it opens
+the release page and never installs anything by itself. The check can be turned off in Settings.
+
+Warnings, capture errors and crashes are written to `logs/cnema.log` in Cnema's data folder (rotated at 512 KB).
+**Settings, Copy diagnostics** puts the version, OS, encoder list, capture setup and the end of the log on the
+clipboard, ready to paste into a bug report.
+
+Saved clips are named and tagged after the app that was in front when the hotkey was pressed (for example
+`Warframe 2026-11-14 21-03-10.mp4`, tagged `warframe`), and Cnema plays a short sound on save. Both can be
+turned off in Settings.
 
 ### Controller mode
 

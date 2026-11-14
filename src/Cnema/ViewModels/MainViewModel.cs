@@ -46,6 +46,95 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public bool IsSettingsOpen => SettingsEditor is not null;
     partial void OnSettingsEditorChanged(SettingsViewModel? value) => OnPropertyChanged(nameof(IsSettingsOpen));
 
+    // ---------- updates, diagnostics, delete ----------
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(HasUpdate), nameof(UpdateText))] private UpdateInfo? _update;
+    public bool HasUpdate => Update is not null;
+    public string UpdateText => Update is null ? "" : $"Cnema {Update.Version.ToString(3)} is available";
+    public string VersionText => "Version " + UpdateService.CurrentText;
+
+    [RelayCommand] private void OpenUpdate() => PlatformShell.OpenUrl(Update?.Url ?? UpdateService.ReleasesPage);
+
+    private async Task CheckForUpdatesAsync()
+    {
+        if (!_settings.Current.CheckForUpdates) return;
+        await Task.Delay(TimeSpan.FromSeconds(4)); // let startup finish first
+        Update = await UpdateService.CheckAsync();
+    }
+
+    /// <summary>Set by the view: puts text on the clipboard.</summary>
+    public Func<string, Task>? CopyText { get; set; }
+
+    [RelayCommand]
+    private async Task CopyDiagnosticsAsync()
+    {
+        var report = await BuildDiagnosticsAsync();
+        if (CopyText is not null) await CopyText(report);
+        if (SettingsEditor is { } editor) editor.Error = null;
+        ShowToast("Diagnostics copied. Paste them wherever you report the problem.");
+    }
+
+    /// <summary>Everything needed to debug a report in one paste. No file names from the library.</summary>
+    public async Task<string> BuildDiagnosticsAsync()
+    {
+        var clip = _settings.Current.Clip;
+        var ffmpeg = await CaptureProbe.FindCaptureFfmpegAsync();
+        var codecs = ffmpeg is null ? "-" : string.Join(", ", (await CaptureProbe.ListCodecsAsync(ffmpeg)).Select(c => $"{c.Codec}={c.Encoder}"));
+        var lines = new List<string>
+        {
+            $"Cnema {UpdateService.CurrentText}",
+            $"OS: {System.Runtime.InteropServices.RuntimeInformation.OSDescription} ({System.Runtime.InteropServices.RuntimeInformation.OSArchitecture})",
+            $".NET: {Environment.Version}",
+            $"Install: {(AppContext.BaseDirectory.Contains("AppTranslocation") ? "TRANSLOCATED (move the app to /Applications)" : "ok")}",
+            $"libVLC: {VlcBootstrap.LibVLC?.Version ?? "MISSING: " + VlcBootstrap.Error}",
+            $"ffmpeg: {(ToolLocator.Ffmpeg is null ? "MISSING" : "found")}, capture: {(ffmpeg is null ? "MISSING" : "found")}",
+            $"Encoders: {codecs}",
+            $"System audio helper: {(CaptureProbe.SystemAudioHelper is null ? "no" : "yes")}",
+            $"Library: {_items.Count} videos in {_settings.Current.Folders.Count} folders",
+            $"Clipping: enabled={clip.Enabled} state={Clips.State} encoder={Clips.Encoder ?? "-"} error={Clips.Error ?? "-"}",
+            $"Clip settings: {clip.Seconds}s {clip.Fps}fps height={clip.Height} {clip.BitrateMbps}Mbps codec={clip.Codec} hw={clip.HardwareEncoder} audio1={(clip.Audio1 is null ? "-" : "set")} audio2={(clip.Audio2 is null ? "-" : "set")} hotkey={clip.HotkeyText} hotkeyRefused={_hotkeyRefused}",
+            $"Controller mode: {_settings.Current.ControllerMode}",
+            "",
+            "--- log ---",
+            Log.Tail(80),
+        };
+        return string.Join(Environment.NewLine, lines);
+    }
+
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(IsConfirmingDelete), nameof(DeletePrompt))] private VideoItemViewModel? _pendingDelete;
+    [ObservableProperty] private string? _deleteError;
+    public bool IsConfirmingDelete => PendingDelete is not null;
+    public string DeletePrompt => PendingDelete is null ? "" : $"Move “{PendingDelete.Title}” to the {(OperatingSystem.IsWindows() ? "Recycle Bin" : "Trash")}?";
+
+    [RelayCommand]
+    private void RequestDelete(VideoItemViewModel? item)
+    {
+        if (item is null) return;
+        Editor = null;
+        DeleteError = null;
+        PendingDelete = item;
+    }
+
+    [RelayCommand] private void CancelDelete() => PendingDelete = null;
+
+    [RelayCommand]
+    private void ConfirmDelete()
+    {
+        if (PendingDelete is not { } item) return;
+        try
+        {
+            _library.Delete(item.Entry);
+            _items.Remove(item.Entry.Path);
+            PendingDelete = null;
+            RefreshView();
+            ShowToast("Moved to the trash: " + item.Title);
+        }
+        catch (Exception ex)
+        {
+            Log.Warn($"Delete failed: {ex.Message}");
+            DeleteError = "Couldn't move it to the trash: " + ex.Message;
+        }
+    }
+
     // ---------- controller mode ----------
     public bool IsControllerMode => _settings.Current.ControllerMode;
     public bool ControllerFullscreen => _settings.Current.ControllerFullscreen;
@@ -165,6 +254,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             _items[e.Path] = new VideoItemViewModel(e);
         RefreshView();
         _ = ApplyClipSettingsAsync();
+        _ = CheckForUpdatesAsync();
         await RescanAsync();
     }
 
@@ -257,6 +347,13 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     {
         if (_items.TryGetValue(e.Path, out var vm)) { if (!ReferenceEquals(vm.Entry, e)) vm.Update(e); }
         else _items[e.Path] = new VideoItemViewModel(e);
+        if (_pendingTags.Remove(e.Path, out var game))
+        {
+            // A clip just saved from this game: tag it so the sidebar groups clips per game.
+            if (!e.Tags.Contains(game, StringComparer.OrdinalIgnoreCase)) e.Tags.Add(game);
+            _items[e.Path].RefreshAll();
+            _library.SaveCache();
+        }
         if (!_refreshTimer.IsEnabled) _refreshTimer.Start();
     }
 
@@ -469,7 +566,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"[Cnema] Clips folder: {ex.Message}");
+                Log.Warn($"Clips folder: {ex.Message}");
             }
             _hotkeyRefused = !_hotkey.Register(clip.HotkeyCtrl, clip.HotkeyAlt, clip.HotkeyShift, clip.HotkeyMeta, clip.HotkeyKey);
         }
@@ -495,15 +592,26 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         BackgroundStateChanged?.Invoke();
     }
 
+    private readonly Dictionary<string, string> _pendingTags = new(StringComparer.OrdinalIgnoreCase);
+
     [RelayCommand(CanExecute = nameof(IsClipRecording))]
     private async Task SaveClipAsync()
     {
-        var path = await Clips.SaveClipAsync();
+        // Ask now, while the game is still in front; saving takes a moment.
+        var game = _settings.Current.Clip.TagWithGame ? PlatformShell.FrontmostAppName() : null;
+        var path = await Clips.SaveClipAsync(game);
         if (path is null) ShowToast("The clip could not be saved.");
+        else if (game is not null)
+        {
+            _pendingTags[path] = game.ToLowerInvariant();
+            // The folder watcher may already have added the clip; tag it now in that case.
+            if (_items.TryGetValue(path, out var existing)) Upsert(existing.Entry);
+        }
     }
 
     private void OnClipSaved(string path)
     {
+        if (_settings.Current.Clip.Sound) PlatformShell.PlayConfirmSound();
         ShowToast("Clip saved: " + Path.GetFileNameWithoutExtension(path));
         if (_settings.Current.Clip.Notify)
             PlatformShell.Notify("Clip saved", $"Last {LengthText(_settings.Current.Clip.Seconds)} · {Path.GetFileName(path)}");
