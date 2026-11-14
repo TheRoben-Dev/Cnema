@@ -26,6 +26,7 @@ public sealed partial class MainViewModel
         Chapters.Enabled = Features.Chapters;
         Player.RefreshChapters();
         Player.Queue = Features.ExportQueue ? Exports : null;
+        Player.IsSimpleEditor = IsControllerMode && _settings.Current.ControllerSimpleEditor;
         Player.RefreshEffectFeatures();
         if (IsMiniPlayerOpen && !UseMiniPlayer) ExpandMiniPlayer();
         foreach (var v in _items.Values) v.RefreshAll();

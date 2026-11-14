@@ -882,5 +882,12 @@
   "{0}, about {1} long.": "{0}, ungefär {1} långt.",
   "recovered": "återställd",
   "Crash-safe sessions": "Kraschsäkra sessioner",
-  "If Cnema or your computer stops in the middle of a session, what was recorded is saved the next time Cnema starts.": "Om Cnema eller datorn stängs av mitt i en session sparas det som hann spelas in nästa gång Cnema startar."
+  "If Cnema or your computer stops in the middle of a session, what was recorded is saved the next time Cnema starts.": "Om Cnema eller datorn stängs av mitt i en session sparas det som hann spelas in nästa gång Cnema startar.",
+  "Back to the video": "Tillbaka till videon",
+  "Move": "Flytta",
+  "Tools": "Verktyg",
+  "Volume": "Volym",
+  "Page": "Sida",
+  "Simple editor in Controller mode": "Enkel redigerare i handkontrolläge",
+  "Only trimming, parts and export, so everything can be reached with the controller. Turn off for every tool.": "Bara klippning, delar och export, så att allt går att nå med handkontrollen. Stäng av för att få alla verktyg."
 }

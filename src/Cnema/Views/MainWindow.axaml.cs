@@ -136,10 +136,15 @@ public partial class MainWindow : Window
         // The grid is virtualized: ask for the card, which creates it if it is scrolled out of view.
         var card = VideoGrid.GetOrCreateElement(index);
         card.BringIntoView();
-        return card.Focus(NavigationMethod.Directional);
+        if (!card.Focus(NavigationMethod.Directional)) return false;
+        _lastCard = index;
+        return true;
     }
 
-    private bool FocusGrid() => FocusCard(0);
+    /// <summary>The card the cursor was last on, so leaving the grid and coming back lands where you were.</summary>
+    private int _lastCard;
+
+    private bool FocusGrid() => FocusCard(_lastCard);
 
     /// <summary>The sidebar as one column: every folder and tag, then the controls underneath.</summary>
     private List<Control> SidebarStops()
@@ -148,7 +153,7 @@ public partial class MainWindow : Window
         foreach (var list in new[] { FolderList, CollectionList, TagList })
             for (var i = 0; list.IsVisible && i < list.ItemCount; i++)
                 if (list.ContainerFromIndex(i) is { } item) stops.Add(item);
-        stops.AddRange(new Control[] { CleanupButton, StatsButton, ClipToggle, SaveClipButton, SessionButton, AddFolderButton, SettingsButton }
+        stops.AddRange(new Control[] { CleanupButton, StatsButton, MontageButton, RecordersButton, ClipToggle, SaveClipButton, SessionButton, AddFolderButton, SettingsButton }
             .Where(c => c.IsEffectivelyVisible && c.IsEffectivelyEnabled));
         return stops;
     }
@@ -178,8 +183,12 @@ public partial class MainWindow : Window
             {
                 case PadButton.Left when index % columns == 0: FocusSidebar(); break;
                 case PadButton.Left: FocusCard(index - 1); break;
-                case PadButton.Right when index < vm.Videos.Count - 1: FocusCard(index + 1); break;
-                case PadButton.Up when index < columns: SortBox.Focus(NavigationMethod.Directional); break;
+                case PadButton.Right when index < vm.Videos.Count - 1 && (index + 1) % columns != 0: FocusCard(index + 1); break;
+                case PadButton.Up when index < columns:
+                    // Off the top row: whatever sits above this card in the toolbar (search, filters, sort).
+                    if (Nearest(MainPane, focused, b, c => !IsCard(c)) is { } above) FocusPad(above);
+                    else SortBox.Focus(NavigationMethod.Directional);
+                    break;
                 case PadButton.Up: FocusCard(index - columns); break;
                 case PadButton.Down when index + columns < vm.Videos.Count: FocusCard(index + columns); break;
                 case PadButton.Down when index / columns < (vm.Videos.Count - 1) / columns: FocusCard(vm.Videos.Count - 1); break;
@@ -187,52 +196,64 @@ public partial class MainWindow : Window
             return;
         }
 
-        // ----- sort box above the grid -----
-        if (ReferenceEquals(focused, SortBox))
-        {
-            if (b == PadButton.Down) FocusGrid();
-            else if (b == PadButton.Left) FocusSidebar();
-            return;
-        }
-
         // ----- sidebar -----
         var stops = SidebarStops();
         var at = focused is null ? -1 : stops.FindIndex(s => ReferenceEquals(s, focused) || s.IsVisualAncestorOf(focused));
-        if (at < 0) { if (!FocusGrid()) FocusSidebar(); return; }
-        switch (b)
+        if (at >= 0)
         {
-            case PadButton.Right: if (!FocusGrid()) SortBox.Focus(NavigationMethod.Directional); break;
-            case PadButton.Up when at > 0: stops[at - 1].Focus(NavigationMethod.Directional); break;
-            case PadButton.Down when at < stops.Count - 1: stops[at + 1].Focus(NavigationMethod.Directional); break;
+            switch (b)
+            {
+                case PadButton.Right: if (!FocusGrid()) SortBox.Focus(NavigationMethod.Directional); break;
+                case PadButton.Up when at > 0: FocusPad(stops[at - 1]); break;
+                case PadButton.Down when at < stops.Count - 1: FocusPad(stops[at + 1]); break;
+            }
+            return;
         }
+
+        // ----- toolbar and the bar above the grid: by position; into the grid lands on the last card -----
+        if (focused is not null && MainPane.IsVisualAncestorOf(focused))
+        {
+            var next = Nearest(MainPane, focused, b);
+            if (next is not null && IsCard(next)) { if (!FocusGrid()) FocusPad(next); }
+            else if (next is not null) FocusPad(next);
+            else if (b == PadButton.Left) FocusSidebar();
+            else if (b == PadButton.Down) FocusGrid();
+            return;
+        }
+        if (!FocusGrid()) FocusSidebar();
     }
 
-    /// <summary>Dialogs are a column of controls: up/down walk it in tab order.</summary>
+    private static bool IsCard(Control c) => c is Button { DataContext: VideoItemViewModel };
+
+    /// <summary>The dialog that is open, in the order they stack.</summary>
+    private Control DialogScope() =>
+        Vm?.IsSetupOpen == true ? SetupScrim
+        : Vm?.IsShowingShortcuts == true ? ShortcutsScrim
+        : Vm?.IsCleaningUp == true ? CleanupScrim
+        : Vm?.IsShowingStats == true ? StatsScrim
+        : Vm?.IsShowingRecorders == true ? RecordersScrim
+        : Vm?.IsMakingMontage == true ? MontageScrim
+        : Vm?.IsConfirmingDelete == true ? DeleteScrim
+        : Vm?.IsSettingsOpen == true ? SettingsScrim : EditScrim;
+
+    /// <summary>In a dialog the D-pad moves to the nearest control in that direction, and stays inside it.</summary>
     private void MoveInDialog(PadButton b)
     {
         var focused = Focused;
         if (IsDropDownOpen(focused)) { SendKey(ArrowFor(b)); return; }
         if (b is PadButton.Left or PadButton.Right && focused is TextBox or Slider) { SendKey(ArrowFor(b)); return; }
-        var forward = b is PadButton.Down or PadButton.Right;
-        var scope = (Control)(Vm?.IsSetupOpen == true ? SetupScrim
-            : Vm?.IsShowingShortcuts == true ? ShortcutsScrim
-            : Vm?.IsCleaningUp == true ? CleanupScrim
-            : Vm?.IsShowingStats == true ? StatsScrim
-            : Vm?.IsShowingRecorders == true ? RecordersScrim
-            : Vm?.IsMakingMontage == true ? MontageScrim
-            : Vm?.IsConfirmingDelete == true ? DeleteScrim
-            : Vm?.IsSettingsOpen == true ? SettingsScrim : EditScrim);
+        var scope = DialogScope();
         if (focused is null || !scope.IsVisualAncestorOf(focused))
         {
-            scope.GetVisualDescendants().OfType<Control>()
-                .FirstOrDefault(c => c.Focusable && c.IsEffectivelyVisible && c.IsEffectivelyEnabled && c is not ScrollViewer)
-                ?.Focus(NavigationMethod.Directional);
+            if (FirstStop(scope) is { } first) FocusPad(first);
             return;
         }
-        var next = KeyboardNavigationHandler.GetNext(focused,
-            forward ? NavigationDirection.Next : NavigationDirection.Previous) as Control;
-        // Tab order wraps around the whole window; stay inside the dialog.
-        if (next is not null && scope.IsVisualAncestorOf(next)) next.Focus(NavigationMethod.Directional);
+        if (Nearest(scope, focused, b) is { } next)
+        {
+            FocusPad(next);
+            // Settings' page tabs switch as the cursor moves along them, like LB / RB.
+            if (next is ListBoxItem { Parent: ListBox { Classes: var cls } } tab && cls.Contains("tabs")) tab.IsSelected = true;
+        }
     }
 
     /// <summary>Sends a key through the normal input route, as if a pad were a tiny keyboard.</summary>
@@ -253,27 +274,46 @@ public partial class MainWindow : Window
         if (Vm is not { } vm || !vm.IsControllerMode) return;
         var direction = b is PadButton.Up or PadButton.Down or PadButton.Left or PadButton.Right;
 
-        // ----- player: the pad drives playback directly, focus plays no part -----
+        // ----- player -----
+        // Two zones. Watching: the pad drives playback directly. Up / Down put a cursor on the tool panel or
+        // the controls under the video; there the D-pad moves by position, A presses, B goes back to watching.
         if (vm.IsPlayerOpen && !vm.IsSettingsOpen)
         {
             var p = vm.Player;
+            var focused = Focused;
+            if (focused is not null && PlayerView.IsVisualAncestorOf(focused))
+            {
+                if (b == PadButton.A) { SendKey(focused is ToggleButton or ToggleSwitch or CheckBox ? Key.Space : Key.Enter); return; }
+                if (b == PadButton.B) { if (IsDropDownOpen(focused)) SendKey(Key.Escape); else LeavePlayerTools(); return; }
+                if (direction)
+                {
+                    if (IsDropDownOpen(focused) || (b is PadButton.Left or PadButton.Right && focused is TextBox or Slider)) SendKey(ArrowFor(b));
+                    else if (Nearest(PlayerView, focused, b) is { } next) FocusPad(next);
+                    return;
+                }
+            }
             switch (b)
             {
                 case PadButton.A: p.TogglePlayCommand.Execute(null); break;
                 case PadButton.B: vm.ClosePlayerCommand.Execute(null); PlayerTopBar.IsVisible = true; break;
                 case PadButton.Left: p.SeekCommand.Execute(p.Position - 5000); break;
                 case PadButton.Right: p.SeekCommand.Execute(p.Position + 5000); break;
-                case PadButton.Up: p.Volume = Math.Min(125, p.Volume + 5); break;
-                case PadButton.Down: p.Volume = Math.Max(0, p.Volume - 5); break;
+                case PadButton.Down: FocusPad(PlayButton); break;
+                case PadButton.Up:
+                    var rail = PlayerView.GetVisualDescendants().OfType<Button>()
+                        .Where(x => x.Classes.Contains("rail") && x.IsEffectivelyVisible).ToList();
+                    if ((rail.FirstOrDefault(x => x.Classes.Contains("on")) ?? rail.FirstOrDefault()) is { } pick) FocusPad(pick);
+                    break;
                 case PadButton.X: p.SetInCommand.Execute(null); break;
                 case PadButton.Y: p.SetOutCommand.Execute(null); break;
                 case PadButton.LB: p.StepFrameBackCommand.Execute(null); break;
                 case PadButton.RB: p.StepFrameCommand.Execute(null); break;
-                case PadButton.LT: p.SeekCommand.Execute(p.Position - 10000); break;
-                case PadButton.RT: p.SeekCommand.Execute(p.Position + 10000); break;
+                case PadButton.LT: p.Volume = Math.Max(0, p.Volume - 10); break;
+                case PadButton.RT: p.Volume = Math.Min(125, p.Volume + 10); break;
                 case PadButton.Start: p.ExportCommand.Execute(null); break;
                 case PadButton.View: vm.SaveClipCommand.Execute(null); break;
             }
+            UpdatePadZone();
             return;
         }
 
@@ -366,8 +406,8 @@ public partial class MainWindow : Window
                 break;
             case PadButton.X when card is not null: vm.ToggleFavoriteCommand.Execute(card.DataContext); break;
             case PadButton.Y when card is not null: vm.BeginEditCommand.Execute(card.DataContext); break;
-            case PadButton.LB: vm.CycleNav(-1); RefocusGridSoon(); break;
-            case PadButton.RB: vm.CycleNav(+1); RefocusGridSoon(); break;
+            case PadButton.LB: vm.CycleNav(-1); RefocusFirstCardSoon(); break;
+            case PadButton.RB: vm.CycleNav(+1); RefocusFirstCardSoon(); break;
             case PadButton.Start: vm.OpenSettingsCommand.Execute(null); break;
             case PadButton.View: vm.SaveClipCommand.Execute(null); break;
             default:
@@ -376,9 +416,29 @@ public partial class MainWindow : Window
         }
     }
 
+    /// <summary>B in the player's tools: the cursor goes away and the pad drives playback again.</summary>
+    private void LeavePlayerTools()
+    {
+        FocusManager?.ClearFocus();
+        UpdatePadZone();
+    }
+
+    /// <summary>Tells the bottom legend whether the cursor is on the player's tools.</summary>
+    private void UpdatePadZone()
+    {
+        if (Vm is { } vm) vm.PadInPlayerTools = Focused is { } f && PlayerView.IsVisualAncestorOf(f);
+    }
+
     /// <summary>After the visible videos changed, put the cursor back on the first card.</summary>
     private void RefocusGridSoon() =>
         Avalonia.Threading.Dispatcher.UIThread.Post(() => FocusGrid(), Avalonia.Threading.DispatcherPriority.Background);
+
+    /// <summary>LB / RB changed the folder: start at the top of the new list.</summary>
+    private void RefocusFirstCardSoon()
+    {
+        _lastCard = 0;
+        RefocusGridSoon();
+    }
 
     private void OnQuitClick(object? sender, RoutedEventArgs e) => (Application.Current as App)?.Quit();
 
@@ -411,6 +471,13 @@ public partial class MainWindow : Window
         _pad.IsActive = () => IsActive && IsVisible;
         _pad.Pressed += OnPad;
         _pad.ConnectionChanged += UpdatePadStatus;
+        // A rescan can re-sort the grid under the cursor; put it back on a card that exists.
+        vm.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(MainViewModel.Videos) && vm.IsControllerMode && !vm.IsPlayerOpen &&
+                (Focused is null || IsCard(Focused)))
+                RefocusGridSoon();
+        };
         ApplyControllerMode();
         vm.CopyText = async text => { if (Clipboard is { } clipboard) await clipboard.SetTextAsync(text); };
         vm.PickFolder = PickFolderAsync;

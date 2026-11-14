@@ -296,7 +296,7 @@
       </Border>
 
       <!-- Main pane -->
-      <DockPanel Grid.Column="1">
+      <DockPanel Grid.Column="1" x:Name="MainPane">
         <!-- Toolbar -->
         <Grid x:Name="Toolbar" DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto,Auto" Margin="28,0,28,0"
               Height="72" Background="Transparent">
@@ -1290,6 +1290,15 @@
                     <TextBlock svc:Tr.Text="Open full screen in Controller mode" />
                     <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding ControllerFullscreen}" />
                   </Grid>
+                  <Border Classes="sep" />
+                  <Grid Classes="row" ColumnDefinitions="*,Auto">
+                    <StackPanel Spacing="2">
+                      <TextBlock svc:Tr.Text="Simple editor in Controller mode" />
+                      <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap"
+                                 svc:Tr.Text="Only trimming, parts and export, so everything can be reached with the controller. Turn off for every tool." />
+                    </StackPanel>
+                    <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding ControllerSimpleEditor}" />
+                  </Grid>
                 </StackPanel>
               </Border>
 
@@ -2077,27 +2086,27 @@
             <StackPanel Spacing="4"><PathIcon Data="{StaticResource IcCut}" /><TextBlock svc:Tr.Text="Trim" /></StackPanel>
           </Button>
           <Button Classes="rail" Classes.on="{Binding IsCaptionsPage}" Command="{Binding PickPageCommand}" CommandParameter="{x:Static vm:ToolPage.Captions}"
-                  IsVisible="{Binding ShowCaptionTools}" svc:Tr.Tip="Text over the video">
+                  IsVisible="{Binding ShowCaptionsTool}" svc:Tr.Tip="Text over the video">
             <StackPanel Spacing="4"><PathIcon Data="{StaticResource IcText}" /><TextBlock svc:Tr.Text="Captions" /></StackPanel>
           </Button>
           <Button Classes="rail" Classes.on="{Binding IsSpeedPage}" Command="{Binding PickPageCommand}" CommandParameter="{x:Static vm:ToolPage.Speed}"
-                  IsVisible="{Binding ShowSpeedTools}" svc:Tr.Tip="Slow motion and fast forward">
+                  IsVisible="{Binding ShowSpeedTool}" svc:Tr.Tip="Slow motion and fast forward">
             <StackPanel Spacing="4"><PathIcon Data="{StaticResource IcSpeed}" /><TextBlock svc:Tr.Text="Speed" /></StackPanel>
           </Button>
           <Button Classes="rail" Classes.on="{Binding IsZoomPage}" Command="{Binding PickPageCommand}" CommandParameter="{x:Static vm:ToolPage.Zoom}"
-                  IsVisible="{Binding ShowZoomTools}" svc:Tr.Tip="Zoom in on the action and follow it, with keyframes">
+                  IsVisible="{Binding ShowZoomTool}" svc:Tr.Tip="Zoom in on the action and follow it, with keyframes">
             <StackPanel Spacing="4"><PathIcon Data="{StaticResource IcZoom}" /><TextBlock svc:Tr.Text="Zoom" /></StackPanel>
           </Button>
           <Button Classes="rail" Classes.on="{Binding IsBlurPage}" Command="{Binding PickPageCommand}" CommandParameter="{x:Static vm:ToolPage.Blur}"
-                  IsVisible="{Binding ShowBlurTools}" svc:Tr.Tip="Hide names, chat or HUD before sharing">
+                  IsVisible="{Binding ShowBlurTool}" svc:Tr.Tip="Hide names, chat or HUD before sharing">
             <StackPanel Spacing="4"><PathIcon Data="{StaticResource IcBlur}" /><TextBlock svc:Tr.Text="Blur" /></StackPanel>
           </Button>
           <Button Classes="rail" Classes.on="{Binding IsSoundPage}" Command="{Binding PickPageCommand}" CommandParameter="{x:Static vm:ToolPage.Sound}"
-                  IsVisible="{Binding ShowSoundPage}" svc:Tr.Tip="Loudness, voice and audio tracks">
+                  IsVisible="{Binding ShowSoundTool}" svc:Tr.Tip="Loudness, voice and audio tracks">
             <StackPanel Spacing="4"><PathIcon Data="{StaticResource IcVolume}" /><TextBlock svc:Tr.Text="Sound" /></StackPanel>
           </Button>
           <Button Classes="rail" Classes.on="{Binding IsBrandPage}" Command="{Binding PickPageCommand}" CommandParameter="{x:Static vm:ToolPage.Brand}"
-                  IsVisible="{Binding ShowBranding}" svc:Tr.Tip="Watermark, intro and outro">
+                  IsVisible="{Binding ShowBrandTool}" svc:Tr.Tip="Watermark, intro and outro">
             <StackPanel Spacing="4"><PathIcon Data="{StaticResource IcImage}" /><TextBlock svc:Tr.Text="Brand" /></StackPanel>
           </Button>
           <Button Classes="rail" Classes.on="{Binding IsSharePage}" Command="{Binding PickPageCommand}" CommandParameter="{x:Static vm:ToolPage.Share}"
@@ -2652,7 +2661,7 @@
               <Button Classes="ghost" Command="{Binding SkipBackCommand}" svc:Tr.Tip="Back 5 s (Shift+←)" VerticalAlignment="Center">
                 <PathIcon Data="{StaticResource IcRewind}" />
               </Button>
-              <Button Classes="play" Command="{Binding TogglePlayCommand}" svc:Tr.Tip="Play / pause (Space)" Margin="6,0">
+              <Button x:Name="PlayButton" Classes="play" Command="{Binding TogglePlayCommand}" svc:Tr.Tip="Play / pause (Space)" Margin="6,0">
                 <Panel>
                   <PathIcon Data="{StaticResource IcPlay}" Width="20" Height="20" Margin="3,0,0,0" Foreground="{DynamicResource Bg0}" IsVisible="{Binding !IsPlaying}" />
                   <PathIcon Data="{StaticResource IcPause}" Width="20" Height="20" Foreground="{DynamicResource Bg0}" IsVisible="{Binding IsPlaying}" />
@@ -2667,13 +2676,13 @@
             </StackPanel>
 
             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right" VerticalAlignment="Center">
-              <Button Classes="ghost" Classes.on="{Binding LoopRange}" Command="{Binding AbLoopCommand}" ToolTip.Tip="{Binding AbTip}" MinWidth="54">
+              <Button Classes="ghost" Classes.on="{Binding LoopRange}" Command="{Binding AbLoopCommand}" ToolTip.Tip="{Binding AbTip}" MinWidth="54" IsVisible="{Binding IsFullEditor}">
                 <StackPanel Orientation="Horizontal" Spacing="5">
                   <PathIcon Data="{StaticResource IcLoop}" Width="13" Height="13" />
                   <TextBlock Text="{Binding AbText}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
                 </StackPanel>
               </Button>
-              <Button Classes="ghost" Classes.on="{Binding IsRateChanged}" svc:Tr.Tip="Playback speed (Shift+, slower, Shift+. faster)" MinWidth="52">
+              <Button Classes="ghost" Classes.on="{Binding IsRateChanged}" svc:Tr.Tip="Playback speed (Shift+, slower, Shift+. faster)" MinWidth="52" IsVisible="{Binding IsFullEditor}">
                 <TextBlock Text="{Binding RateText}" FontSize="13" FontWeight="SemiBold" />
                 <Button.Flyout>
                   <Flyout Placement="TopEdgeAlignedRight">
@@ -2758,28 +2767,28 @@
                   <TextBlock Classes="hint" Text="N" />
                 </StackPanel>
               </Button>
-              <Border Classes="toolsep" />
-              <Button Classes="tool" Command="{Binding AddCaptionCommand}" svc:Tr.Tip="Add a caption at the playhead (C)" IsVisible="{Binding ShowCaptionTools}">
+              <Border Classes="toolsep" IsVisible="{Binding IsFullEditor}" />
+              <Button Classes="tool" Command="{Binding AddCaptionCommand}" svc:Tr.Tip="Add a caption at the playhead (C)" IsVisible="{Binding ShowCaptionsTool}">
                 <StackPanel Orientation="Horizontal" Spacing="6">
                   <PathIcon Data="{StaticResource IcText}" />
                   <TextBlock svc:Tr.Text="Caption" VerticalAlignment="Center" />
                   <TextBlock Classes="hint" Text="C" />
                 </StackPanel>
               </Button>
-              <Button Classes="tool" Command="{Binding AddSpeedSectionCommand}" svc:Tr.Tip="Slow down or speed up part of the clip, starting at the playhead" IsVisible="{Binding ShowSpeedTools}">
+              <Button Classes="tool" Command="{Binding AddSpeedSectionCommand}" svc:Tr.Tip="Slow down or speed up part of the clip, starting at the playhead" IsVisible="{Binding ShowSpeedTool}">
                 <StackPanel Orientation="Horizontal" Spacing="6">
                   <PathIcon Data="{StaticResource IcSpeed}" />
                   <TextBlock svc:Tr.Text="Slow-mo" VerticalAlignment="Center" />
                 </StackPanel>
               </Button>
-              <Button Classes="tool" Command="{Binding PunchInCommand}" svc:Tr.Tip="Zoom in on the playhead for a moment (Z)" IsVisible="{Binding ShowZoomTools}">
+              <Button Classes="tool" Command="{Binding PunchInCommand}" svc:Tr.Tip="Zoom in on the playhead for a moment (Z)" IsVisible="{Binding ShowZoomTool}">
                 <StackPanel Orientation="Horizontal" Spacing="6">
                   <PathIcon Data="{StaticResource IcZoom}" />
                   <TextBlock svc:Tr.Text="Punch in" VerticalAlignment="Center" />
                   <TextBlock Classes="hint" Text="Z" />
                 </StackPanel>
               </Button>
-              <Button Classes="tool" Command="{Binding AddBlurCommand}" svc:Tr.Tip="Blur a name, the chat or part of the HUD (H)" IsVisible="{Binding ShowBlurTools}">
+              <Button Classes="tool" Command="{Binding AddBlurCommand}" svc:Tr.Tip="Blur a name, the chat or part of the HUD (H)" IsVisible="{Binding ShowBlurTool}">
                 <StackPanel Orientation="Horizontal" Spacing="6">
                   <PathIcon Data="{StaticResource IcBlur}" />
                   <TextBlock svc:Tr.Text="Blur" VerticalAlignment="Center" />

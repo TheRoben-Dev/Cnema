@@ -293,20 +293,36 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     /// <summary>Raised after settings were saved; the window re-applies layout and input.</summary>
     public event Action? ControllerModeChanged;
     [ObservableProperty] private string _padStatus = "";
+    /// <summary>The cursor is on the player's tools rather than driving playback.</summary>
+    [ObservableProperty] private bool _padInPlayerTools;
+    partial void OnPadInPlayerToolsChanged(bool value) => OnPropertyChanged(nameof(PadHints));
+    private bool IsInPadDialog => IsShowingRecorders || IsMakingMontage || IsCleaningUp || IsShowingStats ||
+                                  IsShowingShortcuts || IsConfirmingDelete || IsShowingWhatsNew;
 
     /// <summary>What the pad buttons do right now; shown along the bottom in Controller mode.</summary>
     public IReadOnlyList<PadHint> PadHints
     {
         get
         {
-            if (IsSettingsOpen || IsEditing)
+            if (IsEditing)
                 return new PadHint[] { new("A", T("Select"), "a"), new("B", T("Cancel"), "b"), new("☰", T("Save"), "") };
+            if (IsPlayerOpen && PadInPlayerTools)
+                return new PadHint[]
+                {
+                    new("A", T("Select"), "a"), new("B", T("Back to the video"), "b"), new("X", T("Mark in"), "x"), new("Y", T("Mark out"), "y"),
+                    new("✥", T("Move"), ""), new("LB RB", T("Frame"), ""), new("☰", T("Export clip"), ""),
+                };
             if (IsPlayerOpen)
                 return new PadHint[]
                 {
                     new("A", T("Play / pause"), "a"), new("B", T("Back"), "b"), new("X", T("Mark in"), "x"), new("Y", T("Mark out"), "y"),
-                    new("◀ ▶", T("Seek"), ""), new("LB RB", T("Frame"), ""), new("LT RT", "10 s", ""), new("☰", T("Export clip"), ""),
+                    new("◀ ▶", T("Seek"), ""), new("▲ ▼", T("Tools"), ""), new("LB RB", T("Frame"), ""), new("LT RT", T("Volume"), ""),
+                    new("☰", T("Export clip"), ""),
                 };
+            if (IsSettingsOpen)
+                return new PadHint[] { new("A", T("Select"), "a"), new("B", T("Cancel"), "b"), new("LB RB", T("Page"), ""), new("☰", T("Save"), "") };
+            if (IsInPadDialog)
+                return new PadHint[] { new("A", T("Select"), "a"), new("B", T("Close"), "b") };
             var hints = new List<PadHint>
             {
                 new("A", T("Play"), "a"), new("B", T("Sidebar / videos"), "b"), new("X", T("Favourite"), "x"), new("Y", T("Rename & tags"), "y"),
@@ -514,8 +530,15 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         Clips = clips;
         PropertyChanged += (_, e) =>
         {
-            if (e.PropertyName is nameof(IsPlayerOpen) or nameof(Editor) or nameof(SettingsEditor) or nameof(IsClipRecording))
+            if (e.PropertyName is nameof(IsPlayerOpen) or nameof(Editor) or nameof(SettingsEditor) or nameof(IsClipRecording)
+                or nameof(IsShowingRecorders) or nameof(Montage) or nameof(IsCleaningUp) or nameof(IsShowingStats)
+                or nameof(IsShowingShortcuts) or nameof(IsConfirmingDelete) or nameof(IsShowingWhatsNew)
+                or nameof(ShortcutSheet) or nameof(Cleanup) or nameof(Stats) or nameof(Recorders) or nameof(WhatsNew)
+                or nameof(PendingDelete) or nameof(PendingBulkDelete))
+            {
+                if (e.PropertyName == nameof(IsPlayerOpen)) PadInPlayerTools = false;
                 OnPropertyChanged(nameof(PadHints));
+            }
         };
         _hotkey = new GlobalHotkey(() => Dispatcher.UIThread.Post(() => SaveClipCommand.Execute(null)));
         Clips.Changed += () => Dispatcher.UIThread.Post(RaiseClipState);
@@ -559,6 +582,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         VideoItemViewModel.NotesEnabled = Features.Notes;
         Chapters.Enabled = Features.Chapters;
         Player.Queue = Features.ExportQueue ? Exports : null;
+        Player.IsSimpleEditor = IsControllerMode && _settings.Current.ControllerSimpleEditor;
         RebuildCollections();
         IsSetupOpen = _settings.IsFirstRun || Environment.GetEnvironmentVariable("CNEMA_SETUP") == "1";
         _ = RecoverThenApplyClipsAsync();

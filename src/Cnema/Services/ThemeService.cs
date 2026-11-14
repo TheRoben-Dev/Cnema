@@ -73,6 +73,9 @@ public static class ThemeService
         r["PartFill"] = new SolidColorBrush(second, 0.13);
         r["PartLine"] = new SolidColorBrush(second, 0.33);
         r["CardGlow"] = new BoxShadows(new BoxShadow { Blur = 22, Color = Color.FromArgb(0x4D, accent.R, accent.G, accent.B) });
+        // Keyboard / controller focus: the same accent glow as a hovered card, a little tighter and stronger.
+        r["FocusGlow"] = new BoxShadows(new BoxShadow { Blur = 14, Spread = 1, Color = Color.FromArgb(0x73, accent.R, accent.G, accent.B) });
+        r["FocusRing"] = new SolidColorBrush(Mix(accent, Colors.White, 0.12));
         r["Overlay"] = new SolidColorBrush(C(s.Bg0), 0.88);
 
         if (s.Gradients)

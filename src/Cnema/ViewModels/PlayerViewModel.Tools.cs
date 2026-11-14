@@ -25,6 +25,35 @@ public sealed partial class PlayerViewModel
     /// <summary>"Remove all captions and speed changes", under the pages it clears.</summary>
     public bool ShowClearEffects => HasClearableEffects && (IsCaptionsPage || IsSpeedPage || IsZoomPage || IsBlurPage);
 
+    /// <summary>
+    /// Controller mode's simple editor: trim, parts, markers and export only. The advanced tools are hidden
+    /// (anything already made with them still exports), so every button can be reached with the D-pad.
+    /// </summary>
+    public bool IsSimpleEditor
+    {
+        get => _isSimpleEditor;
+        set
+        {
+            if (_isSimpleEditor == value) return;
+            _isSimpleEditor = value;
+            foreach (var name in new[]
+                     {
+                         nameof(IsSimpleEditor), nameof(IsFullEditor), nameof(ShowCaptionsTool), nameof(ShowSpeedTool),
+                         nameof(ShowZoomTool), nameof(ShowBlurTool), nameof(ShowSoundTool), nameof(ShowBrandTool),
+                     })
+                OnPropertyChanged(name);
+            RefreshToolPages();
+        }
+    }
+    private bool _isSimpleEditor;
+    public bool IsFullEditor => !IsSimpleEditor;
+    public bool ShowCaptionsTool => ShowCaptionTools && !IsSimpleEditor;
+    public bool ShowSpeedTool => ShowSpeedTools && !IsSimpleEditor;
+    public bool ShowZoomTool => ShowZoomTools && !IsSimpleEditor;
+    public bool ShowBlurTool => ShowBlurTools && !IsSimpleEditor;
+    public bool ShowSoundTool => ShowSoundPage && !IsSimpleEditor;
+    public bool ShowBrandTool => ShowBranding && !IsSimpleEditor;
+
     /// <summary>The Sound page also holds the audio track switches, so it shows for either.</summary>
     public bool ShowSoundPage => ShowAudioTools || HasAudioTracks || ShowMusicTools;
 
@@ -51,11 +80,13 @@ public sealed partial class PlayerViewModel
     {
         IsToolsOpen = Fx.ToolsOpen;
         Page = Enum.TryParse<ToolPage>(Fx.ToolPage, out var p) ? p : ToolPage.Trim;
-        if (!IsAvailable(Page)) Page = ToolPage.Trim;
+        if (!IsAvailable(Page)) { _page = ToolPage.Trim; ToolsChangedQuiet(); }
     }
 
     private bool IsAvailable(ToolPage page) => page switch
     {
+        ToolPage.Trim or ToolPage.Share => true,
+        _ when IsSimpleEditor => false,
         ToolPage.Captions => ShowCaptionTools,
         ToolPage.Speed => ShowSpeedTools,
         ToolPage.Sound => ShowSoundPage,
@@ -68,12 +99,30 @@ public sealed partial class PlayerViewModel
     /// <summary>After features or the audio tracks changed: a page that went away falls back to Trim.</summary>
     private void RefreshToolPages()
     {
-        OnPropertyChanged(nameof(ShowSoundPage));
-        if (!IsAvailable(Page)) Page = ToolPage.Trim;
+        foreach (var name in new[]
+                 {
+                     nameof(ShowSoundPage), nameof(ShowCaptionsTool), nameof(ShowSpeedTool), nameof(ShowZoomTool),
+                     nameof(ShowBlurTool), nameof(ShowSoundTool), nameof(ShowBrandTool),
+                 })
+            OnPropertyChanged(name);
+        if (!IsAvailable(Page)) _page = ToolPage.Trim; // not saved: the full editor keeps its page
+        ToolsChangedQuiet();
     }
 
     partial void OnPageChanged(ToolPage value) => ToolsChanged();
     partial void OnIsToolsOpenChanged(bool value) => ToolsChanged();
+
+    private void ToolsChangedQuiet()
+    {
+        foreach (var name in new[]
+                 {
+                     nameof(Page), nameof(IsTrimPage), nameof(IsCaptionsPage), nameof(IsSpeedPage), nameof(IsSoundPage),
+                     nameof(IsBrandPage), nameof(IsSharePage), nameof(PageTitle), nameof(ShowClearEffects),
+                     nameof(IsZoomPage), nameof(IsBlurPage),
+                 })
+            OnPropertyChanged(name);
+        UpdateFramePreview();
+    }
 
     private void ToolsChanged()
     {

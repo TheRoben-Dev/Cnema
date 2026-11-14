@@ -28,6 +28,8 @@ public sealed class AppSettings
     public bool ControllerMode { get; set; }
     /// <summary>In Controller mode, open full screen like a console app.</summary>
     public bool ControllerFullscreen { get; set; } = true;
+    /// <summary>In Controller mode the editor shows only trim, parts and export.</summary>
+    public bool ControllerSimpleEditor { get; set; } = true;
 
     /// <summary>Which optional parts of Cnema are switched on (Settings, Features).</summary>
     public FeatureSettings Features { get; set; } = new();
