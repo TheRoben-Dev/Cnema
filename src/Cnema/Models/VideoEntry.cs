@@ -19,6 +19,8 @@ public sealed class VideoEntry
     public bool Favorite { get; set; }
     /// <summary>Moments marked with the hotkey during a session recording, in ms from the start.</summary>
     public List<long> Bookmarks { get; set; } = new();
+    /// <summary>Where the user picked the thumbnail from, in ms; 0 = chosen automatically.</summary>
+    public long ThumbAtMs { get; set; }
 
     [System.Text.Json.Serialization.JsonIgnore]
     public string FileName => System.IO.Path.GetFileName(Path);
@@ -31,10 +33,23 @@ public sealed class VideoEntry
         Tags = other.Tags.ToList();
         Favorite = other.Favorite;
         Bookmarks = other.Bookmarks.ToList();
+        ThumbAtMs = other.ThumbAtMs;
     }
 }
 
 public sealed class LibraryCacheFile
 {
     public Dictionary<string, VideoEntry> Entries { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+}
+
+/// <summary>A hand-made group of videos from any folders, like a playlist.</summary>
+public sealed class VideoCollection
+{
+    public string Name { get; set; } = "";
+    public List<string> Paths { get; set; } = new();
+}
+
+public sealed class CollectionsFile
+{
+    public List<VideoCollection> Collections { get; set; } = new();
 }

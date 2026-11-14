@@ -19,6 +19,7 @@ public static class Shortcuts
         new("search", Library, "Search", "Ctrl+F", "OemQuestion"),
         new("settings", Library, "Open settings", "Ctrl+OemComma"),
         new("refresh", Library, "Rescan folders", "F5"),
+        new("select", Library, "Select several videos", "S"),
 
         new("play", Player, "Play or pause", "Space", "K"),
         new("back5", Player, "Back 5 seconds", "Left"),
@@ -45,6 +46,7 @@ public static class Shortcuts
         new("nextMarker", Player, "Next marker", "N"),
         new("prevMarker", Player, "Previous marker", "Shift+N"),
         new("export", Player, "Export", "E"),
+        new("thumb", Player, "Use this frame as the thumbnail", "T"),
     };
 
     /// <summary>Keys that always work and can't be changed, shown in the shortcut sheet for reference.</summary>
@@ -54,6 +56,7 @@ public static class Shortcuts
         ("General", "Close the window", Mod + "+W"),
         ("General", "Quit Cnema", Mod + "+Q"),
         ("General", "Close a dialog or the player", "Esc"),
+        ("General", "Select all (while selecting)", Mod + "+A"),
     };
 
     private static string Mod => OperatingSystem.IsMacOS() ? "⌘" : "Ctrl";

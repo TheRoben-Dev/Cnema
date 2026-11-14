@@ -100,5 +100,12 @@ public static class ThemeService
         r["SystemAccentColorLight1"] = C(s.AccentHover);
         r["SystemAccentColorLight2"] = Mix(C(s.AccentHover), Colors.White, 0.3);
         r["SystemAccentColorDark1"] = Mix(accent, Colors.Black, 0.18);
+
+        // Menus, submenus and flyouts sit on the scheme's surfaces instead of Fluent's grey.
+        r["MenuFlyoutPresenterBackground"] = B(s.Bg2);
+        r["MenuFlyoutPresenterBorderBrush"] = B(s.Line);
+        r["MenuFlyoutItemBackgroundPointerOver"] = B(s.Bg3);
+        r["FlyoutPresenterBackground"] = B(s.Bg2);
+        r["FlyoutBorderThemeBrush"] = B(s.Line);
     }
 }

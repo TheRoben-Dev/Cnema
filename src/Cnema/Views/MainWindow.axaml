@@ -151,6 +151,53 @@
               </DataTemplate>
             </ListBox.ItemTemplate>
           </ListBox>
+              <StackPanel IsVisible="{Binding ShowCollections}">
+                <Grid ColumnDefinitions="*,Auto" Margin="10,22,0,4">
+                  <TextBlock Classes="label" Text="COLLECTIONS" VerticalAlignment="Center" />
+                  <Button Grid.Column="1" Classes="ghost" Padding="4" ToolTip.Tip="New collection" Command="{Binding NewCollectionCommand}">
+                    <PathIcon Data="{StaticResource IcAdd}" Width="12" Height="12" Foreground="{DynamicResource TextDim}" />
+                  </Button>
+                </Grid>
+                <TextBox x:Name="CollectionNameBox" Margin="4,2,4,6" CornerRadius="8" FontSize="12" Watermark="Collection name, then Enter"
+                         Text="{Binding CollectionName}" IsVisible="{Binding IsNamingCollection}" KeyDown="OnCollectionNameKeyDown" />
+                <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Margin="10,0,8,4"
+                           IsVisible="{Binding !HasCollections}" Text="Group videos from any folders. Right-click a video to add it." />
+                <ListBox x:Name="CollectionList" Classes="nav" ItemsSource="{Binding Collections}" SelectedItem="{Binding SelectedCollection}">
+                  <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:FolderViewModel">
+                      <Grid ColumnDefinitions="Auto,*,Auto" ToolTip.Tip="{Binding Tooltip}" Background="Transparent">
+                        <Grid.ContextMenu>
+                          <ContextMenu>
+                            <MenuItem Header="Rename…" Click="OnRenameCollectionClick" />
+                            <MenuItem Header="Delete collection" Click="OnDeleteCollectionClick" />
+                          </ContextMenu>
+                        </Grid.ContextMenu>
+                        <PathIcon Classes="navicon" Grid.Column="0" Width="15" Height="15" Margin="0,0,10,0"
+                                  Foreground="{DynamicResource TextDim}" Data="{StaticResource IcCollection}" />
+                        <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="13" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="2" Classes="dim" Text="{Binding Count}" FontSize="11" VerticalAlignment="Center" Margin="6,0,0,0" />
+                      </Grid>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+              </StackPanel>
+              <StackPanel IsVisible="{Binding ShowTools}" Margin="0,22,0,0">
+                <TextBlock Classes="label" Text="TOOLS" Margin="10,0,0,8" />
+                <Button x:Name="CleanupButton" Classes="navbutton" IsVisible="{Binding ShowCleanUp}" Command="{Binding OpenCleanupCommand}"
+                        ToolTip.Tip="Find duplicates and broken, empty or very short files">
+                  <StackPanel Orientation="Horizontal" Spacing="10">
+                    <PathIcon Data="{StaticResource IcBroom}" Width="15" Height="15" Foreground="{DynamicResource TextDim}" />
+                    <TextBlock Text="Clean up" FontSize="13" VerticalAlignment="Center" />
+                  </StackPanel>
+                </Button>
+                <Button x:Name="StatsButton" Classes="navbutton" IsVisible="{Binding ShowStats}" Command="{Binding OpenStatsCommand}"
+                        ToolTip.Tip="Numbers about your library and clips">
+                  <StackPanel Orientation="Horizontal" Spacing="10">
+                    <PathIcon Data="{StaticResource IcStats}" Width="15" Height="15" Foreground="{DynamicResource TextDim}" />
+                    <TextBlock Text="Stats" FontSize="13" VerticalAlignment="Center" />
+                  </StackPanel>
+                </Button>
+              </StackPanel>
               <TextBlock Classes="label" Text="TAGS" Margin="10,22,0,8" IsVisible="{Binding HasTags}" />
               <ListBox x:Name="TagList" Classes="nav" ItemsSource="{Binding Tags}" SelectedItem="{Binding SelectedTag}" IsVisible="{Binding HasTags}">
                 <ListBox.ItemTemplate>
@@ -173,7 +220,7 @@
       <!-- Main pane -->
       <DockPanel Grid.Column="1">
         <!-- Toolbar -->
-        <Grid x:Name="Toolbar" DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto,Auto" Margin="28,0,28,0"
+        <Grid x:Name="Toolbar" DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto" Margin="28,0,28,0"
               Height="72" Background="Transparent">
           <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="2" IsHitTestVisible="False">
             <TextBlock Text="{Binding HeaderTitle}" FontSize="22" FontWeight="Bold" />
@@ -184,10 +231,33 @@
             <PathIcon Data="{StaticResource IcSearch}" Width="15" Height="15" Foreground="{DynamicResource TextDim}"
                       HorizontalAlignment="Left" Margin="12,0,0,0" IsHitTestVisible="False" />
           </Panel>
-          <ComboBox x:Name="SortBox" Grid.Column="2" VerticalAlignment="Center" MinWidth="170" Margin="0,0,6,0"
+          <Button Grid.Column="2" Classes="soft" Classes.on="{Binding HasFilters}" VerticalAlignment="Center" Margin="0,0,8,0" Padding="12,8"
+                  ToolTip.Tip="Filter by resolution, length, date or watched">
+            <StackPanel Orientation="Horizontal" Spacing="7">
+              <PathIcon Data="{StaticResource IcFilter}" Width="14" Height="14" />
+              <TextBlock Text="{Binding FilterButtonText}" FontSize="13" />
+            </StackPanel>
+            <Button.Flyout>
+              <Flyout Placement="BottomEdgeAlignedRight">
+                <StackPanel Spacing="10" Width="250" Margin="4">
+                  <TextBlock Classes="label" Text="FILTERS" />
+                  <ComboBox Classes="field" HorizontalAlignment="Stretch" ItemsSource="{x:Static vm:MainViewModel.ResolutionFilters}" SelectedIndex="{Binding FilterResolution}" />
+                  <ComboBox Classes="field" HorizontalAlignment="Stretch" ItemsSource="{x:Static vm:MainViewModel.LengthFilters}" SelectedIndex="{Binding FilterLength}" />
+                  <ComboBox Classes="field" HorizontalAlignment="Stretch" ItemsSource="{x:Static vm:MainViewModel.DateFilters}" SelectedIndex="{Binding FilterDate}" />
+                  <CheckBox Content="Only videos I haven't watched" IsChecked="{Binding FilterUnwatched}" IsVisible="{Binding ShowUnwatchedFilter}" />
+                  <Button Classes="ghost" Content="Clear filters" HorizontalAlignment="Right" Command="{Binding ClearFiltersCommand}" IsEnabled="{Binding HasFilters}" />
+                </StackPanel>
+              </Flyout>
+            </Button.Flyout>
+          </Button>
+          <ComboBox x:Name="SortBox" Grid.Column="3" VerticalAlignment="Center" MinWidth="170" Margin="0,0,6,0"
                     ItemsSource="{x:Static vm:MainViewModel.SortModes}" SelectedIndex="{Binding SortIndex}"
                     CornerRadius="10" Background="{DynamicResource Bg2}" BorderBrush="{DynamicResource Line}" />
-          <Button Grid.Column="3" Classes="ghost" VerticalAlignment="Center" ToolTip.Tip="Rescan folders"
+          <ToggleButton Grid.Column="4" Classes="ghost" VerticalAlignment="Center" ToolTip.Tip="Select several videos"
+                        IsChecked="{Binding IsSelecting}">
+            <PathIcon Data="{StaticResource IcSelect}" />
+          </ToggleButton>
+          <Button Grid.Column="5" Classes="ghost" VerticalAlignment="Center" ToolTip.Tip="Rescan folders"
                   Command="{Binding RescanCommand}">
             <PathIcon Data="{StaticResource IcRefresh}" />
           </Button>
@@ -212,7 +282,7 @@
               </ItemsRepeater.Layout>
               <ItemsRepeater.ItemTemplate>
                 <DataTemplate x:DataType="vm:VideoItemViewModel">
-                  <Button Classes="card" Padding="8"
+                  <Button Classes="card" Padding="8" VerticalAlignment="Top"
                           Command="{Binding #Root.((vm:MainViewModel)DataContext).OpenCommand}"
                           CommandParameter="{Binding}">
                     <Button.ContextMenu>
@@ -220,6 +290,10 @@
                         <MenuItem Header="Play" Click="OnPlayItemClick" />
                         <MenuItem Header="Rename, tag or move…" Click="OnEditItemClick" />
                         <MenuItem Header="Add to / remove from favourites" Click="OnFavoriteItemClick" />
+                        <MenuItem Header="{Binding WatchedMenuText}" Click="OnWatchedItemClick" Tag="watched" />
+                        <MenuItem Header="Add to collection" Tag="collections" />
+                        <MenuItem Header="Remove from this collection" Click="OnRemoveFromCollectionClick" Tag="uncollect" />
+                        <MenuItem Header="Reset thumbnail" Click="OnResetThumbnailClick" IsVisible="{Binding HasCustomThumbnail}" />
                         <Separator />
                         <MenuItem Header="Show in file manager" Click="OnRevealItemClick" />
                         <MenuItem Header="Delete…" Click="OnDeleteItemClick" />
@@ -244,7 +318,11 @@
                               <PathIcon Data="{StaticResource IcPlay}" Width="20" Height="20" Foreground="{DynamicResource OnAccent}" Margin="3,0,0,0" />
                             </Border>
                           </Border>
-                          <Border Classes="ring" CornerRadius="9" BorderThickness="2" BorderBrush="{DynamicResource Brand}" />
+                          <Border Classes="ring" Classes.selected="{Binding IsSelected}" CornerRadius="9" BorderThickness="2" BorderBrush="{DynamicResource Brand}" />
+                          <Border Classes="selbox" Classes.checked="{Binding IsSelected}" IsVisible="{Binding ShowSelectBox}"
+                                  HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="8">
+                            <PathIcon Data="{StaticResource IcCheck}" Width="13" Height="13" IsVisible="{Binding IsSelected}" />
+                          </Border>
                           <Border Classes="badge" Classes.hi="{Binding IsHighRes}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="8"
                                   IsVisible="{Binding HasResolution}">
                             <TextBlock Text="{Binding ResolutionBadge}" />
@@ -261,7 +339,7 @@
                                   IsVisible="{Binding IsFavorite}">
                             <PathIcon Data="{StaticResource IcStar}" Width="12" Height="12" Foreground="#FFD166" />
                           </Border>
-                          <StackPanel Classes="actions" Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="6">
+                          <StackPanel Classes="actions" Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="6" IsVisible="{Binding !ShowSelectBox}">
                             <Button Classes="mini" Focusable="False" ToolTip.Tip="Rename, tag or move"
                                     Command="{Binding #Root.((vm:MainViewModel)DataContext).BeginEditCommand}" CommandParameter="{Binding}">
                               <PathIcon Data="{StaticResource IcEdit}" Width="13" Height="13" />
@@ -274,7 +352,7 @@
                               </Panel>
                             </Button>
                           </StackPanel>
-                          <StackPanel Classes="actions" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="6,6,6,8">
+                          <StackPanel Classes="actions" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="6,6,6,8" IsVisible="{Binding !ShowSelectBox}">
                             <Button Classes="mini del" Focusable="False" ToolTip.Tip="Delete"
                                     Command="{Binding #Root.((vm:MainViewModel)DataContext).RequestDeleteCommand}" CommandParameter="{Binding}">
                               <PathIcon Data="{StaticResource IcDelete}" Width="13" Height="13" />
@@ -284,7 +362,11 @@
                       </Border>
                       </Panel>
                       <StackPanel Spacing="3" Margin="2,0,2,4">
-                        <TextBlock Text="{Binding Title}" ToolTip.Tip="{Binding Entry.Path}" ToolTip.ShowDelay="900" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                        <Grid ColumnDefinitions="Auto,*">
+                          <Ellipse Width="7" Height="7" Fill="{DynamicResource Accent}" Margin="0,0,7,0" VerticalAlignment="Center"
+                                   IsVisible="{Binding ShowUnwatched}" ToolTip.Tip="Not watched yet" />
+                          <TextBlock Grid.Column="1" Text="{Binding Title}" ToolTip.Tip="{Binding Entry.Path}" ToolTip.ShowDelay="900" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                        </Grid>
                         <TextBlock Classes="dim" Text="{Binding Details}" FontSize="11" TextTrimming="CharacterEllipsis" />
                         <ItemsControl ItemsSource="{Binding Tags}" IsVisible="{Binding HasTags}" Margin="0,3,0,0" Height="20" ClipToBounds="True">
                           <ItemsControl.ItemsPanel>
@@ -325,7 +407,62 @@
           <StackPanel IsVisible="{Binding HasNoResults}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="6" Margin="0,0,0,60">
             <TextBlock Text="No videos here" FontSize="17" FontWeight="SemiBold" HorizontalAlignment="Center" />
             <TextBlock Classes="dim" Text="Try another folder or search term." FontSize="13" HorizontalAlignment="Center" />
+            <Button Classes="soft" Content="Clear filters" HorizontalAlignment="Center" Margin="0,8,0,0"
+                    IsVisible="{Binding HasFilters}" Command="{Binding ClearFiltersCommand}" />
           </StackPanel>
+
+          <!-- Bulk actions while selecting -->
+          <Border Classes="bulkbar" IsVisible="{Binding IsSelecting}" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,22">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <TextBlock Text="{Binding SelectionText}" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center" Margin="6,0,10,0" MinWidth="70" />
+              <Button Classes="ghost" Content="Select all" Command="{Binding SelectAllCommand}" />
+              <Border Width="1" Background="{DynamicResource Line}" Margin="4,6" />
+              <Button Classes="ghost" ToolTip.Tip="Favourite" Command="{Binding BulkFavoriteCommand}">
+                <PathIcon Data="{StaticResource IcStarOutline}" Width="15" Height="15" />
+              </Button>
+              <Button x:Name="BulkTagButton" Classes="ghost" Content="Tag…">
+                <Button.Flyout>
+                  <Flyout Placement="Top">
+                    <StackPanel Orientation="Horizontal" Spacing="6" Margin="2">
+                      <TextBox Text="{Binding BulkTag}" Watermark="Tag" Width="160" CornerRadius="8" KeyDown="OnBulkTagKeyDown" />
+                      <Button Classes="accent" Content="Add" Command="{Binding BulkAddTagCommand}" Click="OnBulkFlyoutDone" />
+                    </StackPanel>
+                  </Flyout>
+                </Button.Flyout>
+              </Button>
+              <Button x:Name="BulkCollectionButton" Classes="ghost" Content="Collection…" IsVisible="{Binding ShowCollections}">
+                <Button.Flyout>
+                  <Flyout Placement="Top">
+                    <StackPanel Spacing="2" MinWidth="200" Margin="2">
+                      <ItemsControl ItemsSource="{Binding Collections}">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate x:DataType="vm:FolderViewModel">
+                            <Button Classes="ghost" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Content="{Binding Name}"
+                                    Command="{Binding #Root.((vm:MainViewModel)DataContext).BulkAddToCollectionCommand}" CommandParameter="{Binding}" Click="OnBulkFlyoutDone" />
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                      <Button Classes="ghost" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Content="New collection…"
+                              Command="{Binding BulkNewCollectionCommand}" Click="OnBulkFlyoutDone" />
+                    </StackPanel>
+                  </Flyout>
+                </Button.Flyout>
+              </Button>
+              <Button Classes="ghost" Content="Watched…" IsVisible="{Binding ShowUnwatchedFilter}">
+                <Button.Flyout>
+                  <MenuFlyout Placement="Top">
+                    <MenuItem Header="Mark as watched" Command="{Binding BulkMarkWatchedCommand}" />
+                    <MenuItem Header="Mark as unwatched" Command="{Binding BulkMarkUnwatchedCommand}" />
+                  </MenuFlyout>
+                </Button.Flyout>
+              </Button>
+              <Button Classes="ghost" ToolTip.Tip="Delete" Command="{Binding BulkDeleteCommand}">
+                <PathIcon Data="{StaticResource IcDelete}" Width="15" Height="15" Foreground="{DynamicResource Danger}" />
+              </Button>
+              <Border Width="1" Background="{DynamicResource Line}" Margin="4,6" />
+              <Button Classes="accent" Content="Done" Command="{Binding ToggleSelectModeCommand}" />
+            </StackPanel>
+          </Border>
         </Panel>
       </DockPanel>
     </Grid>
@@ -421,9 +558,9 @@
       <Border Width="420" VerticalAlignment="Center" HorizontalAlignment="Center" Background="{DynamicResource Bg1}"
               BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="16" Padding="22" BoxShadow="0 18 60 0 #80000000">
         <StackPanel Spacing="12">
-          <TextBlock Text="Delete video" FontSize="17" FontWeight="Bold" />
+          <TextBlock Text="{Binding DeleteTitle}" FontSize="17" FontWeight="Bold" />
           <TextBlock Text="{Binding DeletePrompt}" TextWrapping="Wrap" FontSize="13" />
-          <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="You can restore it from the trash if you change your mind." />
+          <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="{Binding DeleteHint}" />
           <TextBlock Text="{Binding DeleteError}" Foreground="{DynamicResource Danger}" FontSize="12" TextWrapping="Wrap"
                      IsVisible="{Binding DeleteError, Converter={x:Static ObjectConverters.IsNotNull}}" />
           <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" Margin="0,4,0,0">
@@ -462,6 +599,125 @@
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
+          </ScrollViewer>
+        </DockPanel>
+      </Border>
+    </Border>
+
+    <!-- ======================= CLEAN UP ======================= -->
+    <Border x:Name="CleanupScrim" Background="#B3050609" IsVisible="{Binding IsCleaningUp}">
+      <Border Width="640" MaxHeight="720" Margin="0,40" VerticalAlignment="Center" HorizontalAlignment="Center" Background="{DynamicResource Bg1}"
+              BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="16" BoxShadow="0 18 60 0 #80000000"
+              DataContext="{Binding Cleanup}" x:DataType="vm:CleanupViewModel">
+        <DockPanel>
+          <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="24,22,24,12">
+            <TextBlock Text="Clean up" FontSize="17" FontWeight="Bold" />
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <ProgressBar IsIndeterminate="True" Width="80" Height="3" MinHeight="3" VerticalAlignment="Center" IsVisible="{Binding IsScanning}" />
+              <TextBlock Classes="dim" FontSize="12" TextWrapping="Wrap" MaxWidth="560" Text="{Binding Summary}" />
+            </StackPanel>
+          </StackPanel>
+          <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Line}" BorderThickness="0,1,0,0" Padding="24,14">
+            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+              <Button x:Name="CleanupClose" Classes="soft" Content="Close" Command="{Binding #Root.((vm:MainViewModel)DataContext).CloseCleanupCommand}" />
+              <!-- TextBlock content: a bound string Content kept its first measured width when the text grew -->
+              <Button Classes="danger" IsEnabled="{Binding CanRemove}"
+                      Command="{Binding #Root.((vm:MainViewModel)DataContext).RemoveCleanupCommand}">
+                <TextBlock Text="{Binding RemoveText}" />
+              </Button>
+            </StackPanel>
+          </Border>
+          <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <ItemsControl ItemsSource="{Binding Rows}" Margin="24,0,24,16">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:CleanupRow">
+                  <Border Classes="cleanrow" Classes.kept="{Binding IsKept}">
+                    <Grid ColumnDefinitions="Auto,*,Auto">
+                      <CheckBox IsChecked="{Binding IsChecked}" VerticalAlignment="Center" MinWidth="0" Margin="0,0,8,0" />
+                      <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Title}" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Classes="dim" Text="{Binding Details}" FontSize="11" TextTrimming="CharacterEllipsis" />
+                      </StackPanel>
+                      <TextBlock Grid.Column="2" Text="{Binding Reason}" FontSize="11" Foreground="{DynamicResource Cyan}"
+                                 VerticalAlignment="Center" Margin="10,0,0,0" MaxWidth="200" TextTrimming="CharacterEllipsis" />
+                    </Grid>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </DockPanel>
+      </Border>
+    </Border>
+
+    <!-- ======================= STATS ======================= -->
+    <Border x:Name="StatsScrim" Background="#B3050609" IsVisible="{Binding IsShowingStats}">
+      <Border Width="640" MaxHeight="720" Margin="0,40" VerticalAlignment="Center" HorizontalAlignment="Center" Background="{DynamicResource Bg1}"
+              BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="16" BoxShadow="0 18 60 0 #80000000"
+              DataContext="{Binding Stats}" x:DataType="vm:StatsViewModel">
+        <DockPanel>
+          <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="24,22,24,12">
+            <TextBlock Text="Stats" FontSize="17" FontWeight="Bold" VerticalAlignment="Center" />
+            <Button x:Name="StatsClose" Grid.Column="1" Classes="ghost" Padding="6" Command="{Binding #Root.((vm:MainViewModel)DataContext).CloseStatsCommand}">
+              <PathIcon Data="{StaticResource IcClose}" Width="13" Height="13" />
+            </Button>
+          </Grid>
+          <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="18" Margin="24,0,24,24">
+              <ItemsControl ItemsSource="{Binding Tiles}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate><UniformGrid Columns="3" /></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:StatTile">
+                    <Border Classes="tile">
+                      <StackPanel Spacing="2">
+                        <TextBlock Text="{Binding Value}" FontSize="22" FontWeight="Bold" />
+                        <TextBlock Classes="dim" Text="{Binding Label}" FontSize="12" />
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+
+              <StackPanel Spacing="8">
+                <TextBlock Classes="label" Text="CLIPS PER WEEK" />
+                <Border Classes="group" Padding="16,14">
+                  <ItemsControl ItemsSource="{Binding Weeks}">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate><UniformGrid Rows="1" /></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:StatBar">
+                        <StackPanel Spacing="4" VerticalAlignment="Bottom">
+                          <TextBlock Classes="dim" Text="{Binding Count}" FontSize="11" HorizontalAlignment="Center" />
+                          <Border Height="{Binding Height}" Width="26" CornerRadius="4" Background="{DynamicResource Accent}" HorizontalAlignment="Center" />
+                          <TextBlock Classes="dim" Text="{Binding Label}" FontSize="10" HorizontalAlignment="Center" />
+                        </StackPanel>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </Border>
+              </StackPanel>
+
+              <StackPanel Spacing="8" IsVisible="{Binding HasGames}">
+                <TextBlock Classes="label" Text="CLIPS PER GAME" />
+                <Border Classes="group" Padding="16,12">
+                  <ItemsControl ItemsSource="{Binding Games}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:StatBar">
+                        <Grid ColumnDefinitions="150,*,Auto" Margin="0,4">
+                          <TextBlock Text="{Binding Label}" FontSize="13" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                          <Border Grid.Column="1" Height="10" Width="{Binding Width}" CornerRadius="5" Background="{DynamicResource Cyan}"
+                                  HorizontalAlignment="Left" VerticalAlignment="Center" />
+                          <TextBlock Grid.Column="2" Classes="dim" Text="{Binding Count}" FontSize="12" VerticalAlignment="Center" Margin="8,0,0,0" />
+                        </Grid>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </Border>
+              </StackPanel>
+            </StackPanel>
           </ScrollViewer>
         </DockPanel>
       </Border>
@@ -801,6 +1057,38 @@
                       </StackPanel>
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureHoverGlow}" />
                     </Grid>
+                    <Border Classes="sep" />
+                    <Grid Classes="row" ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="2">
+                        <TextBlock Text="Collections" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="Group videos from any folders, like playlists." />
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureCollections}" />
+                    </Grid>
+                    <Border Classes="sep" />
+                    <Grid Classes="row" ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="2">
+                        <TextBlock Text="Unwatched dots" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="A dot next to videos you haven't opened yet, and an Unwatched filter." />
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureUnwatched}" />
+                    </Grid>
+                    <Border Classes="sep" />
+                    <Grid Classes="row" ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="2">
+                        <TextBlock Text="Clean up" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="Find duplicates and broken, empty or very short files." />
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureCleanUp}" />
+                    </Grid>
+                    <Border Classes="sep" />
+                    <Grid Classes="row" ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="2">
+                        <TextBlock Text="Stats" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="Numbers about your library and clips: per week, per game, totals." />
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureStats}" />
+                    </Grid>
                   </StackPanel>
                 </Border>
               </StackPanel>
@@ -1046,12 +1334,12 @@
     </Border>
 
     <!-- ======================= TOAST ======================= -->
-    <Border HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,26" Padding="16,10" CornerRadius="10"
+    <Border Classes="toast" Classes.lifted="{Binding IsSelecting}" HorizontalAlignment="Center" VerticalAlignment="Bottom" Padding="16,10" CornerRadius="10"
             Background="{DynamicResource Bg3}" BorderBrush="{DynamicResource Accent}" BorderThickness="1"
             BoxShadow="0 8 30 0 #80000000" IsHitTestVisible="False"
             IsVisible="{Binding Toast, Converter={x:Static ObjectConverters.IsNotNull}}">
       <StackPanel Orientation="Horizontal" Spacing="8">
-        <PathIcon Data="{StaticResource IcCut}" Width="13" Height="13" Foreground="{DynamicResource Cyan}" />
+        <PathIcon Data="{StaticResource IcCheck}" Width="13" Height="13" Foreground="{DynamicResource Cyan}" />
         <TextBlock Text="{Binding Toast}" FontSize="12" FontWeight="SemiBold" />
       </StackPanel>
     </Border>
@@ -1062,7 +1350,7 @@
 
       <!-- Top bar -->
       <Border Grid.Row="0" Background="{DynamicResource Bg1}" Height="52" x:Name="PlayerTopBar">
-        <Grid x:Name="PlayerTopGrid" ColumnDefinitions="Auto,*">
+        <Grid x:Name="PlayerTopGrid" ColumnDefinitions="Auto,*,Auto">
           <Button Classes="ghost" Command="{Binding #Root.((vm:MainViewModel)DataContext).ClosePlayerCommand}"
                   ToolTip.Tip="Back to library (Esc)" VerticalAlignment="Center" Margin="12,0,8,0">
             <StackPanel Orientation="Horizontal" Spacing="6">
@@ -1074,6 +1362,13 @@
             <TextBlock Text="{Binding Title}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" MaxWidth="560" />
             <TextBlock Classes="dim" Text="{Binding Subtitle}" FontSize="12" VerticalAlignment="Center" />
           </StackPanel>
+          <Button Grid.Column="2" Classes="ghost" VerticalAlignment="Center" Margin="0,0,12,0" ToolTip.Tip="Use this frame as the thumbnail (T)"
+                  Command="{Binding #Root.((vm:MainViewModel)DataContext).UseFrameAsThumbnailCommand}">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <PathIcon Data="{StaticResource IcImage}" Width="15" Height="15" />
+              <TextBlock Text="Set thumbnail" FontSize="12" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
         </Grid>
       </Border>
 

@@ -56,6 +56,28 @@ public sealed partial class VideoItemViewModel : ObservableObject
     public double Progress => Entry.DurationMs > 0 ? Math.Clamp((double)Entry.LastPositionMs / Entry.DurationMs, 0, 1) : 0;
     public bool HasProgress => Progress is > 0.01 and < 0.97;
 
+    // ---------- watched ----------
+    /// <summary>The "Unwatched" feature; off, no dot is shown.</summary>
+    public static bool UnwatchedBadges { get; set; } = true;
+    public bool IsUnwatched => Entry.LastPlayedUtc is null;
+    public bool ShowUnwatched => UnwatchedBadges && IsUnwatched;
+    public string WatchedMenuText => IsUnwatched ? "Mark as watched" : "Mark as unwatched";
+    public bool HasCustomThumbnail => Entry.ThumbAtMs > 0;
+
+    // ---------- selection ----------
+    /// <summary>True while the library is in select mode: cards show a tick box and a click selects.</summary>
+    public static bool Selecting { get; set; }
+    public bool ShowSelectBox => Selecting;
+    [ObservableProperty] private bool _isSelected;
+    public void RefreshSelection() => OnPropertyChanged(nameof(ShowSelectBox));
+
+    /// <summary>The thumbnail file changed in place (a picked frame): decode it again.</summary>
+    public void ReloadThumbnail()
+    {
+        OnPropertyChanged(nameof(HasCustomThumbnail));
+        if (_thumbRefs > 0) _ = LoadThumbnailCoreAsync();
+    }
+
     public void Update(VideoEntry e)
     {
         var thumbChanged = e.ThumbPath != Entry.ThumbPath;

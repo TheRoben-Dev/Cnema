@@ -7,6 +7,7 @@ public static class AppPaths
     public static string ThumbDir { get; } = Ensure(Path.Combine(DataDir, "thumbs"));
     public static string SettingsFile => Path.Combine(DataDir, "settings.json");
     public static string LibraryFile => Path.Combine(DataDir, "library.json");
+    public static string CollectionsFile => Path.Combine(DataDir, "collections.json");
 
     /// <summary>Rolling capture segments for the clipping service. Wiped on every start.</summary>
     public static string ClipBufferDir => Path.Combine(Path.GetTempPath(), "cnema-clip-buffer");
@@ -47,7 +48,7 @@ public static class AppPaths
     {
         var target = PortableDir;
         Directory.CreateDirectory(target);
-        foreach (var file in new[] { "settings.json", "library.json" })
+        foreach (var file in new[] { "settings.json", "library.json", "collections.json" })
         {
             var from = Path.Combine(DataDir, file);
             if (File.Exists(from)) File.Copy(from, Path.Combine(target, file), overwrite: true);

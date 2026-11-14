@@ -13,6 +13,7 @@ public sealed partial class MainViewModel
     public bool ShowClipping => Features.Clipping;
     public bool ShowSessionButton => Features.Sessions && CanToggleSession;
     public bool ShowController => Features.Controller;
+    public bool ShowUnwatchedFilter => Features.Unwatched;
 
     /// <summary>Raised when scale, motion or glow change, so the window can restyle itself.</summary>
     public event Action? AppearanceChanged;
@@ -20,7 +21,15 @@ public sealed partial class MainViewModel
     private void RaiseFeatures()
     {
         VideoItemViewModel.HoverPreview = Features.HoverPreview;
-        foreach (var name in new[] { nameof(ShowClipping), nameof(ShowSessionButton), nameof(ShowController) })
+        VideoItemViewModel.UnwatchedBadges = Features.Unwatched;
+        foreach (var v in _items.Values) v.RefreshAll();
+        if (!Features.Collections && SelectedCollection is not null) SelectedFolder = Folders.FirstOrDefault();
+        if (!Features.Unwatched) FilterUnwatched = false;
+        foreach (var name in new[]
+                 {
+                     nameof(ShowClipping), nameof(ShowSessionButton), nameof(ShowController), nameof(ShowCollections),
+                     nameof(ShowCleanUp), nameof(ShowStats), nameof(ShowTools), nameof(ShowUnwatchedFilter),
+                 })
             OnPropertyChanged(name);
         AppearanceChanged?.Invoke();
     }

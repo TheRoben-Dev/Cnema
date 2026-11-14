@@ -29,6 +29,7 @@ public partial class MainWindow : Window
 
         // Tunnel so shortcuts work even when a button/slider has focus; skipped while typing.
         AddHandler(KeyDownEvent, OnPreviewKeyDown, RoutingStrategies.Tunnel);
+        AddHandler(ContextRequestedEvent, OnContextRequestedTunnel, RoutingStrategies.Tunnel);
 
         // Our content covers the title bar, so the OS no longer drags the window for us.
         AddHandler(PointerPressedEvent, OnTitleBarPointerPressed, RoutingStrategies.Bubble, handledEventsToo: false);
@@ -132,17 +133,17 @@ public partial class MainWindow : Window
     private List<Control> SidebarStops()
     {
         var stops = new List<Control>();
-        foreach (var list in new[] { FolderList, TagList })
+        foreach (var list in new[] { FolderList, CollectionList, TagList })
             for (var i = 0; list.IsVisible && i < list.ItemCount; i++)
                 if (list.ContainerFromIndex(i) is { } item) stops.Add(item);
-        stops.AddRange(new Control[] { ClipToggle, SaveClipButton, SessionButton, AddFolderButton, SettingsButton }
+        stops.AddRange(new Control[] { CleanupButton, StatsButton, ClipToggle, SaveClipButton, SessionButton, AddFolderButton, SettingsButton }
             .Where(c => c.IsEffectivelyVisible && c.IsEffectivelyEnabled));
         return stops;
     }
 
     private bool FocusSidebar()
     {
-        var list = Vm?.SelectedTag is not null ? TagList : FolderList;
+        var list = Vm?.SelectedTag is not null ? TagList : Vm?.SelectedCollection is not null ? CollectionList : FolderList;
         var item = list.ContainerFromIndex(Math.Max(0, list.SelectedIndex)) as Control;
         return item?.Focus(NavigationMethod.Directional) == true;
     }
@@ -203,6 +204,8 @@ public partial class MainWindow : Window
         var forward = b is PadButton.Down or PadButton.Right;
         var scope = (Control)(Vm?.IsSetupOpen == true ? SetupScrim
             : Vm?.IsShowingShortcuts == true ? ShortcutsScrim
+            : Vm?.IsCleaningUp == true ? CleanupScrim
+            : Vm?.IsShowingStats == true ? StatsScrim
             : Vm?.IsConfirmingDelete == true ? DeleteScrim
             : Vm?.IsSettingsOpen == true ? SettingsScrim : EditScrim);
         if (focused is null || !scope.IsVisualAncestorOf(focused))
@@ -278,6 +281,18 @@ public partial class MainWindow : Window
         if (vm.IsShowingWhatsNew)
         {
             if (b is PadButton.B or PadButton.A) vm.CloseWhatsNewCommand.Execute(null);
+            return;
+        }
+        if (vm.IsShowingStats)
+        {
+            if (b is PadButton.B or PadButton.A) vm.CloseStatsCommand.Execute(null);
+            return;
+        }
+        if (vm.IsCleaningUp && !vm.IsConfirmingDelete)
+        {
+            if (b == PadButton.B) vm.CloseCleanupCommand.Execute(null);
+            else if (b == PadButton.A) SendKey(Focused is CheckBox ? Key.Space : Key.Enter);
+            else if (direction) MoveInDialog(b);
             return;
         }
         if (vm.IsConfirmingDelete)
@@ -384,6 +399,10 @@ public partial class MainWindow : Window
                     Avalonia.Threading.Dispatcher.UIThread.Post(() => SettingsFirst.Focus(NavigationMethod.Directional),
                         Avalonia.Threading.DispatcherPriority.Background);
             }
+            if (e.PropertyName == nameof(MainViewModel.IsSelecting)) Classes.Set("selecting", vm.IsSelecting);
+            if (e.PropertyName == nameof(MainViewModel.IsNamingCollection) && vm.IsNamingCollection)
+                Avalonia.Threading.Dispatcher.UIThread.Post(() => { CollectionNameBox.Focus(); CollectionNameBox.SelectAll(); },
+                    Avalonia.Threading.DispatcherPriority.Background);
             if (e.PropertyName == nameof(MainViewModel.SettingsEditor) && vm.SettingsEditor is { } editor)
                 editor.PropertyChanged += (_, pe) =>
                 {
@@ -544,6 +563,95 @@ public partial class MainWindow : Window
     private void OnRemoveFolderClick(object? sender, RoutedEventArgs e) =>
         Vm?.RemoveFolderCommand.Execute((sender as Control)?.DataContext as FolderViewModel);
 
+    private void OnWatchedItemClick(object? sender, RoutedEventArgs e) =>
+        Vm?.ToggleWatchedCommand.Execute((sender as Control)?.DataContext as VideoItemViewModel);
+
+    private void OnResetThumbnailClick(object? sender, RoutedEventArgs e) =>
+        Vm?.ResetThumbnailCommand.Execute((sender as Control)?.DataContext as VideoItemViewModel);
+
+    private void OnRemoveFromCollectionClick(object? sender, RoutedEventArgs e)
+    {
+        if ((sender as Control)?.DataContext is VideoItemViewModel item) Vm?.RemoveFromCollection(item);
+    }
+
+    /// <summary>
+    /// The card menu is built per video: "Add to collection" lists the collections there are now,
+    /// and items for features that are off are hidden. This runs on the way down (tunnel), before
+    /// the card's own handler opens the menu; at that point the menu has no DataContext yet.
+    /// </summary>
+    private void OnContextRequestedTunnel(object? sender, ContextRequestedEventArgs e)
+    {
+        if (Vm is not { } vm) return;
+        for (var v = e.Source as Avalonia.Visual; v is not null; v = v.GetVisualParent())
+        {
+            if (v is not Button { Classes: var classes, DataContext: VideoItemViewModel item, ContextMenu: { } menu } || !classes.Contains("card"))
+                continue;
+            PrepareCardMenu(vm, menu, item);
+            return;
+        }
+    }
+
+    private static void PrepareCardMenu(MainViewModel vm, ContextMenu menu, VideoItemViewModel item)
+    {
+        foreach (var mi in menu.Items.OfType<MenuItem>())
+        {
+            switch (mi.Tag as string)
+            {
+                case "watched":
+                    mi.IsVisible = vm.Features.Unwatched;
+                    break;
+                case "uncollect":
+                    mi.IsVisible = vm.ShowCollections && vm.IsInCollectionView;
+                    break;
+                case "collections":
+                    mi.IsVisible = vm.ShowCollections;
+                    var rows = new List<object>();
+                    foreach (var row in vm.Collections)
+                    {
+                        var target = row;
+                        var sub = new MenuItem { Header = row.Name };
+                        sub.Click += (_, _) => vm.AddToCollection(new[] { item }, target);
+                        rows.Add(sub);
+                    }
+                    if (rows.Count > 0) rows.Add(new Separator());
+                    var create = new MenuItem { Header = "New collection…" };
+                    create.Click += (_, _) => vm.NewCollectionWith(new[] { item });
+                    rows.Add(create);
+                    mi.ItemsSource = rows;
+                    break;
+            }
+        }
+    }
+
+    private void OnRenameCollectionClick(object? sender, RoutedEventArgs e) =>
+        Vm?.BeginRenameCollection((sender as Control)?.DataContext as FolderViewModel);
+
+    private void OnDeleteCollectionClick(object? sender, RoutedEventArgs e) =>
+        Vm?.DeleteCollectionCommand.Execute((sender as Control)?.DataContext as FolderViewModel);
+
+    private void OnCollectionNameKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter) { Vm?.ConfirmCollectionNameCommand.Execute(null); e.Handled = true; }
+        else if (e.Key == Key.Escape) { Vm?.CancelNamingCommand.Execute(null); e.Handled = true; }
+    }
+
+    private void OnBulkTagKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter) return;
+        Vm?.BulkAddTagCommand.Execute(null);
+        OnBulkFlyoutDone(sender, e);
+        e.Handled = true;
+    }
+
+    /// <summary>A choice in a bulk-bar flyout was made: close it, the toast says what happened.</summary>
+    private void OnBulkFlyoutDone(object? sender, RoutedEventArgs e) =>
+        // Posted: hiding the flyout right away detaches the button before its Command runs.
+        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            BulkTagButton.Flyout?.Hide();
+            BulkCollectionButton.Flyout?.Hide();
+        });
+
     // ---------- fullscreen ----------
     private void OnFullscreenClick(object? sender, RoutedEventArgs e) => ToggleFullscreen();
 
@@ -609,6 +717,27 @@ public partial class MainWindow : Window
             if (e.Key == Key.Escape) { vm.CancelDeleteCommand.Execute(null); e.Handled = true; }
             return;
         }
+        if (vm.IsCleaningUp)
+        {
+            if (e.Key == Key.Escape) { vm.CloseCleanupCommand.Execute(null); e.Handled = true; }
+            return;
+        }
+        if (vm.IsShowingStats)
+        {
+            if (e.Key == Key.Escape) { vm.CloseStatsCommand.Execute(null); e.Handled = true; }
+            return;
+        }
+        if (vm.IsSelecting && !vm.IsPlayerOpen && e.Source is not TextBox)
+        {
+            if (e.Key == Key.Escape) { vm.ToggleSelectModeCommand.Execute(null); e.Handled = true; return; }
+            if (e.Key == Key.A && e.KeyModifiers is KeyModifiers.Control or KeyModifiers.Meta)
+            {
+                vm.SelectAllCommand.Execute(null);
+                e.Handled = true;
+                return;
+            }
+            if (e.Key is Key.Delete or Key.Back) { vm.BulkDeleteCommand.Execute(null); e.Handled = true; return; }
+        }
         if (e.Key is Key.Delete or Key.Back && e.Source is Button { DataContext: VideoItemViewModel victim } && !vm.IsPlayerOpen)
         {
             vm.RequestDeleteCommand.Execute(victim);
@@ -665,6 +794,7 @@ public partial class MainWindow : Window
                 case "search": SearchBox.Focus(); break;
                 case "settings": vm.OpenSettingsCommand.Execute(null); break;
                 case "refresh": vm.RescanCommand.Execute(null); break;
+                case "select": vm.ToggleSelectModeCommand.Execute(null); break;
                 default: e.Handled = false; break;
             }
             return;
@@ -706,6 +836,7 @@ public partial class MainWindow : Window
             case "export": p.ExportCommand.Execute(null); break;
             case "fullscreen": ToggleFullscreen(); break;
             case "start": p.SeekCommand.Execute(0d); break;
+            case "thumb": vm.UseFrameAsThumbnailCommand.Execute(null); break;
             default: e.Handled = false; break;
         }
     }

@@ -44,6 +44,11 @@ public sealed class FeatureSettings
     public bool HoverPreview { get; set; } = true;
     public bool LoudMarkers { get; set; } = true;
     public bool HoverGlow { get; set; } = true;
+    public bool Collections { get; set; } = true;
+    /// <summary>A dot on videos you haven't opened yet, and the Unwatched filter.</summary>
+    public bool Unwatched { get; set; } = true;
+    public bool CleanUp { get; set; } = true;
+    public bool Stats { get; set; } = true;
 
     public FeatureSettings Clone() => (FeatureSettings)MemberwiseClone();
 }
