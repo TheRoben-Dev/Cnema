@@ -114,6 +114,17 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     public ObservableCollection<string> AudioDevices { get; } = new() { NoAudio };
     public ObservableCollection<string> Screens { get; } = new();
+
+    public const string NoCamera = "None";
+    public ObservableCollection<string> Cameras { get; } = new() { NoCamera };
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(HasCamera))] private string _camera = NoCamera;
+    public bool HasCamera => Camera != NoCamera;
+    public static Choice[] CameraCorners { get; } =
+        { new("Bottom right", 0), new("Bottom left", 1), new("Top right", 2), new("Top left", 3) };
+    private static readonly string[] CornerIds = { "bottom-right", "bottom-left", "top-right", "top-left" };
+    [ObservableProperty] private Choice _cameraCorner = CameraCorners[0];
+    public static Choice[] CameraSizes { get; } = { new("Small", 18), new("Medium", 25), new("Large", 33) };
+    [ObservableProperty] private Choice _cameraSize = CameraSizes[1];
     public ObservableCollection<CodecOption> Codecs { get; } = new();
     public ObservableCollection<ProfileRow> Profiles { get; } = new();
     [ObservableProperty] private bool _separateTracks;
@@ -355,6 +366,13 @@ public sealed partial class SettingsViewModel : ObservableObject
         _audio1 = string.IsNullOrWhiteSpace(c.Audio1) ? NoAudio : c.Audio1!;
         _audio2 = string.IsNullOrWhiteSpace(c.Audio2) ? NoAudio : c.Audio2!;
         Screens.Add("Primary display");
+        if (!string.IsNullOrWhiteSpace(c.Camera))
+        {
+            Cameras.Add(c.Camera!);
+            _camera = c.Camera!;
+        }
+        _cameraCorner = CameraCorners[Math.Max(0, Array.IndexOf(CornerIds, c.CameraCorner))];
+        _cameraSize = Nearest(CameraSizes, c.CameraSize);
     }
 
     private static Choice Nearest(Choice[] options, int value) =>
@@ -376,6 +394,11 @@ public sealed partial class SettingsViewModel : ObservableObject
         foreach (var s in devices.Screens) Screens.Add(s);
         ScreenIndex = Math.Clamp(screen, 0, Math.Max(0, Screens.Count - 1));
         HasSeveralScreens = Screens.Count > 1;
+
+        var camera = Camera;
+        foreach (var name in devices.Cameras)
+            if (!Cameras.Contains(name)) Cameras.Add(name);
+        Camera = camera;
     }
 
     private async Task LoadCodecsAsync()
@@ -442,6 +465,9 @@ public sealed partial class SettingsViewModel : ObservableObject
         c.Screen = Math.Max(0, ScreenIndex);
         c.Audio1 = Audio1 == NoAudio ? null : Audio1;
         c.Audio2 = Audio2 == NoAudio || Audio2 == Audio1 ? null : Audio2;
+        c.Camera = Camera == NoCamera ? null : Camera;
+        c.CameraCorner = CornerIds[CameraCorner.Value];
+        c.CameraSize = CameraSize.Value;
         c.Notify = Notify;
         c.Sound = Sound;
         c.TagWithGame = TagWithGame;

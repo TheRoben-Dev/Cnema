@@ -1619,6 +1619,32 @@
               </Border>
               <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="{Binding AudioHint}" Margin="4,0" />
 
+              <TextBlock Classes="label" Text="CAMERA" Margin="0,8,0,0" />
+              <Border Classes="group">
+                <StackPanel>
+                  <Grid Classes="row" ColumnDefinitions="*,220">
+                    <StackPanel Spacing="2" Margin="0,0,12,0">
+                      <TextBlock Text="Webcam in the corner" />
+                      <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap"
+                                 Text="Puts you in every clip and session, like a facecam. The camera stays on while clipping is on." />
+                    </StackPanel>
+                    <ComboBox Grid.Column="1" Classes="field" ItemsSource="{Binding Cameras}" SelectedItem="{Binding Camera}" />
+                  </Grid>
+                  <StackPanel IsVisible="{Binding HasCamera}">
+                    <Border Classes="sep" />
+                    <Grid Classes="row" ColumnDefinitions="*,220">
+                      <TextBlock Text="Corner" />
+                      <ComboBox Grid.Column="1" Classes="field" ItemsSource="{x:Static vm:SettingsViewModel.CameraCorners}" SelectedItem="{Binding CameraCorner}" />
+                    </Grid>
+                    <Border Classes="sep" />
+                    <Grid Classes="row" ColumnDefinitions="*,220">
+                      <TextBlock Text="Size" />
+                      <ComboBox Grid.Column="1" Classes="field" ItemsSource="{x:Static vm:SettingsViewModel.CameraSizes}" SelectedItem="{Binding CameraSize}" />
+                    </Grid>
+                  </StackPanel>
+                </StackPanel>
+              </Border>
+
               <TextBlock Classes="label" Text="GAME PROFILES" Margin="0,8,0,0" />
               <Border Classes="group">
                 <StackPanel>

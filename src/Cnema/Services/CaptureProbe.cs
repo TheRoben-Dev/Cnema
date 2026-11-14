@@ -2,7 +2,11 @@ using System.Text.RegularExpressions;
 
 namespace Cnema.Services;
 
-public sealed record CaptureDevices(IReadOnlyList<string> Screens, IReadOnlyList<string> Audio);
+public sealed record CaptureDevices(IReadOnlyList<string> Screens, IReadOnlyList<string> Audio)
+{
+    /// <summary>Webcams and other video devices that are not screens, as Settings lists them.</summary>
+    public IReadOnlyList<string> Cameras { get; init; } = Array.Empty<string>();
+}
 
 /// <summary>A video format the clipping service can record in, and the encoder that does it here.</summary>
 public sealed record CodecOption(string Codec, string Encoder, bool Hardware)
@@ -143,7 +147,10 @@ public static class CaptureProbe
             if (OperatingSystem.IsWindows() && ffmpeg is not null)
             {
                 var r = await RunQuiet(ffmpeg, "-hide_banner", "-list_devices", "true", "-f", "dshow", "-i", "dummy");
-                return new CaptureDevices(new[] { "Primary display" }, ParseDshowAudio(r?.StdErr ?? ""));
+                return new CaptureDevices(new[] { "Primary display" }, ParseDshowAudio(r?.StdErr ?? ""))
+                {
+                    Cameras = ParseDshowVideo(r?.StdErr ?? ""),
+                };
             }
             if (OperatingSystem.IsLinux())
             {
@@ -152,7 +159,7 @@ public static class CaptureProbe
                 if (r is { ExitCode: 0 })
                     audio.AddRange(r.StdOut.Split('\n', StringSplitOptions.RemoveEmptyEntries)
                         .Select(l => l.Split('\t')).Where(c => c.Length > 1).Select(c => c[1]));
-                return new CaptureDevices(new[] { "Whole desktop" }, audio);
+                return new CaptureDevices(new[] { "Whole desktop" }, audio) { Cameras = ListV4l2Cameras() };
             }
         }
         catch { /* fall through to "nothing found" */ }
@@ -166,6 +173,7 @@ public static class CaptureProbe
     public static CaptureDevices ParseAvFoundation(string stderr)
     {
         var screens = new List<string>();
+        var cameras = new List<string>();
         var audio = new List<string>();
         var inAudio = false;
         foreach (var line in stderr.Split('\n'))
@@ -177,9 +185,43 @@ public static class CaptureProbe
             var name = m.Groups[2].Value;
             if (inAudio) audio.Add(name);
             else if (name.StartsWith("Capture screen", StringComparison.OrdinalIgnoreCase)) screens.Add(name);
+            else cameras.Add(name);
         }
         if (screens.Count == 0) screens.Add("Capture screen 0");
-        return new CaptureDevices(screens, audio);
+        return new CaptureDevices(screens, audio) { Cameras = cameras };
+    }
+
+    public static IReadOnlyList<string> ParseDshowVideo(string stderr) =>
+        Regex.Matches(stderr, "\"([^\"]+)\"\\s*\\(video\\)").Select(m => m.Groups[1].Value).Distinct().ToList();
+
+    /// <summary>
+    /// Video4Linux capture nodes as "Name (/dev/videoN)". A webcam usually has a second node for
+    /// metadata; only the first (index 0) of each device delivers pictures.
+    /// </summary>
+    private static IReadOnlyList<string> ListV4l2Cameras()
+    {
+        var found = new List<string>();
+        const string sys = "/sys/class/video4linux";
+        if (!Directory.Exists(sys)) return found;
+        foreach (var dir in Directory.GetDirectories(sys, "video*").OrderBy(d => d.Length).ThenBy(d => d, StringComparer.Ordinal))
+        {
+            try
+            {
+                var index = File.Exists(Path.Combine(dir, "index")) ? File.ReadAllText(Path.Combine(dir, "index")).Trim() : "0";
+                if (index != "0") continue;
+                var name = File.ReadAllText(Path.Combine(dir, "name")).Trim();
+                found.Add($"{(name.Length > 0 ? name : "Camera")} (/dev/{Path.GetFileName(dir)})");
+            }
+            catch { /* unreadable node: skip */ }
+        }
+        return found;
+    }
+
+    /// <summary>The device ffmpeg opens for a camera as Settings lists it ("Name (/dev/video0)" on Linux).</summary>
+    public static string CameraInput(string camera)
+    {
+        var m = Regex.Match(camera, @"\((/dev/video\d+)\)$");
+        return m.Success ? m.Groups[1].Value : camera;
     }
 
     public static IReadOnlyList<string> ParseDshowAudio(string stderr) =>

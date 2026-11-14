@@ -464,7 +464,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             $"Recording a session. {_settings.Current.Clip.HotkeyText} adds a bookmark ({Clips.BookmarkCount} so far).",
         ClipState.Recording => _hotkeyRefused || _refusedExtras.Count > 0
             ? $"{string.Join(" and ", RefusedHotkeys)} {(RefusedHotkeys.Count == 1 ? "is" : "are")} taken by another app. Pick a different one in settings."
-            : HotkeySummary,
+            : Clips.CameraNote is { } note ? $"{HotkeySummary}. {note}" : HotkeySummary,
         ClipState.Error => Clips.Error ?? "",
         ClipState.Starting => "",
         _ => "Record in the background and save moments after they happen.",
