@@ -18,6 +18,7 @@ public partial class App : Application
     private TrayIcon? _tray;
     private NativeMenuItem? _traySave;
     private NativeMenuItem? _traySession;
+    private NativeMenuItem? _trayUpdate;
     private NativeMenuItem? _trayToggle;
     private SingleInstance? _instance;
 
@@ -109,8 +110,11 @@ public partial class App : Application
         var quit = new NativeMenuItem("Quit Cnema");
         quit.Click += (_, _) => Quit();
 
+        _trayUpdate = new NativeMenuItem("Get the update") { IsVisible = false };
+        _trayUpdate.Click += (_, _) => _vm?.OpenUpdateCommand.Execute(null);
         var menu = new NativeMenu();
         menu.Add(open);
+        menu.Add(_trayUpdate);
         menu.Add(new NativeMenuItemSeparator());
         menu.Add(_traySave);
         menu.Add(_traySession);
@@ -143,6 +147,11 @@ public partial class App : Application
         {
             _traySession.Header = _vm.SessionLabel;
             _traySession.IsEnabled = _vm.CanToggleSession;
+        }
+        if (_trayUpdate is not null)
+        {
+            _trayUpdate.IsVisible = _vm.HasUpdate;
+            if (_vm.HasUpdate) _trayUpdate.Header = _vm.UpdateText + " · get it";
         }
         if (_trayToggle is not null) _trayToggle.IsChecked = _vm.IsClipEnabled;
     }
