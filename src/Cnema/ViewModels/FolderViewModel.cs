@@ -2,7 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Cnema.ViewModels;
 
-public enum NavKind { All, Favorites, Folder, Tag }
+public enum NavKind { All, Favorites, Folder, Tag, Collection }
 
 /// <summary>One row in the sidebar: a built-in view, a library folder, or a tag.</summary>
 public sealed partial class FolderViewModel : ObservableObject
@@ -19,10 +19,15 @@ public sealed partial class FolderViewModel : ObservableObject
         NavKind.All => "Every video in every folder",
         NavKind.Favorites => "Videos you starred",
         NavKind.Tag => $"Videos tagged \"{Tag}\"",
+        NavKind.Collection => $"Your collection \"{Name}\"",
         _ => Path!,
     };
     public bool IsAll => Kind == NavKind.All;
     public bool IsRemovable => Kind == NavKind.Folder;
+    /// <summary>The collection behind a Collection row.</summary>
+    public Cnema.Models.VideoCollection? Collection { get; }
+
+    public FolderViewModel(Cnema.Models.VideoCollection collection) : this(NavKind.Collection, collection.Name) => Collection = collection;
 
     [ObservableProperty] private int _count;
 
@@ -37,7 +42,7 @@ public sealed partial class FolderViewModel : ObservableObject
         {
             NavKind.All => "All videos",
             NavKind.Favorites => "Favourites",
-            NavKind.Tag => value!,
+            NavKind.Tag or NavKind.Collection => value!,
             _ => System.IO.Path.GetFileName(value!.TrimEnd('/', '\\')) is { Length: > 0 } n ? n : value!,
         };
     }
@@ -52,6 +57,7 @@ public sealed partial class FolderViewModel : ObservableObject
         NavKind.All => true,
         NavKind.Favorites => v.Entry.Favorite,
         NavKind.Tag => v.Entry.Tags.Contains(Tag!, StringComparer.OrdinalIgnoreCase),
+        NavKind.Collection => Collection!.Paths.Contains(v.Entry.Path, StringComparer.OrdinalIgnoreCase),
         _ => Contains(v.Entry.Path),
     };
 }

@@ -73,6 +73,18 @@ Set `CNEMA_LIBVLC_PATH` to a folder containing libvlc + libvlccore to override.
 - **Share presets** (player, *Share*): fit the selection in 10 MB or 50 MB for Discord (two-pass H.264, resolution
   and frame rate drop only as far as the size needs), centre-cropped vertical 9:16, or a GIF of up to 20 seconds.
   With no in/out points set, the whole video is converted. The result lands next to the source.
+- **Filters**: resolution, length, date added and unwatched, next to the search box; they combine with search,
+  folders, tags and collections.
+- **Collections**: playlists that pull videos from any folders. Right-click a video, *Add to collection*, or
+  select several and add them at once. Stored in `collections.json` next to the library cache.
+- **Select mode** (tick button or **S**): favourite, tag, add to a collection, mark watched/unwatched or delete
+  many videos at once. **Ctrl/⌘+A** selects all, **Esc** leaves select mode.
+- **Watched**: a dot marks videos you have not opened; the resume bar shows how far you got in the others.
+- **Thumbnail picker**: *Set thumbnail* (**T**) in the player uses the current frame; *Reset thumbnail* in the
+  card's menu returns to the automatic one.
+- **Clean up**: finds duplicate files (same size and same content samples; the oldest copy is kept) and empty,
+  unreadable or sub-2-second files. Nothing is removed until you confirm, and removal goes to the trash.
+- **Stats**: totals, clips per week for the last 8 weeks, and clips per game tag.
 - **Delete**: right-click a video, press Delete on a focused card, or use the Edit panel. Files go to the system
   trash (Finder Trash, Recycle Bin, XDG trash), never straight off the disk.
 - **Player**: libVLC playback, frame stepping, speed, volume, fullscreen.
@@ -126,8 +138,8 @@ are off by default. The check runs at launch, after each saved clip and when set
 ### Features, accessibility and shortcuts
 
 Nothing optional is forced on you. **Settings, Features** switches off background clipping, session recording,
-controller support, hover preview, loud moment markers or the hover glow; their buttons and settings disappear
-and they stop running. **Settings, Accessibility** has an interface size (90 to 150 %), high contrast and
+controller support, hover preview, loud moment markers, the hover glow, collections, unwatched dots, Clean up
+or Stats; their buttons and settings disappear and they stop running. **Settings, Accessibility** has an interface size (90 to 150 %), high contrast and
 reduce motion. Press **?** for the list of keyboard shortcuts; click a key to change it.
 
 **Settings, General, Backup** exports and imports all settings as one file. **Portable mode** creates a
@@ -198,6 +210,7 @@ H.264 at the same quality. Turning off "Use the graphics card" records H.264 wit
 | M | Mute | E | Export clip |
 | F | Fullscreen | Esc | Back to library |
 | A | Add selection as a part | N / Shift+N | Next / previous marker |
+| T | Use this frame as the thumbnail | ? | All shortcuts (and change them) |
 
 ## Layout
 

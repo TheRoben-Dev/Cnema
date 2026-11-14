@@ -2,6 +2,17 @@
 
 What changed in each Cnema release. The app shows the entries you have not seen yet after it updates.
 
+## 0.12.0
+- Filters next to the search box: resolution, length, date added and "only videos I haven't watched". The button shows how many are on.
+- Collections: group videos from any folders, like playlists. Right-click a video, Add to collection, or use + in the sidebar. A video can be in several collections, and renaming or moving it keeps it there.
+- Select several videos (the tick button in the toolbar, or S) to favourite, tag, add to a collection, mark as watched or delete them together. Ctrl/⌘+A selects all, Esc leaves.
+- A dot marks videos you haven't opened yet. Right-click to mark one as watched or unwatched.
+- Pick the thumbnail: in the player, Set thumbnail (or T) uses the frame on screen. Right-click, Reset thumbnail, goes back to the automatic one.
+- Clean up (sidebar, Tools) finds duplicate files and broken, empty or very short ones. It suggests what to remove; you tick what actually goes to the trash.
+- Stats (sidebar, Tools): how many videos and hours you have, clips per week and clips per game.
+- Collections, unwatched dots, Clean up and Stats can each be switched off under Settings, Features.
+- Menus and pop-ups follow your color scheme.
+
 ## 0.11.0
 - Settings has pages now: General, Features, Clipping and Accessibility. Ctrl+Tab, or LB and RB on a controller, switches between them.
 - Features: switch off anything you don't use (background clipping, session recording, controller support, hover preview, loud moment markers, hover glow). Its buttons and settings disappear and it stops running.

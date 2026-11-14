@@ -12,7 +12,7 @@ public static class ThumbnailService
 
     public static string PathFor(VideoEntry e)
     {
-        var key = $"{e.Path}|{e.Size}|{e.ModifiedUtc.Ticks}";
+        var key = $"{e.Path}|{e.Size}|{e.ModifiedUtc.Ticks}" + (e.ThumbAtMs > 0 ? $"|at{e.ThumbAtMs}" : "");
         var hash = Convert.ToHexString(SHA1.HashData(Encoding.UTF8.GetBytes(key)))[..20].ToLowerInvariant();
         return Path.Combine(AppPaths.ThumbDir, hash + ".jpg");
     }
@@ -23,16 +23,19 @@ public static class ThumbnailService
         if (File.Exists(target)) return target;
         if (ToolLocator.Ffmpeg is not { } ffmpeg) return null;
 
-        // ~12% in avoids black intros/fade-ins; clamp for very short clips.
-        var seekSec = e.DurationMs > 0 ? Math.Min(e.DurationMs * 0.12 / 1000.0, 300) : 1.0;
+        // ~12% in avoids black intros/fade-ins; clamp for very short clips. A frame the user picked
+        // is taken as it is, without the "most representative of the next 12 frames" filter.
+        var picked = e.ThumbAtMs > 0;
+        var seekSec = picked ? e.ThumbAtMs / 1000.0 : e.DurationMs > 0 ? Math.Min(e.DurationMs * 0.12 / 1000.0, 300) : 1.0;
         var ss = seekSec.ToString("0.###", CultureInfo.InvariantCulture);
+        var filter = picked ? $"scale={ThumbWidth}:-2" : $"thumbnail=12,scale={ThumbWidth}:-2";
 
         foreach (var attempt in new[] { ss, "0" })
         {
             var r = await ProcessRunner.RunAsync(ffmpeg, new[]
             {
                 "-v", "error", "-ss", attempt, "-i", e.Path, "-frames:v", "1",
-                "-vf", $"thumbnail=12,scale={ThumbWidth}:-2", "-q:v", "4", "-y", target,
+                "-vf", filter, "-q:v", "4", "-y", target,
             }, ct: ct);
             if (r.ExitCode == 0 && File.Exists(target)) return target;
         }

@@ -234,8 +234,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(IsConfirmingDelete), nameof(DeletePrompt))] private VideoItemViewModel? _pendingDelete;
     [ObservableProperty] private string? _deleteError;
-    public bool IsConfirmingDelete => PendingDelete is not null;
-    public string DeletePrompt => PendingDelete is null ? "" : $"Move “{PendingDelete.Title}” to the {(OperatingSystem.IsWindows() ? "Recycle Bin" : "Trash")}?";
+    public bool IsConfirmingDelete => PendingDelete is not null || PendingBulkDelete is not null;
+    public string DeletePrompt => PendingBulkDelete is { } many
+        ? $"Move {many.Count} video{(many.Count == 1 ? "" : "s")} to the {TrashName}?"
+        : PendingDelete is null ? "" : $"Move “{PendingDelete.Title}” to the {TrashName}?";
 
     [RelayCommand]
     private void RequestDelete(VideoItemViewModel? item)
@@ -246,11 +248,21 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         PendingDelete = item;
     }
 
-    [RelayCommand] private void CancelDelete() => PendingDelete = null;
+    [RelayCommand] private void CancelDelete() { PendingDelete = null; PendingBulkDelete = null; }
 
     [RelayCommand]
     private void ConfirmDelete()
     {
+        if (PendingBulkDelete is { } many)
+        {
+            var failed = DeleteMany(many);
+            PendingBulkDelete = null;
+            IsSelecting = false;
+            RefreshView();
+            ShowToast(failed == 0 ? $"Moved {many.Count} video{(many.Count == 1 ? "" : "s")} to the {TrashName}"
+                : $"{failed} video{(failed == 1 ? "" : "s")} could not be moved to the {TrashName}");
+            return;
+        }
         if (PendingDelete is not { } item) return;
         try
         {
@@ -300,11 +312,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     /// <summary>LB / RB: step through the sidebar (folders, then tags) without moving focus there.</summary>
     public void CycleNav(int delta)
     {
-        var all = Folders.Concat(Tags).ToList();
+        var all = Folders.Concat(Collections).Concat(Tags).ToList();
         if (all.Count == 0) return;
         var index = ActiveNav is null ? 0 : all.IndexOf(ActiveNav);
         var next = all[((index + delta) % all.Count + all.Count) % all.Count];
         if (next.Kind == NavKind.Tag) SelectedTag = next;
+        else if (next.Kind == NavKind.Collection) SelectedCollection = next;
         else SelectedFolder = next;
     }
 
@@ -466,7 +479,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     public bool HasNoFolders => _settings.Current.Folders.Count == 0;
     public bool HasNoResults => !HasNoFolders && Videos.Count == 0 && !IsScanning;
-    private FolderViewModel? ActiveNav => SelectedTag ?? SelectedFolder;
+    private FolderViewModel? ActiveNav => SelectedTag ?? SelectedCollection ?? SelectedFolder;
     public string HeaderTitle => ActiveNav is { Kind: NavKind.Tag } t ? "#" + t.Name : ActiveNav?.Name ?? "All videos";
     public string HeaderCount => Videos.Count == 1 ? "1 video" : $"{Videos.Count:N0} videos";
 
@@ -503,6 +516,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         RefreshView();
         ShowWhatsNewAfterUpdate(firstRunEver: _settings.IsFirstRun);
         VideoItemViewModel.HoverPreview = Features.HoverPreview;
+        VideoItemViewModel.UnwatchedBadges = Features.Unwatched;
+        RebuildCollections();
         IsSetupOpen = _settings.IsFirstRun || Environment.GetEnvironmentVariable("CNEMA_SETUP") == "1";
         _ = ApplyClipSettingsAsync();
         _ = CheckForUpdatesAsync();
@@ -618,21 +633,35 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     // The sidebar is two lists (library + tags) that behave as one selection.
     private bool _rebuildingTags;
 
-    partial void OnSelectedFolderChanged(FolderViewModel? value)
+    // Three lists (library, collections, tags) act as one selection: picking in one clears the others.
+    private bool _navSwitching;
+
+    partial void OnSelectedFolderChanged(FolderViewModel? value) => NavChanged(value);
+    partial void OnSelectedTagChanged(FolderViewModel? value) => NavChanged(value);
+    partial void OnSelectedCollectionChanged(FolderViewModel? value)
     {
-        if (_rebuildingTags) return;
-        if (value is not null) SelectedTag = null;
-        if (value is null && SelectedTag is null) return; // transient: the other list is about to take over
-        RefreshView();
-        OnPropertyChanged(nameof(HeaderTitle));
+        OnPropertyChanged(nameof(IsInCollectionView));
+        NavChanged(value);
     }
 
-    partial void OnSelectedTagChanged(FolderViewModel? value)
+    private void NavChanged(FolderViewModel? value)
     {
-        if (_rebuildingTags) return;
-        if (value is not null) SelectedFolder = null;
-        else if (SelectedFolder is null && Folders.Count > 0) { SelectedFolder = Folders[0]; return; }
-        if (value is null) return;
+        if (_rebuildingTags || _navSwitching) return;
+        if (value is null)
+        {
+            // A list let go of its selection; unless another list holds one, fall back to All videos.
+            if (SelectedFolder is null && SelectedTag is null && SelectedCollection is null && Folders.Count > 0)
+                SelectedFolder = Folders[0];
+            return;
+        }
+        _navSwitching = true;
+        try
+        {
+            if (value.Kind != NavKind.Tag) SelectedTag = null;
+            if (value.Kind != NavKind.Collection) SelectedCollection = null;
+            if (value.Kind is NavKind.Tag or NavKind.Collection) SelectedFolder = null;
+        }
+        finally { _navSwitching = false; }
         RefreshView();
         OnPropertyChanged(nameof(HeaderTitle));
     }
@@ -665,6 +694,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 : v.Entry.Path.Contains(t, StringComparison.OrdinalIgnoreCase) ||
                   v.Entry.Tags.Any(tag => tag.Contains(t, StringComparison.OrdinalIgnoreCase))));
         }
+        q = ApplyFilters(q);
         q = SortIndex switch
         {
             1 => q.OrderByDescending(v => v.Entry.ModifiedUtc),
@@ -674,6 +704,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             _ => q.OrderBy(v => v.Title, StringComparer.CurrentCultureIgnoreCase),
         };
         Videos = new ObservableCollection<VideoItemViewModel>(q);
+        SelectionChanged();
         OnPropertyChanged(nameof(HeaderCount));
         OnPropertyChanged(nameof(HasNoResults));
         UpdateCounts();
@@ -689,6 +720,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 _ => _items.Keys.Count(k => f.Contains(k)),
             };
         RebuildTags();
+        UpdateCollectionCounts();
     }
 
     /// <summary>Keeps the sidebar tag list in sync with the tags actually in use.</summary>
@@ -759,6 +791,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             {
                 _items.Remove(oldPath);
                 _items[newPath] = item;
+                CollectionPathChanged(oldPath, newPath);
             }
         }
         catch (InvalidOperationException ex)
@@ -781,6 +814,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private async Task OpenAsync(VideoItemViewModel? item)
     {
         if (item is null) return;
+        if (IsSelecting) { ToggleSelected(item); return; }
         IsPlayerOpen = true;
         await Player.OpenAsync(item);
     }
@@ -789,8 +823,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private void ClosePlayer()
     {
         if (!IsPlayerOpen) return;
+        var watched = Player.Current;
         Player.Close();
         IsPlayerOpen = false;
+        watched?.RefreshAll();
         _library.SaveCache();
         if (SortIndex == 2) RefreshView();
     }

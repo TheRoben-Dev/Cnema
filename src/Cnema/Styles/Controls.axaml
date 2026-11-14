@@ -544,4 +544,105 @@
   <Style Selector="Window.reduced Button.card Border.ring, Window.reduced Button.card Border.playhint, Window.reduced Button.card StackPanel.actions">
     <Setter Property="Transitions" Value="{x:Null}" />
   </Style>
+
+  <!-- ======================= Library tools (v0.12) ======================= -->
+  <!-- A sidebar row that runs a command instead of selecting a view -->
+  <Style Selector="Button.navbutton">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource Text}" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Left" />
+    <Setter Property="Padding" Value="10,8" />
+    <Setter Property="Margin" Value="0,1" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Cursor" Value="Hand" />
+  </Style>
+  <Style Selector="Button.navbutton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Bg2}" />
+    <Setter Property="Foreground" Value="{DynamicResource Text}" />
+  </Style>
+  <Style Selector="Window.pad Button.navbutton:focus /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AccentSoft}" />
+  </Style>
+
+  <!-- A soft button that is "on" (e.g. filters active) -->
+  <Style Selector="Button.soft.on">
+    <Setter Property="Background" Value="{DynamicResource AccentSoft}" />
+    <Setter Property="Foreground" Value="{DynamicResource Cyan}" />
+  </Style>
+
+  <!-- Select mode: tick box on cards, ring stays on for picked cards -->
+  <Style Selector="Border.selbox">
+    <Setter Property="Width" Value="22" />
+    <Setter Property="Height" Value="22" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="BorderThickness" Value="2" />
+    <Setter Property="BorderBrush" Value="#E6FFFFFF" />
+    <Setter Property="Background" Value="#66000000" />
+  </Style>
+  <Style Selector="Border.selbox.checked">
+    <Setter Property="BorderBrush" Value="{DynamicResource Accent}" />
+    <Setter Property="Background" Value="{DynamicResource Accent}" />
+  </Style>
+  <Style Selector="Border.selbox PathIcon">
+    <Setter Property="Foreground" Value="{DynamicResource OnAccent}" />
+  </Style>
+  <!-- While selecting, a click picks the card, so the play hint would be misleading -->
+  <Style Selector="Window.selecting Button.card:pointerover Border.playhint, Window.selecting.pad Button.card:focus Border.playhint">
+    <Setter Property="Opacity" Value="0" />
+  </Style>
+  <Style Selector="Button.card Border.ring.selected">
+    <Setter Property="Opacity" Value="1" />
+  </Style>
+
+  <!-- The toast moves up while the bulk bar is showing -->
+  <Style Selector="Border.toast">
+    <Setter Property="Margin" Value="0,0,0,26" />
+  </Style>
+  <Style Selector="Border.toast.lifted">
+    <Setter Property="Margin" Value="0,0,0,86" />
+  </Style>
+  <!-- Floating bar of bulk actions -->
+  <Style Selector="Border.bulkbar">
+    <Setter Property="Background" Value="{DynamicResource Bg3}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Line}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="12" />
+    <Setter Property="Padding" Value="8,6" />
+    <Setter Property="BoxShadow" Value="0 8 28 0 #66000000" />
+  </Style>
+
+  <!-- Clean-up rows and stat tiles -->
+  <Style Selector="Border.cleanrow">
+    <Setter Property="Background" Value="{DynamicResource Bg2}" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="10,8" />
+    <Setter Property="Margin" Value="0,2" />
+  </Style>
+  <Style Selector="Border.cleanrow.kept">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Line}" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+  <Style Selector="Border.tile">
+    <Setter Property="Background" Value="{DynamicResource Bg2}" />
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="Padding" Value="14,12" />
+    <Setter Property="Margin" Value="0,0,8,8" />
+  </Style>
+
+  <!-- Menus and flyouts follow the colour scheme -->
+  <Style Selector="FlyoutPresenter">
+    <Setter Property="Background" Value="{DynamicResource Bg2}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Line}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="Padding" Value="12" />
+  </Style>
+  <Style Selector="MenuFlyoutPresenter, ContextMenu">
+    <Setter Property="Background" Value="{DynamicResource Bg2}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Line}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="10" />
+  </Style>
 </Styles>
