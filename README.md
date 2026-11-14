@@ -123,6 +123,11 @@ folder under a size cap by removing the oldest clips first. Removed clips go to 
 folder of your choice. Favourites are never removed, other library folders are never touched, and both limits
 are off by default. The check runs at launch, after each saved clip and when settings change.
 
+### Color schemes
+
+**Settings, Appearance** switches between a few flat color schemes (Violet, Graphite, Ember, Mint, Rose) and
+Aurora, the original look with gradients. The change shows at once and is kept when you press Save.
+
 ### Updates and diagnostics
 
 Cnema checks the public releases page at launch and every 3 hours. At launch a newer version is installed

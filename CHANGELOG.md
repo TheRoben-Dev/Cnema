@@ -2,6 +2,11 @@
 
 What changed in each Cnema release. The app shows the entries you have not seen yet after it updates.
 
+## 0.10.0
+- Color schemes: pick Violet, Graphite, Ember, Mint or Rose under Settings, Appearance. They are flat, without gradients. Aurora keeps the original gradient look.
+- Hovering a video in the library gives it a soft glow in the color of your scheme.
+- A delete button appears in the lower left corner of a video when you hover it. It asks before moving the file to the trash.
+
 ## 0.9.0
 - Cnema now updates itself: at launch it downloads a newer version, installs it and restarts. Turn this off under Settings, Startup.
 - A "What's new" screen like this one appears after an update, and Settings has a button to open it again.

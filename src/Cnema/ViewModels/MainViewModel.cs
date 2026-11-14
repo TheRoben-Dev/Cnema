@@ -922,7 +922,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _ = editor.LoadStorageUsageAsync();
     }
 
-    [RelayCommand] private void CancelSettings() => SettingsEditor = null;
+    [RelayCommand]
+    private void CancelSettings()
+    {
+        SettingsEditor = null;
+        ThemeService.Apply(_settings.Current.ColorScheme); // drop a previewed colour scheme
+    }
 
     [RelayCommand]
     private async Task SaveSettingsAsync()
