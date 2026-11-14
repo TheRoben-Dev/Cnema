@@ -8,6 +8,7 @@ play anything VLC can play and cut clips out of it without leaving the app.
 ![Rename, tag and move](docs/edit.png)
 ![Background clipping](docs/clipping.png)
 ![Settings](docs/settings.png)
+![Controller mode](docs/controller.png)
 
 Stack: C# / .NET 8, [Avalonia 11](https://avaloniaui.net) for UI, [LibVLCSharp](https://code.videolan.org/videolan/LibVLCSharp)
 for playback, ffmpeg/ffprobe for thumbnails, metadata and clip export. One codebase for macOS, Windows and Linux.
@@ -80,9 +81,34 @@ Platform notes:
 
 | | Screen | Audio |
 |---|---|---|
-| macOS | Needs the Screen Recording permission (asked on first use). | Microphones work. System sound needs a loopback device such as BlackHole. |
+| macOS | Needs the Screen Recording permission (asked on first use). | "System audio" (macOS 13+, via ScreenCaptureKit) records everything you hear; microphones work as they are. |
 | Windows | Desktop Duplication (`ddagrab`), `gdigrab` as fallback. | DirectShow devices. System sound needs "Stereo Mix" or a loopback device. |
 | Linux | X11 sessions only (`x11grab`); Wayland is not supported yet. | PulseAudio / PipeWire sources; `.monitor` sources record system sound. |
+
+### Controller mode
+
+Settings › Controller › **Controller mode** turns the same app into a couch / handheld layout: everything
+is scaled up, a button legend runs along the bottom, and an Xbox controller (or any pad SDL knows: PlayStation,
+Switch Pro, Steam Deck…) drives it. It can open full screen automatically.
+
+| | Library | Player |
+|---|---|---|
+| D-pad / left stick | Move between cards, sidebar and sort | Seek ±5 s (◀ ▶), volume (▲ ▼) |
+| A | Play / select | Play / pause |
+| B | Jump between sidebar and videos | Back to library |
+| X / Y | Favourite / rename & tag | Mark in / mark out |
+| LB / RB | Previous / next folder or tag | Step one frame |
+| LT / RT | | Seek ±10 s |
+| Menu ☰ | Settings | Export clip |
+| View ⧉ | Save clip | Save clip |
+
+Arrow keys, Enter and Esc work the same way, so a TV remote or keyboard is fine too.
+
+### Clip formats
+
+Settings › Video › **Format** lists only what this computer can encode in hardware: H.264 everywhere, HEVC
+on Macs and recent GPUs, AV1 on NVIDIA RTX 40+, AMD RDNA3+ and Intel Arc. HEVC is about half the size of
+H.264 at the same quality. Turning off "Use the graphics card" records H.264 with x264.
 
 ### Shortcuts (player)
 

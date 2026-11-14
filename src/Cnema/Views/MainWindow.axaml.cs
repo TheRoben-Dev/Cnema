@@ -475,9 +475,6 @@ public partial class MainWindow : Window
                 PadButton.Start, PadButton.View, PadButton.Up, PadButton.Down, PadButton.Left, PadButton.Right,
             };
             OnPad(map[e.Key - Key.F1]);
-            Avalonia.Threading.Dispatcher.UIThread.Post(() => File.AppendAllText(Path.Combine(Path.GetTempPath(), "cnema-pad.log"), "\n" +
-                $"[pad] {map[e.Key - Key.F1]} -> {Focused?.GetType().Name} {(Focused?.DataContext as VideoItemViewModel)?.Title ?? (Focused?.DataContext as FolderViewModel)?.Name}"),
-                Avalonia.Threading.DispatcherPriority.Background);
             e.Handled = true;
             return;
         }
