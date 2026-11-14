@@ -1,0 +1,669 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="using:Cnema.ViewModels"
+        xmlns:c="using:Cnema.Controls"
+        mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="800"
+        x:Class="Cnema.Views.MainWindow"
+        x:DataType="vm:MainViewModel"
+        x:Name="Root"
+        Title="Cnema"
+        Icon="/Assets/cnema.png"
+        Width="1320" Height="840" MinWidth="820" MinHeight="520"
+        WindowStartupLocation="CenterScreen"
+        Background="{StaticResource Bg0}"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaTitleBarHeightHint="52">
+
+  <Panel>
+    <!-- ======================= LIBRARY ======================= -->
+    <Grid ColumnDefinitions="248,*" IsVisible="{Binding !IsPlayerOpen}">
+
+      <!-- Sidebar -->
+      <Border Grid.Column="0" Background="{StaticResource Bg1}" BorderBrush="{StaticResource Line}" BorderThickness="0,0,1,0">
+        <Panel>
+        <Border Background="{StaticResource SidebarGlow}" IsHitTestVisible="False" />
+        <DockPanel Margin="14,0,14,14">
+          <!-- top spacer under the macOS traffic lights / drag area -->
+          <Border x:Name="SidebarInset" DockPanel.Dock="Top" Height="0" IsHitTestVisible="False" />
+
+          <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="10" Margin="6,6,0,22">
+            <Image Source="/Assets/cnema.png" Width="38" Height="38" Margin="-4" />
+            <TextBlock Text="CNEMA" FontSize="17" FontWeight="Black" LetterSpacing="3" VerticalAlignment="Center" />
+          </StackPanel>
+
+          <!-- bottom: add folder + warnings -->
+          <StackPanel DockPanel.Dock="Bottom" Spacing="10">
+            <Border IsVisible="{Binding FfmpegMissing}" Background="{StaticResource AccentSoft}" CornerRadius="8" Padding="10">
+              <StackPanel Spacing="4">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <PathIcon Data="{StaticResource IcWarn}" Width="13" Height="13" Foreground="{StaticResource Accent}" />
+                  <TextBlock Text="ffmpeg not found" FontWeight="SemiBold" FontSize="12" />
+                </StackPanel>
+                <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap"
+                           Text="Thumbnails and clip export need it. Install, then restart:" />
+                <SelectableTextBlock Classes="mono" FontSize="11" Text="{Binding FfmpegHint}" Foreground="{StaticResource Accent}" />
+              </StackPanel>
+            </Border>
+            <Border IsVisible="{Binding HasVlcError}" Background="#26FF6B6B" CornerRadius="8" Padding="10">
+              <TextBlock Text="{Binding VlcError}" FontSize="11" TextWrapping="Wrap" />
+            </Border>
+            <!-- background clipping status -->
+            <Border Classes="clipbar" Classes.on="{Binding IsClipRecording}" Classes.err="{Binding IsClipError}">
+              <StackPanel Spacing="8">
+                <Grid ColumnDefinitions="Auto,*,Auto">
+                  <Ellipse Classes="clipdot" Width="8" Height="8" VerticalAlignment="Center" Margin="2,0,8,0" />
+                  <TextBlock Grid.Column="1" Text="{Binding ClipTitle}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
+                  <ToggleSwitch Grid.Column="2" IsChecked="{Binding IsClipEnabled, Mode=OneWay}" Command="{Binding ToggleClippingCommand}"
+                                OnContent="" OffContent="" MinWidth="0" Margin="0,-6,-6,-6" ToolTip.Tip="Turn background clipping on or off" />
+                </Grid>
+                <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="{Binding ClipDetail}" IsVisible="{Binding HasClipDetail}" />
+                <Button Classes="accent" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Padding="10,7"
+                        Command="{Binding SaveClipCommand}" IsVisible="{Binding IsClipRecording}">
+                  <StackPanel Orientation="Horizontal" Spacing="7">
+                    <PathIcon Data="{StaticResource IcCut}" Width="13" Height="13" />
+                    <TextBlock Text="{Binding SaveClipLabel}" FontWeight="SemiBold" FontSize="12" />
+                  </StackPanel>
+                </Button>
+              </StackPanel>
+            </Border>
+            <Grid ColumnDefinitions="*,Auto">
+              <Button Classes="soft" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                      Command="{Binding AddFolderCommand}">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <PathIcon Data="{StaticResource IcAdd}" Width="14" Height="14" />
+                  <TextBlock Text="Add folder" FontWeight="SemiBold" />
+                </StackPanel>
+              </Button>
+              <Button Grid.Column="1" Classes="soft" Margin="8,0,0,0" Padding="10" VerticalAlignment="Stretch"
+                      Command="{Binding OpenSettingsCommand}" ToolTip.Tip="Settings">
+                <PathIcon Data="{StaticResource IcSettings}" Width="15" Height="15" />
+              </Button>
+            </Grid>
+          </StackPanel>
+
+          <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+              <TextBlock Classes="label" Text="LIBRARY" Margin="10,0,0,8" />
+          <ListBox Classes="nav" ItemsSource="{Binding Folders}" SelectedItem="{Binding SelectedFolder}">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:FolderViewModel">
+                <Grid ColumnDefinitions="Auto,*,Auto,Auto" ToolTip.Tip="{Binding Tooltip}" Background="Transparent">
+                  <Grid.ContextMenu>
+                    <ContextMenu IsVisible="{Binding IsRemovable}">
+                      <MenuItem Header="Show in file manager" Click="OnRevealFolderClick" />
+                      <MenuItem Header="Remove from library" Click="OnRemoveFolderClick" />
+                    </ContextMenu>
+                  </Grid.ContextMenu>
+                  <PathIcon Classes="navicon" Grid.Column="0" Width="15" Height="15" Margin="0,0,10,0"
+                            Foreground="{StaticResource TextDim}"
+                            Data="{Binding Kind, Converter={x:Static c:Converters.NavIcon}}" />
+                  <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="13" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="2" Classes="dim" Text="{Binding Count}" FontSize="11" VerticalAlignment="Center" Margin="6,0,0,0" />
+                  <Button Grid.Column="3" Classes="ghost remove" Padding="3" Margin="4,-4,-4,-4"
+                          IsVisible="{Binding IsRemovable}" ToolTip.Tip="Remove folder"
+                          Command="{Binding #Root.((vm:MainViewModel)DataContext).RemoveFolderCommand}"
+                          CommandParameter="{Binding}">
+                    <PathIcon Data="{StaticResource IcClose}" Width="11" Height="11" Foreground="{StaticResource TextDim}" />
+                  </Button>
+                </Grid>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+              <TextBlock Classes="label" Text="TAGS" Margin="10,22,0,8" IsVisible="{Binding HasTags}" />
+              <ListBox Classes="nav" ItemsSource="{Binding Tags}" SelectedItem="{Binding SelectedTag}" IsVisible="{Binding HasTags}">
+                <ListBox.ItemTemplate>
+                  <DataTemplate x:DataType="vm:FolderViewModel">
+                    <Grid ColumnDefinitions="Auto,*,Auto" ToolTip.Tip="{Binding Tooltip}" Background="Transparent">
+                      <TextBlock Classes="navicon" Grid.Column="0" Text="#" FontSize="14" FontWeight="Bold" Width="15" Margin="0,0,10,0"
+                                 TextAlignment="Center" Foreground="{StaticResource TextDim}" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="13" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="2" Classes="dim" Text="{Binding Count}" FontSize="11" VerticalAlignment="Center" Margin="6,0,0,0" />
+                    </Grid>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+            </StackPanel>
+          </ScrollViewer>
+        </DockPanel>
+        </Panel>
+      </Border>
+
+      <!-- Main pane -->
+      <DockPanel Grid.Column="1">
+        <!-- Toolbar -->
+        <Grid x:Name="Toolbar" DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto,Auto" Margin="28,0,28,0"
+              Height="72" Background="Transparent">
+          <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="2" IsHitTestVisible="False">
+            <TextBlock Text="{Binding HeaderTitle}" FontSize="22" FontWeight="Bold" />
+            <TextBlock Classes="dim" Text="{Binding HeaderCount}" FontSize="12" />
+          </StackPanel>
+          <Panel Grid.Column="1" Width="260" VerticalAlignment="Center" Margin="0,0,10,0">
+            <TextBox Classes="search" Watermark="Search names or #tags" Text="{Binding SearchText}" x:Name="SearchBox" />
+            <PathIcon Data="{StaticResource IcSearch}" Width="15" Height="15" Foreground="{StaticResource TextDim}"
+                      HorizontalAlignment="Left" Margin="12,0,0,0" IsHitTestVisible="False" />
+          </Panel>
+          <ComboBox Grid.Column="2" VerticalAlignment="Center" MinWidth="170" Margin="0,0,6,0"
+                    ItemsSource="{x:Static vm:MainViewModel.SortModes}" SelectedIndex="{Binding SortIndex}"
+                    CornerRadius="10" Background="{StaticResource Bg2}" BorderBrush="{StaticResource Line}" />
+          <Button Grid.Column="3" Classes="ghost" VerticalAlignment="Center" ToolTip.Tip="Rescan folders"
+                  Command="{Binding RescanCommand}">
+            <PathIcon Data="{StaticResource IcRefresh}" />
+          </Button>
+        </Grid>
+
+        <!-- Scan progress strip -->
+        <Panel DockPanel.Dock="Top" Height="22" Margin="28,0">
+          <StackPanel Orientation="Horizontal" Spacing="10" IsVisible="{Binding IsScanning}">
+            <ProgressBar Width="140" Height="3" MinHeight="3" Value="{Binding ScanProgress}" VerticalAlignment="Center"
+                         IsIndeterminate="{Binding IsScanIndeterminate}" />
+            <TextBlock Classes="dim" Text="{Binding ScanStatus}" FontSize="11" VerticalAlignment="Center" />
+          </StackPanel>
+        </Panel>
+
+        <Panel>
+          <!-- Grid of cards (virtualized) -->
+          <ScrollViewer x:Name="GridScroller" HorizontalScrollBarVisibility="Disabled">
+            <ItemsRepeater x:Name="VideoGrid" ItemsSource="{Binding Videos}" Margin="20,0,20,24">
+              <ItemsRepeater.Layout>
+                <UniformGridLayout MinItemWidth="250" MinItemHeight="250" MinRowSpacing="6" MinColumnSpacing="6"
+                                   ItemsStretch="Fill" />
+              </ItemsRepeater.Layout>
+              <ItemsRepeater.ItemTemplate>
+                <DataTemplate x:DataType="vm:VideoItemViewModel">
+                  <Button Classes="card" Padding="8"
+                          Command="{Binding #Root.((vm:MainViewModel)DataContext).OpenCommand}"
+                          CommandParameter="{Binding}" ToolTip.Tip="{Binding Entry.Path}" ToolTip.ShowDelay="900">
+                    <Button.ContextMenu>
+                      <ContextMenu>
+                        <MenuItem Header="Play" Click="OnPlayItemClick" />
+                        <MenuItem Header="Rename, tag or move…" Click="OnEditItemClick" />
+                        <MenuItem Header="Add to / remove from favourites" Click="OnFavoriteItemClick" />
+                        <Separator />
+                        <MenuItem Header="Show in file manager" Click="OnRevealItemClick" />
+                      </ContextMenu>
+                    </Button.ContextMenu>
+                    <StackPanel Spacing="9">
+                      <Border Classes="thumb" CornerRadius="9" ClipToBounds="True" Background="{StaticResource Bg2}"
+                              Height="{Binding $parent[Button].Bounds.Width, Converter={x:Static c:Converters.SixteenByNine}}">
+                        <Panel>
+                          <PathIcon Data="{StaticResource IcFilm}" Width="34" Height="34" Foreground="{StaticResource Line}" />
+                          <Image Source="{Binding Thumbnail}" Stretch="UniformToFill" />
+                          <Border Classes="playhint" Background="#66000000">
+                            <Border Width="46" Height="46" CornerRadius="23" Background="{StaticResource Brand}">
+                              <PathIcon Data="{StaticResource IcPlay}" Width="20" Height="20" Foreground="#FFFFFF" Margin="3,0,0,0" />
+                            </Border>
+                          </Border>
+                          <Border Classes="ring" CornerRadius="9" BorderThickness="2" BorderBrush="{StaticResource Brand}" />
+                          <Border Classes="badge" Classes.hi="{Binding IsHighRes}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="8"
+                                  IsVisible="{Binding HasResolution}">
+                            <TextBlock Text="{Binding ResolutionBadge}" />
+                          </Border>
+                          <Border Classes="badge" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="8"
+                                  IsVisible="{Binding HasDuration}">
+                            <TextBlock Text="{Binding DurationText}" />
+                          </Border>
+                          <ProgressBar VerticalAlignment="Bottom" Height="3" MinHeight="3" CornerRadius="0"
+                                       Maximum="1" Value="{Binding Progress}" IsVisible="{Binding HasProgress}"
+                                       Background="#55000000" />
+                          <!-- favourite marker (always) and quick actions (on hover) -->
+                          <Border Classes="badge fav" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="8" Padding="5"
+                                  IsVisible="{Binding IsFavorite}">
+                            <PathIcon Data="{StaticResource IcStar}" Width="12" Height="12" Foreground="#FFD166" />
+                          </Border>
+                          <StackPanel Classes="actions" Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="6">
+                            <Button Classes="mini" ToolTip.Tip="Rename, tag or move"
+                                    Command="{Binding #Root.((vm:MainViewModel)DataContext).BeginEditCommand}" CommandParameter="{Binding}">
+                              <PathIcon Data="{StaticResource IcEdit}" Width="13" Height="13" />
+                            </Button>
+                            <Button Classes="mini" ToolTip.Tip="Favourite"
+                                    Command="{Binding #Root.((vm:MainViewModel)DataContext).ToggleFavoriteCommand}" CommandParameter="{Binding}">
+                              <Panel>
+                                <PathIcon Data="{StaticResource IcStarOutline}" Width="13" Height="13" IsVisible="{Binding !IsFavorite}" />
+                                <PathIcon Data="{StaticResource IcStar}" Width="13" Height="13" Foreground="#FFD166" IsVisible="{Binding IsFavorite}" />
+                              </Panel>
+                            </Button>
+                          </StackPanel>
+                        </Panel>
+                      </Border>
+                      <StackPanel Spacing="3" Margin="2,0,2,4">
+                        <TextBlock Text="{Binding Title}" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Classes="dim" Text="{Binding Details}" FontSize="11" TextTrimming="CharacterEllipsis" />
+                        <ItemsControl ItemsSource="{Binding Tags}" IsVisible="{Binding HasTags}" Margin="0,3,0,0" Height="20" ClipToBounds="True">
+                          <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                          </ItemsControl.ItemsPanel>
+                          <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="x:String">
+                              <Border Classes="tag"><TextBlock Text="{Binding}" /></Border>
+                            </DataTemplate>
+                          </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                      </StackPanel>
+                    </StackPanel>
+                  </Button>
+                </DataTemplate>
+              </ItemsRepeater.ItemTemplate>
+            </ItemsRepeater>
+          </ScrollViewer>
+
+          <!-- Empty: no folders yet -->
+          <StackPanel IsVisible="{Binding HasNoFolders}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                      Spacing="14" MaxWidth="380" Margin="0,0,0,60">
+            <Border Width="72" Height="72" CornerRadius="20" Background="{StaticResource Bg2}" HorizontalAlignment="Center">
+              <PathIcon Data="{StaticResource IcLibrary}" Width="32" Height="32" Foreground="{StaticResource Cyan}" />
+            </Border>
+            <TextBlock Text="Build your library" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center" />
+            <TextBlock Classes="dim" TextAlignment="Center" TextWrapping="Wrap" FontSize="13"
+                       Text="Add the folders where you keep videos. Cnema scans them (including subfolders), builds thumbnails, and keeps watching for new files." />
+            <Button Classes="accent" HorizontalAlignment="Center" Command="{Binding AddFolderCommand}" Margin="0,6,0,0">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <PathIcon Data="{StaticResource IcAdd}" Width="14" Height="14" />
+                <TextBlock Text="Add a folder" />
+              </StackPanel>
+            </Button>
+          </StackPanel>
+
+          <!-- Empty: nothing matches -->
+          <StackPanel IsVisible="{Binding HasNoResults}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="6" Margin="0,0,0,60">
+            <TextBlock Text="No videos here" FontSize="17" FontWeight="SemiBold" HorizontalAlignment="Center" />
+            <TextBlock Classes="dim" Text="Try another folder or search term." FontSize="13" HorizontalAlignment="Center" />
+          </StackPanel>
+        </Panel>
+      </DockPanel>
+    </Grid>
+
+    <!-- ======================= EDIT DETAILS ======================= -->
+    <Border x:Name="EditScrim" Background="#B3050609" IsVisible="{Binding IsEditing}">
+      <Border Width="460" VerticalAlignment="Center" HorizontalAlignment="Center" Background="{StaticResource Bg1}"
+              BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="16" Padding="22"
+              BoxShadow="0 18 60 0 #80000000" DataContext="{Binding Editor}" x:DataType="vm:EditViewModel" x:Name="EditCard">
+        <StackPanel Spacing="14">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="Edit details" FontSize="17" FontWeight="Bold" VerticalAlignment="Center" />
+            <ToggleButton Grid.Column="1" Classes="ghost" IsChecked="{Binding Favorite}" ToolTip.Tip="Favourite">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <PathIcon Data="{StaticResource IcStar}" Width="14" Height="14" />
+                <TextBlock Text="Favourite" FontSize="12" FontWeight="SemiBold" />
+              </StackPanel>
+            </ToggleButton>
+          </Grid>
+
+          <StackPanel Spacing="6">
+            <TextBlock Classes="label" Text="FILE NAME" />
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBox x:Name="EditName" Text="{Binding Name}" CornerRadius="8" />
+              <TextBlock Grid.Column="1" Classes="dim mono" Text="{Binding Extension}" VerticalAlignment="Center" Margin="8,0,0,0" />
+            </Grid>
+            <TextBlock Classes="dim" FontSize="11" Text="Renames the actual file on disk." />
+          </StackPanel>
+
+          <StackPanel Spacing="6" IsVisible="{Binding CanMove}">
+            <TextBlock Classes="label" Text="LIBRARY FOLDER" />
+            <ComboBox ItemsSource="{Binding Folders}" SelectedItem="{Binding Folder}" HorizontalAlignment="Stretch" CornerRadius="8">
+              <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:FolderViewModel">
+                  <TextBlock Text="{Binding Name}" ToolTip.Tip="{Binding Path}" />
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+            <TextBlock Classes="dim" FontSize="11" Text="Picking another folder moves the file there." />
+          </StackPanel>
+
+          <StackPanel Spacing="8">
+            <TextBlock Classes="label" Text="TAGS" />
+            <ItemsControl ItemsSource="{Binding Tags}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="x:String">
+                  <Border Classes="tag big">
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                      <TextBlock Text="{Binding}" VerticalAlignment="Center" />
+                      <Button Classes="ghost" Padding="2" Click="OnRemoveTagClick" ToolTip.Tip="Remove tag">
+                        <PathIcon Data="{StaticResource IcClose}" Width="9" Height="9" />
+                      </Button>
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <TextBox x:Name="EditTagInput" Text="{Binding TagInput}" Watermark="Add a tag and press Enter" CornerRadius="8" />
+            <ItemsControl ItemsSource="{Binding Suggestions}" IsVisible="{Binding HasSuggestions}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="x:String">
+                  <Button Classes="suggest" Click="OnSuggestedTagClick">
+                    <TextBlock Text="{Binding StringFormat='+ {0}'}" />
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+
+          <TextBlock Text="{Binding Error}" Foreground="{StaticResource Danger}" FontSize="12" TextWrapping="Wrap"
+                     IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+
+          <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" Margin="0,4,0,0">
+            <Button Classes="soft" Content="Cancel" Command="{Binding #Root.((vm:MainViewModel)DataContext).CancelEditCommand}" />
+            <Button Classes="accent" Content="Save" Command="{Binding #Root.((vm:MainViewModel)DataContext).SaveEditCommand}" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+    </Border>
+
+    <!-- ======================= SETTINGS ======================= -->
+    <Border x:Name="SettingsScrim" Background="#B3050609" IsVisible="{Binding IsSettingsOpen}">
+      <Border Width="580" MaxHeight="720" Margin="0,40" VerticalAlignment="Center" HorizontalAlignment="Center"
+              Background="{StaticResource Bg1}" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="16"
+              BoxShadow="0 18 60 0 #80000000" DataContext="{Binding SettingsEditor}" x:DataType="vm:SettingsViewModel">
+        <DockPanel>
+          <TextBlock DockPanel.Dock="Top" Text="Settings" FontSize="17" FontWeight="Bold" Margin="24,22,24,10" />
+
+          <Border DockPanel.Dock="Bottom" BorderBrush="{StaticResource Line}" BorderThickness="0,1,0,0" Padding="24,14">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+              <Button Classes="ghost" Content="Quit Cnema" Click="OnQuitClick" FontSize="12"
+                      ToolTip.Tip="Stops clipping and closes Cnema completely" />
+              <TextBlock Grid.Column="1" Text="{Binding Error}" Foreground="{StaticResource Danger}" FontSize="12" TextWrapping="Wrap"
+                         VerticalAlignment="Center" Margin="12,0" />
+              <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
+                <Button Classes="soft" Content="Cancel" Command="{Binding #Root.((vm:MainViewModel)DataContext).CancelSettingsCommand}" />
+                <Button Classes="accent" Content="Save" Command="{Binding #Root.((vm:MainViewModel)DataContext).SaveSettingsCommand}" />
+              </StackPanel>
+            </Grid>
+          </Border>
+
+          <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="12" Margin="24,4,24,20">
+
+              <TextBlock Classes="label" Text="STARTUP" />
+              <Border Classes="group">
+                <StackPanel>
+                  <Grid Classes="row" ColumnDefinitions="*,Auto">
+                    <TextBlock Text="Launch Cnema when I log in" />
+                    <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding LaunchAtLogin}" />
+                  </Grid>
+                  <Border Classes="sep" />
+                  <Grid Classes="row" ColumnDefinitions="*,Auto">
+                    <StackPanel Spacing="2">
+                      <TextBlock Text="{Binding BackgroundLabel}" TextWrapping="Wrap" />
+                      <TextBlock Classes="dim" FontSize="11" Text="Always on while clipping is enabled." />
+                    </StackPanel>
+                    <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding KeepInBackground}" />
+                  </Grid>
+                </StackPanel>
+              </Border>
+
+              <TextBlock Classes="label" Text="CLIPPING" Margin="0,8,0,0" />
+              <Border Classes="group">
+                <StackPanel>
+                  <Grid Classes="row" ColumnDefinitions="*,Auto">
+                    <StackPanel Spacing="2">
+                      <TextBlock Text="Background clipping" />
+                      <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="{Binding Footprint}" />
+                    </StackPanel>
+                    <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding ClipEnabled}" />
+                  </Grid>
+                  <Border Classes="sep" />
+                  <Grid Classes="row" ColumnDefinitions="*,220">
+                    <TextBlock Text="Clip length" />
+                    <ComboBox Grid.Column="1" Classes="field" ItemsSource="{x:Static vm:SettingsViewModel.Lengths}" SelectedItem="{Binding Length}" />
+                  </Grid>
+                  <Border Classes="sep" />
+                  <Grid Classes="row" ColumnDefinitions="*,Auto">
+                    <TextBlock Text="Save clip hotkey" />
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
+                      <ToggleButton Classes="mod" IsChecked="{Binding HotkeyCtrl}" Content="{Binding CtrlLabel}" />
+                      <ToggleButton Classes="mod" IsChecked="{Binding HotkeyAlt}" Content="{Binding AltLabel}" />
+                      <ToggleButton Classes="mod" IsChecked="{Binding HotkeyShift}" Content="{Binding ShiftLabel}" />
+                      <ToggleButton Classes="mod" IsChecked="{Binding HotkeyMeta}" Content="{Binding MetaLabel}" />
+                      <ComboBox Classes="field" Width="74" ItemsSource="{x:Static vm:SettingsViewModel.Keys}" SelectedItem="{Binding HotkeyKey}" />
+                    </StackPanel>
+                  </Grid>
+                  <Border Classes="sep" />
+                  <Grid Classes="row" ColumnDefinitions="*,Auto">
+                    <StackPanel Spacing="2">
+                      <TextBlock Text="Save clips to" />
+                      <TextBlock Classes="dim mono" FontSize="11" Text="{Binding Folder}" TextTrimming="PathSegmentEllipsis" MaxWidth="360" HorizontalAlignment="Left" />
+                    </StackPanel>
+                    <Button Grid.Column="1" Classes="soft" Content="Choose…" Command="{Binding BrowseFolderCommand}" />
+                  </Grid>
+                  <Border Classes="sep" />
+                  <Grid Classes="row" ColumnDefinitions="*,Auto">
+                    <TextBlock Text="Notify me when a clip is saved" />
+                    <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding Notify}" />
+                  </Grid>
+                </StackPanel>
+              </Border>
+
+              <TextBlock Classes="label" Text="VIDEO" Margin="0,8,0,0" />
+              <Border Classes="group">
+                <StackPanel>
+                  <Grid Classes="row" ColumnDefinitions="*,220" IsVisible="{Binding HasSeveralScreens}">
+                    <TextBlock Text="Screen" />
+                    <ComboBox Grid.Column="1" Classes="field" ItemsSource="{Binding Screens}" SelectedIndex="{Binding ScreenIndex}" />
+                  </Grid>
+                  <Border Classes="sep" IsVisible="{Binding HasSeveralScreens}" />
+                  <Grid Classes="row" ColumnDefinitions="*,220">
+                    <TextBlock Text="Resolution" />
+                    <ComboBox Grid.Column="1" Classes="field" ItemsSource="{x:Static vm:SettingsViewModel.Resolutions}" SelectedItem="{Binding Resolution}" />
+                  </Grid>
+                  <Border Classes="sep" />
+                  <Grid Classes="row" ColumnDefinitions="*,220">
+                    <TextBlock Text="Frame rate" />
+                    <ComboBox Grid.Column="1" Classes="field" ItemsSource="{x:Static vm:SettingsViewModel.FrameRates}" SelectedItem="{Binding FrameRate}" />
+                  </Grid>
+                  <Border Classes="sep" />
+                  <Grid Classes="row" ColumnDefinitions="*,220">
+                    <TextBlock Text="Video bitrate" />
+                    <ComboBox Grid.Column="1" Classes="field" ItemsSource="{x:Static vm:SettingsViewModel.Bitrates}" SelectedItem="{Binding Bitrate}" />
+                  </Grid>
+                  <Border Classes="sep" />
+                  <Grid Classes="row" ColumnDefinitions="*,Auto">
+                    <StackPanel Spacing="2">
+                      <TextBlock Text="Use the graphics card to encode" />
+                      <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap"
+                                 Text="Much lighter on the CPU while gaming. Falls back to software if unavailable." />
+                    </StackPanel>
+                    <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding HardwareEncoder}" />
+                  </Grid>
+                </StackPanel>
+              </Border>
+
+              <TextBlock Classes="label" Text="AUDIO" Margin="0,8,0,0" />
+              <Border Classes="group">
+                <StackPanel>
+                  <Grid Classes="row" ColumnDefinitions="*,260">
+                    <TextBlock Text="Audio device" />
+                    <ComboBox Grid.Column="1" Classes="field" ItemsSource="{Binding AudioDevices}" SelectedItem="{Binding Audio1}" />
+                  </Grid>
+                  <Border Classes="sep" />
+                  <Grid Classes="row" ColumnDefinitions="*,260">
+                    <StackPanel Spacing="2">
+                      <TextBlock Text="Second device" />
+                      <TextBlock Classes="dim" FontSize="11" Text="Mixed in, e.g. your microphone." />
+                    </StackPanel>
+                    <ComboBox Grid.Column="1" Classes="field" ItemsSource="{Binding AudioDevices}" SelectedItem="{Binding Audio2}" />
+                  </Grid>
+                  <Border Classes="sep" />
+                  <Grid Classes="row" ColumnDefinitions="*,220">
+                    <TextBlock Text="Audio bitrate" />
+                    <ComboBox Grid.Column="1" Classes="field" ItemsSource="{x:Static vm:SettingsViewModel.AudioBitrates}" SelectedItem="{Binding AudioBitrate}" />
+                  </Grid>
+                </StackPanel>
+              </Border>
+              <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="{Binding AudioHint}" Margin="4,0" />
+            </StackPanel>
+          </ScrollViewer>
+        </DockPanel>
+      </Border>
+    </Border>
+
+    <!-- ======================= TOAST ======================= -->
+    <Border HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,26" Padding="16,10" CornerRadius="10"
+            Background="{StaticResource Bg3}" BorderBrush="{StaticResource Accent}" BorderThickness="1"
+            BoxShadow="0 8 30 0 #80000000" IsHitTestVisible="False"
+            IsVisible="{Binding Toast, Converter={x:Static ObjectConverters.IsNotNull}}">
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <PathIcon Data="{StaticResource IcCut}" Width="13" Height="13" Foreground="{StaticResource Cyan}" />
+        <TextBlock Text="{Binding Toast}" FontSize="12" FontWeight="SemiBold" />
+      </StackPanel>
+    </Border>
+
+    <!-- ======================= PLAYER ======================= -->
+    <Grid x:Name="PlayerView" RowDefinitions="Auto,*,Auto" IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).IsPlayerOpen}" Background="Black"
+          DataContext="{Binding Player}" x:DataType="vm:PlayerViewModel">
+
+      <!-- Top bar -->
+      <Border Grid.Row="0" Background="{StaticResource Bg1}" Height="52" x:Name="PlayerTopBar">
+        <Grid x:Name="PlayerTopGrid" ColumnDefinitions="Auto,*">
+          <Button Classes="ghost" Command="{Binding #Root.((vm:MainViewModel)DataContext).ClosePlayerCommand}"
+                  ToolTip.Tip="Back to library (Esc)" VerticalAlignment="Center" Margin="12,0,8,0">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <PathIcon Data="{StaticResource IcBack}" Width="16" Height="16" />
+              <TextBlock Text="Library" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center" IsHitTestVisible="False">
+            <TextBlock Text="{Binding Title}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" MaxWidth="560" />
+            <TextBlock Classes="dim" Text="{Binding Subtitle}" FontSize="12" VerticalAlignment="Center" />
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <!-- Video -->
+      <Panel Grid.Row="1">
+        <c:VideoSurface x:Name="Surface" Frames="{Binding Frames}" />
+        <Border Background="Transparent" x:Name="SurfaceHit" />
+        <Border IsVisible="{Binding Toast, Converter={x:Static ObjectConverters.IsNotNull}}"
+                HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,18,0,0"
+                Background="#E614151B" CornerRadius="10" Padding="14,8" BorderBrush="{StaticResource Line}" BorderThickness="1">
+          <TextBlock Text="{Binding Toast}" FontSize="13" />
+        </Border>
+      </Panel>
+
+      <!-- Controls -->
+      <Border Grid.Row="2" Background="{StaticResource Bg1}" BorderBrush="{StaticResource Line}" BorderThickness="0,1,0,0"
+              Padding="18,4,18,14" x:Name="ControlsPanel">
+        <StackPanel Spacing="6">
+          <c:TrimTimeline Duration="{Binding Duration}" Position="{Binding Position}"
+                          InPoint="{Binding InPoint}" OutPoint="{Binding OutPoint}"
+                          SeekCommand="{Binding SeekCommand}" Accent="{StaticResource Accent}" RangeBrush="{StaticResource Cyan}" />
+
+          <!-- Transport row -->
+          <Grid ColumnDefinitions="*,Auto,*">
+            <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+              <TextBlock Classes="mono" Text="{Binding PositionText}" FontSize="13" />
+              <TextBlock Classes="dim mono" Text="/" FontSize="13" Margin="4,0" />
+              <TextBlock Classes="dim mono" Text="{Binding DurationText}" FontSize="13" />
+            </StackPanel>
+
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
+              <Button Classes="ghost" Command="{Binding StepFrameBackCommand}" ToolTip.Tip="Previous frame (,)" VerticalAlignment="Center">
+                <PathIcon Data="{StaticResource IcFramePrev}" />
+              </Button>
+              <Button Classes="ghost" Command="{Binding SkipBackCommand}" ToolTip.Tip="Back 5 s (←)" VerticalAlignment="Center">
+                <PathIcon Data="{StaticResource IcRewind}" />
+              </Button>
+              <Button Classes="play" Command="{Binding TogglePlayCommand}" ToolTip.Tip="Play / pause (Space)" Margin="6,0">
+                <Panel>
+                  <PathIcon Data="{StaticResource IcPlay}" Width="20" Height="20" Margin="3,0,0,0" Foreground="{StaticResource Bg0}" IsVisible="{Binding !IsPlaying}" />
+                  <PathIcon Data="{StaticResource IcPause}" Width="20" Height="20" Foreground="{StaticResource Bg0}" IsVisible="{Binding IsPlaying}" />
+                </Panel>
+              </Button>
+              <Button Classes="ghost" Command="{Binding SkipForwardCommand}" ToolTip.Tip="Forward 5 s (→)" VerticalAlignment="Center">
+                <PathIcon Data="{StaticResource IcForward}" />
+              </Button>
+              <Button Classes="ghost" Command="{Binding StepFrameCommand}" ToolTip.Tip="Next frame (.)" VerticalAlignment="Center">
+                <PathIcon Data="{StaticResource IcFrameNext}" />
+              </Button>
+            </StackPanel>
+
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right" VerticalAlignment="Center">
+              <Button Classes="ghost" Command="{Binding CycleRateCommand}" ToolTip.Tip="Playback speed" MinWidth="52">
+                <TextBlock Text="{Binding Rate, StringFormat='{}{0:0.##}×'}" FontSize="13" FontWeight="SemiBold" />
+              </Button>
+              <Button Classes="ghost" Command="{Binding ToggleMuteCommand}" ToolTip.Tip="Mute (M)">
+                <Panel>
+                  <PathIcon Data="{StaticResource IcVolume}" IsVisible="{Binding !IsMuted}" />
+                  <PathIcon Data="{StaticResource IcMute}" IsVisible="{Binding IsMuted}" />
+                </Panel>
+              </Button>
+              <Slider Width="110" Minimum="0" Maximum="125" Value="{Binding Volume}" VerticalAlignment="Center" Margin="0,-6,8,-6" />
+              <Button Classes="ghost" Click="OnFullscreenClick" ToolTip.Tip="Fullscreen (F)">
+                <PathIcon Data="{StaticResource IcFullscreen}" />
+              </Button>
+            </StackPanel>
+          </Grid>
+
+          <!-- Trim strip -->
+          <Border Background="{StaticResource Bg2}" CornerRadius="12" Padding="12,8" Margin="0,4,0,0">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+              <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <PathIcon Data="{StaticResource IcCut}" Width="15" Height="15" Foreground="{StaticResource Cyan}" />
+                <TextBlock Classes="label" Text="TRIM" VerticalAlignment="Center" Margin="0,0,8,0" />
+
+                <Button Classes="soft" Command="{Binding SetInCommand}" ToolTip.Tip="Set in point at playhead (I)">
+                  <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Border Classes="key"><TextBlock Text="I" /></Border>
+                    <TextBlock Text="In" FontWeight="SemiBold" />
+                    <TextBlock Classes="mono" Text="{Binding InText}" Foreground="{StaticResource Cyan}" />
+                  </StackPanel>
+                </Button>
+                <Button Classes="soft" Command="{Binding SetOutCommand}" ToolTip.Tip="Set out point at playhead (O)">
+                  <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Border Classes="key"><TextBlock Text="O" /></Border>
+                    <TextBlock Text="Out" FontWeight="SemiBold" />
+                    <TextBlock Classes="mono" Text="{Binding OutText}" Foreground="{StaticResource Cyan}" />
+                  </StackPanel>
+                </Button>
+                <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding HasRange}" VerticalAlignment="Center" Margin="6,0,0,0">
+                  <TextBlock Classes="dim" Text="Length" FontSize="12" VerticalAlignment="Center" />
+                  <TextBlock Classes="mono" Text="{Binding RangeText}" FontSize="12" VerticalAlignment="Center" />
+                  <Button Classes="ghost" Command="{Binding PreviewRangeCommand}" ToolTip.Tip="Play selection (P)" Margin="6,0,0,0">
+                    <PathIcon Data="{StaticResource IcPlay}" Width="15" Height="15" />
+                  </Button>
+                  <ToggleButton Classes="ghost" IsChecked="{Binding LoopRange}" ToolTip.Tip="Loop selection (L)">
+                    <PathIcon Data="{StaticResource IcLoop}" Width="15" Height="15" />
+                  </ToggleButton>
+                  <Button Classes="ghost" Command="{Binding ClearRangeCommand}" ToolTip.Tip="Clear in/out (X)">
+                    <PathIcon Data="{StaticResource IcClose}" Width="14" Height="14" />
+                  </Button>
+                </StackPanel>
+              </StackPanel>
+
+              <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                <Border Background="{StaticResource Bg1}" CornerRadius="8" Padding="3">
+                  <StackPanel Orientation="Horizontal">
+                    <RadioButton Classes="seg" GroupName="mode" Content="Lossless" IsChecked="{Binding !PreciseExport}"
+                                 ToolTip.Tip="Stream copy: instant, no quality loss. Start snaps to the nearest earlier keyframe." />
+                    <RadioButton Classes="seg" GroupName="mode" Content="Precise" IsChecked="{Binding PreciseExport}"
+                                 ToolTip.Tip="Re-encode to H.264/AAC MP4: frame-accurate cut, slower." />
+                  </StackPanel>
+                </Border>
+                <Button Classes="accent" Command="{Binding ExportCommand}" IsVisible="{Binding !IsExporting}"
+                        ToolTip.Tip="Export clip (E)">
+                  <StackPanel Orientation="Horizontal" Spacing="8">
+                    <PathIcon Data="{StaticResource IcExport}" Width="15" Height="15" />
+                    <TextBlock Text="Export clip" />
+                  </StackPanel>
+                </Button>
+                <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsExporting}">
+                  <ProgressBar Width="150" Height="6" MinHeight="6" Value="{Binding ExportProgress}" VerticalAlignment="Center" CornerRadius="3" />
+                  <TextBlock Classes="mono" FontSize="12" Text="{Binding ExportProgress, StringFormat='{}{0:0}%'}" VerticalAlignment="Center" />
+                  <Button Classes="ghost" Command="{Binding CancelExportCommand}" ToolTip.Tip="Cancel export">
+                    <PathIcon Data="{StaticResource IcClose}" Width="14" Height="14" />
+                  </Button>
+                </StackPanel>
+              </StackPanel>
+            </Grid>
+          </Border>
+        </StackPanel>
+      </Border>
+    </Grid>
+  </Panel>
+</Window>

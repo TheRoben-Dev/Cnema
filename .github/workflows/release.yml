@@ -36,8 +36,8 @@ jobs:
         with:
           tag_name: ${{ env.TAG }}
           target_commitish: ${{ github.sha }}
-          name: Cinema ${{ env.TAG }}
+          name: Cnema ${{ env.TAG }}
           generate_release_notes: true
           files: |
-            Cinema-*.zip
-            Cinema-*.tar.gz
+            Cnema-*.zip
+            Cnema-*.tar.gz

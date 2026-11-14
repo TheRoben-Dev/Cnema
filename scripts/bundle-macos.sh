@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds dist/Cinema.app with everything inside it: the .NET runtime, libVLC and its plugins,
+# Builds dist/Cnema.app with everything inside it: the .NET runtime, libVLC and its plugins,
 # ffmpeg/ffprobe and the app icon. Nothing else needs to be installed.
 # Usage: scripts/bundle-macos.sh [osx-arm64|osx-x64] [version]
 set -euo pipefail
@@ -7,21 +7,21 @@ cd "$(dirname "$0")/.."
 
 RID="${1:-osx-$( [ "$(uname -m)" = "arm64" ] && echo arm64 || echo x64 )}"
 VERSION="${2:-0.1.0}"
-APP="dist/Cinema.app"
+APP="dist/Cnema.app"
 
 rm -rf "$APP" "dist/publish-$RID"
-dotnet publish src/Cinema/Cinema.csproj -c Release -r "$RID" --self-contained true \
+dotnet publish src/Cnema/Cnema.csproj -c Release -r "$RID" --self-contained true \
   -p:Version="$VERSION" -p:DebugType=none -o "dist/publish-$RID"
 
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp -R "dist/publish-$RID/." "$APP/Contents/MacOS/"
-cp packaging/cinema.icns "$APP/Contents/Resources/cinema.icns"
+cp packaging/cnema.icns "$APP/Contents/Resources/cnema.icns"
 sed "s/__VERSION__/$VERSION/g" packaging/Info.plist > "$APP/Contents/Info.plist"
-chmod +x "$APP/Contents/MacOS/Cinema"
+chmod +x "$APP/Contents/MacOS/Cnema"
 cp LICENSE THIRD-PARTY-NOTICES.md "$APP/Contents/Resources/"
 
-# ffmpeg + ffprobe (skip with CINEMA_SKIP_FFMPEG=1 to build offline)
-if [ "${CINEMA_SKIP_FFMPEG:-0}" != "1" ]; then
+# ffmpeg + ffprobe (skip with CNEMA_SKIP_FFMPEG=1 to build offline)
+if [ "${CNEMA_SKIP_FFMPEG:-0}" != "1" ]; then
   scripts/fetch-ffmpeg.sh "$RID" "$APP/Contents/MacOS/tools"
 fi
 
