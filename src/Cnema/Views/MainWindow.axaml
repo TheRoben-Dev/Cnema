@@ -467,6 +467,19 @@
                     <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding CheckForUpdates}" />
                   </Grid>
                   <Border Classes="sep" />
+                  <Grid Classes="row" ColumnDefinitions="*,Auto,Auto">
+                    <StackPanel Spacing="2">
+                      <TextBlock Text="{Binding #Root.((vm:MainViewModel)DataContext).VersionText}" />
+                      <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap"
+                                 Text="{Binding #Root.((vm:MainViewModel)DataContext).UpdateStatus}" />
+                    </StackPanel>
+                    <Button Grid.Column="1" Classes="accent" Content="Get the update" Margin="0,0,8,0"
+                            IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).HasUpdate}"
+                            Command="{Binding #Root.((vm:MainViewModel)DataContext).OpenUpdateCommand}" />
+                    <Button Grid.Column="2" Classes="soft" Content="Check now"
+                            Command="{Binding #Root.((vm:MainViewModel)DataContext).CheckForUpdatesNowCommand}" />
+                  </Grid>
+                  <Border Classes="sep" />
                   <Grid Classes="row" ColumnDefinitions="*,Auto">
                     <StackPanel Spacing="2">
                       <TextBlock Text="{Binding BackgroundLabel}" TextWrapping="Wrap" />

@@ -20,7 +20,10 @@ public static class UpdateService
     public static string CurrentText => Current.ToString(3);
 
     /// <summary>The newer release, or null when up to date or when GitHub can't be reached.</summary>
-    public static async Task<UpdateInfo?> CheckAsync(CancellationToken ct = default)
+    public static async Task<UpdateInfo?> CheckAsync(CancellationToken ct = default) => (await CheckDetailedAsync(ct)).Update;
+
+    /// <summary>Like <see cref="CheckAsync"/>, but also says why nothing came back.</summary>
+    public static async Task<(UpdateInfo? Update, string? Error)> CheckDetailedAsync(CancellationToken ct = default)
     {
         try
         {
@@ -30,12 +33,19 @@ public static class UpdateService
             using var doc = JsonDocument.Parse(await http.GetStringAsync(Api, ct));
             var latest = Parse(doc.RootElement.GetProperty("tag_name").GetString());
             var url = doc.RootElement.TryGetProperty("html_url", out var u) ? u.GetString() : null;
-            return latest is not null && latest > Current ? new UpdateInfo(latest, url ?? ReleasesPage) : null;
+            Log.Info($"Update check: running {CurrentText}, latest release {latest?.ToString(3) ?? "unreadable"}");
+            return (latest is not null && latest > Current ? new UpdateInfo(latest, url ?? ReleasesPage) : null, null);
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            // GitHub answers 404 for a repository that is private or has no published release.
+            Log.Warn("Update check failed: the release list is not public (404)");
+            return (null, "the release list is not publicly readable");
         }
         catch (Exception ex)
         {
-            Log.Info("Update check skipped: " + ex.Message);
-            return null;
+            Log.Warn("Update check failed: " + ex.Message);
+            return (null, ex.Message);
         }
     }
 

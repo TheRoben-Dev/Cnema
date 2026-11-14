@@ -58,7 +58,48 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     {
         if (!_settings.Current.CheckForUpdates) return;
         await Task.Delay(TimeSpan.FromSeconds(4)); // let startup finish first
-        Update = await UpdateService.CheckAsync();
+        await CheckForUpdatesCoreAsync(announce: true);
+        // Cnema usually stays running in the background for days, so one check at launch is not
+        // enough: a release published after login would never be seen.
+        if (_updateTimer is null)
+        {
+            _updateTimer = new DispatcherTimer { Interval = TimeSpan.FromHours(3) };
+            _updateTimer.Tick += async (_, _) =>
+            {
+                if (_settings.Current.CheckForUpdates) await CheckForUpdatesCoreAsync(announce: true);
+            };
+            _updateTimer.Start();
+        }
+    }
+
+    private DispatcherTimer? _updateTimer;
+    private Version? _announced;
+    [ObservableProperty] private string _updateStatus = "";
+
+    private async Task<string?> CheckForUpdatesCoreAsync(bool announce)
+    {
+        var (found, error) = await UpdateService.CheckDetailedAsync();
+        if (error is null) Update = found;
+        else if (announce) UpdateStatus = "Couldn't check for updates: " + error;
+        // One system notification per new version, so it is noticed while Cnema sits in the tray.
+        if (announce && found is not null && found.Version != _announced)
+        {
+            _announced = found.Version;
+            PlatformShell.Notify("Cnema update", $"Version {found.Version.ToString(3)} is available. Open Cnema to get it.");
+        }
+        BackgroundStateChanged?.Invoke();
+        return error;
+    }
+
+    /// <summary>The "Check now" button in Settings: always says what it found.</summary>
+    [RelayCommand]
+    private async Task CheckForUpdatesNowAsync()
+    {
+        UpdateStatus = "Checking…";
+        var error = await CheckForUpdatesCoreAsync(announce: false);
+        UpdateStatus = error is not null ? "Couldn't check for updates: " + error
+            : Update is { } u ? $"Version {u.Version.ToString(3)} is available."
+            : $"You have the latest version ({UpdateService.CurrentText}).";
     }
 
     /// <summary>Set by the view: puts text on the clipboard.</summary>
