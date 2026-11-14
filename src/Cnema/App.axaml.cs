@@ -45,7 +45,8 @@ public partial class App : Application
             AutostartService.RefreshIfEnabled();
 
             var settings = new SettingsStore();
-            ThemeService.Apply(settings.Current.ColorScheme);
+            ThemeService.Apply(settings.Current.ColorScheme, settings.Current.Accessibility.HighContrast);
+            Shortcuts.Load(settings.Current.Shortcuts);
             _vm = new MainViewModel(settings, new LibraryService(), new ClipService(settings));
             _window = new MainWindow { DataContext = _vm };
 

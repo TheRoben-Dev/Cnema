@@ -129,7 +129,62 @@ public sealed partial class SettingsViewModel : ObservableObject
     public IReadOnlyList<ColorScheme> ColorSchemes => ThemeService.Schemes;
     [ObservableProperty] private ColorScheme _colorScheme = ThemeService.Current;
     // Shown straight away as a preview; cancelling Settings puts the saved scheme back.
-    partial void OnColorSchemeChanged(ColorScheme value) { if (value is not null) ThemeService.Apply(value.Id); }
+    partial void OnColorSchemeChanged(ColorScheme value) { if (value is not null) ThemeService.Apply(value.Id, HighContrast); }
+
+    // ---------- pages ----------
+    public static string[] PageNames { get; } = { "General", "Features", "Clipping", "Accessibility" };
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsGeneralPage), nameof(IsFeaturesPage), nameof(IsClippingPage), nameof(IsAccessibilityPage),
+        nameof(ShowClippingSettings), nameof(ShowClippingOffNotice))]
+    private int _page;
+    public bool IsGeneralPage => Page == 0;
+    public bool IsFeaturesPage => Page == 1;
+    public bool IsClippingPage => Page == 2;
+    public bool IsAccessibilityPage => Page == 3;
+    public bool ShowClippingSettings => IsClippingPage && FeatureClipping;
+    public bool ShowClippingOffNotice => IsClippingPage && !FeatureClipping;
+    /// <summary>LB / RB on a controller, Ctrl+Tab on a keyboard.</summary>
+    public void CyclePage(int delta) => Page = ((Page + delta) % PageNames.Length + PageNames.Length) % PageNames.Length;
+
+    // ---------- features ----------
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(ShowClippingSettings), nameof(ShowClippingOffNotice))] private bool _featureClipping;
+    [ObservableProperty] private bool _featureSessions;
+    [ObservableProperty] private bool _featureController;
+    [ObservableProperty] private bool _featureHoverPreview;
+    [ObservableProperty] private bool _featureLoudMarkers;
+    [ObservableProperty] private bool _featureHoverGlow;
+
+    // ---------- accessibility ----------
+    public static Choice[] UiScales { get; } =
+        new[] { 90, 100, 110, 125, 150 }.Select(p => new Choice($"{p} %", p)).ToArray();
+    [ObservableProperty] private Choice _uiScale;
+    [ObservableProperty] private bool _highContrast;
+    [ObservableProperty] private bool _reducedMotion;
+    // Previewed straight away like the colour scheme; Cancel puts the saved look back.
+    partial void OnHighContrastChanged(bool value) => ThemeService.Apply(ColorScheme.Id, value);
+
+    // ---------- portable mode ----------
+    public bool IsPortable => AppPaths.IsPortable;
+    public string PortableStatus => AppPaths.IsPortable
+        ? "On: settings, library and thumbnails are kept in \"Cnema Data\" next to the app. Delete or rename that folder to turn it off."
+        : "Keep settings, library and thumbnails next to the app, for running Cnema from a USB stick.";
+    [ObservableProperty] private string? _portableMessage;
+
+    [RelayCommand]
+    private void MakePortable()
+    {
+        try
+        {
+            AppPaths.MakePortable();
+            PortableMessage = "Done. Cnema uses the \"Cnema Data\" folder from the next start.";
+        }
+        catch (Exception ex)
+        {
+            PortableMessage = "Could not create the folder next to the app: " + ex.Message;
+        }
+    }
+
+    [RelayCommand] private void ShowPortableFolder() => PlatformShell.OpenUrl(AppPaths.DataDir);
     [ObservableProperty] private bool _hotkeyCtrl;
     [ObservableProperty] private bool _hotkeyAlt;
     [ObservableProperty] private bool _hotkeyShift;
@@ -182,6 +237,17 @@ public sealed partial class SettingsViewModel : ObservableObject
         _checkForUpdates = settings.CheckForUpdates;
         _autoUpdate = settings.AutoUpdate;
         _colorScheme = ThemeService.Find(settings.ColorScheme);
+        var f = settings.Features;
+        _featureClipping = f.Clipping;
+        _featureSessions = f.Sessions;
+        _featureController = f.Controller;
+        _featureHoverPreview = f.HoverPreview;
+        _featureLoudMarkers = f.LoudMarkers;
+        _featureHoverGlow = f.HoverGlow;
+        var a = settings.Accessibility;
+        _uiScale = UiScales.OrderBy(o => Math.Abs(o.Value - a.UiScale * 100)).First();
+        _highContrast = a.HighContrast;
+        _reducedMotion = a.ReducedMotion;
         _hotkeyCtrl = c.HotkeyCtrl;
         _hotkeyAlt = c.HotkeyAlt;
         _hotkeyShift = c.HotkeyShift;
@@ -287,6 +353,18 @@ public sealed partial class SettingsViewModel : ObservableObject
         settings.CheckForUpdates = CheckForUpdates;
         settings.AutoUpdate = AutoUpdate;
         settings.ColorScheme = ColorScheme.Id;
+        settings.Features = new FeatureSettings
+        {
+            Clipping = FeatureClipping, Sessions = FeatureSessions, Controller = FeatureController,
+            HoverPreview = FeatureHoverPreview, LoudMarkers = FeatureLoudMarkers, HoverGlow = FeatureHoverGlow,
+        };
+        // Switching a module off switches off what it was doing, not only its buttons.
+        if (!FeatureClipping) c.Enabled = false;
+        if (!FeatureController) settings.ControllerMode = false;
+        settings.Accessibility = new AccessibilitySettings
+        {
+            UiScale = UiScale.Value / 100.0, HighContrast = HighContrast, ReducedMotion = ReducedMotion,
+        };
         c.HotkeyCtrl = HotkeyCtrl;
         c.HotkeyAlt = HotkeyAlt;
         c.HotkeyShift = HotkeyShift;

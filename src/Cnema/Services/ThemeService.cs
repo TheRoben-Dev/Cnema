@@ -33,11 +33,24 @@ public static class ThemeService
 
     public static ColorScheme Current { get; private set; } = Schemes[0];
 
-    public static void Apply(string? id)
+    public static bool HighContrast { get; private set; }
+
+    /// <summary>
+    /// High contrast keeps the scheme's accent but puts it on pure black with white text and
+    /// clearly visible lines, and drops every gradient.
+    /// </summary>
+    public static void Apply(string? id, bool highContrast = false)
     {
         if (Application.Current is not { } app) return;
         var s = Find(id);
         Current = s;
+        HighContrast = highContrast;
+        if (highContrast)
+            s = s with
+            {
+                Bg0 = "#000000", Bg1 = "#000000", Bg2 = "#121212", Bg3 = "#242424", Line = "#9A9A9A",
+                Text = "#FFFFFF", TextDim = "#E0E0E0", Gradients = false,
+            };
         var r = app.Resources;
         static Color C(string hex) => Color.Parse(hex);
         static SolidColorBrush B(string hex, double opacity = 1) => new(Color.Parse(hex), opacity);

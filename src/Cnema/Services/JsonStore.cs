@@ -21,6 +21,10 @@ public static class JsonStore
         return new T();
     }
 
+    /// <summary>Reads a file the user picked; throws with a readable message when it is not valid.</summary>
+    public static T Read<T>(string path) where T : class =>
+        JsonSerializer.Deserialize<T>(File.ReadAllText(path), Options) ?? throw new InvalidDataException("The file is empty.");
+
     public static void Save<T>(string path, T value)
     {
         var tmp = path + ".tmp";

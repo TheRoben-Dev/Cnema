@@ -223,7 +223,9 @@ public sealed class GlobalHotkey : IDisposable
             }
         }) { IsBackground = true, Name = "Cnema hotkey" };
         thread.Start();
-        _unregister = () => Volatile.Write(ref stop, true);
+        // Wait for the thread to close its display: until then the old grab still holds the key,
+        // and grabbing it again (after saving settings) would be refused as "taken".
+        _unregister = () => { Volatile.Write(ref stop, true); thread.Join(1000); };
         return true;
     }
 }
