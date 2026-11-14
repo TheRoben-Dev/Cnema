@@ -6,7 +6,6 @@ What changed in each Cnema release. The app shows the entries you have not seen 
 - More save-clip hotkeys, each with its own length: say Ctrl+Alt+S for the last 15 seconds and Ctrl+Alt+D for the last 3 minutes. Add them under Settings, Clipping. The sidebar lists them all.
 - Clip length now goes up to 10 minutes.
 - Webcam in the corner: pick a camera under Settings, Clipping, and it goes into every clip and session, in the corner and size you choose. If the camera can't be opened, clipping carries on without it and tells you why.
-- Discord status: switch on "Show what I'm doing in Discord" under Settings, General, and your profile shows Cnema while you browse, watch or edit clips, or record a session. You choose whether it shows the video's name. Off unless you turn it on.
 
 ## 0.15.0
 - The editor is laid out around its tools now. A rail beside the video holds Trim, Captions, Speed, Sound, Brand and Export, and each opens a page with everything for that job: in and out points, parts, markers and chapters on Trim, the share presets on Export, and so on.

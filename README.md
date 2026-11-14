@@ -160,13 +160,6 @@ Platform notes:
   in front every few seconds while profiles exist. Changing bitrate or format restarts the capture, so the
   profile stays on while you alt-tab and is only dropped after two minutes away from the game.
 
-### Discord status
-
-Settings, General, *Show what I'm doing in Discord* puts Cnema on your Discord profile while the window is
-open (browsing, watching or editing clips) or while a session records, optionally with the video's name.
-It talks to the Discord app on the same computer over its local socket; nothing goes over the network, and
-hiding Cnema in the tray or switching the setting off removes the status. Off by default.
-
 ### Storage limits
 
 Settings, Storage can keep the clips folder in check: remove clips older than a number of days, and keep the
