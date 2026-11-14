@@ -53,6 +53,35 @@ public sealed partial class ProfileRow : ObservableObject
     };
 }
 
+/// <summary>One extra save-clip hotkey in Settings: its keys and the length it saves.</summary>
+public sealed partial class HotkeyRow : ObservableObject
+{
+    [ObservableProperty] private bool _ctrl;
+    [ObservableProperty] private bool _alt;
+    [ObservableProperty] private bool _shift;
+    [ObservableProperty] private bool _meta;
+    [ObservableProperty] private string _key;
+    [ObservableProperty] private Choice _length;
+
+    public HotkeyRow(ClipHotkey h)
+    {
+        _ctrl = h.Ctrl;
+        _alt = h.Alt;
+        _shift = h.Shift;
+        _meta = h.Meta;
+        _key = GlobalHotkey.Keys.Contains(h.Key) ? h.Key : "D";
+        _length = SettingsViewModel.Lengths.OrderBy(c => Math.Abs(c.Value - h.Seconds)).First();
+    }
+
+    public ClipHotkey ToHotkey() => new()
+    {
+        Ctrl = Ctrl, Alt = Alt, Shift = Shift, Meta = Meta, Key = Key, Seconds = Length.Value,
+    };
+
+    public string Combo => ClipSettings.FormatHotkey(Ctrl, Alt, Shift, Meta, Key);
+    public bool HasModifier => Ctrl || Alt || Shift || Meta;
+}
+
 /// <summary>Editable copy of the background + clipping settings; nothing changes until Save.</summary>
 public sealed partial class SettingsViewModel : ObservableObject
 {
@@ -61,7 +90,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     public static Choice[] Lengths { get; } =
     {
         new("15 seconds", 15), new("30 seconds", 30), new("1 minute", 60), new("1.5 minutes", 90),
-        new("2 minutes", 120), new("3 minutes", 180), new("5 minutes", 300),
+        new("2 minutes", 120), new("3 minutes", 180), new("5 minutes", 300), new("10 minutes", 600),
     };
     public static Choice[] Resolutions { get; } =
     {
@@ -85,11 +114,61 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     public ObservableCollection<string> AudioDevices { get; } = new() { NoAudio };
     public ObservableCollection<string> Screens { get; } = new();
+
+    public const string NoCamera = "None";
+    public ObservableCollection<string> Cameras { get; } = new() { NoCamera };
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(HasCamera))] private string _camera = NoCamera;
+    public bool HasCamera => Camera != NoCamera;
+    public static Choice[] CameraCorners { get; } =
+        { new("Bottom right", 0), new("Bottom left", 1), new("Top right", 2), new("Top left", 3) };
+    private static readonly string[] CornerIds = { "bottom-right", "bottom-left", "top-right", "top-left" };
+    [ObservableProperty] private Choice _cameraCorner = CameraCorners[0];
+    public static Choice[] CameraSizes { get; } = { new("Small", 18), new("Medium", 25), new("Large", 33) };
+    [ObservableProperty] private Choice _cameraSize = CameraSizes[1];
     public ObservableCollection<CodecOption> Codecs { get; } = new();
     public ObservableCollection<ProfileRow> Profiles { get; } = new();
     [ObservableProperty] private bool _separateTracks;
 
     [RelayCommand] private void AddProfile() => Profiles.Add(new ProfileRow());
+
+    /// <summary>More save-clip hotkeys, each with its own length.</summary>
+    public ObservableCollection<HotkeyRow> ExtraHotkeys { get; } = new();
+    public const int MaxExtraHotkeys = 4;
+    public bool CanAddHotkey => ExtraHotkeys.Count < MaxExtraHotkeys;
+
+    [RelayCommand]
+    private void AddHotkey()
+    {
+        if (!CanAddHotkey) return;
+        // Suggest a free letter next to the main one, and a longer length than the main clip.
+        var used = ExtraHotkeys.Select(h => h.Key).Append(HotkeyKey).ToHashSet();
+        var key = new[] { "D", "F", "G", "H", "A", "W", "E", "R" }.FirstOrDefault(k => !used.Contains(k)) ?? "D";
+        var longer = Lengths.FirstOrDefault(c => c.Value > Length.Value) ?? Lengths[^1];
+        AddHotkeyRow(new HotkeyRow(new ClipHotkey
+        {
+            Ctrl = HotkeyCtrl, Alt = HotkeyAlt, Shift = HotkeyShift, Meta = HotkeyMeta, Key = key, Seconds = longer.Value,
+        }));
+    }
+
+    [RelayCommand]
+    private void RemoveHotkey(HotkeyRow? row)
+    {
+        if (row is null) return;
+        ExtraHotkeys.Remove(row);
+        OnPropertyChanged(nameof(CanAddHotkey));
+        OnPropertyChanged(nameof(Footprint));
+    }
+
+    private void AddHotkeyRow(HotkeyRow row)
+    {
+        row.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(HotkeyRow.Length)) OnPropertyChanged(nameof(Footprint));
+        };
+        ExtraHotkeys.Add(row);
+        OnPropertyChanged(nameof(CanAddHotkey));
+        OnPropertyChanged(nameof(Footprint));
+    }
     [RelayCommand] private void RemoveProfile(ProfileRow? row) { if (row is not null) Profiles.Remove(row); }
 
     /// <summary>Set by the view: opens a native folder picker.</summary>
@@ -218,9 +297,15 @@ public sealed partial class SettingsViewModel : ObservableObject
             : "Sources ending in \".monitor\" record what the speakers play.";
 
     /// <summary>Temp disk the rolling buffer needs; nothing else is written until a clip is saved.</summary>
-    public string Footprint =>
-        $"Keeps the last {Length.Label} in a temporary buffer of about {Bitrate.Value * (Length.Value + 6) / 8:N0} MB. " +
-        "Nothing is kept unless you save a clip.";
+    public string Footprint
+    {
+        get
+        {
+            var longest = ExtraHotkeys.Select(h => h.Length).Append(Length).MaxBy(c => c.Value)!;
+            return $"Keeps the last {longest.Label} in a temporary buffer of about {Bitrate.Value * (longest.Value + 6) / 8:N0} MB. " +
+                   "Nothing is kept unless you save a clip.";
+        }
+    }
 
     public SettingsViewModel(AppSettings settings)
     {
@@ -270,6 +355,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         _folder = c.ResolvedFolder;
         _separateTracks = c.SeparateTracks;
         foreach (var profile in c.Profiles) Profiles.Add(new ProfileRow(profile));
+        foreach (var extra in c.ExtraHotkeys.Take(MaxExtraHotkeys)) AddHotkeyRow(new HotkeyRow(extra));
         _keepDays = Nearest(KeepDaysOptions, c.KeepDays);
         _folderCap = Nearest(FolderCaps, c.MaxFolderGb);
         _cleanupTarget = CleanupTargets[c.CleanupArchive ? 1 : 0];
@@ -280,6 +366,13 @@ public sealed partial class SettingsViewModel : ObservableObject
         _audio1 = string.IsNullOrWhiteSpace(c.Audio1) ? NoAudio : c.Audio1!;
         _audio2 = string.IsNullOrWhiteSpace(c.Audio2) ? NoAudio : c.Audio2!;
         Screens.Add("Primary display");
+        if (!string.IsNullOrWhiteSpace(c.Camera))
+        {
+            Cameras.Add(c.Camera!);
+            _camera = c.Camera!;
+        }
+        _cameraCorner = CameraCorners[Math.Max(0, Array.IndexOf(CornerIds, c.CameraCorner))];
+        _cameraSize = Nearest(CameraSizes, c.CameraSize);
     }
 
     private static Choice Nearest(Choice[] options, int value) =>
@@ -301,6 +394,11 @@ public sealed partial class SettingsViewModel : ObservableObject
         foreach (var s in devices.Screens) Screens.Add(s);
         ScreenIndex = Math.Clamp(screen, 0, Math.Max(0, Screens.Count - 1));
         HasSeveralScreens = Screens.Count > 1;
+
+        var camera = Camera;
+        foreach (var name in devices.Cameras)
+            if (!Cameras.Contains(name)) Cameras.Add(name);
+        Camera = camera;
     }
 
     private async Task LoadCodecsAsync()
@@ -346,6 +444,12 @@ public sealed partial class SettingsViewModel : ObservableObject
     {
         if (ClipEnabled && !(HotkeyCtrl || HotkeyAlt || HotkeyShift || HotkeyMeta) && HotkeyKey.Length == 1)
             return "Add at least one modifier to the hotkey, or a plain letter would stop working everywhere else.";
+        if (ClipEnabled && ExtraHotkeys.Any(h => !h.HasModifier && h.Key.Length == 1))
+            return "Add at least one modifier to each extra hotkey, or a plain letter would stop working everywhere else.";
+        var combos = ExtraHotkeys.Select(h => h.Combo)
+            .Prepend(ClipSettings.FormatHotkey(HotkeyCtrl, HotkeyAlt, HotkeyShift, HotkeyMeta, HotkeyKey)).ToList();
+        if (combos.Distinct().Count() != combos.Count)
+            return "Two save-clip hotkeys use the same keys. Give each one its own.";
         var c = settings.Clip;
         settings.KeepInBackground = KeepInBackground;
         settings.ControllerMode = ControllerMode;
@@ -361,6 +465,9 @@ public sealed partial class SettingsViewModel : ObservableObject
         c.Screen = Math.Max(0, ScreenIndex);
         c.Audio1 = Audio1 == NoAudio ? null : Audio1;
         c.Audio2 = Audio2 == NoAudio || Audio2 == Audio1 ? null : Audio2;
+        c.Camera = Camera == NoCamera ? null : Camera;
+        c.CameraCorner = CornerIds[CameraCorner.Value];
+        c.CameraSize = CameraSize.Value;
         c.Notify = Notify;
         c.Sound = Sound;
         c.TagWithGame = TagWithGame;
@@ -393,6 +500,7 @@ public sealed partial class SettingsViewModel : ObservableObject
             return "The archive folder has to be a different folder from the clips folder.";
         c.SeparateTracks = SeparateTracks;
         c.Profiles = Profiles.Where(p => p.Game.Trim().Length > 0).Select(p => p.ToProfile()).ToList();
+        c.ExtraHotkeys = ExtraHotkeys.Select(h => h.ToHotkey()).ToList();
         c.KeepDays = KeepDays.Value;
         c.MaxFolderGb = FolderCap.Value;
         c.CleanupArchive = UsesArchive;

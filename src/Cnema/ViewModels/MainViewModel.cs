@@ -17,6 +17,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private readonly GlobalHotkey _hotkey;
     private CancellationTokenSource? _toastCts;
     private bool _hotkeyRefused;
+    /// <summary>The extra save-clip hotkeys, each with its own length.</summary>
+    private readonly List<GlobalHotkey> _extraHotkeys = new();
+    /// <summary>Extra hotkeys another app already holds, as shown text.</summary>
+    private readonly List<string> _refusedExtras = new();
 
     public ClipService Clips { get; }
 
@@ -227,7 +231,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             $"System audio helper: {(CaptureProbe.SystemAudioHelper is null ? "no" : "yes")}",
             $"Library: {_items.Count} videos in {_settings.Current.Folders.Count} folders",
             $"Clipping: enabled={clip.Enabled} state={Clips.State} encoder={Clips.Encoder ?? "-"} error={Clips.Error ?? "-"}",
-            $"Clip settings: {clip.Seconds}s {clip.Fps}fps height={clip.Height} {clip.BitrateMbps}Mbps codec={clip.Codec} hw={clip.HardwareEncoder} audio1={(clip.Audio1 is null ? "-" : "set")} audio2={(clip.Audio2 is null ? "-" : "set")} hotkey={clip.HotkeyText} hotkeyRefused={_hotkeyRefused}",
+            $"Clip settings: {clip.Seconds}s {clip.Fps}fps height={clip.Height} {clip.BitrateMbps}Mbps codec={clip.Codec} hw={clip.HardwareEncoder} audio1={(clip.Audio1 is null ? "-" : "set")} audio2={(clip.Audio2 is null ? "-" : "set")} hotkey={clip.HotkeyText} hotkeyRefused={_hotkeyRefused} extraHotkeys={clip.ExtraHotkeys.Count} extraRefused={_refusedExtras.Count}",
             $"Controller mode: {_settings.Current.ControllerMode}",
             "",
             "--- log ---",
@@ -458,15 +462,30 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     {
         ClipState.Recording when IsSession =>
             $"Recording a session. {_settings.Current.Clip.HotkeyText} adds a bookmark ({Clips.BookmarkCount} so far).",
-        ClipState.Recording => _hotkeyRefused
-            ? "The hotkey is taken by another app. Pick a different one in settings."
-            : $"{_settings.Current.Clip.HotkeyText} saves the last {LengthText(EffectiveClip.Seconds)}",
+        ClipState.Recording => _hotkeyRefused || _refusedExtras.Count > 0
+            ? $"{string.Join(" and ", RefusedHotkeys)} {(RefusedHotkeys.Count == 1 ? "is" : "are")} taken by another app. Pick a different one in settings."
+            : Clips.CameraNote is { } note ? $"{HotkeySummary}. {note}" : HotkeySummary,
         ClipState.Error => Clips.Error ?? "",
         ClipState.Starting => "",
         _ => "Record in the background and save moments after they happen.",
     };
     /// <summary>Raised when tray-relevant state changed (clipping on/off, background mode).</summary>
     public event Action? BackgroundStateChanged;
+
+    private List<string> RefusedHotkeys =>
+        (_hotkeyRefused ? new[] { _settings.Current.Clip.HotkeyText } : Array.Empty<string>()).Concat(_refusedExtras).ToList();
+
+    /// <summary>"Ctrl+Alt+S saves the last 30 seconds, Ctrl+Alt+D the last 2 minutes".</summary>
+    private string HotkeySummary
+    {
+        get
+        {
+            var c = _settings.Current.Clip;
+            var text = $"{c.HotkeyText} saves the last {LengthText(EffectiveClip.Seconds)}";
+            foreach (var h in c.ExtraHotkeys) text += $", {h.Text} the last {LengthText(h.Seconds)}";
+            return text;
+        }
+    }
 
     private static string LengthText(int seconds) =>
         seconds < 60 ? $"{seconds} s" : seconds % 60 == 0 ? $"{seconds / 60} min" : $"{seconds / 60.0:0.#} min";
@@ -499,7 +518,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         };
         _hotkey = new GlobalHotkey(() => Dispatcher.UIThread.Post(() => SaveClipCommand.Execute(null)));
         Clips.Changed += () => Dispatcher.UIThread.Post(RaiseClipState);
-        Clips.ClipSaved += path => Dispatcher.UIThread.Post(() => OnClipSaved(path));
+        Clips.ClipSaved += (path, seconds) => Dispatcher.UIThread.Post(() => OnClipSaved(path, seconds));
         Clips.SessionSaved += (path, marks) => Dispatcher.UIThread.Post(() => OnSessionSaved(path, marks));
         Player = new PlayerViewModel(settings);
         Player.Exported += path => { _ = RescanAsync(); };
@@ -878,11 +897,13 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 Log.Warn($"Clips folder: {ex.Message}");
             }
             _hotkeyRefused = !_hotkey.Register(clip.HotkeyCtrl, clip.HotkeyAlt, clip.HotkeyShift, clip.HotkeyMeta, clip.HotkeyKey);
+            RegisterExtraHotkeys(clip);
         }
         else
         {
             _hotkey.Unregister();
             _hotkeyRefused = false;
+            RegisterExtraHotkeys(null);
         }
         RaiseClipState();
         await Clips.ApplyAsync();
@@ -909,10 +930,35 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         BackgroundStateChanged?.Invoke();
     }
 
+    private void RegisterExtraHotkeys(ClipSettings? clip)
+    {
+        foreach (var h in _extraHotkeys) h.Dispose();
+        _extraHotkeys.Clear();
+        _refusedExtras.Clear();
+        if (clip is null) return;
+        foreach (var extra in clip.ExtraHotkeys)
+        {
+            var seconds = extra.Seconds;
+            var hotkey = new GlobalHotkey(() => Dispatcher.UIThread.Post(() =>
+            {
+                if (IsClipRecording) _ = SaveClipCoreAsync(seconds);
+            }));
+            if (hotkey.Register(extra.Ctrl, extra.Alt, extra.Shift, extra.Meta, extra.Key)) _extraHotkeys.Add(hotkey);
+            else
+            {
+                hotkey.Dispose();
+                _refusedExtras.Add(extra.Text);
+            }
+        }
+    }
+
     private readonly Dictionary<string, string> _pendingTags = new(StringComparer.OrdinalIgnoreCase);
 
     [RelayCommand(CanExecute = nameof(IsClipRecording))]
-    private async Task SaveClipAsync()
+    private Task SaveClipAsync() => SaveClipCoreAsync(null);
+
+    /// <summary>Saves the last <paramref name="seconds"/> (the clip length setting when null).</summary>
+    private async Task SaveClipCoreAsync(int? seconds)
     {
         if (Clips.AddBookmark() is { } at)
         {
@@ -923,7 +969,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         }
         // Ask now, while the game is still in front; saving takes a moment.
         var game = _settings.Current.Clip.TagWithGame ? PlatformShell.FrontmostAppName() : null;
-        var path = await Clips.SaveClipAsync(game);
+        var path = await Clips.SaveClipAsync(game, seconds);
         if (path is null) ShowToast("The clip could not be saved.");
         else if (game is not null)
         {
@@ -933,12 +979,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         }
     }
 
-    private void OnClipSaved(string path)
+    private void OnClipSaved(string path, int seconds)
     {
         if (_settings.Current.Clip.Sound) PlatformShell.PlayConfirmSound();
         ShowToast("Clip saved: " + Path.GetFileNameWithoutExtension(path));
         if (_settings.Current.Clip.Notify)
-            PlatformShell.Notify("Clip saved", $"Last {LengthText(EffectiveClip.Seconds)} · {Path.GetFileName(path)}");
+            PlatformShell.Notify("Clip saved", $"Last {LengthText(seconds)} · {Path.GetFileName(path)}");
         _ = RescanAsync();
         _ = CleanupAfterSaveAsync();
     }
@@ -1060,6 +1106,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     {
         Exports.CancelAll();
         _hotkey.Dispose();
+        RegisterExtraHotkeys(null);
         Clips.Dispose();
         _scanCts?.Cancel();
         Player.Dispose();

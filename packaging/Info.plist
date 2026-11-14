@@ -14,6 +14,7 @@
   <key>LSApplicationCategoryType</key><string>public.app-category.video</string>
   <key>NSHighResolutionCapable</key><true/>
   <key>NSMicrophoneUsageDescription</key><string>Cnema records the audio devices you pick in its clipping settings.</string>
+  <key>NSCameraUsageDescription</key><string>Cnema puts the camera you pick in its clipping settings into a corner of your clips.</string>
   <key>NSRequiresAquaSystemAppearance</key><false/>
 </dict>
 </plist>

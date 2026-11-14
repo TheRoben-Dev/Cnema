@@ -129,9 +129,15 @@ written to your clips folder, which is a library folder, so the clip shows up in
   "Launch Cnema when I log in"; it then starts without a window.
 - **Light on resources.** One ffmpeg process encodes with the GPU where it can (VideoToolbox on macOS;
   NVENC, AMF or Quick Sync on Windows) and falls back to x264. The buffer is 2-second segments in the temp
-  folder, capped at the clip length; saving is a stream copy, not a re-encode.
-- **Settings:** clip length (15 s to 5 min), resolution, frame rate, video bitrate, hardware encoding,
-  two audio devices (mixed), audio bitrate, hotkey, clips folder.
+  folder, capped at the longest clip length; saving is a stream copy, not a re-encode.
+- **Settings:** clip length (15 s to 10 min), resolution, frame rate, video bitrate, hardware encoding,
+  two audio devices (mixed), audio bitrate, hotkey, clips folder, webcam.
+- **Extra hotkeys** (Settings, Clipping, *Add hotkey*): up to four more hotkeys, each saving its own length,
+  say 15 seconds on one and 3 minutes on another. The buffer holds the longest of them.
+- **Webcam** (Settings, Clipping, Camera): puts a camera in a corner of every clip and session (small,
+  medium or large, any corner), sized against the picture so it looks the same at any resolution. The
+  camera stays on while clipping runs. If it can't be opened (another app has it, or no permission), clipping
+  carries on without it and the sidebar says why. macOS asks for camera access the first time.
 
 Platform notes:
 

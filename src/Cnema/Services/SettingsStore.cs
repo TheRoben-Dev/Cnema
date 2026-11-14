@@ -117,6 +117,19 @@ public sealed class ClipProfile
     public string? Codec { get; set; }
 }
 
+/// <summary>A second (third, ...) save-clip hotkey that saves its own length.</summary>
+public sealed class ClipHotkey
+{
+    public bool Ctrl { get; set; } = true;
+    public bool Alt { get; set; } = true;
+    public bool Shift { get; set; }
+    public bool Meta { get; set; }
+    public string Key { get; set; } = "D";
+    public int Seconds { get; set; } = 120;
+
+    public string Text => ClipSettings.FormatHotkey(Ctrl, Alt, Shift, Meta, Key);
+}
+
 /// <summary>Settings for the background clipping service (see ClipService).</summary>
 public sealed class ClipSettings
 {
@@ -143,6 +156,13 @@ public sealed class ClipSettings
     public bool TagWithGame { get; set; } = true;
     /// <summary>With two audio devices: keep them as two tracks instead of mixing them into one.</summary>
     public bool SeparateTracks { get; set; }
+    /// <summary>A webcam to put in a corner of every clip; null = none.</summary>
+    public string? Camera { get; set; }
+    /// <summary>"top-left", "top-right", "bottom-left" or "bottom-right".</summary>
+    public string CameraCorner { get; set; } = "bottom-right";
+    /// <summary>The camera picture's height as a percentage of the video's.</summary>
+    public int CameraSize { get; set; } = 25;
+
     /// <summary>Per-game overrides, matched against the app in front.</summary>
     public List<ClipProfile> Profiles { get; set; } = new();
 
@@ -158,6 +178,13 @@ public sealed class ClipSettings
         return c;
     }
 
+    public ClipSettings WithoutCamera()
+    {
+        var c = (ClipSettings)MemberwiseClone();
+        c.Camera = null;
+        return c;
+    }
+
     public ClipProfile? ProfileFor(string? game) => string.IsNullOrWhiteSpace(game)
         ? null
         : Profiles.FirstOrDefault(p => p.Game.Trim().Length > 0 &&
@@ -170,6 +197,12 @@ public sealed class ClipSettings
     public bool CleanupArchive { get; set; }
     public string? ArchiveFolder { get; set; }
 
+    /// <summary>More hotkeys, each saving a different length (a short one and a long one, say).</summary>
+    public List<ClipHotkey> ExtraHotkeys { get; set; } = new();
+
+    /// <summary>How much the rolling buffer has to hold: the longest of all the hotkeys' lengths.</summary>
+    public int BufferSeconds => ExtraHotkeys.Select(h => h.Seconds).Append(Seconds).Max();
+
     public bool HotkeyCtrl { get; set; } = true;
     public bool HotkeyAlt { get; set; } = true;
     public bool HotkeyShift { get; set; }
@@ -181,19 +214,18 @@ public sealed class ClipSettings
         : ArchiveFolder!;
     public string ResolvedFolder => string.IsNullOrWhiteSpace(Folder) ? AppPaths.DefaultClipsDir : Folder!;
 
-    public string HotkeyText
+    public string HotkeyText => FormatHotkey(HotkeyCtrl, HotkeyAlt, HotkeyShift, HotkeyMeta, HotkeyKey);
+
+    public static string FormatHotkey(bool ctrl, bool alt, bool shift, bool meta, string key)
     {
-        get
-        {
-            var mac = OperatingSystem.IsMacOS();
-            var parts = new List<string>();
-            if (HotkeyCtrl) parts.Add(mac ? "⌃" : "Ctrl");
-            if (HotkeyAlt) parts.Add(mac ? "⌥" : "Alt");
-            if (HotkeyShift) parts.Add(mac ? "⇧" : "Shift");
-            if (HotkeyMeta) parts.Add(mac ? "⌘" : OperatingSystem.IsWindows() ? "Win" : "Super");
-            parts.Add(HotkeyKey);
-            return string.Join(mac ? "" : "+", parts);
-        }
+        var mac = OperatingSystem.IsMacOS();
+        var parts = new List<string>();
+        if (ctrl) parts.Add(mac ? "⌃" : "Ctrl");
+        if (alt) parts.Add(mac ? "⌥" : "Alt");
+        if (shift) parts.Add(mac ? "⇧" : "Shift");
+        if (meta) parts.Add(mac ? "⌘" : OperatingSystem.IsWindows() ? "Win" : "Super");
+        parts.Add(key);
+        return string.Join(mac ? "" : "+", parts);
     }
 }
 

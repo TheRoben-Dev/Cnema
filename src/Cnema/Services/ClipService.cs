@@ -24,6 +24,11 @@ public sealed class ClipService : IDisposable
     private Timer? _janitor;
     private int _generation;
     private int _restarts;
+    /// <summary>The camera made capture fail at the start, so it runs without it until settings change.</summary>
+    private bool _withoutCamera;
+    private bool _cameraUsed;
+    /// <summary>Why the picked camera isn't in the clips, or null when it is (or none is picked).</summary>
+    public string? CameraNote { get; private set; }
     private DateTime _startedAt;
 
     public ClipState State { get; private set; } = ClipState.Off;
@@ -34,7 +39,7 @@ public sealed class ClipService : IDisposable
     /// <summary>Raised on any thread when State/Error change.</summary>
     public event Action? Changed;
     /// <summary>Raised on any thread after a clip was written; the argument is its path.</summary>
-    public event Action<string>? ClipSaved;
+    public event Action<string, int>? ClipSaved;
 
     public ClipService(SettingsStore settings) => _settings = settings;
 
@@ -167,6 +172,8 @@ public sealed class ClipService : IDisposable
             await FinishSessionCoreAsync(); // a running session is saved before capture restarts
             StopCore();
             _restarts = 0;
+            _withoutCamera = false;
+            CameraNote = null;
             if (Cfg.Enabled) await StartCoreAsync();
             else Set(ClipState.Off, null);
         }
@@ -211,7 +218,9 @@ public sealed class ClipService : IDisposable
         var encoder = codec.Encoder;
         Codec = codec;
         var ddagrab = await CaptureProbe.HasDdagrabAsync(ffmpeg);
-        var devices = OperatingSystem.IsMacOS() ? await CaptureProbe.ListDevicesAsync() : null;
+        var devices = OperatingSystem.IsMacOS() || !string.IsNullOrWhiteSpace(Cfg.Camera)
+            ? await CaptureProbe.ListDevicesAsync()
+            : null;
         Encoder = encoder;
 
         KillStaleCapture();
@@ -223,7 +232,11 @@ public sealed class ClipService : IDisposable
         catch { /* stale segments are harmless: they sort before the new ones */ }
         Directory.CreateDirectory(AppPaths.ClipBufferDir);
 
-        var args = BuildArguments(Cfg, encoder, ddagrab, devices, AppPaths.ClipBufferDir,
+        var cfg = _withoutCamera ? Cfg.WithoutCamera() : Cfg;
+        _cameraUsed = !string.IsNullOrWhiteSpace(cfg.Camera) && devices?.Cameras.Contains(cfg.Camera) == true;
+        if (!string.IsNullOrWhiteSpace(cfg.Camera) && !_cameraUsed)
+            CameraNote = $"{cfg.Camera} isn't connected, so clips are recorded without the camera.";
+        var args = BuildArguments(cfg, encoder, ddagrab, devices, AppPaths.ClipBufferDir,
             Environment.GetEnvironmentVariable("DISPLAY"));
         if (!StartSystemAudio(devices)) return;
         var psi = new ProcessStartInfo(ffmpeg)
@@ -235,7 +248,7 @@ public sealed class ClipService : IDisposable
         };
         foreach (var a in args) psi.ArgumentList.Add(a);
 
-        Log.Info($"Capture starting: {encoder}, {Cfg.Fps} fps, {(Cfg.Height > 0 ? Cfg.Height + "p" : "native")}, {Cfg.BitrateMbps} Mbps");
+        Log.Info($"Capture starting: {encoder}, {Cfg.Fps} fps, {(Cfg.Height > 0 ? Cfg.Height + "p" : "native")}, {Cfg.BitrateMbps} Mbps{(_cameraUsed ? ", with camera" : "")}");
         var generation = ++_generation;
         var p = new Process { StartInfo = psi, EnableRaisingEvents = true };
         lock (_log) _log.Clear();
@@ -285,7 +298,7 @@ public sealed class ClipService : IDisposable
                 return;
             }
             if (IsSession) return; // a session keeps every segment until it is saved
-            var keep = SegmentsFor(Cfg.Seconds) + 2;
+            var keep = SegmentsFor(Cfg.BufferSeconds) + 2;
             if (!_gate.Wait(0)) return; // a save is reading the buffer right now
             try
             {
@@ -326,6 +339,29 @@ public sealed class ClipService : IDisposable
         _janitor?.Dispose();
         _janitor = null;
         _process = null;
+
+        // A camera that can't be opened (in use, no permission) must not stop clipping: go on without it.
+        if (_cameraUsed && ranFor < TimeSpan.FromSeconds(30) && Cfg.Enabled)
+        {
+            _withoutCamera = true;
+            CameraNote = "The camera could not be opened, so clips are recorded without it. " +
+                         "Check that no other app is using it" +
+                         (OperatingSystem.IsMacOS() ? " and that Cnema may use it (System Settings › Privacy & Security › Camera)." : ".");
+            _ = Task.Run(async () =>
+            {
+                await _gate.WaitAsync();
+                try
+                {
+                    if (generation == _generation && Cfg.Enabled) await StartCoreAsync();
+                }
+                finally
+                {
+                    _gate.Release();
+                }
+            });
+            Set(ClipState.Starting, null);
+            return;
+        }
 
         // A capture that had been healthy for a while (display sleep, device unplugged) gets retried.
         if (ranFor > TimeSpan.FromSeconds(30) && _restarts < 3 && Cfg.Enabled)
@@ -438,14 +474,15 @@ public sealed class ClipService : IDisposable
     }
 
     /// <summary>Writes the last N seconds to the clips folder. Returns the new file, or null.</summary>
-    public async Task<string?> SaveClipAsync(string? label = null)
+    public async Task<string?> SaveClipAsync(string? label = null, int? seconds = null)
     {
+        var length = seconds ?? Cfg.Seconds;
         if (State != ClipState.Recording) return null;
         await _gate.WaitAsync();
         try
         {
             var ffmpeg = await CaptureProbe.FindCaptureFfmpegAsync() ?? ToolLocator.Ffmpeg;
-            var segments = Segments().TakeLast(SegmentsFor(Cfg.Seconds) + 1).ToList();
+            var segments = Segments().TakeLast(SegmentsFor(length) + 1).ToList();
             if (ffmpeg is null || segments.Count == 0) return null;
 
             var folder = Cfg.ResolvedFolder;
@@ -458,7 +495,7 @@ public sealed class ClipService : IDisposable
             // The newest segment is still being written, so the clip runs right up to "now". Its
             // exact length is the requested one plus at most one segment.
             var total = segments.Count * (double)SegmentSeconds;
-            var skip = Math.Max(0, total - Cfg.Seconds - SegmentSeconds);
+            var skip = Math.Max(0, total - length - SegmentSeconds);
             var args = new List<string> { "-hide_banner", "-loglevel", "error", "-y", "-f", "concat", "-safe", "0" };
             if (skip > 0) args.AddRange(new[] { "-ss", skip.ToString("0.###", CultureInfo.InvariantCulture) });
             // Written next to the buffer and moved into place when complete: the clips folder is a
@@ -476,7 +513,7 @@ public sealed class ClipService : IDisposable
                 return null;
             }
             File.Move(partial, output, overwrite: false);
-            ClipSaved?.Invoke(output);
+            ClipSaved?.Invoke(output, length);
             return output;
         }
         catch (Exception ex)
@@ -503,10 +540,12 @@ public sealed class ClipService : IDisposable
 
     /// <summary>
     /// The ffmpeg command line for the rolling capture. Pure function so it can be checked without
-    /// a display: input 0 is the screen, inputs 1..2 are the optional audio devices.
+    /// a display: input 0 is the screen, inputs 1..2 are the optional audio devices, and the camera
+    /// (if one is picked and plugged in) comes after them. <paramref name="devices"/> is what
+    /// CaptureProbe found; macOS needs it for the screens and audio devices, every OS for the camera.
     /// </summary>
     public static List<string> BuildArguments(ClipSettings s, string encoder, bool ddagrab,
-        CaptureDevices? macDevices, string bufferDir, string? x11Display)
+        CaptureDevices? devices, string bufferDir, string? x11Display)
     {
         var fps = s.Fps is 30 or 60 ? s.Fps : 60;
         var inv = CultureInfo.InvariantCulture;
@@ -517,7 +556,7 @@ public sealed class ClipService : IDisposable
         // ---- video input ----
         if (OperatingSystem.IsMacOS())
         {
-            var screens = macDevices?.Screens ?? Array.Empty<string>();
+            var screens = devices?.Screens ?? Array.Empty<string>();
             var screen = screens.Count > 0 ? screens[Math.Clamp(s.Screen, 0, screens.Count - 1)] : "Capture screen 0";
             a.AddRange(new[]
             {
@@ -560,7 +599,7 @@ public sealed class ClipService : IDisposable
         if (OperatingSystem.IsMacOS())
         {
             // avfoundation addresses audio devices by index; drop names that are no longer plugged in.
-            var known = macDevices?.Audio ?? Array.Empty<string>();
+            var known = devices?.Audio ?? Array.Empty<string>();
             audio = audio.Where(known.Contains).ToList();
             // The system audio entry is not an avfoundation device, so it does not count in the indexes.
             var avDevices = known.Where(n => n != CaptureProbe.SystemAudio).ToList();
@@ -588,35 +627,61 @@ public sealed class ClipService : IDisposable
                 a.AddRange(new[] { "-f", "pulse", "-thread_queue_size", "1024", "-i", name });
         }
 
+        // ---- camera input ----
+        var camera = !string.IsNullOrWhiteSpace(s.Camera) && devices?.Cameras.Contains(s.Camera) == true ? s.Camera : null;
+        var cameraInput = 1 + audio.Count;
+        if (camera is not null)
+        {
+            if (OperatingSystem.IsMacOS())
+                // avfoundation's default rate (29.97) is one most webcams refuse; 30 they all offer.
+                a.AddRange(new[] { "-f", "avfoundation", "-thread_queue_size", "512", "-framerate", "30", "-i", camera + ":none" });
+            else if (OperatingSystem.IsWindows())
+                a.AddRange(new[] { "-f", "dshow", "-thread_queue_size", "512", "-rtbufsize", "64M", "-i", "video=" + camera });
+            else
+                a.AddRange(new[] { "-f", "v4l2", "-thread_queue_size", "512", "-i", CaptureProbe.CameraInput(camera) });
+        }
+
         // ---- video filters ----
         // Desktop Duplication hands over GPU textures. NVENC and AMF encode those directly (no copy
-        // through system memory); anything else, and any resize, needs them downloaded first.
-        var direct = gpuFrames && s.Height <= 0 && (encoder.EndsWith("_nvenc") || encoder.EndsWith("_amf"));
+        // through system memory); anything else, any resize and the camera need them downloaded first.
+        var direct = camera is null && gpuFrames && s.Height <= 0 && (encoder.EndsWith("_nvenc") || encoder.EndsWith("_amf"));
         if (gpuFrames && !direct) filters.Add("hwdownload,format=bgra");
         if (s.Height > 0) filters.Add($"scale=-2:'min({s.Height},ih)':flags=fast_bilinear");
+        string? format = null;
         if (!direct)
         {
-            var alreadyNv12 = OperatingSystem.IsMacOS() && s.Height <= 0 && encoder != "libx264";
-            if (!alreadyNv12) filters.Add(encoder == "libx264" ? "format=yuv420p" : "format=nv12");
+            var alreadyNv12 = OperatingSystem.IsMacOS() && s.Height <= 0 && encoder != "libx264" && camera is null;
+            if (!alreadyNv12) format = encoder == "libx264" ? "format=yuv420p" : "format=nv12";
         }
-        if (filters.Count > 0) a.AddRange(new[] { "-vf", string.Join(",", filters) });
+        var graphs = new List<string>();
+        var video = "0:v";
+        if (camera is null)
+        {
+            if (format is not null) filters.Add(format);
+            if (filters.Count > 0) a.AddRange(new[] { "-vf", string.Join(",", filters) });
+        }
+        else
+        {
+            graphs.AddRange(CameraGraph(filters, cameraInput, s.CameraCorner, s.CameraSize, format ?? "format=nv12"));
+            video = "[v]";
+        }
 
         // ---- mapping ----
+        var maps = new List<string> { "-map", video };
         if (audio.Count == 2 && s.SeparateTracks)
         {
             // Two tracks (for example game and microphone) that the editor can mute independently.
-            a.AddRange(new[] { "-map", "0:v", "-map", "1:a", "-map", "2:a" });
+            maps.AddRange(new[] { "-map", "1:a", "-map", "2:a" });
         }
         else if (audio.Count == 2)
         {
-            a.AddRange(new[]
-            {
-                "-filter_complex", "[1:a][2:a]amix=inputs=2:duration=longest:normalize=0[mix]",
-                "-map", "0:v", "-map", "[mix]",
-            });
+            graphs.Add("[1:a][2:a]amix=inputs=2:duration=longest:normalize=0[mix]");
+            maps.AddRange(new[] { "-map", "[mix]" });
         }
-        else if (audio.Count == 1) a.AddRange(new[] { "-map", "0:v", "-map", "1:a" });
-        else a.AddRange(new[] { "-map", "0:v", "-an" });
+        else if (audio.Count == 1) maps.AddRange(new[] { "-map", "1:a" });
+        else maps.Add("-an");
+        if (graphs.Count > 0) a.AddRange(new[] { "-filter_complex", string.Join(";", graphs) });
+        a.AddRange(maps);
 
         // ---- encoders ----
         var kbps = Math.Clamp(s.BitrateMbps, 1, 100) * 1000;
@@ -651,6 +716,23 @@ public sealed class ClipService : IDisposable
             "-flush_packets", "1", Path.Combine(bufferDir, encoder.StartsWith("av1") ? "seg%07d.mkv" : "seg%07d.ts"),
         });
         return a;
+    }
+
+    /// <summary>
+    /// The screen (after <paramref name="screenFilters"/>) with the camera in a corner, as [v]. The
+    /// camera is sized against the screen picture, so it stays the same share of it at any resolution.
+    /// </summary>
+    public static IEnumerable<string> CameraGraph(IReadOnlyList<string> screenFilters, int cameraInput,
+        string corner, int sizePercent, string format)
+    {
+        var inv = CultureInfo.InvariantCulture;
+        var share = (Math.Clamp(sizePercent, 10, 50) / 100.0).ToString("0.###", inv);
+        // A gap of 3 % of the height between the camera and the edges.
+        var x = corner.EndsWith("left") ? "main_h*0.03" : "main_w-overlay_w-main_h*0.03";
+        var y = corner.StartsWith("top") ? "main_h*0.03" : "main_h-overlay_h-main_h*0.03";
+        yield return $"[0:v]{(screenFilters.Count > 0 ? string.Join(",", screenFilters) : "null")}[screen]";
+        yield return $"[{cameraInput}:v][screen]scale2ref=w='trunc(oh*mdar/2)*2':h='trunc(ih*{share}/2)*2'[cam][base]";
+        yield return $"[base][cam]overlay=x='{x}':y='{y}':eof_action=pass,{format}[v]";
     }
 
     private void Set(ClipState state, string? error)
