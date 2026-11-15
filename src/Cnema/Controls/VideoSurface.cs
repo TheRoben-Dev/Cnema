@@ -67,7 +67,13 @@ public sealed class VideoSurface : Control
         InvalidateVisual();
     }
 
-    private void OnCleared() => Dispatcher.UIThread.Post(Clear);
+    // Reset runs on the UI thread when a video is opened: clear right away, so a posted clear can't
+    // land after (and wipe) the first frame of the new video.
+    private void OnCleared()
+    {
+        if (Dispatcher.UIThread.CheckAccess()) Clear();
+        else Dispatcher.UIThread.Post(Clear);
+    }
 
     private void OnFrameReady()
     {

@@ -110,7 +110,6 @@
       <!-- Sidebar -->
       <Border Grid.Column="0" Background="{DynamicResource Bg1}" BorderBrush="{DynamicResource Line}" BorderThickness="0,0,1,0">
         <Panel>
-        <Border Background="{DynamicResource SidebarGlow}" IsHitTestVisible="False" />
         <DockPanel Margin="14,0,14,14">
           <!-- top spacer under the macOS traffic lights / drag area -->
           <Border x:Name="SidebarInset" DockPanel.Dock="Top" Height="0" IsHitTestVisible="False" />
@@ -148,7 +147,7 @@
 >
               <StackPanel Spacing="4">
                 <TextBlock Text="{Binding UpdateText}" FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap" />
-                <TextBlock Text="{Binding UpdateAction}" FontSize="11" Foreground="{DynamicResource Cyan}" />
+                <TextBlock Text="{Binding UpdateAction}" FontSize="11" Foreground="{DynamicResource Highlight}" />
                 <ProgressBar Minimum="0" Maximum="1" Value="{Binding UpdateProgress}" Height="3" MinHeight="3" MinWidth="0"
                              IsVisible="{Binding IsInstallingUpdate}" />
               </StackPanel>
@@ -201,7 +200,7 @@
           <ListBox x:Name="FolderList" Classes="nav" ItemsSource="{Binding Folders}" SelectedItem="{Binding SelectedFolder}">
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="vm:FolderViewModel">
-                <Grid ColumnDefinitions="Auto,*,Auto,Auto" ToolTip.Tip="{Binding Tooltip}" Background="Transparent">
+                <Grid ColumnDefinitions="Auto,*,Auto" ToolTip.Tip="{Binding Tooltip}" Background="Transparent">
                   <Grid.ContextMenu>
                     <ContextMenu IsVisible="{Binding IsRemovable}">
                       <MenuItem svc:Tr.Header="Show in file manager" Click="OnRevealFolderClick" />
@@ -212,13 +211,16 @@
                             Foreground="{DynamicResource TextDim}"
                             Data="{Binding Kind, Converter={x:Static c:Converters.NavIcon}}" />
                   <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="13" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                  <TextBlock Grid.Column="2" Classes="dim" Text="{Binding Count}" FontSize="11" VerticalAlignment="Center" Margin="6,0,0,0" />
-                  <Button Grid.Column="3" Classes="ghost remove" Padding="3" Margin="4,-4,-4,-4"
-                          IsVisible="{Binding IsRemovable}" svc:Tr.Tip="Remove folder"
-                          Command="{Binding #Root.((vm:MainViewModel)DataContext).RemoveFolderCommand}"
-                          CommandParameter="{Binding}">
-                    <PathIcon Data="{StaticResource IcClose}" Width="11" Height="11" Foreground="{DynamicResource TextDim}" />
-                  </Button>
+                  <!-- The count, swapped for a remove button on hover, so every row's count lines up -->
+                  <Panel Grid.Column="2" Classes.removable="{Binding IsRemovable}" Margin="6,0,0,0" VerticalAlignment="Center">
+                    <TextBlock Classes="dim count" Text="{Binding Count}" FontSize="11" VerticalAlignment="Center" HorizontalAlignment="Right" />
+                    <Button Classes="ghost remove" Padding="3" Margin="0,-4,-4,-4" HorizontalAlignment="Right"
+                            IsVisible="{Binding IsRemovable}" svc:Tr.Tip="Remove folder"
+                            Command="{Binding #Root.((vm:MainViewModel)DataContext).RemoveFolderCommand}"
+                            CommandParameter="{Binding}">
+                      <PathIcon Data="{StaticResource IcClose}" Width="11" Height="11" Foreground="{DynamicResource TextDim}" />
+                    </Button>
+                  </Panel>
                 </Grid>
               </DataTemplate>
             </ListBox.ItemTemplate>
@@ -463,7 +465,7 @@
 
             <ItemsRepeater x:Name="VideoGrid" ItemsSource="{Binding Videos}" Margin="20,0,20,24">
               <ItemsRepeater.Layout>
-                <UniformGridLayout MinItemWidth="250" MinItemHeight="250" MinRowSpacing="6" MinColumnSpacing="6"
+                <UniformGridLayout MinItemWidth="250" MinRowSpacing="6" MinColumnSpacing="6"
                                    ItemsStretch="Fill" />
               </ItemsRepeater.Layout>
               <ItemsRepeater.ItemTemplate>
@@ -554,11 +556,13 @@
                           <TextBlock Grid.Column="1" Text="{Binding Title}" ToolTip.Tip="{Binding Entry.Path}" ToolTip.ShowDelay="900" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
                         </Grid>
                         <Grid ColumnDefinitions="Auto,*" ToolTip.Tip="{Binding SubtitleTip}">
-                          <PathIcon Data="{StaticResource IcNote}" Width="11" Height="11" Margin="0,0,5,0" Foreground="{DynamicResource Cyan}"
+                          <PathIcon Data="{StaticResource IcNote}" Width="11" Height="11" Margin="0,0,5,0" Foreground="{DynamicResource Highlight}"
                                     IsVisible="{Binding HasNote}" VerticalAlignment="Center" />
                           <TextBlock Grid.Column="1" Classes="dim" Text="{Binding Subtitle}" FontSize="11" TextTrimming="CharacterEllipsis" />
                         </Grid>
-                        <ItemsControl ItemsSource="{Binding Tags}" IsVisible="{Binding HasTags}" Margin="0,3,0,0" Height="20" ClipToBounds="True">
+                        <!-- Always takes its row, empty or not: the grid sizes every card like the first one, so
+                             cards line up and a tagged card is never cut off -->
+                        <ItemsControl ItemsSource="{Binding Tags}" Margin="0,3,0,0" Height="20" ClipToBounds="True">
                           <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
                           </ItemsControl.ItemsPanel>
@@ -581,7 +585,7 @@
           <StackPanel IsVisible="{Binding HasNoFolders}" HorizontalAlignment="Center" VerticalAlignment="Center"
                       Spacing="14" MaxWidth="380" Margin="0,0,0,60">
             <Border Width="72" Height="72" CornerRadius="20" Background="{DynamicResource Bg2}" HorizontalAlignment="Center">
-              <PathIcon Data="{StaticResource IcLibrary}" Width="32" Height="32" Foreground="{DynamicResource Cyan}" />
+              <PathIcon Data="{StaticResource IcLibrary}" Width="32" Height="32" Foreground="{DynamicResource Highlight}" />
             </Border>
             <TextBlock svc:Tr.Text="Your saves start here" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center" />
             <TextBlock Classes="dim" TextAlignment="Center" TextWrapping="Wrap" FontSize="13"
@@ -664,14 +668,14 @@
     <!-- Plain playback over the library, almost window-sized; Edit opens the same video in the full editor.
          (Called the mini player in code: it started out as a small corner player.) -->
     <Panel IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).IsMiniPlayerOpen}">
-      <Border x:Name="MiniScrim" Background="#99050609" />
+      <Border x:Name="MiniScrim" Background="{DynamicResource ScrimLight}" />
       <Border x:Name="MiniPlayer" Classes="miniplayer" Margin="48,56,48,40"
               DataContext="{Binding Player}" x:DataType="vm:PlayerViewModel">
         <DockPanel>
           <StackPanel DockPanel.Dock="Bottom" Margin="14,2,14,12" Spacing="2">
             <c:TrimTimeline Duration="{Binding Duration}" Position="{Binding Position}"
                             InPoint="{Binding InPoint}" OutPoint="{Binding OutPoint}"
-                            SeekCommand="{Binding SeekCommand}" Accent="{DynamicResource Accent}" RangeBrush="{DynamicResource Cyan}"
+                            SeekCommand="{Binding SeekCommand}" Accent="{DynamicResource Accent}" RangeBrush="{DynamicResource Highlight}"
                             Segments="{Binding SegmentRanges}" Markers="{Binding Markers}" />
             <Grid ColumnDefinitions="Auto,*,Auto">
               <StackPanel Orientation="Horizontal" Spacing="0" VerticalAlignment="Center">
@@ -703,14 +707,25 @@
                   <TextBlock Classes="dim" Text="{Binding RateText}" FontSize="11" Margin="4,0,0,0" IsVisible="{Binding IsRateChanged}" />
                 </StackPanel>
               </StackPanel>
-              <Button Grid.Column="2" Classes="accent" Focusable="False" Padding="14,7" VerticalAlignment="Center"
-                      svc:Tr.Tip="Open in the editor: trim, export and share"
-                      Command="{Binding #Root.((vm:MainViewModel)DataContext).ExpandMiniPlayerCommand}">
-                <StackPanel Orientation="Horizontal" Spacing="6">
-                  <PathIcon Data="{StaticResource IcEdit}" Width="13" Height="13" Foreground="{DynamicResource OnAccent}" />
-                  <TextBlock svc:Tr.Text="Edit" FontSize="12" />
-                </StackPanel>
-              </Button>
+              <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+                <!-- The same previous / next video buttons as in the editor (← / →) -->
+                <Button Classes="ghost" Focusable="False" Padding="6" svc:Tr.Tip="Previous video (←)"
+                        Command="{Binding #Root.((vm:MainViewModel)DataContext).PreviousClipCommand}">
+                  <PathIcon Data="{StaticResource IcChevronLeft}" Width="18" Height="18" />
+                </Button>
+                <Button Classes="ghost" Focusable="False" Padding="6" Margin="0,0,8,0" svc:Tr.Tip="Next video (→)"
+                        Command="{Binding #Root.((vm:MainViewModel)DataContext).NextClipCommand}">
+                  <PathIcon Data="{StaticResource IcChevronRight}" Width="18" Height="18" />
+                </Button>
+                <Button Classes="accent" Focusable="False" VerticalAlignment="Center"
+                        svc:Tr.Tip="Open in the editor: trim, export and share"
+                        Command="{Binding #Root.((vm:MainViewModel)DataContext).ExpandMiniPlayerCommand}">
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <PathIcon Data="{StaticResource IcEdit}" Width="13" Height="13" Foreground="{DynamicResource OnAccent}" />
+                    <TextBlock svc:Tr.Text="Edit" />
+                  </StackPanel>
+                </Button>
+              </StackPanel>
             </Grid>
           </StackPanel>
           <Panel Background="Black">
@@ -732,10 +747,10 @@
     </Panel>
 
     <!-- ======================= EDIT DETAILS ======================= -->
-    <Border x:Name="EditScrim" Background="#B3050609" IsVisible="{Binding IsEditing}">
+    <Border x:Name="EditScrim" Background="{DynamicResource Scrim}" IsVisible="{Binding IsEditing}">
       <Border Width="460" VerticalAlignment="Center" HorizontalAlignment="Center" Background="{DynamicResource Bg1}"
               BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="16" Padding="22"
-              BoxShadow="0 18 60 0 #80000000" DataContext="{Binding Editor}" x:DataType="vm:EditViewModel" x:Name="EditCard">
+              BoxShadow="{DynamicResource DialogShadow}" DataContext="{Binding Editor}" x:DataType="vm:EditViewModel" x:Name="EditCard">
         <StackPanel Spacing="14">
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock svc:Tr.Text="Edit details" FontSize="17" FontWeight="Bold" VerticalAlignment="Center" />
@@ -841,9 +856,9 @@
     </Border>
 
     <!-- ======================= DELETE CONFIRMATION ======================= -->
-    <Border x:Name="DeleteScrim" Background="#B3050609" IsVisible="{Binding IsConfirmingDelete}">
+    <Border x:Name="DeleteScrim" Background="{DynamicResource Scrim}" IsVisible="{Binding IsConfirmingDelete}">
       <Border Width="420" VerticalAlignment="Center" HorizontalAlignment="Center" Background="{DynamicResource Bg1}"
-              BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="16" Padding="22" BoxShadow="0 18 60 0 #80000000">
+              BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="16" Padding="22" BoxShadow="{DynamicResource DialogShadow}">
         <StackPanel Spacing="12">
           <TextBlock Text="{Binding DeleteTitle}" FontSize="17" FontWeight="Bold" />
           <TextBlock Text="{Binding DeletePrompt}" TextWrapping="Wrap" FontSize="13" />
@@ -859,9 +874,9 @@
     </Border>
 
     <!-- ======================= WHAT'S NEW ======================= -->
-    <Border x:Name="WhatsNewScrim" Background="#B3050609" IsVisible="{Binding IsShowingWhatsNew}">
+    <Border x:Name="WhatsNewScrim" Background="{DynamicResource Scrim}" IsVisible="{Binding IsShowingWhatsNew}">
       <Border Width="520" MaxHeight="620" VerticalAlignment="Center" HorizontalAlignment="Center" Background="{DynamicResource Bg1}"
-              BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="16" Padding="22" BoxShadow="0 18 60 0 #80000000">
+              BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="16" Padding="22" BoxShadow="{DynamicResource DialogShadow}">
         <DockPanel>
           <TextBlock DockPanel.Dock="Top" Text="{Binding WhatsNewTitle}" FontSize="17" FontWeight="Bold" Margin="0,0,0,12" />
           <Button x:Name="WhatsNewClose" DockPanel.Dock="Bottom" Classes="accent" svc:Tr.Content="Got it" HorizontalAlignment="Right"
@@ -871,7 +886,7 @@
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="svc:ChangelogEntry">
                   <StackPanel Spacing="6" Margin="0,0,12,16">
-                    <TextBlock Text="{Binding Title}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource Cyan}" />
+                    <TextBlock Text="{Binding Title}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource Highlight}" />
                     <ItemsControl ItemsSource="{Binding Items}">
                       <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="x:String">
@@ -892,9 +907,9 @@
     </Border>
 
     <!-- ======================= CLEAN UP ======================= -->
-    <Border x:Name="CleanupScrim" Background="#B3050609" IsVisible="{Binding IsCleaningUp}">
+    <Border x:Name="CleanupScrim" Background="{DynamicResource Scrim}" IsVisible="{Binding IsCleaningUp}">
       <Border Width="640" MaxHeight="720" Margin="0,40" VerticalAlignment="Center" HorizontalAlignment="Center" Background="{DynamicResource Bg1}"
-              BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="16" BoxShadow="0 18 60 0 #80000000"
+              BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="16" BoxShadow="{DynamicResource DialogShadow}"
               DataContext="{Binding Cleanup}" x:DataType="vm:CleanupViewModel">
         <DockPanel>
           <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="24,22,24,12">
@@ -925,7 +940,7 @@
                         <TextBlock Text="{Binding Title}" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
                         <TextBlock Classes="dim" Text="{Binding Details}" FontSize="11" TextTrimming="CharacterEllipsis" />
                       </StackPanel>
-                      <TextBlock Grid.Column="2" Text="{Binding Reason}" FontSize="11" Foreground="{DynamicResource Cyan}"
+                      <TextBlock Grid.Column="2" Text="{Binding Reason}" FontSize="11" Foreground="{DynamicResource Highlight}"
                                  VerticalAlignment="Center" Margin="10,0,0,0" MaxWidth="200" TextTrimming="CharacterEllipsis" />
                     </Grid>
                   </Border>
@@ -938,9 +953,9 @@
     </Border>
 
     <!-- ======================= AUTO MONTAGE ======================= -->
-    <Border x:Name="MontageScrim" Background="#B3050609" IsVisible="{Binding IsMakingMontage}">
+    <Border x:Name="MontageScrim" Background="{DynamicResource Scrim}" IsVisible="{Binding IsMakingMontage}">
       <Border Width="560" MaxHeight="720" Margin="0,40" VerticalAlignment="Center" HorizontalAlignment="Center" Background="{DynamicResource Bg1}"
-              BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="16" BoxShadow="0 18 60 0 #80000000"
+              BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="16" BoxShadow="{DynamicResource DialogShadow}"
               DataContext="{Binding Montage}" x:DataType="vm:MontageViewModel">
         <DockPanel>
           <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="24,22,24,4">
@@ -1002,9 +1017,9 @@
     </Border>
 
     <!-- ======================= OTHER RECORDERS ======================= -->
-    <Border x:Name="RecordersScrim" Background="#B3050609" IsVisible="{Binding IsShowingRecorders}">
+    <Border x:Name="RecordersScrim" Background="{DynamicResource Scrim}" IsVisible="{Binding IsShowingRecorders}">
       <Border Width="640" MaxHeight="720" Margin="0,40" VerticalAlignment="Center" HorizontalAlignment="Center" Background="{DynamicResource Bg1}"
-              BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="16" BoxShadow="0 18 60 0 #80000000"
+              BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="16" BoxShadow="{DynamicResource DialogShadow}"
               DataContext="{Binding Recorders}" x:DataType="vm:RecordersViewModel">
         <DockPanel>
           <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="24,22,24,6">
@@ -1033,9 +1048,9 @@
                       <StackPanel Spacing="3">
                         <StackPanel Orientation="Horizontal" Spacing="8">
                           <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold" />
-                          <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{DynamicResource Cyan}" VerticalAlignment="Center" />
+                          <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{DynamicResource Highlight}" VerticalAlignment="Center" />
                         </StackPanel>
-                        <TextBlock Classes="dim mono" Text="{Binding PathText}" FontSize="11" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Path}" />
+                        <TextBlock Classes="dim" Classes.mono="{Binding HasPath}" Text="{Binding PathText}" FontSize="11" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Path}" />
                         <TextBlock Classes="dim" Text="{Binding Description}" FontSize="11" TextWrapping="Wrap" />
                       </StackPanel>
                       <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Margin="12,0,0,0"
@@ -1064,9 +1079,9 @@
     </Border>
 
     <!-- ======================= STATS ======================= -->
-    <Border x:Name="StatsScrim" Background="#B3050609" IsVisible="{Binding IsShowingStats}">
+    <Border x:Name="StatsScrim" Background="{DynamicResource Scrim}" IsVisible="{Binding IsShowingStats}">
       <Border Width="640" MaxHeight="720" Margin="0,40" VerticalAlignment="Center" HorizontalAlignment="Center" Background="{DynamicResource Bg1}"
-              BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="16" BoxShadow="0 18 60 0 #80000000"
+              BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="16" BoxShadow="{DynamicResource DialogShadow}"
               DataContext="{Binding Stats}" x:DataType="vm:StatsViewModel">
         <DockPanel>
           <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="24,22,24,12">
@@ -1121,7 +1136,7 @@
                       <DataTemplate x:DataType="vm:StatBar">
                         <Grid ColumnDefinitions="150,*,Auto" Margin="0,4">
                           <TextBlock Text="{Binding Label}" FontSize="13" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                          <Border Grid.Column="1" Height="10" Width="{Binding Width}" CornerRadius="5" Background="{DynamicResource Cyan}"
+                          <Border Grid.Column="1" Height="10" Width="{Binding Width}" CornerRadius="5" Background="{DynamicResource Highlight}"
                                   HorizontalAlignment="Left" VerticalAlignment="Center" />
                           <TextBlock Grid.Column="2" Classes="dim" Text="{Binding Count}" FontSize="12" VerticalAlignment="Center" Margin="8,0,0,0" />
                         </Grid>
@@ -1137,9 +1152,9 @@
     </Border>
 
     <!-- ======================= KEYBOARD SHORTCUTS ======================= -->
-    <Border x:Name="ShortcutsScrim" Background="#B3050609" IsVisible="{Binding IsShowingShortcuts}">
+    <Border x:Name="ShortcutsScrim" Background="{DynamicResource Scrim}" IsVisible="{Binding IsShowingShortcuts}">
       <Border Width="560" MaxHeight="700" Margin="0,40" VerticalAlignment="Center" HorizontalAlignment="Center" Background="{DynamicResource Bg1}"
-              BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="16" BoxShadow="0 18 60 0 #80000000"
+              BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="16" BoxShadow="{DynamicResource DialogShadow}"
               DataContext="{Binding ShortcutSheet}" x:DataType="vm:ShortcutsViewModel">
         <DockPanel>
           <StackPanel DockPanel.Dock="Top" Spacing="4" Margin="24,22,24,12">
@@ -1149,7 +1164,7 @@
           <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Line}" BorderThickness="0,1,0,0" Padding="24,14">
             <Grid ColumnDefinitions="Auto,*,Auto">
               <Button Classes="ghost" svc:Tr.Content="Reset all" FontSize="12" Command="{Binding ResetAllCommand}" />
-              <TextBlock Grid.Column="1" Text="{Binding Message}" Foreground="{DynamicResource Cyan}" FontSize="12" TextWrapping="Wrap"
+              <TextBlock Grid.Column="1" Text="{Binding Message}" Foreground="{DynamicResource Highlight}" FontSize="12" TextWrapping="Wrap"
                          VerticalAlignment="Center" Margin="12,0" />
               <Button x:Name="ShortcutsClose" Grid.Column="2" Classes="accent" svc:Tr.Content="Done"
                       Command="{Binding #Root.((vm:MainViewModel)DataContext).CloseShortcutsCommand}" />
@@ -1190,9 +1205,9 @@
     </Border>
 
     <!-- ======================= FIRST-RUN SETUP ======================= -->
-    <Border x:Name="SetupScrim" Background="#E6050609" IsVisible="{Binding IsSetupOpen}">
+    <Border x:Name="SetupScrim" Background="{DynamicResource ScrimStrong}" IsVisible="{Binding IsSetupOpen}">
       <Border Width="560" MaxHeight="720" Margin="0,40" VerticalAlignment="Center" HorizontalAlignment="Center" Background="{DynamicResource Bg1}"
-              BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="16" BoxShadow="0 18 60 0 #80000000">
+              BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="16" BoxShadow="{DynamicResource DialogShadow}">
         <DockPanel>
           <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Line}" BorderThickness="0,1,0,0" Padding="24,14">
             <Grid ColumnDefinitions="*,Auto">
@@ -1259,10 +1274,10 @@
     </Border>
 
     <!-- ======================= SETTINGS ======================= -->
-    <Border x:Name="SettingsScrim" Background="#B3050609" IsVisible="{Binding IsSettingsOpen}" ZIndex="10">
+    <Border x:Name="SettingsScrim" Background="{DynamicResource Scrim}" IsVisible="{Binding IsSettingsOpen}" ZIndex="10">
       <Border Width="580" MaxHeight="720" Margin="0,40" VerticalAlignment="Stretch" HorizontalAlignment="Center"
               Background="{DynamicResource Bg1}" BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="16"
-              BoxShadow="0 18 60 0 #80000000" DataContext="{Binding SettingsEditor}" x:DataType="vm:SettingsViewModel">
+              BoxShadow="{DynamicResource DialogShadow}" DataContext="{Binding SettingsEditor}" x:DataType="vm:SettingsViewModel">
         <DockPanel>
           <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="24,22,24,10">
             <TextBlock svc:Tr.Text="Settings" FontSize="17" FontWeight="Bold" />
@@ -1373,7 +1388,7 @@
                       <TextBlock svc:Tr.Text="Controller mode" />
                       <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap"
                                  svc:Tr.Text="Bigger layout and full gamepad navigation, for handhelds and TVs." />
-                      <TextBlock FontSize="11" TextWrapping="Wrap" Foreground="{DynamicResource Cyan}"
+                      <TextBlock FontSize="11" TextWrapping="Wrap" Foreground="{DynamicResource Highlight}"
                                  Text="{Binding #Root.((vm:MainViewModel)DataContext).PadStatus}"
                                  IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).IsControllerMode}" />
                     </StackPanel>
@@ -1426,7 +1441,7 @@
                     <StackPanel Spacing="2">
                       <TextBlock svc:Tr.Text="Portable mode" />
                       <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="{Binding PortableStatus}" />
-                      <TextBlock FontSize="11" TextWrapping="Wrap" Foreground="{DynamicResource Cyan}" Text="{Binding PortableMessage}"
+                      <TextBlock FontSize="11" TextWrapping="Wrap" Foreground="{DynamicResource Highlight}" Text="{Binding PortableMessage}"
                                  IsVisible="{Binding PortableMessage, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     </StackPanel>
                     <Panel Grid.Column="1">
@@ -1508,7 +1523,7 @@
                     <Grid Classes="row" ColumnDefinitions="*,Auto">
                       <StackPanel Spacing="2">
                         <TextBlock svc:Tr.Text="Hover glow" />
-                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="A soft glow in your color scheme around the video under the pointer." />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="A soft purple glow around the video under the pointer." />
                       </StackPanel>
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureHoverGlow}" />
                     </Grid>
@@ -1805,7 +1820,7 @@
                     <Grid Classes="row" ColumnDefinitions="*,Auto">
                       <StackPanel Spacing="2">
                         <TextBlock svc:Tr.Text="High contrast" />
-                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Black background, white text and clearer lines, with your scheme's accent color." />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Black background, white text and clearer lines, with the purple accent." />
                       </StackPanel>
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding HighContrast}" />
                     </Grid>
@@ -2095,7 +2110,7 @@
             BoxShadow="0 8 30 0 #80000000" IsHitTestVisible="False"
             IsVisible="{Binding Toast, Converter={x:Static ObjectConverters.IsNotNull}}">
       <StackPanel Orientation="Horizontal" Spacing="8">
-        <PathIcon Data="{StaticResource IcCheck}" Width="13" Height="13" Foreground="{DynamicResource Cyan}" />
+        <PathIcon Data="{StaticResource IcCheck}" Width="13" Height="13" Foreground="{DynamicResource Highlight}" />
         <TextBlock Text="{Binding Toast}" FontSize="12" FontWeight="SemiBold" />
       </StackPanel>
     </Border>
@@ -2266,7 +2281,7 @@
                     <TextBlock Classes="label" svc:Tr.Text="SELECTION" />
                     <Grid ColumnDefinitions="40,*,Auto,Auto" RowDefinitions="Auto,Auto">
                       <TextBlock svc:Tr.Text="In" FontSize="12" VerticalAlignment="Center" />
-                      <TextBlock Grid.Column="1" Classes="mono" Text="{Binding InText}" Foreground="{DynamicResource Cyan}" FontSize="12" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="1" Classes="mono" Text="{Binding InText}" Foreground="{DynamicResource Highlight}" FontSize="12" VerticalAlignment="Center" />
                       <Button Grid.Column="2" Classes="ghost" Padding="7,4" Command="{Binding SetInCommand}" svc:Tr.Tip="Set the start at the playhead (I)">
                         <TextBlock svc:Tr.Text="Set" FontSize="11" />
                       </Button>
@@ -2274,7 +2289,7 @@
                         <TextBlock svc:Tr.Text="Go to" FontSize="11" />
                       </Button>
                       <TextBlock Grid.Row="1" svc:Tr.Text="Out" FontSize="12" VerticalAlignment="Center" />
-                      <TextBlock Grid.Row="1" Grid.Column="1" Classes="mono" Text="{Binding OutText}" Foreground="{DynamicResource Cyan}" FontSize="12" VerticalAlignment="Center" />
+                      <TextBlock Grid.Row="1" Grid.Column="1" Classes="mono" Text="{Binding OutText}" Foreground="{DynamicResource Highlight}" FontSize="12" VerticalAlignment="Center" />
                       <Button Grid.Row="1" Grid.Column="2" Classes="ghost" Padding="7,4" Command="{Binding SetOutCommand}" svc:Tr.Tip="Set the end at the playhead (O)">
                         <TextBlock svc:Tr.Text="Set" FontSize="11" />
                       </Button>
@@ -2378,9 +2393,12 @@
                   </StackPanel>
                 </Border>
 
-                <Button Classes="ghost" HorizontalAlignment="Left" Padding="10,6" Command="{Binding StartOverCommand}"
+                <Button Classes="soft" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Command="{Binding StartOverCommand}"
                         svc:Tr.Tip="Remove trim marks, parts, captions and speed changes from this video">
-                  <TextBlock svc:Tr.Text="Start over" FontSize="12" />
+                  <StackPanel Orientation="Horizontal" Spacing="8">
+                    <PathIcon Data="{StaticResource IcRefresh}" Width="12" Height="12" />
+                    <TextBlock svc:Tr.Text="Start over" />
+                  </StackPanel>
                 </Button>
               </StackPanel>
 
@@ -2770,7 +2788,7 @@
         <StackPanel Spacing="6">
           <c:TrimTimeline Duration="{Binding Duration}" Position="{Binding Position}"
                           InPoint="{Binding InPoint}" OutPoint="{Binding OutPoint}"
-                          SeekCommand="{Binding SeekCommand}" Accent="{DynamicResource Accent}" RangeBrush="{DynamicResource Cyan}"
+                          SeekCommand="{Binding SeekCommand}" Accent="{DynamicResource Accent}" RangeBrush="{DynamicResource Highlight}"
                           Segments="{Binding SegmentRanges}" Markers="{Binding Markers}" Effects="{Binding EffectRanges}" />
 
           <!-- Transport row -->
@@ -2850,14 +2868,14 @@
               <Button Classes="tool" Command="{Binding SetInCommand}" svc:Tr.Tip="Start the selection at the playhead (I)">
                 <StackPanel Orientation="Horizontal" Spacing="6">
                   <TextBlock svc:Tr.Text="In" FontWeight="SemiBold" VerticalAlignment="Center" />
-                  <TextBlock Classes="mono" Text="{Binding InText}" Foreground="{DynamicResource Cyan}" FontSize="12" VerticalAlignment="Center" />
+                  <TextBlock Classes="mono" Text="{Binding InText}" Foreground="{DynamicResource Highlight}" FontSize="12" VerticalAlignment="Center" />
                   <TextBlock Classes="hint" Text="I" />
                 </StackPanel>
               </Button>
               <Button Classes="tool" Command="{Binding SetOutCommand}" svc:Tr.Tip="End the selection at the playhead (O)">
                 <StackPanel Orientation="Horizontal" Spacing="6">
                   <TextBlock svc:Tr.Text="Out" FontWeight="SemiBold" VerticalAlignment="Center" />
-                  <TextBlock Classes="mono" Text="{Binding OutText}" Foreground="{DynamicResource Cyan}" FontSize="12" VerticalAlignment="Center" />
+                  <TextBlock Classes="mono" Text="{Binding OutText}" Foreground="{DynamicResource Highlight}" FontSize="12" VerticalAlignment="Center" />
                   <TextBlock Classes="hint" Text="O" />
                 </StackPanel>
               </Button>

@@ -35,7 +35,7 @@ public sealed class TrimTimeline : Control
     public static readonly StyledProperty<IBrush> AccentProperty =
         AvaloniaProperty.Register<TrimTimeline, IBrush>(nameof(Accent), new SolidColorBrush(Color.Parse("#8E6BFF")));
     public static readonly StyledProperty<IBrush> RangeBrushProperty =
-        AvaloniaProperty.Register<TrimTimeline, IBrush>(nameof(RangeBrush), new SolidColorBrush(Color.Parse("#3DDCFF")));
+        AvaloniaProperty.Register<TrimTimeline, IBrush>(nameof(RangeBrush), new SolidColorBrush(Color.Parse("#C2AEFF")));
 
     public static readonly StyledProperty<IReadOnlyList<TimeRange>?> SegmentsProperty =
         AvaloniaProperty.Register<TrimTimeline, IReadOnlyList<TimeRange>?>(nameof(Segments));
@@ -146,7 +146,7 @@ public sealed class TrimTimeline : Control
         var cy = h / 2 + 4;
         var accent = Accent;
         var range = RangeBrush;
-        var rangeColor = (range as ISolidColorBrush)?.Color ?? Colors.Cyan;
+        var rangeColor = (range as ISolidColorBrush)?.Color ?? Color.Parse("#C2AEFF");
 
         // Hit area (transparent so the whole control receives pointer input).
         ctx.FillRectangle(Brushes.Transparent, new Rect(0, 0, w, h));

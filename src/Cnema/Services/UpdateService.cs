@@ -79,6 +79,17 @@ public static class UpdateService
             Log.Warn("Update check failed: the release list is not public (404)");
             return (null, T("the release list is not publicly readable"));
         }
+        catch (HttpRequestException ex) when (ex.StatusCode is System.Net.HttpStatusCode.Forbidden or System.Net.HttpStatusCode.TooManyRequests)
+        {
+            // GitHub's limit for checks without an account (60 an hour per network) was reached.
+            Log.Warn("Update check failed: " + ex.Message);
+            return (null, T("GitHub is busy right now, so try again in a while"));
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Net.Sockets.SocketException)
+        {
+            Log.Warn("Update check failed: " + ex.Message);
+            return (null, T("no connection to GitHub. Check your internet connection"));
+        }
         catch (Exception ex)
         {
             Log.Warn("Update check failed: " + ex.Message);

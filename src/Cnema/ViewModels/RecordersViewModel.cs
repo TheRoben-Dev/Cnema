@@ -10,7 +10,9 @@ public sealed partial class RecorderRow : ObservableObject
     public RecorderKind Kind { get; init; }
     public string Name { get; init; } = "";
     public bool IsSupported { get; init; }
-    [ObservableProperty] [NotifyPropertyChangedFor(nameof(PathText), nameof(CanAdd))] private string? _path;
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(PathText), nameof(CanAdd), nameof(HasPath))] private string? _path;
+    /// <summary>A real folder is shown in the monospace font; the hints in its place read as normal text.</summary>
+    public bool HasPath => IsSupported && Path is not null;
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(CanAdd), nameof(StatusText), nameof(HasPending))] private bool _isAdded;
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(HasPending), nameof(PendingText))] private int _pending;
     [ObservableProperty] private bool _isConverting;

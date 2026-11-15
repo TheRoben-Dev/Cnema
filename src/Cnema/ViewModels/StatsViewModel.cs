@@ -50,6 +50,9 @@ public sealed class StatsViewModel
     private static string Hours(long ms)
     {
         var t = TimeSpan.FromMilliseconds(ms);
-        return t.TotalHours >= 1 ? $"{(int)t.TotalHours} h {t.Minutes} min" : $"{t.Minutes} min";
+        // Under a minute in all reads as "0 min" otherwise.
+        return t.TotalHours >= 1 ? $"{(int)t.TotalHours} h {t.Minutes} min"
+            : t.TotalMinutes >= 1 ? $"{(int)Math.Round(t.TotalMinutes)} min"
+            : $"{(int)Math.Round(t.TotalSeconds)} s";
     }
 }
