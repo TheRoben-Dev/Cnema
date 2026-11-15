@@ -49,6 +49,7 @@ public partial class App : Application
             VlcBootstrap.Initialize();
             AutostartService.RefreshIfEnabled();
 
+            ThemeService.Mode = settings.Current.ThemeMode;
             ThemeService.Apply(settings.Current.ColorScheme, settings.Current.Accessibility.HighContrast);
             Shortcuts.Load(settings.Current.Shortcuts);
             _vm = new MainViewModel(settings, new LibraryService(), new ClipService(settings));

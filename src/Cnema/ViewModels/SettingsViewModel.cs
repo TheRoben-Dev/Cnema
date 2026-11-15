@@ -224,6 +224,14 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private ColorScheme _colorScheme = ThemeService.Current;
     // Shown straight away as a preview; cancelling Settings puts the saved scheme back.
     partial void OnColorSchemeChanged(ColorScheme value) { if (value is not null) ThemeService.Apply(value.Id, HighContrast); }
+    public IReadOnlyList<ThemeModeOption> ThemeModes => ThemeService.Modes;
+    [ObservableProperty] private ThemeModeOption _themeMode = ThemeService.FindMode("");
+    partial void OnThemeModeChanged(ThemeModeOption value)
+    {
+        if (value is null) return;
+        ThemeService.Mode = value.Id;
+        ThemeService.Apply(ColorScheme.Id, HighContrast);
+    }
 
     public IReadOnlyList<LanguageOption> LanguageOptions { get; } =
         new[] { new LanguageOption("", SystemLanguageLabel()) }
@@ -359,6 +367,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         _checkForUpdates = settings.CheckForUpdates;
         _autoUpdate = settings.AutoUpdate;
         _colorScheme = ThemeService.Find(settings.ColorScheme);
+        _themeMode = ThemeService.FindMode(settings.ThemeMode);
         _language = LanguageOptions.FirstOrDefault(l => l.Code == settings.Language) ?? LanguageOptions[0];
         var f = settings.Features;
         _featureClipping = f.Clipping;
@@ -506,6 +515,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         settings.CheckForUpdates = CheckForUpdates;
         settings.AutoUpdate = AutoUpdate;
         settings.ColorScheme = ColorScheme.Id;
+        settings.ThemeMode = ThemeMode.Id;
         settings.Language = Language.Code;
         settings.Features = new FeatureSettings
         {

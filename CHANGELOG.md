@@ -9,6 +9,8 @@ What changed in each Savefile (formerly Cnema) release. The app shows the entrie
 - Who was there: tag the friends in a clip under Rename, tag or move. Their names show on the card ("with Alex and Sam"), and search finds them, or only them with @name.
 - Milestones: a small celebration for your first save, your 10th, your 100th and so on. Saving a clip also gets a friendlier message.
 - The colour schemes have new names: Memory Card (the default, matches the icon), Cartridge, Campfire, Handheld, Sleepover and Classic Cnema (the original look with gradients). Your pick is kept.
+- Light mode: every colour scheme now comes in dark and light. Pick Dark, Light or Same as system under Settings, General, Appearance (or in the welcome setup). Same as system switches along with your computer.
+- The dark schemes are a step lighter, so panels and cards stand apart instead of everything sitting on near-black. Classic Cnema keeps its original look.
 - Friendlier words around the app: the library header counts the moments you've kept, and empty screens and the delete prompt read more like a person wrote them.
 - All of the new parts can be switched off under Settings, Features, Memories.
 - The app file is still called Cnema.app / Cnema.exe for this release so updates keep working; it shows as Savefile everywhere you see it.

@@ -1093,6 +1093,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private void CancelSettings()
     {
         SettingsEditor = null;
+        ThemeService.Mode = _settings.Current.ThemeMode;
         ThemeService.Apply(_settings.Current.ColorScheme, Accessibility.HighContrast); // drop a previewed look
         Loc.Apply(_settings.Current.Language); // and a previewed language
     }

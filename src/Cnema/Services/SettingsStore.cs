@@ -17,6 +17,8 @@ public sealed class AppSettings
     public int ClipsSaved { get; set; }
     /// <summary>Id of the colour scheme, see ThemeService.</summary>
     public string ColorScheme { get; set; } = ThemeService.DefaultId;
+    /// <summary>Dark or light: "" follows the system, otherwise "dark" or "light".</summary>
+    public string ThemeMode { get; set; } = "";
     /// <summary>UI language code ("en", "sv"), or "" to follow the system language.</summary>
     public string Language { get; set; } = "";
     /// <summary>Download and install a newer version at launch, without asking.</summary>

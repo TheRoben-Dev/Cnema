@@ -53,6 +53,7 @@ public sealed partial class MainViewModel
     private void ShowShortcuts()
     {
         SettingsEditor = null;
+        ThemeService.Mode = _settings.Current.ThemeMode;
         ThemeService.Apply(_settings.Current.ColorScheme, Accessibility.HighContrast);
         ShortcutSheet = new ShortcutsViewModel(_settings.Save);
     }
@@ -109,6 +110,7 @@ public sealed partial class MainViewModel
     /// <summary>Puts look, keys, features and controller mode in line with the stored settings.</summary>
     private void ApplyAllSettings()
     {
+        ThemeService.Mode = _settings.Current.ThemeMode;
         ThemeService.Apply(_settings.Current.ColorScheme, Accessibility.HighContrast);
         Shortcuts.Load(_settings.Current.Shortcuts);
         OnPropertyChanged(nameof(IsControllerMode));
@@ -121,6 +123,14 @@ public sealed partial class MainViewModel
     public IReadOnlyList<ColorScheme> ColorSchemes => ThemeService.Schemes;
     [ObservableProperty] private ColorScheme _setupScheme = ThemeService.Current;
     partial void OnSetupSchemeChanged(ColorScheme value) { if (value is not null) ThemeService.Apply(value.Id, Accessibility.HighContrast); }
+    public IReadOnlyList<ThemeModeOption> ThemeModes => ThemeService.Modes;
+    [ObservableProperty] private ThemeModeOption _setupMode = ThemeService.FindMode("");
+    partial void OnSetupModeChanged(ThemeModeOption value)
+    {
+        if (value is null) return;
+        ThemeService.Mode = value.Id;
+        ThemeService.Apply(SetupScheme.Id, Accessibility.HighContrast);
+    }
     public IReadOnlyList<LanguageOption> SetupLanguages { get; } = Loc.Languages.Select(l => new LanguageOption(l.Code, l.Name)).ToList();
     [ObservableProperty] private LanguageOption? _setupLanguage;
     partial void OnSetupLanguageChanged(LanguageOption? value) { if (value is not null) Loc.Apply(value.Code); }
@@ -149,6 +159,7 @@ public sealed partial class MainViewModel
     {
         var s = _settings.Current;
         s.ColorScheme = SetupScheme.Id;
+        s.ThemeMode = SetupMode.Id;
         // Picking the system's own language keeps following the system.
         if (SetupLanguage is { } lang) s.Language = lang.Code == Loc.SystemLanguage ? "" : lang.Code;
         // Only the switches shown in setup; everything else (other features, folders, hotkeys) stays.
@@ -171,6 +182,7 @@ public sealed partial class MainViewModel
         var s = _settings.Current;
         var f = s.Features;
         SetupScheme = ThemeService.Find(s.ColorScheme);
+        SetupMode = ThemeService.FindMode(s.ThemeMode);
         SetupLanguage = SetupLanguages.FirstOrDefault(l => l.Code == Loc.Current);
         SetupClipping = f.Clipping; SetupSessions = f.Sessions; SetupController = f.Controller;
         SetupHoverPreview = f.HoverPreview; SetupLoudMarkers = f.LoudMarkers; SetupHoverGlow = f.HoverGlow;
