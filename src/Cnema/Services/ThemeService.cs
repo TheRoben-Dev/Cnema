@@ -34,14 +34,10 @@ public static class ThemeService
 {
     public const string DefaultId = "violet";
 
+    /// <summary>Savefile purple only (Roben, 2026-11-15); a saved id from an older scheme falls back to it.</summary>
     public static IReadOnlyList<ColorScheme> Schemes { get; } = new[]
     {
         new ColorScheme("violet", "Memory Card", 252, 0.30, "#8E6BFF", "#A78BFF", "#3DDCFF"),
-        new ColorScheme("graphite", "Cartridge", 225, 0.06, "#4C8DFF", "#6BA4FF", "#8AB8FF"),
-        new ColorScheme("ember", "Campfire", 18, 0.26, "#FF7A45", "#FF9567", "#FFC857", "#1A0D06"),
-        new ColorScheme("mint", "Handheld", 162, 0.24, "#2FCF8F", "#55DDA6", "#7CE8D0", "#04140D"),
-        new ColorScheme("rose", "Sleepover", 322, 0.26, "#FF5C93", "#FF7DAA", "#C9A0FF"),
-        new ColorScheme("aurora", "Classic Cnema (gradients)", 232, 0.28, "#8E6BFF", "#A78BFF", "#3DDCFF", Gradients: true),
     };
 
     /// <summary>"" follows the system, otherwise "dark" or "light".</summary>
@@ -69,10 +65,6 @@ public static class ThemeService
     public static Palette Resolve(ColorScheme s, bool light)
     {
         string N(double l, double satScale = 1) => Hsl(s.Hue, s.Tint * satScale, l);
-        // Classic Cnema is the original look, kept exactly as it was.
-        if (!light && s.Id == "aurora")
-            return new Palette("#090A0F", "#0F111A", "#161926", "#20243A", "#2A2F4A", "#EEF0FA", "#8B91B0",
-                s.Accent, s.AccentHover, s.Second, s.OnAccent, true, false);
         if (!light)
             return new Palette(N(0.105), N(0.135), N(0.170), N(0.220), N(0.265, 0.9), N(0.965, 0.6), N(0.690, 0.55),
                 s.Accent, s.AccentHover, s.Second, s.OnAccent, s.Gradients, false);

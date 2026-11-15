@@ -37,14 +37,14 @@ Savefile updates itself after that.
 - **Clipping:** a rolling replay buffer with GPU encoding (H.264, HEVC, AV1). Several hotkeys with their own
   clip lengths, webcam overlay, session recording with bookmarks, separate game and mic tracks,
   per-game profiles and storage limits.
-- **Make it yours:** everything optional can be switched off under **Settings, Features**. Color schemes,
+- **Make it yours:** everything optional can be switched off under **Settings, Features**. Dark and light mode,
   rebindable shortcuts (press **?**), accessibility options, controller mode, portable mode and settings backup.
 - **Languages:** English and Swedish, following the system language by default. Translations are flat JSON
   files in `src/Cnema/Assets/Lang/` (`"English": "translation"`); `scripts/check-translations.py` lists gaps.
 
 See [CHANGELOG.md](CHANGELOG.md) for what's new in each version.
 
-![Color schemes](docs/color-schemes.png)
+![Light mode](docs/color-schemes.png)
 
 ## Build from source
 

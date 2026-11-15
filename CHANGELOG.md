@@ -3,14 +3,13 @@
 What changed in each Savefile (formerly Cnema) release. The app shows the entries you have not seen yet after it updates.
 
 ## 0.23.0
-- Cnema is now **Savefile**. Some saves you never overwrite: the app is about the moments you keep with your friends, so it has a name and a look to match. New icon (a memory card with a play button), and the logo in the sidebar takes the colour of your scheme. Your library, settings and clips stay exactly where they were.
+- Cnema is now **Savefile**. Some saves you never overwrite: the app is about the moments you keep with your friends, so it has a name and a look to match. New icon (a memory card with a play button), and the logo sits right in the sidebar. Your library, settings and clips stay exactly where they were.
 - Worth a rewatch: a row at the top of All videos with old favourites, clips with friends and things you haven't seen in a while. A new pick every day.
 - On this day: a card with what you recorded on this day in earlier years (or a month ago), with Watch again.
 - Who was there: tag the friends in a clip under Rename, tag or move. Their names show on the card ("with Alex and Sam"), and search finds them, or only them with @name.
 - Milestones: a small celebration for your first save, your 10th, your 100th and so on. Saving a clip also gets a friendlier message.
-- The colour schemes have new names: Memory Card (the default, matches the icon), Cartridge, Campfire, Handheld, Sleepover and Classic Cnema (the original look with gradients). Your pick is kept.
-- Light mode: every colour scheme now comes in dark and light. Pick Dark, Light or Same as system under Settings, General, Appearance (or in the welcome setup). Same as system switches along with your computer.
-- The dark schemes are a step lighter, so panels and cards stand apart instead of everything sitting on near-black. Classic Cnema keeps its original look.
+- One look, in Savefile purple, now in dark and light. Pick Dark, Light or Same as system under Settings, General, Appearance (or in the welcome setup). Same as system switches along with your computer. The other colour schemes are gone; if you used one, you get the purple look.
+- Dark is a step lighter, so panels and cards stand apart instead of everything sitting on near-black.
 - Friendlier words around the app: the library header counts the moments you've kept, and empty screens and the delete prompt read more like a person wrote them.
 - All of the new parts can be switched off under Settings, Features, Memories.
 - The app file is still called Cnema.app / Cnema.exe for this release so updates keep working; it shows as Savefile everywhere you see it.

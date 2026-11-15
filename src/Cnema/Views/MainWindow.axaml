@@ -1222,21 +1222,7 @@
               </ListBox>
 
               <TextBlock Classes="label" svc:Tr.Text="LOOK" Margin="0,6,0,0" />
-              <ListBox Classes="swatches" ItemsSource="{Binding ColorSchemes}" SelectedItem="{Binding SetupScheme}">
-                <ListBox.ItemsPanel>
-                  <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
-                </ListBox.ItemsPanel>
-                <ListBox.ItemTemplate>
-                  <DataTemplate x:DataType="svc:ColorScheme">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                      <Ellipse Width="14" Height="14" VerticalAlignment="Center" Fill="{Binding Accent}" />
-                      <TextBlock Text="{Binding Name}" VerticalAlignment="Center" FontSize="12" />
-                    </StackPanel>
-                  </DataTemplate>
-                </ListBox.ItemTemplate>
-              </ListBox>
-
-              <ListBox Classes="swatches" ItemsSource="{Binding ThemeModes}" SelectedItem="{Binding SetupMode}" Margin="0,-6,0,0">
+              <ListBox Classes="swatches" ItemsSource="{Binding ThemeModes}" SelectedItem="{Binding SetupMode}">
                 <ListBox.ItemsPanel>
                   <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
                 </ListBox.ItemsPanel>
@@ -1325,26 +1311,9 @@
                 <Grid Classes="row" ColumnDefinitions="*,Auto">
                   <StackPanel Spacing="2">
                     <TextBlock svc:Tr.Text="Appearance" />
-                    <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Dark, light, or follow your system. Every color scheme has both." />
+                    <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Dark, light, or follow your system." />
                   </StackPanel>
                   <ComboBox Grid.Column="1" MinWidth="190" CornerRadius="8" ItemsSource="{Binding ThemeModes}" SelectedItem="{Binding ThemeMode}" />
-                </Grid>
-                <Border Classes="sep" />
-                <Grid Classes="row" ColumnDefinitions="*,Auto">
-                  <StackPanel Spacing="2">
-                    <TextBlock svc:Tr.Text="Color scheme" />
-                    <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Memory Card matches the app icon. Classic Cnema is the original look, with gradients." />
-                  </StackPanel>
-                  <ComboBox Grid.Column="1" MinWidth="190" CornerRadius="8" ItemsSource="{Binding ColorSchemes}" SelectedItem="{Binding ColorScheme}">
-                    <ComboBox.ItemTemplate>
-                      <DataTemplate x:DataType="svc:ColorScheme">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                          <Ellipse Width="12" Height="12" VerticalAlignment="Center" Fill="{Binding Accent}" />
-                          <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
-                        </StackPanel>
-                      </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                  </ComboBox>
                 </Grid>
                 </StackPanel>
               </Border>
