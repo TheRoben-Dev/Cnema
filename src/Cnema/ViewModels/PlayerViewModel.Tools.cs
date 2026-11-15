@@ -80,7 +80,9 @@ public sealed partial class PlayerViewModel
     {
         IsToolsOpen = Fx.ToolsOpen;
         Page = Enum.TryParse<ToolPage>(Fx.ToolPage, out var p) ? p : ToolPage.Trim;
+#pragma warning disable MVVMTK0034 // set quietly on purpose: OnPageChanged would save the fallback page
         if (!IsAvailable(Page)) { _page = ToolPage.Trim; ToolsChangedQuiet(); }
+#pragma warning restore MVVMTK0034
     }
 
     private bool IsAvailable(ToolPage page) => page switch
@@ -105,7 +107,9 @@ public sealed partial class PlayerViewModel
                      nameof(ShowBlurTool), nameof(ShowSoundTool), nameof(ShowBrandTool),
                  })
             OnPropertyChanged(name);
+#pragma warning disable MVVMTK0034 // set quietly on purpose, see InitTools
         if (!IsAvailable(Page)) _page = ToolPage.Trim; // not saved: the full editor keeps its page
+#pragma warning restore MVVMTK0034
         ToolsChangedQuiet();
     }
 
