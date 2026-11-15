@@ -13,7 +13,7 @@ case "$RID" in
     scripts/bundle-macos.sh "$RID" "$VERSION"
     label=$([ "$RID" = "osx-arm64" ] && echo apple-silicon || echo intel)
     # ditto keeps signatures and permissions intact
-    (cd dist && ditto -c -k --sequesterRsrc --keepParent Cnema.app "Cnema-v$VERSION-macos-$label.zip")
+    (cd dist && ditto -c -k --sequesterRsrc --keepParent Cnema.app "Savefile-v$VERSION-macos-$label.zip")
     ;;
   win-x64|linux-x64)
     out="dist/Cnema"
@@ -27,10 +27,10 @@ case "$RID" in
       # The NuGet package ships three architectures; this archive is x64 only.
       rm -rf "$out/libvlc/win-x86" "$out/libvlc/win-arm64"
       scripts/strip-vlc.sh "$out/libvlc"
-      (cd dist && 7z a -bso0 "Cnema-v$VERSION-windows-x64.zip" Cnema)
+      (cd dist && 7z a -bso0 "Savefile-v$VERSION-windows-x64.zip" Cnema)
     else
       cp src/Cnema/Assets/cnema.png "$out/cnema.png"
-      tar -C dist -czf "dist/Cnema-v$VERSION-linux-x64.tar.gz" Cnema
+      tar -C dist -czf "dist/Savefile-v$VERSION-linux-x64.tar.gz" Cnema
     fi
     ;;
   *) echo "Unsupported RID: $RID" >&2; exit 1 ;;

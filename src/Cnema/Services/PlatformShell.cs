@@ -31,7 +31,7 @@ public static class PlatformShell
             if (OperatingSystem.IsMacOS())
                 Start("osascript", "-e", $"display notification {Quote(body)} with title {Quote(title)}");
             else if (OperatingSystem.IsLinux())
-                Start("notify-send", "-a", "Cnema", "-t", "3000", title, body);
+                Start("notify-send", "-a", "Savefile", "-t", "3000", title, body);
             // Windows: the tray icon tooltip and the in-app banner report the save.
         }
         catch { /* notifications are a nicety */ }

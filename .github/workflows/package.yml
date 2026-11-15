@@ -54,6 +54,6 @@ jobs:
         with:
           name: ${{ matrix.rid }}
           path: |
-            dist/Cnema-*.zip
-            dist/Cnema-*.tar.gz
+            dist/Savefile-*.zip
+            dist/Savefile-*.tar.gz
           if-no-files-found: error

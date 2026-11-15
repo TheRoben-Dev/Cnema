@@ -31,7 +31,7 @@ public static class RenderService
     public static async Task RenderAsync(RenderJob job, IProgress<double>? progress, CancellationToken ct)
     {
         var ffmpeg = ToolLocator.Ffmpeg ?? throw new InvalidOperationException(T("ffmpeg not found."));
-        var info = await MediaProbe.InfoAsync(job.Source, ct) ?? throw new InvalidOperationException(T("Cnema couldn't read this video."));
+        var info = await MediaProbe.InfoAsync(job.Source, ct) ?? throw new InvalidOperationException(T("Savefile couldn't read this video."));
         if (info.Width <= 0 || info.Height <= 0) throw new InvalidOperationException(T("This file has no picture to add effects to."));
 
         var fx = job.Effects;
@@ -70,7 +70,7 @@ public static class RenderService
             if (string.IsNullOrWhiteSpace(path)) continue;
             if (!File.Exists(path)) throw new FileNotFoundException(Loc.F(before ? "The intro clip is missing: {0}" : "The outro clip is missing: {0}", path));
             var bi = await MediaProbe.InfoAsync(path, ct);
-            if (bi is null || bi.DurationMs <= 0 || bi.Width <= 0) throw new InvalidOperationException(T(before ? "Cnema couldn't read the intro clip." : "Cnema couldn't read the outro clip."));
+            if (bi is null || bi.DurationMs <= 0 || bi.Width <= 0) throw new InvalidOperationException(T(before ? "Savefile couldn't read the intro clip." : "Savefile couldn't read the outro clip."));
             bumpers.Add((path, bi, before));
         }
         var introMs = bumpers.Where(b => b.Before).Sum(b => b.Info.DurationMs);

@@ -12,6 +12,9 @@
     <AssemblyName>Cnema</AssemblyName>
     <RootNamespace>Cnema</RootNamespace>
     <Version>0.1.0</Version>
+    <Product>Savefile</Product>
+    <AssemblyTitle>Savefile</AssemblyTitle>
+    <Company>Savefile</Company>
     <ApplicationIcon Condition="Exists('Assets/cnema.ico')">Assets/cnema.ico</ApplicationIcon>
   </PropertyGroup>
 

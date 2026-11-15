@@ -305,6 +305,9 @@ public sealed partial class MainViewModel
             v.RefreshSelection();
         }
         SelectionChanged();
+        OnPropertyChanged(nameof(ShowFeatured));
+        OnPropertyChanged(nameof(ShowMemory));
+        OnPropertyChanged(nameof(HeaderCount));
     }
 
     private void SelectionChanged()
@@ -373,7 +376,7 @@ public sealed partial class MainViewModel
 
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(IsConfirmingDelete), nameof(DeletePrompt), nameof(DeleteTitle), nameof(DeleteHint))]
     private IReadOnlyList<VideoItemViewModel>? _pendingBulkDelete;
-    public string DeleteTitle => PendingBulkDelete is { Count: > 1 } ? T("Delete videos") : T("Delete video");
+    public string DeleteTitle => PendingBulkDelete is { Count: > 1 } ? T("Let these go?") : T("Let this one go?");
     public string DeleteHint => PendingBulkDelete is { Count: > 1 }
         ? F("You can restore them from the {0} if you change your mind.", TrashName)
         : F("You can restore it from the {0} if you change your mind.", TrashName);

@@ -23,6 +23,61 @@ public sealed partial class EditViewModel : ObservableObject
     /// <summary>The Notes feature is on.</summary>
     public bool ShowNote { get; init; }
 
+    // ---------- who was there ----------
+    /// <summary>The "Who was there" feature is on.</summary>
+    public bool ShowPeople { get; init; }
+    /// <summary>Names typed as "Alex, Sam".</summary>
+    [ObservableProperty] private string _people;
+    public ObservableCollection<string> PeopleSuggestions { get; } = new();
+    public bool HasPeopleSuggestions => PeopleSuggestions.Count > 0;
+    private List<string> _allPeople = new();
+
+    /// <summary>Everyone tagged on any video, for the suggestions under the box.</summary>
+    public IEnumerable<string> AllPeople
+    {
+        init { _allPeople = value.ToList(); RefreshPeopleSuggestions(); }
+    }
+
+    partial void OnPeopleChanged(string value) => RefreshPeopleSuggestions();
+
+    /// <summary>The names in the box, trimmed, without duplicates, spelled like earlier tags.</summary>
+    public List<string> PeopleList() => People
+        .Split(',', StringSplitOptions.RemoveEmptyEntries)
+        .Select(n => n.Trim().TrimStart('@').Trim())
+        .Where(n => n.Length is > 0 and <= 40)
+        .Select(n => _allPeople.FirstOrDefault(p => string.Equals(p, n, StringComparison.OrdinalIgnoreCase)) ?? n)
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .ToList();
+
+    [RelayCommand]
+    private void AddPerson(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return;
+        var list = PeopleList();
+        // A half-typed name that this suggestion completes is replaced, not kept beside it.
+        var typing = People.Split(',').LastOrDefault()?.Trim() ?? "";
+        if (typing.Length > 0 && name.StartsWith(typing, StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(typing, name, StringComparison.OrdinalIgnoreCase))
+            list.RemoveAll(n => string.Equals(n, typing, StringComparison.OrdinalIgnoreCase));
+        if (!list.Contains(name, StringComparer.OrdinalIgnoreCase)) list.Add(name);
+        People = string.Join(", ", list);
+    }
+
+    private void RefreshPeopleSuggestions()
+    {
+        var have = PeopleList();
+        var typing = People.Split(',').LastOrDefault()?.Trim().TrimStart('@') ?? "";
+        // A finished name ("Sam") doesn't narrow the list; a partial one ("Sa") does.
+        var narrowing = typing.Length > 0 && !_allPeople.Contains(typing, StringComparer.OrdinalIgnoreCase);
+        var next = _allPeople
+            .Where(p => !have.Contains(p, StringComparer.OrdinalIgnoreCase))
+            .Where(p => !narrowing || p.StartsWith(typing, StringComparison.OrdinalIgnoreCase))
+            .Take(10).ToList();
+        PeopleSuggestions.Clear();
+        foreach (var p in next) PeopleSuggestions.Add(p);
+        OnPropertyChanged(nameof(HasPeopleSuggestions));
+    }
+
     /// <summary>The library folder the file currently lives under (null if none matches).</summary>
     public FolderViewModel? OriginalFolder { get; }
     public bool CanMove => Folders.Count > 1;
@@ -35,6 +90,7 @@ public sealed partial class EditViewModel : ObservableObject
         Extension = Path.GetExtension(item.Entry.Path);
         _favorite = item.Entry.Favorite;
         _note = item.Entry.Note ?? "";
+        _people = string.Join(", ", item.Entry.People);
         Tags = new ObservableCollection<string>(item.Entry.Tags);
         _allTags = allTags.ToList();
         Folders = folders.Where(f => f.Kind == NavKind.Folder).ToList();

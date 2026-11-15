@@ -23,6 +23,7 @@ public sealed partial class MainViewModel
         VideoItemViewModel.HoverPreview = Features.HoverPreview;
         VideoItemViewModel.UnwatchedBadges = Features.Unwatched;
         VideoItemViewModel.NotesEnabled = Features.Notes;
+        VideoItemViewModel.PeopleEnabled = Features.People;
         Chapters.Enabled = Features.Chapters;
         Player.RefreshChapters();
         Player.Queue = Features.ExportQueue ? Exports : null;
@@ -32,11 +33,13 @@ public sealed partial class MainViewModel
         foreach (var v in _items.Values) v.RefreshAll();
         if (!Features.Collections && SelectedCollection is not null) SelectedFolder = Folders.FirstOrDefault();
         if (!Features.Unwatched) FilterUnwatched = false;
+        RefreshMemories();
+        OnPropertyChanged(nameof(HeaderCount));
         foreach (var name in new[]
                  {
                      nameof(ShowClipping), nameof(ShowSessionButton), nameof(ShowController), nameof(ShowCollections),
                      nameof(ShowCleanUp), nameof(ShowStats), nameof(ShowTools), nameof(ShowUnwatchedFilter),
-                     nameof(ShowMiniPlayerButton), nameof(ShowRecorders), nameof(ShowNotes), nameof(ShowMontage),
+                     nameof(ShowMiniPlayerButton), nameof(ShowRecorders), nameof(ShowNotes), nameof(ShowMontage), nameof(ShowPeople),
                  })
             OnPropertyChanged(name);
         AppearanceChanged?.Invoke();
@@ -50,6 +53,7 @@ public sealed partial class MainViewModel
     private void ShowShortcuts()
     {
         SettingsEditor = null;
+        ThemeService.Mode = _settings.Current.ThemeMode;
         ThemeService.Apply(_settings.Current.ColorScheme, Accessibility.HighContrast);
         ShortcutSheet = new ShortcutsViewModel(_settings.Save);
     }
@@ -90,7 +94,7 @@ public sealed partial class MainViewModel
         }
         catch (Exception ex)
         {
-            ShowToast(T("That file is not a Cnema settings file."));
+            ShowToast(T("That file is not a Savefile settings file."));
             Log.Warn("Importing settings failed: " + ex.Message);
             return;
         }
@@ -106,6 +110,7 @@ public sealed partial class MainViewModel
     /// <summary>Puts look, keys, features and controller mode in line with the stored settings.</summary>
     private void ApplyAllSettings()
     {
+        ThemeService.Mode = _settings.Current.ThemeMode;
         ThemeService.Apply(_settings.Current.ColorScheme, Accessibility.HighContrast);
         Shortcuts.Load(_settings.Current.Shortcuts);
         OnPropertyChanged(nameof(IsControllerMode));
@@ -118,6 +123,14 @@ public sealed partial class MainViewModel
     public IReadOnlyList<ColorScheme> ColorSchemes => ThemeService.Schemes;
     [ObservableProperty] private ColorScheme _setupScheme = ThemeService.Current;
     partial void OnSetupSchemeChanged(ColorScheme value) { if (value is not null) ThemeService.Apply(value.Id, Accessibility.HighContrast); }
+    public IReadOnlyList<ThemeModeOption> ThemeModes => ThemeService.Modes;
+    [ObservableProperty] private ThemeModeOption _setupMode = ThemeService.FindMode("");
+    partial void OnSetupModeChanged(ThemeModeOption value)
+    {
+        if (value is null) return;
+        ThemeService.Mode = value.Id;
+        ThemeService.Apply(SetupScheme.Id, Accessibility.HighContrast);
+    }
     public IReadOnlyList<LanguageOption> SetupLanguages { get; } = Loc.Languages.Select(l => new LanguageOption(l.Code, l.Name)).ToList();
     [ObservableProperty] private LanguageOption? _setupLanguage;
     partial void OnSetupLanguageChanged(LanguageOption? value) { if (value is not null) Loc.Apply(value.Code); }
@@ -129,7 +142,7 @@ public sealed partial class MainViewModel
     [ObservableProperty] private bool _setupHoverGlow = true;
     public string SetupFolders => _settings.Current.Folders.Count switch
     {
-        0 => T("No folders yet. Cnema only shows videos from folders you add."),
+        0 => T("No folders yet. Savefile only shows videos from folders you add."),
         1 => T("1 folder: ") + _settings.Current.Folders[0],
         var n => F("{0} folders added.", n),
     };
@@ -146,6 +159,7 @@ public sealed partial class MainViewModel
     {
         var s = _settings.Current;
         s.ColorScheme = SetupScheme.Id;
+        s.ThemeMode = SetupMode.Id;
         // Picking the system's own language keeps following the system.
         if (SetupLanguage is { } lang) s.Language = lang.Code == Loc.SystemLanguage ? "" : lang.Code;
         // Only the switches shown in setup; everything else (other features, folders, hotkeys) stays.
@@ -168,6 +182,7 @@ public sealed partial class MainViewModel
         var s = _settings.Current;
         var f = s.Features;
         SetupScheme = ThemeService.Find(s.ColorScheme);
+        SetupMode = ThemeService.FindMode(s.ThemeMode);
         SetupLanguage = SetupLanguages.FirstOrDefault(l => l.Code == Loc.Current);
         SetupClipping = f.Clipping; SetupSessions = f.Sessions; SetupController = f.Controller;
         SetupHoverPreview = f.HoverPreview; SetupLoudMarkers = f.LoudMarkers; SetupHoverGlow = f.HoverGlow;

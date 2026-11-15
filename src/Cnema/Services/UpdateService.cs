@@ -120,7 +120,7 @@ public static class UpdateService
         if (InstallRoot is not { } root) return T("this copy was not installed from a release build");
         // A quarantined app on macOS runs from a read-only, randomised copy of itself.
         if (root.Contains("/AppTranslocation/", StringComparison.Ordinal))
-            return T("macOS is running Cnema from a temporary location; move Cnema.app to Applications and open it from there");
+            return T("macOS is running Savefile from a temporary location; move Cnema.app to Applications and open it from there");
         try
         {
             var parent = Path.GetDirectoryName(root)!;
@@ -131,7 +131,7 @@ public static class UpdateService
         }
         catch
         {
-            return T("Cnema is not allowed to write to the folder it is installed in");
+            return T("Savefile is not allowed to write to the folder it is installed in");
         }
     }
 
@@ -192,11 +192,15 @@ public static class UpdateService
         }
         try { File.Delete(archive); } catch { /* removed with the stage folder later */ }
 
-        var app = Path.Combine(unpacked, OperatingSystem.IsMacOS() ? "Cnema.app" : "Cnema");
-        var exe = OperatingSystem.IsMacOS() ? Path.Combine(app, "Contents", "MacOS", "Cnema")
-            : Path.Combine(app, OperatingSystem.IsWindows() ? "Cnema.exe" : "Cnema");
-        if (!File.Exists(exe)) throw new InvalidOperationException(T("The update did not contain the app."));
-        return app;
+        // The app is still packaged as Cnema(.app) for now; a later release may ship it as Savefile.
+        foreach (var name in new[] { "Cnema", "Savefile" })
+        {
+            var app = Path.Combine(unpacked, OperatingSystem.IsMacOS() ? name + ".app" : name);
+            var exe = OperatingSystem.IsMacOS() ? Path.Combine(app, "Contents", "MacOS", name)
+                : Path.Combine(app, OperatingSystem.IsWindows() ? name + ".exe" : name);
+            if (File.Exists(exe)) return app;
+        }
+        throw new InvalidOperationException(T("The update did not contain the app."));
     }
 
     /// <summary>

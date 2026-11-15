@@ -59,9 +59,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public bool HasUpdate => Update is not null;
     public string UpdateText => Update is null ? ""
         : IsInstallingUpdate ? F("Updating to {0}…", Update.Version.ToString(3))
-        : F("Cnema {0} is available", Update.Version.ToString(3));
+        : F("Savefile {0} is available", Update.Version.ToString(3));
     public string UpdateAction => IsInstallingUpdate
-        ? (UpdateProgress >= 1 ? T("Installing, Cnema will restart") : F("Downloading {0:0}%", UpdateProgress * 100))
+        ? (UpdateProgress >= 1 ? T("Installing, Savefile will restart") : F("Downloading {0:0}%", UpdateProgress * 100))
         : UpdateService.WhyNoSelfUpdate() is null && Update?.AssetUrl is not null ? T("Install and restart") : T("Get the update");
 
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(UpdateText), nameof(UpdateAction))] private bool _isInstallingUpdate;
@@ -103,7 +103,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     // ---------- what's new ----------
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(IsShowingWhatsNew))] private IReadOnlyList<ChangelogEntry>? _whatsNew;
     public bool IsShowingWhatsNew => WhatsNew is { Count: > 0 };
-    public string WhatsNewTitle => F("What's new in Cnema {0}", UpdateService.CurrentText);
+    public string WhatsNewTitle => F("What's new in Savefile {0}", UpdateService.CurrentText);
 
     [RelayCommand] private void CloseWhatsNew() => WhatsNew = null;
 
@@ -184,7 +184,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         if (announce && found is not null && found.Version != _announced)
         {
             _announced = found.Version;
-            PlatformShell.Notify(T("Cnema update"), F("Version {0} is available. Open Cnema to get it.", found.Version.ToString(3)));
+            PlatformShell.Notify(T("Savefile update"), F("Version {0} is available. Open Savefile to get it.", found.Version.ToString(3)));
         }
         BackgroundStateChanged?.Invoke();
         return error;
@@ -221,7 +221,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         var codecs = ffmpeg is null ? "-" : string.Join(", ", (await CaptureProbe.ListCodecsAsync(ffmpeg)).Select(c => $"{c.Codec}={c.Encoder}"));
         var lines = new List<string>
         {
-            $"Cnema {UpdateService.CurrentText}",
+            $"Savefile {UpdateService.CurrentText}",
             $"OS: {System.Runtime.InteropServices.RuntimeInformation.OSDescription} ({System.Runtime.InteropServices.RuntimeInformation.OSArchitecture})",
             $".NET: {Environment.Version}",
             $"Install: {(AppContext.BaseDirectory.Contains("AppTranslocation") ? "TRANSLOCATED (move the app to /Applications)" : "ok")}",
@@ -521,7 +521,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public bool HasNoResults => !HasNoFolders && Videos.Count == 0 && !IsScanning;
     private FolderViewModel? ActiveNav => SelectedTag ?? SelectedCollection ?? SelectedFolder;
     public string HeaderTitle => ActiveNav is { Kind: NavKind.Tag } t ? "#" + t.Name : ActiveNav?.Name ?? T("All videos");
-    public string HeaderCount => Videos.Count == 1 ? T("1 video") : F("{0:N0} videos", Videos.Count);
+    public string HeaderCount => FriendlyCount();
 
     public MainViewModel(SettingsStore settings, LibraryService library, ClipService clips)
     {
@@ -580,6 +580,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         VideoItemViewModel.HoverPreview = Features.HoverPreview;
         VideoItemViewModel.UnwatchedBadges = Features.Unwatched;
         VideoItemViewModel.NotesEnabled = Features.Notes;
+        VideoItemViewModel.PeopleEnabled = Features.People;
         Chapters.Enabled = Features.Chapters;
         Player.Queue = Features.ExportQueue ? Exports : null;
         Player.IsSimpleEditor = IsControllerMode && _settings.Current.ControllerSimpleEditor;
@@ -755,13 +756,17 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         if (search.Length > 0)
         {
             var terms = search.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            // A term matches the path, a tag or the note; "#clutch" matches tags only.
+            // A term matches the path, a tag, the note or a friend; "#clutch" matches tags only, "@sam" friends only.
             var notes = Features.Notes;
+            var people = Features.People;
             q = q.Where(v => terms.All(t => t.StartsWith('#')
                 ? t.Length > 1 && v.Entry.Tags.Any(tag => tag.Contains(t[1..], StringComparison.OrdinalIgnoreCase))
+                : t.StartsWith('@')
+                ? t.Length > 1 && people && v.Entry.People.Any(p => p.Contains(t[1..], StringComparison.OrdinalIgnoreCase))
                 : v.Entry.Path.Contains(t, StringComparison.OrdinalIgnoreCase) ||
                   v.Entry.Tags.Any(tag => tag.Contains(t, StringComparison.OrdinalIgnoreCase)) ||
-                  (notes && v.Entry.Note is { } n && n.Contains(t, StringComparison.OrdinalIgnoreCase))));
+                  (notes && v.Entry.Note is { } n && n.Contains(t, StringComparison.OrdinalIgnoreCase)) ||
+                  (people && v.Entry.People.Any(p => p.Contains(t, StringComparison.OrdinalIgnoreCase)))));
         }
         q = ApplyFilters(q);
         q = SortIndex switch
@@ -774,6 +779,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         };
         Videos = new ObservableCollection<VideoItemViewModel>(q);
         SelectionChanged();
+        RefreshMemories();
         OnPropertyChanged(nameof(HeaderCount));
         OnPropertyChanged(nameof(HasNoResults));
         UpdateCounts();
@@ -838,7 +844,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void BeginEdit(VideoItemViewModel? item)
     {
-        if (item is not null) Editor = new EditViewModel(item, Folders, AllTags) { ShowNote = Features.Notes };
+        if (item is not null)
+            Editor = new EditViewModel(item, Folders, AllTags) { ShowNote = Features.Notes, ShowPeople = Features.People, AllPeople = AllPeople };
     }
 
     [RelayCommand] private void CancelEdit() => Editor = null;
@@ -871,6 +878,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         entry.Tags = ed.Tags.ToList();
         entry.Favorite = ed.Favorite;
         if (ed.ShowNote) entry.Note = string.IsNullOrWhiteSpace(ed.Note) ? null : ed.Note.Trim();
+        if (ed.ShowPeople) entry.People = ed.PeopleList();
         _library.SaveCache();
         item.RefreshAll();
         Editor = null;
@@ -1033,7 +1041,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private void OnClipSaved(string path, int seconds)
     {
         if (_settings.Current.Clip.Sound) PlatformShell.PlayConfirmSound();
-        ShowToast(T("Clip saved: ") + Path.GetFileNameWithoutExtension(path));
+        ShowToast(SavedToastText(path));
         if (_settings.Current.Clip.Notify)
             PlatformShell.Notify(T("Clip saved"), F("Last {0} · {1}", LengthText(seconds), Path.GetFileName(path)));
         _ = RescanAsync();
@@ -1085,6 +1093,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private void CancelSettings()
     {
         SettingsEditor = null;
+        ThemeService.Mode = _settings.Current.ThemeMode;
         ThemeService.Apply(_settings.Current.ColorScheme, Accessibility.HighContrast); // drop a previewed look
         Loc.Apply(_settings.Current.Language); // and a previewed language
     }

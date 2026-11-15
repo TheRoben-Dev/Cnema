@@ -228,6 +228,7 @@
     <Setter Property="Padding" Value="6,2" />
   </Style>
   <Style Selector="Border.badge TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource OnOverlay}" />
     <Setter Property="FontSize" Value="11" />
     <Setter Property="FontWeight" Value="SemiBold" />
   </Style>
@@ -279,7 +280,7 @@
     <Setter Property="Padding" Value="0" />
     <Setter Property="CornerRadius" Value="14" />
     <Setter Property="Background" Value="{DynamicResource Overlay}" />
-    <Setter Property="Foreground" Value="{DynamicResource Text}" />
+    <Setter Property="Foreground" Value="{DynamicResource OnOverlay}" />
     <Setter Property="HorizontalContentAlignment" Value="Center" />
     <Setter Property="VerticalContentAlignment" Value="Center" />
   </Style>
@@ -758,7 +759,7 @@
     <Setter Property="Foreground" Value="{DynamicResource Danger}" />
   </Style>
   <Style Selector="Border.speedbadge">
-    <Setter Property="Background" Value="#E614151B" />
+    <Setter Property="Background" Value="{DynamicResource ToastBg}" />
     <Setter Property="BorderBrush" Value="#FF9F43" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="8" />

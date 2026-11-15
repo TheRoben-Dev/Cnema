@@ -28,7 +28,7 @@ public sealed partial class RecorderRow : ObservableObject
         RecorderKind.Obs => T("Recordings and replay buffer saves. Videos in a subfolder are tagged with the folder's name."),
         RecorderKind.Nvidia => T("ShadowPlay / NVIDIA app clips, tagged with the game from their folder."),
         RecorderKind.XboxGameBar => T("Game Bar captures, tagged with the game from their file name."),
-        RecorderKind.Steam => T("Steam keeps clips in a streaming format; Cnema copies them into MP4 files, tagged with the game."),
+        RecorderKind.Steam => T("Steam keeps clips in a streaming format; Savefile copies them into MP4 files, tagged with the game."),
         RecorderKind.MacScreen => T("Recordings made with Screenshot (Shift-Command-5) or QuickTime."),
         RecorderKind.SnippingTool => T("Screen recordings from the Snipping Tool."),
         RecorderKind.Custom => T("Any other recorder or folder. Videos in a subfolder are tagged with the folder's name."),

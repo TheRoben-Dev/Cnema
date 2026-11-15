@@ -23,6 +23,8 @@ public sealed class VideoEntry
     public long ThumbAtMs { get; set; }
     /// <summary>A line of text the user wrote about the video; search finds it.</summary>
     public string? Note { get; set; }
+    /// <summary>Friends who were there when this was recorded ("Who was there"); search finds them.</summary>
+    public List<string> People { get; set; } = new();
 
     [System.Text.Json.Serialization.JsonIgnore]
     public string FileName => System.IO.Path.GetFileName(Path);
@@ -37,6 +39,7 @@ public sealed class VideoEntry
         Bookmarks = other.Bookmarks.ToList();
         ThumbAtMs = other.ThumbAtMs;
         Note = other.Note;
+        People = other.People.ToList();
     }
 }
 

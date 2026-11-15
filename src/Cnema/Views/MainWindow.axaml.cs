@@ -617,14 +617,14 @@ public partial class MainWindow : Window
         return files.FirstOrDefault()?.TryGetLocalPath();
     }
 
-    private static readonly FilePickerFileType SettingsFileType = new(T("Cnema settings")) { Patterns = new[] { "*.json" } };
+    private static readonly FilePickerFileType SettingsFileType = new(T("Savefile settings")) { Patterns = new[] { "*.json" } };
 
     private async Task<string?> PickSettingsSavePathAsync()
     {
         var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
             Title = T("Export settings"),
-            SuggestedFileName = "Cnema settings.json",
+            SuggestedFileName = "Savefile settings.json",
             DefaultExtension = "json",
             ShowOverwritePrompt = true,
             FileTypeChoices = new[] { SettingsFileType },
