@@ -46,7 +46,7 @@ public static class MontageService
 
         var infos = new List<StreamInfo>();
         foreach (var p in parts)
-            infos.Add(await MediaProbe.InfoAsync(p.Path, ct) ?? throw new InvalidOperationException(Loc.F("Cnema couldn't read {0}.", Path.GetFileName(p.Path))));
+            infos.Add(await MediaProbe.InfoAsync(p.Path, ct) ?? throw new InvalidOperationException(Loc.F("Savefile couldn't read {0}.", Path.GetFileName(p.Path))));
 
         var height = Math.Min(1080, infos.Max(i => i.Height));
         var width = Even((int)Math.Round(height * 16 / 9.0));

@@ -13,6 +13,8 @@ public sealed class AppSettings
     public bool KeepInBackground { get; set; }
     public ClipSettings Clip { get; set; } = new();
     public bool CheckForUpdates { get; set; } = true;
+    /// <summary>How many clips the hotkey has saved, for milestone messages.</summary>
+    public int ClipsSaved { get; set; }
     /// <summary>Id of the colour scheme, see ThemeService.</summary>
     public string ColorScheme { get; set; } = ThemeService.DefaultId;
     /// <summary>UI language code ("en", "sv"), or "" to follow the system language.</summary>
@@ -124,6 +126,14 @@ public sealed class FeatureSettings
     public bool RecoverSessions { get; set; } = true;
     /// <summary>Auto montage: the best moments of several videos stitched with transitions.</summary>
     public bool Montage { get; set; } = true;
+    /// <summary>A "Worth a rewatch" row of older favourites and forgotten clips at the top of the library.</summary>
+    public bool Rewatch { get; set; } = true;
+    /// <summary>A card at the top of the library with what you recorded on this day in earlier years.</summary>
+    public bool OnThisDay { get; set; } = true;
+    /// <summary>Tag the friends who were there; it shows on the card and search finds them with @name.</summary>
+    public bool People { get; set; } = true;
+    /// <summary>A small celebration on the 1st, 10th, 100th… clip saved.</summary>
+    public bool Milestones { get; set; } = true;
 
     public FeatureSettings Clone() => (FeatureSettings)MemberwiseClone();
 }

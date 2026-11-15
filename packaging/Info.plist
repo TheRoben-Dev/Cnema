@@ -2,8 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-  <key>CFBundleName</key><string>Cnema</string>
-  <key>CFBundleDisplayName</key><string>Cnema</string>
+  <key>CFBundleName</key><string>Savefile</string>
+  <key>CFBundleDisplayName</key><string>Savefile</string>
   <key>CFBundleIdentifier</key><string>dev.theroben.cnema</string>
   <key>CFBundleExecutable</key><string>Cnema</string>
   <key>CFBundleIconFile</key><string>cnema.icns</string>
@@ -13,8 +13,8 @@
   <key>LSMinimumSystemVersion</key><string>11.0</string>
   <key>LSApplicationCategoryType</key><string>public.app-category.video</string>
   <key>NSHighResolutionCapable</key><true/>
-  <key>NSMicrophoneUsageDescription</key><string>Cnema records the audio devices you pick in its clipping settings.</string>
-  <key>NSCameraUsageDescription</key><string>Cnema puts the camera you pick in its clipping settings into a corner of your clips.</string>
+  <key>NSMicrophoneUsageDescription</key><string>Savefile records the audio devices you pick in its clipping settings.</string>
+  <key>NSCameraUsageDescription</key><string>Savefile puts the camera you pick in its clipping settings into a corner of your clips.</string>
   <key>NSRequiresAquaSystemAppearance</key><false/>
 </dict>
 </plist>

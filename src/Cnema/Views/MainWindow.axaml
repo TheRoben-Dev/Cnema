@@ -9,7 +9,7 @@
         x:Class="Cnema.Views.MainWindow"
         x:DataType="vm:MainViewModel"
         x:Name="Root"
-        Title="Cnema"
+        Title="Savefile"
         Icon="/Assets/cnema.png"
         Width="1320" Height="840" MinWidth="820" MinHeight="520"
         WindowStartupLocation="CenterScreen"
@@ -76,7 +76,7 @@
           </ItemsControl>
         </ScrollViewer>
         <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Margin="4,0"
-                   svc:Tr.Text="Exports run one at a time while you keep working. Quitting Cnema stops them." />
+                   svc:Tr.Text="Exports run one at a time while you keep working. Quitting Savefile stops them." />
       </StackPanel>
     </DataTemplate>
   </Window.DataTemplates>
@@ -116,8 +116,16 @@
           <Border x:Name="SidebarInset" DockPanel.Dock="Top" Height="0" IsHitTestVisible="False" />
 
           <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="10" Margin="6,6,0,22">
-            <Image Source="/Assets/cnema.png" Width="38" Height="38" Margin="-4" />
-            <TextBlock Text="CNEMA" FontSize="17" FontWeight="Black" LetterSpacing="3" VerticalAlignment="Center" />
+            <!-- The Savefile mark drawn in the colour scheme's accent, so it matches every scheme. -->
+            <Viewbox Width="30" Height="30" VerticalAlignment="Center">
+              <Canvas Width="512" Height="512">
+                <Rectangle Width="512" Height="512" RadiusX="114" RadiusY="114" Fill="{DynamicResource Accent}" />
+                <Path Data="M150 96H330L376 142V392A28 28 0 0 1 348 420H164A28 28 0 0 1 136 392V110A14 14 0 0 1 150 96Z" Fill="{DynamicResource OnAccent}" />
+                <Path Data="M176 356h18v40h-18z M212 356h18v40h-18z M248 356h18v40h-18z M284 356h18v40h-18z M320 356h18v40h-18z" Fill="{DynamicResource Accent}" Opacity="0.35" />
+                <Path Data="M228 186L228 290L310 238Z" Fill="{DynamicResource Accent}" Stroke="{DynamicResource Accent}" StrokeThickness="24" StrokeJoin="Round" />
+              </Canvas>
+            </Viewbox>
+            <TextBlock Text="savefile" FontSize="20" FontWeight="Bold" LetterSpacing="-0.3" VerticalAlignment="Center" />
           </StackPanel>
 
           <!-- bottom: add folder + warnings -->
@@ -317,7 +325,7 @@
             </Button.Flyout>
           </Button>
           <Panel Grid.Column="2" Width="260" VerticalAlignment="Center" Margin="0,0,10,0">
-            <TextBox Classes="search" svc:Tr.Watermark="Search names or #tags" Text="{Binding SearchText}" x:Name="SearchBox" />
+            <TextBox Classes="search" svc:Tr.Watermark="Search names, #tags or @friends" Text="{Binding SearchText}" x:Name="SearchBox" />
             <PathIcon Data="{StaticResource IcSearch}" Width="15" Height="15" Foreground="{DynamicResource TextDim}"
                       HorizontalAlignment="Left" Margin="12,0,0,0" IsHitTestVisible="False" />
           </Panel>
@@ -373,6 +381,86 @@
         <Panel>
           <!-- Grid of cards (virtualized) -->
           <ScrollViewer x:Name="GridScroller" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel>
+            <!-- On this day: a clip from this date in an earlier year (Settings, Features, On this day) -->
+            <Border Classes="memory" IsVisible="{Binding ShowMemory}" Margin="26,0,26,16" Padding="12" CornerRadius="14"
+                    Background="{DynamicResource Bg2}" BorderBrush="{DynamicResource Line}" BorderThickness="1">
+              <Grid ColumnDefinitions="Auto,*,Auto" DataContext="{Binding MemoryItem}" x:DataType="vm:VideoItemViewModel">
+                <Border Width="168" Height="94" CornerRadius="9" ClipToBounds="True" Background="{DynamicResource Bg3}">
+                  <Panel>
+                    <PathIcon Data="{StaticResource IcFilm}" Width="26" Height="26" Foreground="{DynamicResource Line}" />
+                    <Image Source="{Binding Thumbnail}" Stretch="UniformToFill" />
+                  </Panel>
+                </Border>
+                <StackPanel Grid.Column="1" Margin="16,0,12,0" VerticalAlignment="Center" Spacing="4">
+                  <TextBlock Text="{Binding #Root.((vm:MainViewModel)DataContext).MemoryTitle}" FontSize="11" FontWeight="Bold"
+                             LetterSpacing="1.2" Foreground="{DynamicResource Accent}" />
+                  <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Classes="dim" Text="{Binding MemoryLine}" FontSize="12" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                  <Button Classes="accent" Command="{Binding #Root.((vm:MainViewModel)DataContext).OpenCommand}" CommandParameter="{Binding}">
+                    <StackPanel Orientation="Horizontal" Spacing="7">
+                      <PathIcon Data="{StaticResource IcPlay}" Width="13" Height="13" />
+                      <TextBlock svc:Tr.Text="Watch again" />
+                    </StackPanel>
+                  </Button>
+                  <Button Classes="ghost" svc:Tr.Tip="Not today" Command="{Binding #Root.((vm:MainViewModel)DataContext).DismissMemoryCommand}">
+                    <PathIcon Data="{StaticResource IcClose}" Width="12" Height="12" />
+                  </Button>
+                </StackPanel>
+              </Grid>
+            </Border>
+
+            <!-- Worth a rewatch: older favourites and clips with friends (Settings, Features, Worth a rewatch) -->
+            <StackPanel IsVisible="{Binding ShowFeatured}" Margin="0,0,0,10" Spacing="8">
+              <StackPanel Orientation="Horizontal" Spacing="10" Margin="28,0,28,0">
+                <TextBlock svc:Tr.Text="Worth a rewatch" FontSize="15" FontWeight="Bold" VerticalAlignment="Center" />
+                <TextBlock Classes="dim" svc:Tr.Text="Old favourites and nights with friends. A new pick every day." FontSize="12" VerticalAlignment="Center" />
+              </StackPanel>
+              <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                <ItemsControl ItemsSource="{Binding Featured}" Margin="20,0,20,10">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="6" /></ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:VideoItemViewModel">
+                      <Button Classes="card" Padding="8" Width="236" VerticalAlignment="Top"
+                              Command="{Binding #Root.((vm:MainViewModel)DataContext).OpenCommand}" CommandParameter="{Binding}">
+                        <StackPanel Spacing="8">
+                          <Panel>
+                            <Border Classes="glow" CornerRadius="9" Background="{DynamicResource Bg2}" BoxShadow="{DynamicResource CardGlow}" IsHitTestVisible="False" />
+                            <Border Classes="thumb" CornerRadius="9" ClipToBounds="True" Background="{DynamicResource Bg2}" Height="124">
+                              <Panel>
+                                <PathIcon Data="{StaticResource IcFilm}" Width="28" Height="28" Foreground="{DynamicResource Line}" />
+                                <Image Source="{Binding Thumbnail}" Stretch="UniformToFill" />
+                                <Border Classes="playhint" Background="#66000000">
+                                  <Border Width="40" Height="40" CornerRadius="20" Background="{DynamicResource Brand}">
+                                    <PathIcon Data="{StaticResource IcPlay}" Width="17" Height="17" Foreground="{DynamicResource OnAccent}" Margin="3,0,0,0" />
+                                  </Border>
+                                </Border>
+                                <Border Classes="badge" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="7" IsVisible="{Binding HasDuration}">
+                                  <TextBlock Text="{Binding DurationText}" />
+                                </Border>
+                                <Border Classes="badge fav" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="7" Padding="5" IsVisible="{Binding IsFavorite}">
+                                  <PathIcon Data="{StaticResource IcStar}" Width="11" Height="11" Foreground="#FFD166" />
+                                </Border>
+                              </Panel>
+                            </Border>
+                          </Panel>
+                          <StackPanel Spacing="2" Margin="2,0,2,2">
+                            <TextBlock Text="{Binding Title}" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Classes="dim" Text="{Binding MemoryLine}" FontSize="11" TextTrimming="CharacterEllipsis" />
+                          </StackPanel>
+                        </StackPanel>
+                      </Button>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </ScrollViewer>
+              <TextBlock svc:Tr.Text="Everything" FontSize="15" FontWeight="Bold" Margin="28,4,28,0" />
+            </StackPanel>
+
             <ItemsRepeater x:Name="VideoGrid" ItemsSource="{Binding Videos}" Margin="20,0,20,24">
               <ItemsRepeater.Layout>
                 <UniformGridLayout MinItemWidth="250" MinItemHeight="250" MinRowSpacing="6" MinColumnSpacing="6"
@@ -486,6 +574,7 @@
                 </DataTemplate>
               </ItemsRepeater.ItemTemplate>
             </ItemsRepeater>
+            </StackPanel>
           </ScrollViewer>
 
           <!-- Empty: no folders yet -->
@@ -494,9 +583,9 @@
             <Border Width="72" Height="72" CornerRadius="20" Background="{DynamicResource Bg2}" HorizontalAlignment="Center">
               <PathIcon Data="{StaticResource IcLibrary}" Width="32" Height="32" Foreground="{DynamicResource Cyan}" />
             </Border>
-            <TextBlock svc:Tr.Text="Build your library" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center" />
+            <TextBlock svc:Tr.Text="Your saves start here" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center" />
             <TextBlock Classes="dim" TextAlignment="Center" TextWrapping="Wrap" FontSize="13"
-                       svc:Tr.Text="Add the folders where you keep videos. Cnema scans them (including subfolders), builds thumbnails, and keeps watching for new files." />
+                       svc:Tr.Text="Add the folders where your clips live. Savefile finds every video in them, subfolders too, and keeps an eye out for new ones." />
             <Button Classes="accent" HorizontalAlignment="Center" Command="{Binding AddFolderCommand}" Margin="0,6,0,0">
               <StackPanel Orientation="Horizontal" Spacing="8">
                 <PathIcon Data="{StaticResource IcAdd}" Width="14" Height="14" />
@@ -507,8 +596,8 @@
 
           <!-- Empty: nothing matches -->
           <StackPanel IsVisible="{Binding HasNoResults}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="6" Margin="0,0,0,60">
-            <TextBlock svc:Tr.Text="No videos here" FontSize="17" FontWeight="SemiBold" HorizontalAlignment="Center" />
-            <TextBlock Classes="dim" svc:Tr.Text="Try another folder or search term." FontSize="13" HorizontalAlignment="Center" />
+            <TextBlock svc:Tr.Text="Nothing here yet" FontSize="17" FontWeight="SemiBold" HorizontalAlignment="Center" />
+            <TextBlock Classes="dim" svc:Tr.Text="Try another search, or pick a different folder." FontSize="13" HorizontalAlignment="Center" />
             <Button Classes="soft" svc:Tr.Content="Clear filters" HorizontalAlignment="Center" Margin="0,8,0,0"
                     IsVisible="{Binding HasFilters}" Command="{Binding ClearFiltersCommand}" />
           </StackPanel>
@@ -719,6 +808,23 @@
                      TextWrapping="Wrap" MaxLength="300" MaxHeight="80" />
           </StackPanel>
 
+          <StackPanel Spacing="6" IsVisible="{Binding ShowPeople}">
+            <TextBlock Classes="label" svc:Tr.Text="WHO WAS THERE" />
+            <TextBox x:Name="EditPeople" Text="{Binding People}" svc:Tr.Watermark="Friends in this clip, like Alex, Sam" CornerRadius="8" MaxLength="300" />
+            <ItemsControl ItemsSource="{Binding PeopleSuggestions}" IsVisible="{Binding HasPeopleSuggestions}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="x:String">
+                  <Button Classes="suggest" Command="{Binding #Root.((vm:MainViewModel)DataContext).Editor.AddPersonCommand}" CommandParameter="{Binding}">
+                    <TextBlock Text="{Binding StringFormat='+ {0}'}" />
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+
           <TextBlock Text="{Binding Error}" Foreground="{DynamicResource Danger}" FontSize="12" TextWrapping="Wrap"
                      IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
 
@@ -844,7 +950,7 @@
             </Button>
           </Grid>
           <TextBlock DockPanel.Dock="Top" Classes="dim" FontSize="12" TextWrapping="Wrap" Margin="24,0,24,14"
-                     svc:Tr.Text="Cnema takes the loudest moment of each video, puts them one after another with a transition, and saves a new video. Your clips stay as they are." />
+                     svc:Tr.Text="Savefile takes the loudest moment of each video, puts them one after another with a transition, and saves a new video. Your clips stay as they are." />
           <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Line}" BorderThickness="0,1,0,0" Padding="24,14">
             <Grid ColumnDefinitions="*,Auto,Auto">
               <TextBlock Text="{Binding Summary}" FontSize="12" VerticalAlignment="Center" TextWrapping="Wrap" />
@@ -1092,15 +1198,15 @@
             <Grid ColumnDefinitions="*,Auto">
               <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" VerticalAlignment="Center"
                          svc:Tr.Text="You can change all of this later in Settings." />
-              <Button x:Name="SetupDone" Grid.Column="1" Classes="accent" svc:Tr.Content="Start using Cnema" Command="{Binding FinishSetupCommand}" />
+              <Button x:Name="SetupDone" Grid.Column="1" Classes="accent" svc:Tr.Content="Start using Savefile" Command="{Binding FinishSetupCommand}" />
             </Grid>
           </Border>
           <ScrollViewer VerticalScrollBarVisibility="Auto">
             <StackPanel Spacing="12" Margin="24,24,24,18">
               <StackPanel Spacing="4">
-                <TextBlock svc:Tr.Text="Welcome to Cnema" FontSize="22" FontWeight="Bold" />
+                <TextBlock svc:Tr.Text="Welcome to Savefile" FontSize="22" FontWeight="Bold" />
                 <TextBlock Classes="dim" FontSize="13" TextWrapping="Wrap"
-                           svc:Tr.Text="A few choices to make it yours. Nothing here is required." />
+                           svc:Tr.Text="A few choices to make it yours, then go make some memories. Nothing here is required." />
               </StackPanel>
 
               <TextBlock Classes="label" svc:Tr.Text="LANGUAGE" Margin="0,6,0,0" />
@@ -1174,8 +1280,8 @@
           <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Line}" BorderThickness="0,1,0,0" Padding="24,14">
             <Grid ColumnDefinitions="Auto,*,Auto">
               <StackPanel Orientation="Horizontal" Spacing="4">
-                <Button Classes="ghost" svc:Tr.Content="Quit Cnema" Click="OnQuitClick" FontSize="12"
-                        svc:Tr.Tip="Stops clipping and closes Cnema completely" />
+                <Button Classes="ghost" svc:Tr.Content="Quit Savefile" Click="OnQuitClick" FontSize="12"
+                        svc:Tr.Tip="Stops clipping and closes Savefile completely" />
                 <Button Classes="ghost" svc:Tr.Content="Copy diagnostics" FontSize="12"
                         Command="{Binding #Root.((vm:MainViewModel)DataContext).CopyDiagnosticsCommand}"
                         svc:Tr.Tip="Copies version, hardware, settings and the recent log, for reporting a problem" />
@@ -1200,7 +1306,7 @@
                 <Grid Classes="row" ColumnDefinitions="*,Auto">
                   <StackPanel Spacing="2">
                     <TextBlock svc:Tr.Text="Language" />
-                    <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Changes right away. A few lists switch over after Cnema restarts." />
+                    <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Changes right away. A few lists switch over after Savefile restarts." />
                   </StackPanel>
                   <ComboBox Grid.Column="1" MinWidth="190" CornerRadius="8" ItemsSource="{Binding LanguageOptions}" SelectedItem="{Binding Language}" />
                 </Grid>
@@ -1208,7 +1314,7 @@
                 <Grid Classes="row" ColumnDefinitions="*,Auto">
                   <StackPanel Spacing="2">
                     <TextBlock svc:Tr.Text="Color scheme" />
-                    <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Aurora is the original look with gradients." />
+                    <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Memory Card matches the app icon. Classic Cnema is the original look, with gradients." />
                   </StackPanel>
                   <ComboBox Grid.Column="1" MinWidth="190" CornerRadius="8" ItemsSource="{Binding ColorSchemes}" SelectedItem="{Binding ColorScheme}">
                     <ComboBox.ItemTemplate>
@@ -1228,7 +1334,7 @@
               <Border Classes="group">
                 <StackPanel>
                   <Grid Classes="row" ColumnDefinitions="*,Auto">
-                    <TextBlock svc:Tr.Text="Launch Cnema when I log in" />
+                    <TextBlock svc:Tr.Text="Launch Savefile when I log in" />
                     <ToggleSwitch x:Name="SettingsFirst" Grid.Column="1" Classes="bare" IsChecked="{Binding LaunchAtLogin}" />
                   </Grid>
                   <Border Classes="sep" />
@@ -1240,7 +1346,7 @@
                   <Grid Classes="row" ColumnDefinitions="*,Auto" IsEnabled="{Binding CheckForUpdates}">
                     <StackPanel Spacing="2">
                       <TextBlock svc:Tr.Text="Install updates automatically" />
-                      <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="When Cnema starts and finds a newer version, it installs it and restarts." />
+                      <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="When Savefile starts and finds a newer version, it installs it and restarts." />
                     </StackPanel>
                     <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding AutoUpdate}" />
                   </Grid>
@@ -1382,7 +1488,7 @@
                     <Grid Classes="row" ColumnDefinitions="*,Auto" IsEnabled="{Binding FeatureSessions}">
                       <StackPanel Spacing="2">
                         <TextBlock svc:Tr.Text="Crash-safe sessions" />
-                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="If Cnema or your computer stops in the middle of a session, what was recorded is saved the next time Cnema starts." />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="If Savefile or your computer stops in the middle of a session, what was recorded is saved the next time Savefile starts." />
                       </StackPanel>
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureRecoverSessions}" />
                     </Grid>
@@ -1489,6 +1595,42 @@
                         <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Bring in videos from OBS, NVIDIA, Xbox Game Bar and Steam, tagged by game." />
                       </StackPanel>
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureRecorders}" />
+                    </Grid>
+                  </StackPanel>
+                </Border>
+                <TextBlock Classes="label" svc:Tr.Text="MEMORIES" Margin="0,8,0,0" />
+                <Border Classes="group">
+                  <StackPanel>
+                    <Grid Classes="row" ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="2">
+                        <TextBlock svc:Tr.Text="Worth a rewatch" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="A row at the top of the library with old favourites and clips with friends. A new pick every day." />
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureRewatch}" />
+                    </Grid>
+                    <Border Classes="sep" />
+                    <Grid Classes="row" ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="2">
+                        <TextBlock svc:Tr.Text="On this day" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="A card with what you recorded on this day in earlier years, or a month ago." />
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureOnThisDay}" />
+                    </Grid>
+                    <Border Classes="sep" />
+                    <Grid Classes="row" ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="2">
+                        <TextBlock svc:Tr.Text="Who was there" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Tag the friends in a clip under Rename, tag or move. Their names show on the card, and @name finds them." />
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeaturePeople}" />
+                    </Grid>
+                    <Border Classes="sep" />
+                    <Grid Classes="row" ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="2">
+                        <TextBlock svc:Tr.Text="Milestones" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="A small celebration for your first save, your 100th, and so on." />
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureMilestones}" />
                     </Grid>
                   </StackPanel>
                 </Border>
@@ -2374,7 +2516,7 @@
                     </Grid>
                     <Slider Minimum="1" Maximum="4" Value="{Binding ZoomAtPlayhead}" SmallChange="0.1" LargeChange="0.5" />
                     <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap"
-                               svc:Tr.Text="On this page you see the whole picture with the zoom frame on it. Drag the frame to aim, or its corners to zoom. Changing it sets a keyframe at the playhead; Cnema glides smoothly from one keyframe to the next." />
+                               svc:Tr.Text="On this page you see the whole picture with the zoom frame on it. Drag the frame to aim, or its corners to zoom. Changing it sets a keyframe at the playhead; Savefile glides smoothly from one keyframe to the next." />
                   </StackPanel>
                 </Border>
                 <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Margin="4,0" IsVisible="{Binding !HasZoomKeys}"

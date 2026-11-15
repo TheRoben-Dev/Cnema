@@ -159,7 +159,7 @@ public static class TrimService
         IReadOnlyList<Chapter>? chapters = null)
     {
         var ffmpeg = ToolLocator.Ffmpeg ?? throw new InvalidOperationException(
-            T("ffmpeg not found. Install it (macOS: brew install ffmpeg) and restart Cnema."));
+            T("ffmpeg not found. Install it (macOS: brew install ffmpeg) and restart Savefile."));
         if (outMs <= inMs) throw new ArgumentException(T("Out point must be after in point."));
 
         var durationMs = outMs - inMs;

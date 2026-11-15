@@ -1,15 +1,21 @@
-# Cnema
+# Savefile
 
-A clip library, player, editor and clipper for game footage, built on the VLC engine. Point it at your folders,
-watch anything VLC can play, cut and share clips, and save the last few seconds of gameplay with a hotkey.
+*Some saves you never overwrite.*
 
-![Editor](docs/editor.png)
+The late nights, the lost runs, the one clutch nobody believes. Savefile quietly records while you play,
+keeps the moments you shared with your friends in a library on your own machine, and makes them easy to trim,
+caption and send to the group chat. No account, no cloud. Built on the VLC engine.
+
+Savefile was called **Cnema** up to v0.22. The repository, the release mirror and the app file
+(`Cnema.app`, `Cnema.exe`) keep the old name for now so existing installs keep updating themselves.
+
+![Library](docs/library.png)
 
 ## Download
 
-Get the latest build from **[Cnema releases](https://github.com/TheRoben-Dev/Cnema-releases/releases/latest)**
+Get the latest build from **[Savefile releases](https://github.com/TheRoben-Dev/Cnema-releases/releases/latest)**
 (macOS Apple Silicon and Intel, Windows, Linux). Everything is bundled: the .NET runtime, libVLC and ffmpeg.
-Cnema updates itself after that.
+Savefile updates itself after that.
 
 **First launch:** the builds aren't signed.
 
@@ -19,6 +25,8 @@ Cnema updates itself after that.
 
 ## Features
 
+- **Memories:** a "Worth a rewatch" row of old favourites and clips with friends, an "On this day" card,
+  "Who was there" tags that search finds with `@name`, and small milestones as your saves add up.
 - **Library:** watched folders, thumbnails with hover scrub, search, filters, tags, favourites, collections,
   bulk select, duplicate finder and stats.
 - **Quick player:** videos open in a large player over the library; **Edit** takes you to the full editor.

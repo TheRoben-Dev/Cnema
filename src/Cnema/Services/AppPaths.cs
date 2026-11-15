@@ -42,12 +42,14 @@ public static class AppPaths
             if (string.IsNullOrEmpty(videos))
                 videos = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
                     OperatingSystem.IsMacOS() ? "Movies" : "Videos");
-            return Path.Combine(videos, "Cnema Clips");
+            // Installs from before the Savefile rename keep their "Cnema Clips" folder.
+            var legacy = Path.Combine(videos, "Cnema Clips");
+            return Directory.Exists(legacy) ? legacy : Path.Combine(videos, "Savefile Clips");
         }
     }
 
     /// <summary>
-    /// Portable mode: a "Cnema Data" folder next to the app (next to Cnema.app on macOS, next to the
+    /// Portable mode: a "Savefile Data" folder ("Cnema Data" before the rename) next to the app (next to Cnema.app on macOS, next to the
     /// Cnema folder elsewhere) holds settings, library and thumbnails instead of the user profile.
     /// It sits beside the app rather than inside it so updates, which replace the app, leave it alone.
     /// </summary>
@@ -59,7 +61,9 @@ public static class AppPaths
             if (OperatingSystem.IsMacOS() && Path.GetDirectoryName(Path.GetDirectoryName(dir)) is { } bundle &&
                 bundle.EndsWith(".app", StringComparison.OrdinalIgnoreCase))
                 dir = bundle;
-            return Path.Combine(Path.GetDirectoryName(dir) ?? dir, "Cnema Data");
+            var parent = Path.GetDirectoryName(dir) ?? dir;
+            var legacy = Path.Combine(parent, "Cnema Data");
+            return Directory.Exists(legacy) ? legacy : Path.Combine(parent, "Savefile Data");
         }
     }
 

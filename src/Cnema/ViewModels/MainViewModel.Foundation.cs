@@ -23,6 +23,7 @@ public sealed partial class MainViewModel
         VideoItemViewModel.HoverPreview = Features.HoverPreview;
         VideoItemViewModel.UnwatchedBadges = Features.Unwatched;
         VideoItemViewModel.NotesEnabled = Features.Notes;
+        VideoItemViewModel.PeopleEnabled = Features.People;
         Chapters.Enabled = Features.Chapters;
         Player.RefreshChapters();
         Player.Queue = Features.ExportQueue ? Exports : null;
@@ -32,11 +33,13 @@ public sealed partial class MainViewModel
         foreach (var v in _items.Values) v.RefreshAll();
         if (!Features.Collections && SelectedCollection is not null) SelectedFolder = Folders.FirstOrDefault();
         if (!Features.Unwatched) FilterUnwatched = false;
+        RefreshMemories();
+        OnPropertyChanged(nameof(HeaderCount));
         foreach (var name in new[]
                  {
                      nameof(ShowClipping), nameof(ShowSessionButton), nameof(ShowController), nameof(ShowCollections),
                      nameof(ShowCleanUp), nameof(ShowStats), nameof(ShowTools), nameof(ShowUnwatchedFilter),
-                     nameof(ShowMiniPlayerButton), nameof(ShowRecorders), nameof(ShowNotes), nameof(ShowMontage),
+                     nameof(ShowMiniPlayerButton), nameof(ShowRecorders), nameof(ShowNotes), nameof(ShowMontage), nameof(ShowPeople),
                  })
             OnPropertyChanged(name);
         AppearanceChanged?.Invoke();
@@ -90,7 +93,7 @@ public sealed partial class MainViewModel
         }
         catch (Exception ex)
         {
-            ShowToast(T("That file is not a Cnema settings file."));
+            ShowToast(T("That file is not a Savefile settings file."));
             Log.Warn("Importing settings failed: " + ex.Message);
             return;
         }
@@ -129,7 +132,7 @@ public sealed partial class MainViewModel
     [ObservableProperty] private bool _setupHoverGlow = true;
     public string SetupFolders => _settings.Current.Folders.Count switch
     {
-        0 => T("No folders yet. Cnema only shows videos from folders you add."),
+        0 => T("No folders yet. Savefile only shows videos from folders you add."),
         1 => T("1 folder: ") + _settings.Current.Folders[0],
         var n => F("{0} folders added.", n),
     };

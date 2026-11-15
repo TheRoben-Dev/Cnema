@@ -281,8 +281,8 @@ public sealed partial class SettingsViewModel : ObservableObject
     // ---------- portable mode ----------
     public bool IsPortable => AppPaths.IsPortable;
     public string PortableStatus => AppPaths.IsPortable
-        ? T("On: settings, library and thumbnails are kept in \"Cnema Data\" next to the app. Delete or rename that folder to turn it off.")
-        : T("Keep settings, library and thumbnails next to the app, for running Cnema from a USB stick.");
+        ? T("On: settings, library and thumbnails are kept in \"Savefile Data\" next to the app. Delete or rename that folder to turn it off.")
+        : T("Keep settings, library and thumbnails next to the app, for running Savefile from a USB stick.");
     [ObservableProperty] private string? _portableMessage;
 
     [RelayCommand]
@@ -291,7 +291,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         try
         {
             AppPaths.MakePortable();
-            PortableMessage = T("Done. Cnema uses the \"Cnema Data\" folder from the next start.");
+            PortableMessage = T("Done. Savefile uses the \"Savefile Data\" folder from the next start.");
         }
         catch (Exception ex)
         {
@@ -518,6 +518,7 @@ public sealed partial class SettingsViewModel : ObservableObject
             Notes = FeatureNotes, DragOut = FeatureDragOut, Recorders = FeatureRecorders,
             ZoomPan = FeatureZoomPan, Blur = FeatureBlur, Music = FeatureMusic, Montage = FeatureMontage,
             RecoverSessions = FeatureRecoverSessions,
+            Rewatch = FeatureRewatch, OnThisDay = FeatureOnThisDay, People = FeaturePeople, Milestones = FeatureMilestones,
         };
         WriteEditing(settings);
         // Switching a module off switches off what it was doing, not only its buttons.

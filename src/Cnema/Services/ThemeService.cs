@@ -3,7 +3,7 @@ using Avalonia.Media;
 
 namespace Cnema.Services;
 
-/// <summary>One colour scheme: backgrounds, text, an accent and a second colour for selections and highlights.</summary>
+/// <summary>One colour scheme (ids stay the same across renames, names follow the Savefile brand): backgrounds, text, an accent and a second colour for selections and highlights.</summary>
 public sealed record ColorScheme(string Id, string Name, string Bg0, string Bg1, string Bg2, string Bg3, string Line,
     string Text, string TextDim, string Accent, string AccentHover, string Second, string OnAccent = "#FFFFFF", bool Gradients = false)
 {
@@ -20,12 +20,12 @@ public static class ThemeService
 
     public static IReadOnlyList<ColorScheme> Schemes { get; } = new[]
     {
-        new ColorScheme("violet", "Violet", "#090A0F", "#0F111A", "#161926", "#20243A", "#2A2F4A", "#EEF0FA", "#8B91B0", "#8E6BFF", "#A78BFF", "#3DDCFF"),
-        new ColorScheme("graphite", "Graphite", "#0B0B0D", "#121214", "#1A1A1D", "#26262B", "#323238", "#F2F2F4", "#93939C", "#4C8DFF", "#6BA4FF", "#8AB8FF"),
-        new ColorScheme("ember", "Ember", "#0E0A09", "#16100E", "#1F1714", "#2E221D", "#3D2E27", "#FAF1EC", "#B09A8E", "#FF7A45", "#FF9567", "#FFC857", "#1A0D06"),
-        new ColorScheme("mint", "Mint", "#080D0C", "#0E1514", "#141E1C", "#1D2C29", "#294039", "#ECF8F4", "#88A8A0", "#2FCF8F", "#55DDA6", "#7CE8D0", "#04140D"),
-        new ColorScheme("rose", "Rose", "#0E090C", "#161016", "#1F1620", "#2E2030", "#3F2C40", "#FAEEF5", "#B093A6", "#FF5C93", "#FF7DAA", "#C9A0FF"),
-        new ColorScheme("aurora", "Aurora (gradients)", "#090A0F", "#0F111A", "#161926", "#20243A", "#2A2F4A", "#EEF0FA", "#8B91B0", "#8E6BFF", "#A78BFF", "#3DDCFF", Gradients: true),
+        new ColorScheme("violet", "Memory Card", "#090A0F", "#0F111A", "#161926", "#20243A", "#2A2F4A", "#EEF0FA", "#8B91B0", "#8E6BFF", "#A78BFF", "#3DDCFF"),
+        new ColorScheme("graphite", "Cartridge", "#0B0B0D", "#121214", "#1A1A1D", "#26262B", "#323238", "#F2F2F4", "#93939C", "#4C8DFF", "#6BA4FF", "#8AB8FF"),
+        new ColorScheme("ember", "Campfire", "#0E0A09", "#16100E", "#1F1714", "#2E221D", "#3D2E27", "#FAF1EC", "#B09A8E", "#FF7A45", "#FF9567", "#FFC857", "#1A0D06"),
+        new ColorScheme("mint", "Handheld", "#080D0C", "#0E1514", "#141E1C", "#1D2C29", "#294039", "#ECF8F4", "#88A8A0", "#2FCF8F", "#55DDA6", "#7CE8D0", "#04140D"),
+        new ColorScheme("rose", "Sleepover", "#0E090C", "#161016", "#1F1620", "#2E2030", "#3F2C40", "#FAEEF5", "#B093A6", "#FF5C93", "#FF7DAA", "#C9A0FF"),
+        new ColorScheme("aurora", "Classic Cnema (gradients)", "#090A0F", "#0F111A", "#161926", "#20243A", "#2A2F4A", "#EEF0FA", "#8B91B0", "#8E6BFF", "#A78BFF", "#3DDCFF", Gradients: true),
     };
 
     public static ColorScheme Find(string? id) =>

@@ -106,7 +106,7 @@ public partial class App : Application
 
     private void BuildTray()
     {
-        var open = _trayOpen = new NativeMenuItem(T("Open Cnema"));
+        var open = _trayOpen = new NativeMenuItem(T("Open Savefile"));
         open.Click += (_, _) => ShowWindow();
         _traySave = new NativeMenuItem(T("Save clip"));
         _traySave.Click += (_, _) => _vm?.SaveClipCommand.Execute(null);
@@ -114,7 +114,7 @@ public partial class App : Application
         _traySession.Click += (_, _) => _vm?.ToggleSessionCommand.Execute(null);
         _trayToggle = new NativeMenuItem(T("Background clipping")) { ToggleType = NativeMenuItemToggleType.CheckBox };
         _trayToggle.Click += (_, _) => _vm?.ToggleClippingCommand.Execute(null);
-        var quit = _trayQuit = new NativeMenuItem(T("Quit Cnema"));
+        var quit = _trayQuit = new NativeMenuItem(T("Quit Savefile"));
         quit.Click += (_, _) => Quit();
 
         _trayUpdate = new NativeMenuItem(T("Get the update")) { IsVisible = false };
@@ -132,7 +132,7 @@ public partial class App : Application
         _tray = new TrayIcon
         {
             Icon = new WindowIcon(AssetLoader.Open(new Uri("avares://Cnema/Assets/cnema.png"))),
-            ToolTipText = "Cnema",
+            ToolTipText = "Savefile",
             Menu = menu,
             IsVisible = false,
         };
@@ -144,10 +144,10 @@ public partial class App : Application
     {
         if (_vm is null || _tray is null) return;
         _tray.IsVisible = _vm.StaysInBackground;
-        _tray.ToolTipText = "Cnema · " + _vm.ClipTitle;
+        _tray.ToolTipText = "Savefile · " + _vm.ClipTitle;
         // Fixed labels too, so the menu follows a language change.
-        if (_trayOpen is not null) _trayOpen.Header = T("Open Cnema");
-        if (_trayQuit is not null) _trayQuit.Header = T("Quit Cnema");
+        if (_trayOpen is not null) _trayOpen.Header = T("Open Savefile");
+        if (_trayQuit is not null) _trayQuit.Header = T("Quit Savefile");
         if (_trayToggle is not null) _trayToggle.Header = T("Background clipping");
         if (_traySave is not null)
         {

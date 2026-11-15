@@ -50,7 +50,7 @@ public static class AutostartService
     public static string? Set(bool enabled)
     {
         var exe = Environment.ProcessPath;
-        if (enabled && string.IsNullOrEmpty(exe)) return T("Could not work out where Cnema is installed.");
+        if (enabled && string.IsNullOrEmpty(exe)) return T("Could not work out where Savefile is installed.");
         try
         {
             if (OperatingSystem.IsMacOS())
@@ -86,7 +86,7 @@ public static class AutostartService
             if (!enabled) { File.Delete(LinuxDesktop); return null; }
             Directory.CreateDirectory(Path.GetDirectoryName(LinuxDesktop)!);
             File.WriteAllText(LinuxDesktop,
-                "[Desktop Entry]\nType=Application\nName=Cnema\n" +
+                "[Desktop Entry]\nType=Application\nName=Savefile\n" +
                 $"Exec=\"{exe}\" {BackgroundFlag}\nX-GNOME-Autostart-enabled=true\nTerminal=false\n");
             return null;
         }

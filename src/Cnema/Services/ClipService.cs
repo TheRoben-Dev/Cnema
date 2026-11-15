@@ -303,7 +303,7 @@ public sealed class ClipService : IDisposable
         if (OperatingSystem.IsMacOS() && !PlatformShell.EnsureScreenCaptureAccess())
         {
             Set(ClipState.Error,
-                T("Allow Cnema under System Settings › Privacy & Security › Screen Recording, then restart Cnema."));
+                T("Allow Savefile under System Settings › Privacy & Security › Screen Recording, then restart Savefile."));
             return;
         }
 
@@ -439,7 +439,7 @@ public sealed class ClipService : IDisposable
         {
             _withoutCamera = true;
             CameraNote = T(OperatingSystem.IsMacOS()
-                ? "The camera could not be opened, so clips are recorded without it. Check that no other app is using it and that Cnema may use it (System Settings › Privacy & Security › Camera)."
+                ? "The camera could not be opened, so clips are recorded without it. Check that no other app is using it and that Savefile may use it (System Settings › Privacy & Security › Camera)."
                 : "The camera could not be opened, so clips are recorded without it. Check that no other app is using it.");
             _ = Task.Run(async () =>
             {

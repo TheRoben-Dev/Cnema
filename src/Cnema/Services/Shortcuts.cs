@@ -66,7 +66,7 @@ public static class Shortcuts
     {
         ("General", "Show this list", "?"),
         ("General", "Close the window", Mod + "+W"),
-        ("General", "Quit Cnema", Mod + "+Q"),
+        ("General", "Quit Savefile", Mod + "+Q"),
         ("General", "Close a dialog or the player", "Esc"),
         ("General", "Select all (while selecting)", Mod + "+A"),
         ("General", "Quick player: play/pause, previous / next video, seek, mute, close", "Space ← → Shift+← → M Esc"),

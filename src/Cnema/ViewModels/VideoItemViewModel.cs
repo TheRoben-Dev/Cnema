@@ -69,9 +69,40 @@ public sealed partial class VideoItemViewModel : ObservableObject
     public static bool NotesEnabled { get; set; } = true;
     public bool HasNote => NotesEnabled && !string.IsNullOrWhiteSpace(Entry.Note);
     public string Note => Entry.Note ?? "";
-    /// <summary>The card's second line: the note when there is one, otherwise resolution, codec and size.</summary>
-    public string Subtitle => HasNote ? Note : Details;
-    public string? SubtitleTip => HasNote ? Details : null;
+    // ---------- who was there ----------
+    /// <summary>The "Who was there" feature; off, names are kept but not shown.</summary>
+    public static bool PeopleEnabled { get; set; } = true;
+    public bool HasPeople => PeopleEnabled && Entry.People.Count > 0;
+    /// <summary>"with Alex, Sam and Mira".</summary>
+    public string PeopleText => HasPeople ? F("with {0}", JoinNames(Entry.People)) : "";
+
+    public static string JoinNames(IReadOnlyList<string> names) => names.Count switch
+    {
+        0 => "",
+        1 => names[0],
+        _ => F("{0} and {1}", string.Join(", ", names.Take(names.Count - 1)), names[^1]),
+    };
+
+    /// <summary>When it was recorded, said the way a friend would: "last night", "3 weeks ago", "2 years ago".</summary>
+    public string AgoText => Ago(Entry.ModifiedUtc.ToLocalTime(), DateTime.Now);
+
+    public static string Ago(DateTime when, DateTime now)
+    {
+        var days = (now.Date - when.Date).Days;
+        if (days <= 0) return when.Hour >= 18 || when.Hour < 4 ? T("tonight") : T("today");
+        if (days == 1) return when.Hour >= 18 || when.Hour < 4 ? T("last night") : T("yesterday");
+        if (days < 7) return F("{0} days ago", days);
+        if (days < 30) return P(days / 7, "{0} week ago", "{0} weeks ago");
+        if (days < 365) return P(Math.Max(1, days / 30), "{0} month ago", "{0} months ago");
+        return P(days / 365, "{0} year ago", "{0} years ago");
+    }
+
+    /// <summary>Second line on a "Worth a rewatch" card: who was there and when, or just when.</summary>
+    public string MemoryLine => HasPeople ? $"{PeopleText} · {AgoText}" : AgoText;
+
+    /// <summary>The card's second line: the note, then who was there, otherwise resolution, codec and size.</summary>
+    public string Subtitle => HasNote ? Note : HasPeople ? PeopleText : Details;
+    public string? SubtitleTip => HasNote || HasPeople ? Details : null;
 
     // ---------- selection ----------
     /// <summary>True while the library is in select mode: cards show a tick box and a click selects.</summary>
