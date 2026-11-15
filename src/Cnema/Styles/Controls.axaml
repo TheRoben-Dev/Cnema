@@ -17,6 +17,15 @@
     <Setter Property="FontFamily" Value="Menlo, Consolas, DejaVu Sans Mono, monospace" />
   </Style>
 
+  <!-- One body size for form controls, so dialogs, Settings and the welcome setup read the same -->
+  <Style Selector="CheckBox, RadioButton, ComboBox, TextBox">
+    <Setter Property="FontSize" Value="13" />
+  </Style>
+  <Style Selector="ComboBox, TextBox">
+    <Setter Property="MinHeight" Value="32" />
+    <Setter Property="CornerRadius" Value="8" />
+  </Style>
+
   <!-- Generic button chrome -->
   <Style Selector="Button">
     <Setter Property="CornerRadius" Value="8" />
@@ -68,7 +77,8 @@
     <Setter Property="Background" Value="{DynamicResource BrandButton}" />
     <Setter Property="Foreground" Value="{DynamicResource OnAccent}" />
     <Setter Property="FontWeight" Value="SemiBold" />
-    <Setter Property="Padding" Value="14,8" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="Padding" Value="14,7" />
   </Style>
   <Style Selector="Button.accent:pointerover /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource BrandButtonHover}" />
@@ -91,7 +101,7 @@
     <Setter Property="Foreground" Value="{DynamicResource Bg0}" />
   </Style>
   <Style Selector="Button.play:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="{DynamicResource Cyan}" />
+    <Setter Property="Background" Value="{DynamicResource Highlight}" />
     <Setter Property="Foreground" Value="{DynamicResource Bg0}" />
   </Style>
 
@@ -150,13 +160,16 @@
     <Setter Property="Background" Value="{DynamicResource AccentSoft}" />
   </Style>
   <Style Selector="ListBox.nav ListBoxItem:selected PathIcon.navicon">
-    <Setter Property="Foreground" Value="{DynamicResource Cyan}" />
+    <Setter Property="Foreground" Value="{DynamicResource Highlight}" />
   </Style>
   <Style Selector="ListBox.nav ListBoxItem Button.remove">
     <Setter Property="Opacity" Value="0" />
   </Style>
   <Style Selector="ListBox.nav ListBoxItem:pointerover Button.remove">
     <Setter Property="Opacity" Value="1" />
+  </Style>
+  <Style Selector="ListBox.nav ListBoxItem:pointerover Panel.removable TextBlock.count">
+    <Setter Property="Opacity" Value="0" />
   </Style>
 
   <!-- Video cards -->
@@ -305,7 +318,7 @@
     <Setter Property="IsVisible" Value="False" />
   </Style>
   <Style Selector="ListBox.nav ListBoxItem:selected TextBlock.navicon">
-    <Setter Property="Foreground" Value="{DynamicResource Cyan}" />
+    <Setter Property="Foreground" Value="{DynamicResource Highlight}" />
   </Style>
 
   <!-- Keycap hint -->
@@ -474,10 +487,15 @@
     <Setter Property="Foreground" Value="#FFFFFF" />
     <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="CornerRadius" Value="8" />
-    <Setter Property="Padding" Value="14,8" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="Padding" Value="14,7" />
+  </Style>
+  <Style Selector="Button.danger:disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Bg3}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextDim}" />
   </Style>
   <Style Selector="Button.danger:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="#FF5C87" />
+    <Setter Property="Background" Value="{DynamicResource DangerHover}" />
     <Setter Property="Foreground" Value="#FFFFFF" />
   </Style>
   <Style Selector="Border.part">
@@ -548,7 +566,7 @@
     <Setter Property="Foreground" Value="{DynamicResource TextDim}" />
   </Style>
   <Style Selector="Button.keychip.custom">
-    <Setter Property="Foreground" Value="{DynamicResource Cyan}" />
+    <Setter Property="Foreground" Value="{DynamicResource Highlight}" />
   </Style>
   <Style Selector="Button.keychip.capturing /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource AccentSoft}" />
@@ -594,7 +612,7 @@
   <!-- A soft button that is "on" (e.g. filters active) -->
   <Style Selector="Button.soft.on">
     <Setter Property="Background" Value="{DynamicResource AccentSoft}" />
-    <Setter Property="Foreground" Value="{DynamicResource Cyan}" />
+    <Setter Property="Foreground" Value="{DynamicResource Highlight}" />
   </Style>
 
   <!-- Select mode: tick box on cards, ring stays on for picked cards -->
@@ -675,10 +693,10 @@
   <!-- ======================= Player (v0.13) ======================= -->
   <Style Selector="Button.ghost.on">
     <Setter Property="Background" Value="{DynamicResource AccentSoft}" />
-    <Setter Property="Foreground" Value="{DynamicResource Cyan}" />
+    <Setter Property="Foreground" Value="{DynamicResource Highlight}" />
   </Style>
   <Style Selector="Button.ghost.on PathIcon">
-    <Setter Property="Foreground" Value="{DynamicResource Cyan}" />
+    <Setter Property="Foreground" Value="{DynamicResource Highlight}" />
   </Style>
   <!-- A row in a flyout list (speed, chapters) -->
   <Style Selector="Button.menurow">
@@ -696,7 +714,7 @@
   </Style>
   <Style Selector="Button.menurow.on">
     <Setter Property="Background" Value="{DynamicResource AccentSoft}" />
-    <Setter Property="Foreground" Value="{DynamicResource Cyan}" />
+    <Setter Property="Foreground" Value="{DynamicResource Highlight}" />
   </Style>
   <!-- The mini player card -->
   <Style Selector="Border.miniplayer">

@@ -274,6 +274,14 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
             SaveProgress(previous);
             RememberEdits(previous);
         }
+        // Stop the previous video before loading the next one (← / → or a new pick in the quick player).
+        // Swapping media on a playing player leaves the old decoder and video output to wind down
+        // while the new file starts; a clean stop, off the UI thread, gives the new file a fresh start.
+        if (_active && _player.State is not (VLCState.Stopped or VLCState.NothingSpecial))
+        {
+            var p = _player;
+            _pendingStop = Task.Run(() => p.Stop());
+        }
         _active = true;
         await _pendingStop;
         Frames?.Reset();

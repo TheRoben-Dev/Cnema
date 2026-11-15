@@ -2,6 +2,20 @@
 
 What changed in each Savefile (formerly Cnema) release. The app shows the entries you have not seen yet after it updates.
 
+## 0.24.0
+- Fixed: jumping to the previous or next video with ← / → in the Quick player (and the editor) could leave a black picture until the player was closed and opened again. The next video now always shows up, and switching is a little smoother too.
+- The Quick player has the same previous / next video buttons as the editor, next to Edit.
+- The last bits of the old blue-green (cyan) colour are gone: selected icons, In / Out times, the timeline selection, statuses and the stats bars are now Savefile purple, in dark and light.
+- Buttons line up: Cancel, Save, Move to trash and the other main buttons now have the same height and text size everywhere.
+- Light look: dialogs dim the app with a soft violet shade instead of near-black, their shadows are lighter, and switches that are off use a soft outline instead of a hard black one.
+- Text boxes keep the card colour while you type instead of turning black (dark) or stark white (light), and drop-downs, checkboxes and text boxes use the same text size in Settings, dialogs and the welcome setup.
+- Library: the counts in the sidebar line up for folders too, the rows of videos sit closer together, and the select button has an outline icon like its neighbours.
+- Start over in the editor's Trim page is a proper button now.
+- Stats shows seconds for a library under a minute instead of "0 min".
+- Other recorders: "Not found on this computer" reads as a normal sentence instead of a file path.
+- A failed update check says what went wrong in plain words (no connection, or GitHub is busy), and the message goes away after the next check that works.
+- Fixed a rare crash when capture had to be stopped because the replay buffer got stuck.
+
 ## 0.23.0
 - Cnema is now **Savefile**. Some saves you never overwrite: the app is about the moments you keep with your friends, so it has a name and a look to match. New icon (a memory card with a play button), and the logo sits right in the sidebar. Your library, settings and clips stay exactly where they were.
 - Worth a rewatch: a row at the top of All videos with old favourites, clips with friends and things you haven't seen in a while. A new pick every day.

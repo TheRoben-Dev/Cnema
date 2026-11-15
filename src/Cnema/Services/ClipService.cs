@@ -417,6 +417,11 @@ public sealed class ClipService : IDisposable
             await FinishSessionCoreAsync();
             Set(ClipState.Error, T("The replay buffer stopped rotating, so capture was stopped to protect your disk."));
         }
+        catch (Exception ex)
+        {
+            // async void on a pool thread: an exception escaping here would take the whole app down.
+            Log.Error("Stopping a stuck capture failed", ex);
+        }
         finally
         {
             _gate.Release();

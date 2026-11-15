@@ -177,7 +177,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private async Task<string?> CheckForUpdatesCoreAsync(bool announce)
     {
         var (found, error) = await UpdateService.CheckDetailedAsync();
-        if (error is null) Update = found;
+        if (error is null)
+        {
+            Update = found;
+            // A later check that went through replaces the message of one that failed.
+            if (UpdateStatus.StartsWith(T("Couldn't check for updates: "), StringComparison.Ordinal)) UpdateStatus = "";
+        }
         else if (announce) UpdateStatus = T("Couldn't check for updates: ") + error;
         // One system notification per new version, so it is noticed while Cnema sits in the tray.
         OnPropertyChanged(nameof(UpdateAction));

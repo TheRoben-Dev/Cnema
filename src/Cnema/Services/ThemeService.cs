@@ -7,17 +7,18 @@ namespace Cnema.Services;
 /// <summary>
 /// One colour scheme (ids stay the same across renames, names follow the Savefile brand). The
 /// backgrounds and text are worked out from a tint (Hue, Tint = saturation), so every scheme has a
-/// dark and a light version; the accent and second colour are the scheme's own.
+/// dark and a light version. Highlight is the lighter partner of the accent: selected icons, small
+/// accent text (In / Out times, statuses) and the selection on the timeline.
 /// </summary>
 public sealed record ColorScheme(string Id, string Name, double Hue, double Tint,
-    string Accent, string AccentHover, string Second, string OnAccent = "#FFFFFF", bool Gradients = false)
+    string Accent, string AccentHover, string Highlight, string OnAccent = "#FFFFFF")
 {
     public override string ToString() => Name;
 }
 
 /// <summary>The colours actually put on screen: a scheme in dark or light.</summary>
 public sealed record Palette(string Bg0, string Bg1, string Bg2, string Bg3, string Line, string Text, string TextDim,
-    string Accent, string AccentHover, string Second, string OnAccent, bool Gradients, bool Light);
+    string Accent, string AccentHover, string Highlight, string OnAccent, bool Light);
 
 /// <summary>One entry of the Appearance picker; Id "" follows the system.</summary>
 public sealed record ThemeModeOption(string Id, string English)
@@ -37,7 +38,7 @@ public static class ThemeService
     /// <summary>Savefile purple only (Roben, 2026-11-15); a saved id from an older scheme falls back to it.</summary>
     public static IReadOnlyList<ColorScheme> Schemes { get; } = new[]
     {
-        new ColorScheme("violet", "Memory Card", 252, 0.30, "#8E6BFF", "#A78BFF", "#3DDCFF"),
+        new ColorScheme("violet", "Memory Card", 252, 0.30, "#8E6BFF", "#A78BFF", "#C2AEFF"),
     };
 
     /// <summary>"" follows the system, otherwise "dark" or "light".</summary>
@@ -59,20 +60,20 @@ public static class ThemeService
 
     /// <summary>
     /// The scheme in dark or light. Dark sits a step above near-black so cards and panels read
-    /// as layers; light is a soft tinted paper with white cards. On light the accent and second
-    /// colour are deepened a little so text and icons in them stay readable on white.
+    /// as layers; light is a soft tinted paper with white cards. On light the accent is deepened a
+    /// little and the highlight becomes a deep violet, so text and icons in them stay readable on white.
     /// </summary>
     public static Palette Resolve(ColorScheme s, bool light)
     {
         string N(double l, double satScale = 1) => Hsl(s.Hue, s.Tint * satScale, l);
         if (!light)
             return new Palette(N(0.105), N(0.135), N(0.170), N(0.220), N(0.265, 0.9), N(0.965, 0.6), N(0.690, 0.55),
-                s.Accent, s.AccentHover, s.Second, s.OnAccent, s.Gradients, false);
+                s.Accent, s.AccentHover, s.Highlight, s.OnAccent, false);
         var accent = Color.Parse(s.Accent);
         var deep = Mix(accent, Colors.Black, 0.10);
         return new Palette(N(0.955, 1.4), N(0.985, 1.6), "#FFFFFF", N(0.915, 1.3), N(0.865, 1.0), N(0.135, 1.2), N(0.430, 0.7),
-            Hex(deep), Hex(Mix(accent, Colors.Black, 0.22)), Hex(Mix(Color.Parse(s.Second), Colors.Black, 0.32)),
-            s.OnAccent, s.Gradients, true);
+            Hex(deep), Hex(Mix(accent, Colors.Black, 0.22)), Hex(Mix(accent, Colors.Black, 0.30)),
+            s.OnAccent, true);
     }
 
     private static string Hsl(double h, double s, double l)
@@ -102,7 +103,7 @@ public static class ThemeService
 
     /// <summary>
     /// High contrast keeps the scheme's accent but puts it on pure black with white text and
-    /// clearly visible lines, and drops every gradient.
+    /// clearly visible lines.
     /// </summary>
     public static void Apply(string? id, bool highContrast = false)
     {
@@ -126,28 +127,30 @@ public static class ThemeService
             s = s with
             {
                 Bg0 = "#000000", Bg1 = "#000000", Bg2 = "#121212", Bg3 = "#242424", Line = "#9A9A9A",
-                Text = "#FFFFFF", TextDim = "#E0E0E0", Gradients = false,
+                Text = "#FFFFFF", TextDim = "#E0E0E0",
             };
         var r = app.Resources;
         static Color C(string hex) => Color.Parse(hex);
         static SolidColorBrush B(string hex, double opacity = 1) => new(Color.Parse(hex), opacity);
-        static IBrush Diagonal(Color from, Color to) => new LinearGradientBrush
-        {
-            StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative),
-            EndPoint = new RelativePoint(1, 1, RelativeUnit.Relative),
-            GradientStops = { new GradientStop(from, 0), new GradientStop(to, 1) },
-        };
 
         r["Bg0"] = B(s.Bg0); r["Bg1"] = B(s.Bg1); r["Bg2"] = B(s.Bg2); r["Bg3"] = B(s.Bg3);
         r["Line"] = B(s.Line); r["Text"] = B(s.Text); r["TextDim"] = B(s.TextDim);
-        r["Accent"] = B(s.Accent); r["AccentSoft"] = B(s.Accent, 0.18); r["Cyan"] = B(s.Second);
+        r["Accent"] = B(s.Accent); r["AccentSoft"] = B(s.Accent, 0.18); r["Highlight"] = B(s.Highlight);
         r["OnAccent"] = B(s.OnAccent);
         var accent = C(s.Accent);
-        var second = C(s.Second);
+        var highlight = C(s.Highlight);
         r["TagText"] = new SolidColorBrush(Mix(accent, C(s.Text), 0.55));
-        r["PartFill"] = new SolidColorBrush(second, 0.13);
-        r["PartLine"] = new SolidColorBrush(second, 0.33);
+        r["PartFill"] = new SolidColorBrush(highlight, 0.13);
+        r["PartLine"] = new SolidColorBrush(highlight, 0.33);
+        // Delete buttons: the same red in both looks, a step lighter on hover.
+        r["DangerHover"] = B("#FF5C87");
+        // Behind dialogs: a deep violet shade over the app. Light keeps it lighter, so the page
+        // still reads as "behind" without turning the whole window grey.
+        r["Scrim"] = new SolidColorBrush(C(s.Light ? "#2A2140" : "#050609"), s.Light ? 0.45 : 0.70);
+        r["ScrimStrong"] = new SolidColorBrush(C(s.Light ? "#2A2140" : "#050609"), s.Light ? 0.60 : 0.90);
+        r["ScrimLight"] = new SolidColorBrush(C(s.Light ? "#2A2140" : "#050609"), s.Light ? 0.35 : 0.60);
         r["CardGlow"] = new BoxShadows(new BoxShadow { Blur = 22, Color = Color.FromArgb((byte)(s.Light ? 0x40 : 0x4D), accent.R, accent.G, accent.B) });
+        r["DialogShadow"] = new BoxShadows(new BoxShadow { OffsetY = 18, Blur = 60, Color = s.Light ? Color.FromArgb(0x38, 0x2A, 0x21, 0x40) : Color.FromArgb(0x80, 0, 0, 0) });
         // Keyboard / controller focus: the same accent glow as a hovered card, a little tighter and stronger.
         r["FocusGlow"] = new BoxShadows(new BoxShadow { Blur = 14, Spread = 1, Color = Color.FromArgb(0x73, accent.R, accent.G, accent.B) });
         r["FocusRing"] = new SolidColorBrush(Mix(accent, s.Light ? Colors.Black : Colors.White, 0.12));
@@ -157,25 +160,10 @@ public static class ThemeService
         // Toasts and the speed badge float over the video, so they stay solid enough to read.
         r["ToastBg"] = new SolidColorBrush(C(s.Light ? s.Bg1 : "#14151B"), s.Light ? 0.96 : 0.9);
 
-        if (s.Gradients)
-        {
-            r["Brand"] = Diagonal(accent, second);
-            r["BrandButton"] = Diagonal(accent, C("#4C8DFF"));
-            r["BrandButtonHover"] = Diagonal(C(s.AccentHover), C("#6BA4FF"));
-            r["SidebarGlow"] = new LinearGradientBrush
-            {
-                StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative),
-                EndPoint = new RelativePoint(0, 1, RelativeUnit.Relative),
-                GradientStops = { new GradientStop(Color.FromArgb(0x1F, accent.R, accent.G, accent.B), 0), new GradientStop(Color.FromArgb(0, accent.R, accent.G, accent.B), 0.35) },
-            };
-        }
-        else
-        {
-            r["Brand"] = B(s.Accent);
-            r["BrandButton"] = B(s.Accent);
-            r["BrandButtonHover"] = B(s.AccentHover);
-            r["SidebarGlow"] = Brushes.Transparent;
-        }
+        // One flat purple: no gradients anywhere (Roben, 2026-11-15).
+        r["Brand"] = B(s.Accent);
+        r["BrandButton"] = B(s.Accent);
+        r["BrandButtonHover"] = B(s.AccentHover);
 
         // Fluent's own controls (toggles, sliders, progress bars) follow the accent.
         r["SystemAccentColor"] = accent;
@@ -191,6 +179,31 @@ public static class ThemeService
         r["MenuFlyoutItemBackgroundPointerOver"] = B(s.Bg3);
         r["FlyoutPresenterBackground"] = B(s.Bg2);
         r["FlyoutBorderThemeBrush"] = B(s.Line);
+
+        // Text boxes sit on the card surface in every state, instead of Fluent's black (dark) or
+        // white (light) when focused, which looked like a hole in the dialog.
+        r["TextControlBackground"] = B(s.Bg1);
+        r["TextControlBackgroundPointerOver"] = B(s.Bg1);
+        r["TextControlBackgroundFocused"] = B(s.Bg1);
+        r["TextControlBorderBrush"] = B(s.Line);
+        r["TextControlBorderBrushPointerOver"] = B(s.TextDim);
+        r["TextControlForegroundFocused"] = B(s.Text);
+        r["TextControlForeground"] = B(s.Text);
+        r["TextControlPlaceholderForeground"] = B(s.TextDim);
+        r["TextControlPlaceholderForegroundPointerOver"] = B(s.TextDim);
+        r["TextControlPlaceholderForegroundFocused"] = B(s.TextDim);
+        // Switches that are off: a soft outline in the text colour instead of Fluent's hard black / white.
+        r["ToggleSwitchStrokeOff"] = B(s.TextDim);
+        r["ToggleSwitchStrokeOffPointerOver"] = B(s.Text);
+        r["ToggleSwitchKnobFillOff"] = B(s.TextDim);
+        r["ToggleSwitchKnobFillOffPointerOver"] = B(s.Text);
+        r["ToggleSwitchFillOff"] = Brushes.Transparent;
+        r["ComboBoxBackground"] = B(s.Bg1);
+        r["ComboBoxBackgroundPointerOver"] = B(s.Bg2);
+        r["ComboBoxBorderBrush"] = B(s.Line);
+        r["ComboBoxBorderBrushPointerOver"] = B(s.TextDim);
+        r["ComboBoxDropDownBackground"] = B(s.Bg2);
+        r["ComboBoxDropDownBorderBrush"] = B(s.Line);
     }
 
     private static bool _hooked;

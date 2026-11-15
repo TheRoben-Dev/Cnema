@@ -21,6 +21,8 @@ public sealed class VideoFrameBuffer : IDisposable
     private byte[]? _latest;
     private int _width, _height;
     private long _frameId;
+    // Set by Reset: the picture in _latest belongs to the previous video and must not be shown.
+    private bool _stale;
 
     // Delegates must stay referenced for as long as native code may call them.
     private readonly MediaPlayer.LibVLCVideoFormatCb _format;
@@ -58,6 +60,7 @@ public sealed class VideoFrameBuffer : IDisposable
             _vlcBuffer = Marshal.AllocHGlobal(size);
             _latest = new byte[size];
             _frameId++; // a new size is always worth presenting
+            _stale = false;
         }
         pitches = width * 4;
         lines = height;
@@ -79,6 +82,7 @@ public sealed class VideoFrameBuffer : IDisposable
             if (_latest is null || _vlcBuffer == IntPtr.Zero) return;
             Marshal.Copy(_vlcBuffer, _latest, 0, _latest.Length);
             _frameId++;
+            _stale = false;
         }
         FrameReady?.Invoke();
     }
@@ -92,7 +96,7 @@ public sealed class VideoFrameBuffer : IDisposable
     {
         lock (_sync)
         {
-            if (_latest is null || _frameId == presentedId) return false;
+            if (_latest is null || _stale || _frameId == presentedId) return false;
             if (bitmap is null || bitmap.PixelSize.Width != _width || bitmap.PixelSize.Height != _height)
             {
                 bitmap?.Dispose();
@@ -118,11 +122,16 @@ public sealed class VideoFrameBuffer : IDisposable
     /// <summary>Raised when the current picture should be discarded (new media loaded).</summary>
     public event Action? Cleared;
 
+    /// <remarks>
+    /// The buffers stay allocated. When the next video has the same picture format, libVLC keeps its
+    /// video output and never calls the format callback again, so freeing them here left every frame
+    /// of the next video undrawn (a black screen after ← / → until the player was reopened).
+    /// </remarks>
     public void Reset()
     {
         lock (_sync)
         {
-            _latest = null;
+            _stale = true;
         }
         Cleared?.Invoke();
     }
