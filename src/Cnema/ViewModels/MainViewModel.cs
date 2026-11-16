@@ -345,6 +345,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     {
         _pendingBookmarks[path] = bookmarks;
         QueueSquad(path);
+        QueueAutoBackup();
         var name = Path.GetFileNameWithoutExtension(path);
         var tag = name.EndsWith(" session", StringComparison.Ordinal) ? null : SessionGame(name);
         if (tag is not null) _pendingTags[path] = tag;
@@ -501,11 +502,13 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _library.FoldersChanged += () => Dispatcher.UIThread.Post(() => _ = RescanAsync());
         _library.GameTagger = GameTagFor;
         Player.Finished += OnPlayerFinished;
+        VideoItemViewModel.BackedUp = e => Features.Backup && _backup.IsBackedUp(e);
         // A file renamed or moved outside the app keeps its collections and remembered edits.
         _library.EntryMoved += (from, to) => Dispatcher.UIThread.Post(() =>
         {
             CollectionPathChanged(from, to);
             EditStore.Move(from, to);
+            _backup.Moved(from, to);
         });
         RebuildFolders();
         Loc.Changed += OnLanguageChanged;
@@ -814,6 +817,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         item.RefreshAll();
         _library.SaveCache();
         if (ActiveNav?.Kind == NavKind.Favorites) RefreshView(); else UpdateCounts();
+        if (item.Entry.Favorite) QueueAutoBackup();
     }
 
     [RelayCommand]
@@ -843,6 +847,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 _items.Remove(oldPath);
                 _items[newPath] = item;
                 CollectionPathChanged(oldPath, newPath);
+                _backup.Moved(oldPath, newPath);
             }
         }
         catch (InvalidOperationException ex)
@@ -1024,6 +1029,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     {
         if (_settings.Current.Clip.Sound) PlatformShell.PlayConfirmSound();
         QueueSquad(path);
+        QueueAutoBackup();
         ShowToast(SavedToastText(path));
         if (_settings.Current.Clip.Notify)
             PlatformShell.Notify(T("Clip saved"), F("Last {0} · {1}", LengthText(seconds), Path.GetFileName(path)));

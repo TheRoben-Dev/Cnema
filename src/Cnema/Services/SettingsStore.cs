@@ -44,6 +44,26 @@ public sealed class AppSettings
     public List<string> PlayingWith { get; set; } = new();
     /// <summary>The year whose "Your year in clips is ready" banner was closed.</summary>
     public int RecapBannerClosed { get; set; }
+    /// <summary>Backup to your own server (S3-compatible: Garage, SeaweedFS, MinIO…). The secret key is kept in the system keychain.</summary>
+    public BackupSettings Backup { get; set; } = new();
+}
+
+public sealed class BackupSettings
+{
+    /// <summary>The server's address, such as http://192.168.1.20:3900. Empty: not set up.</summary>
+    public string Endpoint { get; set; } = "";
+    /// <summary>Garage wants "garage"; most others accept anything, so "us-east-1".</summary>
+    public string Region { get; set; } = "us-east-1";
+    public string Bucket { get; set; } = "";
+    /// <summary>A folder inside the bucket, so one bucket can hold several computers.</summary>
+    public string Prefix { get; set; } = "savefile";
+    public string AccessKey { get; set; } = "";
+    /// <summary>Favourites only (default) or every video.</summary>
+    public bool Everything { get; set; }
+    /// <summary>Back up new clips and favourites on their own, a little while after they change.</summary>
+    public bool Automatic { get; set; } = true;
+    public DateTime? LastRunUtc { get; set; }
+    public bool IsSetUp => Endpoint.Length > 0 && Bucket.Length > 0 && AccessKey.Length > 0;
 }
 
 /// <summary>Effects that stay as you left them from one export to the next.</summary>
@@ -137,6 +157,8 @@ public sealed class FeatureSettings
     public bool Recap { get; set; } = true;
     /// <summary>Play all: the Quick player goes on to the next video when one ends.</summary>
     public bool PlayAll { get; set; } = true;
+    /// <summary>Backup to your own server. Off until switched on.</summary>
+    public bool Backup { get; set; }
 
     public FeatureSettings Clone() => (FeatureSettings)MemberwiseClone();
 }

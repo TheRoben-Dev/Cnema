@@ -72,6 +72,10 @@ public sealed partial class VideoItemViewModel : ObservableObject
     // ---------- who was there ----------
     /// <summary>The "Who was there" feature; off, names are kept but not shown.</summary>
     public static bool PeopleEnabled { get; set; } = true;
+    /// <summary>Whether this exact file is on the backup server; set by the main view model.</summary>
+    public static Func<VideoEntry, bool>? BackedUp { get; set; }
+    public bool IsBackedUp => BackedUp?.Invoke(Entry) == true;
+    public void RefreshBackup() => OnPropertyChanged(nameof(IsBackedUp));
     public bool HasPeople => PeopleEnabled && Entry.People.Count > 0;
     /// <summary>"with Alex, Sam and Mira".</summary>
     public string PeopleText => HasPeople ? F("with {0}", JoinNames(Entry.People)) : "";

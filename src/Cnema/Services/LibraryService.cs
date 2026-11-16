@@ -217,6 +217,17 @@ public sealed class LibraryService : IDisposable
         SaveCache();
     }
 
+    /// <summary>
+    /// A file about to appear (restored from a backup) takes over these favourites, tags, friends and
+    /// notes; the next scan reads the file itself and keeps them.
+    /// </summary>
+    public void Adopt(string path, VideoEntry details)
+    {
+        var e = new VideoEntry { Path = path };
+        e.CopyUserDataFrom(details);
+        lock (_cacheLock) _cache.Entries[path] = e;
+    }
+
     public void SaveCache()
     {
         lock (_cacheLock) JsonStore.Save(AppPaths.LibraryFile, _cache);

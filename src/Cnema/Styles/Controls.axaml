@@ -887,4 +887,7 @@
     <Setter Property="Background" Value="{DynamicResource Bg3}" />
     <Setter Property="BorderBrush" Value="{DynamicResource Accent}" />
   </Style>
+  <Style Selector="TextBlock.error">
+    <Setter Property="Foreground" Value="{DynamicResource Danger}" />
+  </Style>
 </Styles>
