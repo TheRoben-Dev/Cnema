@@ -131,6 +131,8 @@ public sealed partial class MainViewModel
         try
         {
             var tried = new HashSet<VideoItemViewModel>();
+            var pace = new PassLog("Speech");
+            using var awake = PlatformShell.StayAwake("Speech");
             Log.Info($"Speech pass: {_items.Values.Count(v => v.Entry.Speech is not { Version: SpeechService.Version })} to do");
             while (!ct.IsCancellationRequested && Features.Speech)
             {
@@ -149,25 +151,27 @@ public sealed partial class MainViewModel
                         SpeechActivity = T("Starting the speech model…");
                         speech = await LoadModelAsync("Speech", () => SpeechService.Load(ModelStore.PathOf(ModelStore.Speech)), ct);
                     }
-                    await TakeTurnAsync(s => SpeechActivity = s, working, "Speech", ct);
+                    var waited = await TakeTurnAsync(s => SpeechActivity = s, working, "Speech", ct);
+                    using var limit = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                    limit.CancelAfter(ItemLimit(item.Entry.DurationMs));
+                    var watch = System.Diagnostics.Stopwatch.StartNew();
                     SpeechInfo? info;
                     try
                     {
                         var path = item.Entry.Path;
                         var length = item.Entry.DurationMs;
-                        var watch = System.Diagnostics.Stopwatch.StartNew();
-                        info = await Task.Run(() => speech.TranscribeAsync(path, length, ct), ct);
+                        info = await Task.Run(() => speech.TranscribeAsync(path, length, limit.Token), limit.Token);
                         // A video with no sound is skipped in a blink; that says nothing about this computer's pace.
                         if (info.Language is not null || watch.Elapsed.TotalSeconds >= 1) CostMeter.Record(SpeechCostKey, watch.Elapsed.TotalSeconds, length);
                     }
-                    catch (OperationCanceledException) { throw; }
+                    catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
                     catch (Exception ex)
                     {
-                        Log.Warn($"Speech for {item.Entry.FileName}: {ex.Message}");
+                        Log.Warn($"Speech for {item.Entry.FileName}: {SkipReason(ex, item.Entry.DurationMs)}");
                         CountFailure("Speech");
                         info = null;
                     }
-                    finally { _workGate.Release(); }
+                    finally { _workGate.Release(); pace.Add(item.Entry.FileName, waited, watch.Elapsed); }
                     if (_items.TryGetValue(item.Entry.Path, out var still) && ReferenceEquals(still, item))
                     {
                         item.Entry.Speech = info ?? new SpeechInfo { Version = SpeechService.Version };

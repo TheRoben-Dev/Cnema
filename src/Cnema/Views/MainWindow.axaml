@@ -109,6 +109,48 @@
 
           <!-- bottom: add folder + warnings -->
           <StackPanel DockPanel.Dock="Bottom" Spacing="10">
+            <!-- indexing: the blob looking through your clips while the smart features work; details on click -->
+            <Button x:Name="IndexCard" Classes="indexcard" HorizontalAlignment="Stretch" IsVisible="{Binding ShowIndexing}"
+                    svc:Tr.Tip="What Savefile is doing">
+              <Grid ColumnDefinitions="Auto,*">
+                <c:BlobMascot Width="52" Height="48" Reading="True" Still="{Binding ReducedMotion}" CheerTick="{Binding IndexCheer}" />
+                <StackPanel Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Center" Spacing="3">
+                  <TextBlock Text="{Binding IndexTitle}" FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap" MaxLines="2" />
+                  <TextBlock Classes="dim" Text="{Binding IndexCount}" FontSize="11" />
+                  <ProgressBar Minimum="0" Maximum="1" Value="{Binding IndexProgress}" Height="3" MinHeight="3" MinWidth="0" CornerRadius="2" />
+                </StackPanel>
+              </Grid>
+              <Button.Flyout>
+                <Flyout Placement="RightEdgeAlignedBottom">
+                  <StackPanel Width="310" Spacing="12" Margin="6">
+                    <StackPanel Spacing="3">
+                      <TextBlock svc:Tr.Text="Looking through your clips" FontSize="14" FontWeight="Bold" />
+                      <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap"
+                                 svc:Tr.Text="Finding the best moments and learning what's in each video, so search and Worth a rewatch can find them. It all happens on this computer and gives way to your games." />
+                    </StackPanel>
+                    <StackPanel Spacing="8">
+                      <StackPanel Spacing="1" IsVisible="{Binding HasMomentsActivity}">
+                        <TextBlock svc:Tr.Text="Best moments" FontSize="12" FontWeight="SemiBold" />
+                        <TextBlock Classes="dim" Text="{Binding SmartActivity}" FontSize="11" TextWrapping="Wrap" />
+                      </StackPanel>
+                      <StackPanel Spacing="1" IsVisible="{Binding HasSpeechActivity}">
+                        <TextBlock svc:Tr.Text="What's said" FontSize="12" FontWeight="SemiBold" />
+                        <TextBlock Classes="dim" Text="{Binding SpeechActivity}" FontSize="11" TextWrapping="Wrap" />
+                      </StackPanel>
+                      <StackPanel Spacing="1" IsVisible="{Binding HasVisualActivity}">
+                        <TextBlock svc:Tr.Text="What's on screen" FontSize="12" FontWeight="SemiBold" />
+                        <TextBlock Classes="dim" Text="{Binding VisualActivity}" FontSize="11" TextWrapping="Wrap" />
+                      </StackPanel>
+                      <StackPanel Spacing="1" IsVisible="{Binding HasSoundActivity}">
+                        <TextBlock svc:Tr.Text="Laughter and hype" FontSize="12" FontWeight="SemiBold" />
+                        <TextBlock Classes="dim" Text="{Binding SoundActivity}" FontSize="11" TextWrapping="Wrap" />
+                      </StackPanel>
+                    </StackPanel>
+                    <Button Classes="soft" HorizontalAlignment="Left" Content="{Binding IndexPauseText}" Command="{Binding ToggleIndexPauseCommand}" />
+                  </StackPanel>
+                </Flyout>
+              </Button.Flyout>
+            </Button>
             <Border IsVisible="{Binding FfmpegMissing}" Background="{DynamicResource AccentSoft}" CornerRadius="8" Padding="10">
               <StackPanel Spacing="4">
                 <StackPanel Orientation="Horizontal" Spacing="6">
@@ -2072,7 +2114,7 @@
               <TextBlock FontSize="12" FontWeight="Bold" svc:Tr.Text="How it works" />
               <TextBlock Classes="dim" FontSize="12" TextWrapping="Wrap" svc:Tr.Text="1. Add two or three songs you love (MP3 or similar). Without songs, the clips keep their own sound." />
               <TextBlock Classes="dim" FontSize="12" TextWrapping="Wrap" svc:Tr.Text="2. Savefile makes it on this computer, in the background. Nothing leaves it. If you quit, it carries on next time." />
-              <TextBlock Classes="dim" FontSize="12" TextWrapping="Wrap" svc:Tr.Text="3. When it's ready, the present next to the blob holds it. The first time, it plays full screen." />
+              <TextBlock Classes="dim" FontSize="12" TextWrapping="Wrap" svc:Tr.Text="3. When it's ready, the present next to Mochi holds it. The first time, it plays full screen." />
             </StackPanel>
             <Border Padding="14,12" CornerRadius="12" Background="{DynamicResource Bg2}">
               <StackPanel Spacing="8">
@@ -2453,7 +2495,7 @@
                     <Grid Classes="row" ColumnDefinitions="*,Auto">
                       <StackPanel Spacing="2">
                         <TextBlock svc:Tr.Text="Loading screen" />
-                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="The logo, the blob and what's being got ready while Savefile starts, including waking up the smart models you switched on. Click it to skip. Never shown when Savefile starts at login." />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="The logo, Mochi and what's being got ready while Savefile starts, including waking up the smart models you switched on. Click it to skip. Never shown when Savefile starts at login." />
                       </StackPanel>
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureSplash}" />
                     </Grid>
@@ -2566,8 +2608,8 @@
                     <Border Classes="sep" />
                     <Grid Classes="row" ColumnDefinitions="*,Auto" IsEnabled="{Binding FeatureRewatch}">
                       <StackPanel Spacing="2">
-                        <TextBlock svc:Tr.Text="The blob" />
-                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="A little purple blob presents Worth a rewatch with something about your clips: a keeper from last night, a run with a friend, what you played a year ago. Click it for the next line." />
+                        <TextBlock svc:Tr.Text="Mochi" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Mochi, a little purple blob, presents Worth a rewatch with something about your clips: a keeper from last night, a run with a friend, what you played a year ago. Click Mochi for the next line." />
                       </StackPanel>
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureMascot}" />
                     </Grid>
@@ -2607,7 +2649,7 @@
                     <Grid Classes="row" ColumnDefinitions="*,Auto" IsEnabled="{Binding FeatureRecap}" IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).WrappedReadyUi}">
                       <StackPanel Spacing="2">
                         <TextBlock svc:Tr.Text="Wrapped" />
-                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="In December, Savefile makes a video of your year: your stats, then your best moments cut to the beat of songs you pick in Year in clips. The blob tells you when it's ready." />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="A video of your year: chapters about your games and your people, then your best moments cut to the beat of songs you pick. From 1 November to 31 December, Mochi has it for you as a present." />
                         <Grid ColumnDefinitions="Auto,*" Margin="0,4,0,0">
                           <PathIcon Data="{StaticResource IcSpeed}" Width="11" Height="11" Margin="0,2,6,0" VerticalAlignment="Top" Foreground="{DynamicResource TextDim}" />
                           <TextBlock Grid.Column="1" Classes="dim cost" FontSize="11" TextWrapping="Wrap" Text="{Binding #Root.((vm:MainViewModel)DataContext).WrappedCostText}" />
@@ -2774,7 +2816,7 @@
                     <Grid Classes="row" ColumnDefinitions="*,Auto">
                       <StackPanel Spacing="2">
                         <TextBlock svc:Tr.Text="Laughter and hype" />
-                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Savefile listens for laughing, cheering and shouting, on this computer and only when it's not busy. The videos where everyone lost it come first in Worth a rewatch, the blob tells you about them, and search finds them with &quot;laughing&quot; or &quot;hype&quot;." />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Savefile listens for laughing, cheering and shouting, on this computer and only when it's not busy. The videos where everyone lost it come first in Worth a rewatch, Mochi tells you about them, and search finds them with &quot;laughing&quot; or &quot;hype&quot;." />
                         <Grid ColumnDefinitions="Auto,*" Margin="0,4,0,0">
                           <PathIcon Data="{StaticResource IcSpeed}" Width="11" Height="11" Margin="0,2,6,0" VerticalAlignment="Top" Foreground="{DynamicResource TextDim}" />
                           <TextBlock Grid.Column="1" Classes="dim cost" FontSize="11" TextWrapping="Wrap" Text="{Binding #Root.((vm:MainViewModel)DataContext).SoundCostText}" />

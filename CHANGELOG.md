@@ -2,6 +2,10 @@
 
 What changed in each Savefile (formerly Cnema) release. The app shows the entries you have not seen yet after it updates.
 
+## 0.36.1
+- Smart features get through your library again: on a Mac they managed about one video every few minutes. macOS was putting Savefile to sleep in the background (App Nap) and holding its helper back on the slowest cores, so a big library would have taken days. Now Savefile stays awake while it works (your Mac can still sleep), and a video that takes far too long is skipped instead of holding up the rest.
+- Meet Mochi: the blob has a name. While Savefile looks through your clips, Mochi sits at the bottom of the sidebar flipping through them ("Looking through your clips… 15 of 645") and hops when it finds a really good moment. Click it to see what each smart feature is doing, how long is left, and to pause for now.
+
 ## 0.36.0
 - Savefile Wrapped: your year as a 5–10 minute video, cut to the beat of your own songs. Chapters on your games, your people, your biggest night and your best laughs, a card for each of your crew, a month-by-month flash, your first and last clip of the year, a hidden gem and the funniest moment to close. Every number counts clips, never guessed hours.
 - From 1 November to 31 December the blob has a present for you. Open it, add a few of your own MP3s (Savefile says how many minutes of music it needs) and it makes your Wrapped on this computer while you do other things. It picks up where it left off if you quit. The first time, it plays full screen with only pause and scrubbing; after that the open box next to the blob replays it, with Export.

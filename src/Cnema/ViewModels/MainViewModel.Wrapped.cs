@@ -346,7 +346,7 @@ public sealed partial class MainViewModel
         }
     }
 
-    public string GiftTip => !GiftOpened ? T("A present from the blob. Click to open it.")
+    public string GiftTip => !GiftOpened ? T("A present from Mochi. Click to open it.")
         : IsMakingWrapped ? WrappedStatus
         : WrappedVideo(DateTime.Now.Year) is not null ? T("Watch your Wrapped again, or save a copy")
         : T("Make your Wrapped");

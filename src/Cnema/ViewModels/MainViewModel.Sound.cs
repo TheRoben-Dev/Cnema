@@ -92,6 +92,8 @@ public sealed partial class MainViewModel
         try
         {
             var tried = new HashSet<VideoItemViewModel>();
+            var pace = new PassLog("Sound");
+            using var awake = PlatformShell.StayAwake("Sound");
             Log.Info($"Sound pass: {_items.Values.Count(v => v.Entry.Sound is not { Version: SoundService.Version })} to do");
             while (!ct.IsCancellationRequested && Features.Laughs)
             {
@@ -109,27 +111,29 @@ public sealed partial class MainViewModel
                         SoundActivity = T("Starting the sound model…");
                         model = await LoadModelAsync("Sound", SoundService.Load, ct);
                     }
-                    await TakeTurnAsync(s => SoundActivity = s, working, "Sound", ct);
+                    var waited = await TakeTurnAsync(s => SoundActivity = s, working, "Sound", ct);
+                    using var limit = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                    limit.CancelAfter(ItemLimit(item.Entry.DurationMs));
+                    var watch = System.Diagnostics.Stopwatch.StartNew();
                     SoundInfo? info;
                     try
                     {
                         var path = item.Entry.Path;
                         var length = item.Entry.DurationMs;
-                        var watch = System.Diagnostics.Stopwatch.StartNew();
-                        info = await Task.Run(() => model.ListenAsync(path, length, ct), ct);
+                        info = await Task.Run(() => model.ListenAsync(path, length, limit.Token), limit.Token);
                         if (watch.Elapsed.TotalSeconds >= 0.5) CostMeter.Record(CostMeter.Sound, watch.Elapsed.TotalSeconds, length);
                     }
-                    catch (OperationCanceledException) { throw; }
+                    catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
                     catch (Exception ex)
                     {
-                        Log.Warn($"Laughs for {item.Entry.FileName}: {ex.Message}");
+                        Log.Warn($"Laughs for {item.Entry.FileName}: {SkipReason(ex, item.Entry.DurationMs)}");
                         CountFailure("Sound");
                         info = null;
                     }
-                    finally { _workGate.Release(); }
+                    finally { _workGate.Release(); pace.Add(item.Entry.FileName, waited, watch.Elapsed); }
                     if (_items.TryGetValue(item.Entry.Path, out var still) && ReferenceEquals(still, item))
                         item.Entry.Sound = info ?? new SoundInfo { Version = SoundService.Version };
-                    if (++done % 25 == 0) { _library.SaveCache(); OnPropertyChanged(nameof(SoundModelText)); OnCostsChanged(); }
+                    if (++done % 10 == 0) { _library.SaveCache(); OnPropertyChanged(nameof(SoundModelText)); OnCostsChanged(); }
                     await Task.Delay(100, ct);
                 }
             }

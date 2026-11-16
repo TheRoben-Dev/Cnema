@@ -146,6 +146,66 @@ public static class PlatformShell
         catch { /* a nicety */ }
     }
 
+    // ---------------------------------------------------------------- App Nap
+    [DllImport(ObjC, EntryPoint = "objc_msgSend")] private static extern IntPtr SendPtr(IntPtr receiver, IntPtr selector, IntPtr arg);
+    [DllImport(ObjC, EntryPoint = "objc_msgSend")] private static extern IntPtr SendActivity(IntPtr receiver, IntPtr selector, ulong options, IntPtr reason);
+
+    private static readonly object AwakeLock = new();
+    private static int _awake;
+    private static IntPtr _activity;
+
+    /// <summary>
+    /// Keeps macOS from napping Savefile while background work runs (dispose to let it nap again). With the
+    /// window behind a game, App Nap slows a napping app's timers and threads to a crawl, so the smart passes
+    /// managed about one video every few minutes. The computer may still sleep; this only keeps the work going.
+    /// </summary>
+    public static IDisposable StayAwake(string reason)
+    {
+        lock (AwakeLock)
+        {
+            if (_awake++ == 0 && OperatingSystem.IsMacOS())
+            {
+                try
+                {
+                    var info = Send(objc_getClass("NSProcessInfo"), sel_registerName("processInfo"));
+                    var text = Marshal.StringToCoTaskMemUTF8("Savefile is looking through your videos");
+                    var str = SendPtr(objc_getClass("NSString"), sel_registerName("stringWithUTF8String:"), text);
+                    Marshal.FreeCoTaskMem(text);
+                    // NSActivityUserInitiatedAllowingIdleSystemSleep: no App Nap, but the Mac can still go to sleep.
+                    const ulong options = 0x00FFFFFFUL & ~(1UL << 20);
+                    var token = SendActivity(info, sel_registerName("beginActivityWithOptions:reason:"), options, str);
+                    _activity = token == IntPtr.Zero ? IntPtr.Zero : Send(token, sel_registerName("retain"));
+                    Log.Info($"Background work started ({reason}): App Nap off");
+                }
+                catch (Exception ex) { Log.Warn($"Couldn't turn App Nap off: {ex.Message}"); }
+            }
+        }
+        return new Awake();
+    }
+
+    private sealed class Awake : IDisposable
+    {
+        private int _done;
+
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref _done, 1) == 1) return;
+            lock (AwakeLock)
+            {
+                if (--_awake > 0 || _activity == IntPtr.Zero) return;
+                try
+                {
+                    var info = Send(objc_getClass("NSProcessInfo"), sel_registerName("processInfo"));
+                    SendPtr(info, sel_registerName("endActivity:"), _activity);
+                    Send(_activity, sel_registerName("release"));
+                }
+                catch { /* nothing to undo */ }
+                _activity = IntPtr.Zero;
+                Log.Info("Background work done: App Nap allowed again");
+            }
+        }
+    }
+
     // ---------------------------------------------------------------- frontmost app
     private const string ObjC = "/usr/lib/libobjc.A.dylib";
     [DllImport(ObjC)] private static extern IntPtr objc_getClass(string name);
