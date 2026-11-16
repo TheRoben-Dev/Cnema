@@ -409,6 +409,14 @@
               <TextBlock svc:Tr.Text="Make a montage" FontSize="13" />
             </StackPanel>
           </Button>
+          <Button x:Name="FriendWrappedButton" Classes="soft" VerticalAlignment="Center" Margin="0,0,10,0" Padding="12,8"
+                  IsVisible="{Binding ShowFriendWrapped}" Command="{Binding MakeFriendWrappedCommand}" IsEnabled="{Binding !IsMakingWrapped}"
+                  svc:Tr.Tip="A shorter Wrapped of only your clips together this year, cut to your Wrapped songs">
+            <StackPanel Orientation="Horizontal" Spacing="7">
+              <PathIcon Data="{StaticResource IcFilm}" Width="14" Height="14" />
+              <TextBlock Text="{Binding FriendWrappedLabel}" FontSize="13" />
+            </StackPanel>
+          </Button>
           <Button Classes="soft" VerticalAlignment="Center" Margin="0,0,10,0" Padding="12,8"
                   IsVisible="{Binding Exports.HasJobs}" svc:Tr.Tip="Exports running in the background">
             <StackPanel Orientation="Horizontal" Spacing="7">

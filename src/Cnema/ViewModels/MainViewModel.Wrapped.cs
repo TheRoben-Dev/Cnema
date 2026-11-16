@@ -86,6 +86,7 @@ public sealed partial class MainViewModel
     private void RaiseWrapped()
     {
         OnPropertyChanged(nameof(ShowWrapped));
+        OnPropertyChanged(nameof(ShowFriendWrapped));
         OnPropertyChanged(nameof(WrappedTitle));
         OnPropertyChanged(nameof(HasWrappedVideo));
         OnPropertyChanged(nameof(MakeWrappedLabel));
@@ -168,14 +169,35 @@ public sealed partial class MainViewModel
 
     [RelayCommand] private void MakeWrapped() => MakeWrappedFor(WrappedYear, byItself: false);
 
-    private WrappedScript WrappedScriptFor(IReadOnlyList<VideoEntry> clips, int year) =>
-        WrappedService.Script(clips, year, Features.People, e => e.Tags.FirstOrDefault(GameTest(e)));
+    private WrappedScript WrappedScriptFor(IReadOnlyList<VideoEntry> clips, int year, string? friend = null) =>
+        WrappedService.Script(clips, year, Features.People, e => e.Tags.FirstOrDefault(GameTest(e)), friend);
+
+    /// <summary>On a friend's page: a shorter Wrapped of only your clips together this year.</summary>
+    public bool ShowFriendWrapped => ShowWrapped && Features.People && ActiveNav is { Kind: NavKind.Person } friend && !IsSelecting &&
+        FriendYearClips(friend.Name, DateTime.Now.Year).Count >= 3;
+
+    public string FriendWrappedLabel => ActiveNav is { Kind: NavKind.Person } f ? F("Wrapped with {0}", f.Name) : "";
+
+    private List<VideoEntry> FriendYearClips(string friend, int year) =>
+        WrappedService.YearClips(_items.Values.Select(v => v.Entry), year)
+            .Where(e => e.People.Any(p => string.Equals(p.Trim(), friend, StringComparison.OrdinalIgnoreCase))).ToList();
+
+    [RelayCommand]
+    private void MakeFriendWrapped()
+    {
+        if (ActiveNav is not { Kind: NavKind.Person } friend) return;
+        MakeWrappedFor(DateTime.Now.Year, byItself: false, friend.Name);
+    }
 
     /// <summary>Queues the year's video in the export list. Returns false when there's too little to make one.</summary>
-    private bool MakeWrappedFor(int year, bool byItself)
+    private bool MakeWrappedFor(int year, bool byItself, string? friend = null)
     {
-        if (IsMakingWrapped) return true;
-        var clips = WrappedService.YearClips(_items.Values.Select(v => v.Entry), year);
+        if (IsMakingWrapped)
+        {
+            if (!byItself) ShowToast(T("A Wrapped is already being made. This one can start when it's done."));
+            return IsMakingWrapped && friend is null;
+        }
+        var clips = friend is null ? WrappedService.YearClips(_items.Values.Select(v => v.Entry), year) : FriendYearClips(friend, year);
         if (clips.Count < 3)
         {
             if (!byItself) ShowToast(F("Save a few more clips in {0} first.", year));
@@ -186,17 +208,20 @@ public sealed partial class MainViewModel
         var root = _settings.Current.Folders.Any(f => Under(Path.Combine(clipsDir, "x"), f)) ? clipsDir
             : _settings.Current.Folders.FirstOrDefault() ?? clipsDir;
         var dir = Path.Combine(root, "Wrapped");
-        var name = F("Savefile Wrapped {0}", year);
+        var name = friend is null ? F("Savefile Wrapped {0}", year) : F("Savefile Wrapped {0} with {1}", year, Sanitize(friend));
         var output = Path.Combine(dir, name + ".mp4");
         for (var n = 2; File.Exists(output) || Exports.IsTarget(output); n++) output = Path.Combine(dir, $"{name} ({n}).mp4");
         var work = Path.Combine(AppPaths.DataDir, "wrapped", $"{year}-{DateTime.UtcNow:yyyyMMddHHmmss}");
-        var job = new WrappedJob { Year = year, Output = output, Work = work, Width = height * 16 / 9, Height = height };
+        var job = new WrappedJob { Year = year, Output = output, Work = work, Width = height * 16 / 9, Height = height, Friend = friend };
         _settings.Current.Wrapped.Job = job;
         _settings.Save();
-        QueueWrapped(job, WrappedScriptFor(clips, year), WrappedSongs.Select(s => s.Path).Where(File.Exists).ToList(), byItself);
+        QueueWrapped(job, WrappedScriptFor(clips, year, friend), WrappedSongs.Select(s => s.Path).Where(File.Exists).ToList(), byItself);
         if (!byItself) ShowToast(T("Making your Wrapped. It shows up in your library when it's done."));
         return true;
     }
+
+    private static string Sanitize(string name) =>
+        string.Concat(name.Select(ch => Path.GetInvalidFileNameChars().Contains(ch) || ch is '/' or '\\' or ':' ? '_' : ch)).Trim();
 
     /// <summary>A video that was being made when Savefile last quit carries on from the parts already done.</summary>
     private void ResumeWrapped()
@@ -219,7 +244,7 @@ public sealed partial class MainViewModel
         WrappedStatus = T("Getting your Wrapped ready…");
         WrappedProgress = 0;
         var year = job.Year;
-        Exports.Add(job.Output, F("Your {0} Wrapped", year), async (progress, ct) =>
+        Exports.Add(job.Output, job.Friend is null ? F("Your {0} Wrapped", year) : F("Your {0} Wrapped with {1}", year, job.Friend), async (progress, ct) =>
         {
             var watch = System.Diagnostics.Stopwatch.StartNew();
             var finished = false; // a late progress report must not bring the status back
@@ -264,7 +289,7 @@ public sealed partial class MainViewModel
                 try { Directory.Delete(job.Work, true); } catch { /* left for the next clean-up */ }
                 Dispatcher.UIThread.Post(() =>
                 {
-                    _settings.Current.Wrapped.Made[year] = job.Output;
+                    if (job.Friend is null) _settings.Current.Wrapped.Made[year] = job.Output;
                     if (_settings.Current.Wrapped.Job?.Work == job.Work) _settings.Current.Wrapped.Job = null;
                     _settings.Save();
                     RaiseWrapped();

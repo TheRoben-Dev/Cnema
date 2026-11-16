@@ -310,6 +310,8 @@ public sealed partial class MainViewModel
         OnPropertyChanged(nameof(HeaderCount));
         OnPropertyChanged(nameof(CanPlayAll));
         OnPropertyChanged(nameof(ShowFriendMontage));
+        OnPropertyChanged(nameof(ShowFriendWrapped));
+        OnPropertyChanged(nameof(FriendWrappedLabel));
     }
 
     private void SelectionChanged()
