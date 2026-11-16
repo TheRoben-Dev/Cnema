@@ -3,14 +3,12 @@
 What changed in each Savefile (formerly Cnema) release. The app shows the entries you have not seen yet after it updates.
 
 ## 0.41.1
-- The favourite star is plain gold again, with a simple glimmer when you turn it on: a glint across it and one small sparkle.
-
-## 0.41.0
 - Who's talking: Savefile can now tell your friends' voices apart and fill in Who was there by itself. Turn it on in Settings › Smart features (it needs Voice search, and a one-time 26 MB download). It all happens on this computer.
 - "Who's that?", Mochi's little voice game: listen to a short snippet, then say who it is. Mochi offers its best guesses, or you can pick Someone else (a new name becomes a new friend), That's me, Not sure, or Not a person for game voices and music. Undo takes an answer back. After a few answers per friend, Mochi recognises them in your other clips too, and only adds a name it's sure about. If you take a name off a clip, it stays off.
 - Renaming or merging a friend carries their voice along.
-- The favourite star in the Quick player now looks like real gold, with a glint and a little sparkle when you turn it on, and an occasional quiet shine after that (no movement with Reduced motion).
+- The favourite star in the Quick player glimmers when you turn it on: a glint across it and a small sparkle (no movement with Reduced motion).
 
+## 0.40.1
 - The Quick player now takes the shape of the video: an ultrawide clip gets a wide, short player and a phone clip a narrow one, so there are no black bars beside the picture. It resizes smoothly when the next clip has another shape (instantly with Reduced motion on).
 - A favourite star in the Quick player, next to tags and delete. It glows when you turn it on and stays filled while the clip is a favourite. Press F to do the same.
 
