@@ -1,23 +1,41 @@
 namespace Cnema.Services;
 
 /// <summary>A moment that could go in the year's video: where it is, its peak, how good it is, where people talk or laugh.</summary>
-public sealed record WrappedMoment(string Path, long DurationMs, long FocusMs, double Score, IReadOnlyList<(long From, long To)> Voice);
+public sealed record WrappedMoment(string Path, long DurationMs, long FocusMs, double Score, IReadOnlyList<(long From, long To)> Voice)
+{
+    public string? Game { get; init; }
+    public IReadOnlyList<string> People { get; init; } = Array.Empty<string>();
+    public DateTime Local { get; init; }
+    /// <summary>Seconds of laughter heard in it.</summary>
+    public double Laugh { get; init; }
+}
 
 public enum WrappedShotKind { Card, Clip }
+
+/// <summary>How the picture moves during a shot: a slow push in, a quick settle back, or still.</summary>
+public enum WrappedMove { None, PushIn, PullOut }
 
 /// <summary>One shot of the video: a stat card or a stretch of a clip, placed on the timeline in seconds.</summary>
 public sealed class WrappedShot
 {
-    public WrappedShotKind Kind { get; init; }
-    public int Card { get; init; } = -1;
+    public WrappedShotKind Kind { get; set; }
+    public int Card { get; set; } = -1;
     public string? Path { get; set; }
     public long StartMs { get; set; }
-    public double At { get; init; }
-    public double Length { get; init; }
+    public double At { get; set; }
+    public double Length { get; set; }
     /// <summary>Someone talks or laughs here: the clip's sound comes up and the music steps back.</summary>
     public bool Voice { get; set; }
+    /// <summary>A moment that plays with its own sound (the music stays under it).</summary>
+    public bool Story { get; set; }
     /// <summary>How loud the music is under this shot, 0 to 1.</summary>
-    public float Energy { get; init; }
+    public float Energy { get; set; }
+    /// <summary>How the shot comes in from the one before (an ffmpeg xfade name), or null for a straight cut.</summary>
+    public string? Transition { get; set; }
+    public double TransitionSeconds { get; set; }
+    /// <summary>A line written over the picture ("March", "#3", "Your first clip of 2026").</summary>
+    public string? Caption { get; set; }
+    public WrappedMove Move { get; set; }
     public double End => At + Length;
 }
 
@@ -39,12 +57,37 @@ public sealed class WrappedSongPart
 
 public sealed class WrappedPlan
 {
-    public List<WrappedShot> Shots { get; } = new();
-    public List<WrappedSongPart> Songs { get; } = new();
+    public List<WrappedShot> Shots { get; set; } = new();
+    public List<WrappedSongPart> Songs { get; set; } = new();
     public double Seconds { get; set; }
     public int Moments { get; set; }
     public double Bpm { get; set; }
+    /// <summary>The soundtrack's beats on the video's timeline (seconds), and which of them start a bar.</summary>
+    public List<double> Beats { get; set; } = new();
+    public List<double> Downbeats { get; set; } = new();
 }
+
+/// <summary>What a part of the video does with its clips.</summary>
+public enum WrappedActStyle
+{
+    /// <summary>Only its card.</summary>
+    Card,
+    /// <summary>Quick cuts on the bar.</summary>
+    Burst,
+    /// <summary>Quick cuts with a longer moment, with its own sound, every few shots.</summary>
+    Mix,
+    /// <summary>One quick shot per clip, each with its caption (month by month).</summary>
+    Flash,
+    /// <summary>Each clip as a longer moment with its own sound and caption.</summary>
+    Story,
+}
+
+/// <summary>
+/// One part of the video: a card (or none), then clips from its own pool. <see cref="Weight"/> shares out the
+/// time left once the fixed parts are placed; <see cref="Captions"/> line up with <see cref="Pool"/>.
+/// </summary>
+public sealed record WrappedAct(int Card, WrappedActStyle Style, IReadOnlyList<WrappedMoment> Pool, double Weight = 1,
+    IReadOnlyList<string?>? Captions = null, double StorySeconds = 10);
 
 /// <summary>
 /// The "director" of the year's video: plain rules, no AI. It lays the songs end to end (ordered so tempo,
@@ -55,26 +98,32 @@ public sealed class WrappedPlan
 /// </summary>
 public static class WrappedDirector
 {
-    public const double IntroSeconds = 4.0, CardSeconds = 3.2, OutroSeconds = 4.5;
-    private const double SecondsPerMoment = 3.4;
+    public const double IntroSeconds = 6, CardSeconds = 4.5, ChapterSeconds = 3.2, OutroSeconds = 7;
+    /// <summary>The video aims for 5 to 10 minutes when there are enough clips for it.</summary>
+    public const double MinSeconds = 300, MaxSeconds = 600;
 
-    /// <summary>How long the video wants to be, in seconds: the cards plus a few seconds per moment.</summary>
-    public static double TargetSeconds(int moments, int cards)
+    /// <summary>
+    /// How long the video wants to be, in seconds: the cards plus what the clips can fill without repeating,
+    /// between 5 and 10 minutes when the year has enough clips (shorter when it doesn't).
+    /// </summary>
+    public static double TargetSeconds(IReadOnlyList<WrappedAct> acts, IReadOnlyList<double> cardSeconds)
     {
-        var cardTime = IntroSeconds + OutroSeconds + Math.Max(0, cards - 2) * CardSeconds;
-        return cardTime + Math.Clamp(moments * SecondsPerMoment, 20, 150);
+        var cards = cardSeconds.Sum();
+        var footage = acts.SelectMany(a => a.Pool).Distinct().Sum(m => Math.Min(m.DurationMs / 1000.0, 12));
+        if (cards + footage * 0.7 < MinSeconds) return Math.Max(45, cards + footage * 0.7);
+        return Math.Clamp(cards + footage * 0.4, MinSeconds, MaxSeconds);
     }
 
     /// <summary>How much music to bring, rounded up to the next half minute.</summary>
-    public static double RecommendedMusicSeconds(int moments, int cards) => Math.Ceiling(TargetSeconds(moments, cards) / 30) * 30;
+    public static double RecommendedMusicSeconds(double target) => Math.Ceiling(target / 30) * 30;
 
     private sealed record Beat(double Time, bool Down, float Energy, float Drive);
 
-    public static WrappedPlan Plan(IReadOnlyList<WrappedMoment> moments, IReadOnlyList<double> cardSeconds, IReadOnlyList<SongInfo> songs)
+    public static WrappedPlan Plan(IReadOnlyList<WrappedAct> acts, IReadOnlyList<double> cardSeconds, IReadOnlyList<SongInfo> songs)
     {
         var plan = new WrappedPlan();
         var usable = songs.Where(s => s.Usable).ToList();
-        var target = TargetSeconds(moments.Count, cardSeconds.Count);
+        var target = TargetSeconds(acts, cardSeconds);
         var beats = new List<Beat>();
         var mustCut = new List<double>();
         if (usable.Count == 0)
@@ -90,7 +139,10 @@ public static class WrappedDirector
             beats = Grid(plan, mustCut);
             plan.Bpm = plan.Songs[0].Song.Bpm;
         }
-        CutPicture(plan, beats, mustCut, moments, cardSeconds);
+        plan.Beats = beats.Select(b => b.Time).ToList();
+        plan.Downbeats = beats.Where(b => b.Down).Select(b => b.Time).ToList();
+        CutPicture(plan, beats, mustCut, acts, cardSeconds);
+        Transitions(plan, mustCut);
         return plan;
     }
 
@@ -254,95 +306,196 @@ public static class WrappedDirector
 
     // ---------- the picture ----------
 
-    private static void CutPicture(WrappedPlan plan, List<Beat> beats, List<double> mustCut, IReadOnlyList<WrappedMoment> moments, IReadOnlyList<double> cardSeconds)
+    private static void CutPicture(WrappedPlan plan, List<Beat> beats, List<double> mustCut, IReadOnlyList<WrappedAct> acts, IReadOnlyList<double> cardSeconds)
     {
         var downs = beats.Where(b => b.Down).Select(b => b.Time).ToList();
         if (downs.Count < 4) downs = beats.Select(b => b.Time).ToList();
-        double NextDown(double atLeast) => downs.FirstOrDefault(t => t >= atLeast - 0.05, atLeast);
+        var gaps = downs.Zip(downs.Skip(1), (a, b) => b - a).Where(d => d > 0.3).OrderBy(d => d).ToList();
+        var bar = gaps.Count > 0 ? gaps[gaps.Count / 2] : 2;
+        double Snap(double t, double atLeast) => downs.FirstOrDefault(d => d >= Math.Max(t, atLeast) - 0.05, Math.Max(t, atLeast));
         float EnergyAt(double from, double to)
         {
             var inside = beats.Where(b => b.Time >= from && b.Time < to).ToList();
             return inside.Count == 0 ? 0.5f : inside.Average(b => b.Energy);
         }
+        // A quick shot is a bar long, or two when the bars are short, or half when they're long.
+        var quick = bar < 1.4 ? bar * 2 : bar > 2.8 ? bar / 2 : bar;
+        double Bars(double seconds) => Math.Max(1, Math.Round(seconds / bar)) * bar;
 
         var total = plan.Seconds;
         var cards = cardSeconds.Count;
-        // The outro card closes the video: from the last bar line that leaves it enough time.
-        var outroMin = cards > 0 ? cardSeconds[^1] : 0;
-        var outroAt = cards > 0 ? downs.LastOrDefault(t => t <= total - outroMin + 0.05, total - outroMin) : total;
-        double cursor = 0;
-        for (var c = 0; c < cards - 1; c++)
-        {
-            var end = Math.Min(NextDown(cursor + cardSeconds[c]), outroAt);
-            plan.Shots.Add(new WrappedShot { Kind = WrappedShotKind.Card, Card = c, At = cursor, Length = end - cursor, Energy = EnergyAt(cursor, end) });
-            cursor = end;
-        }
+        var last = acts.Count - 1;
+        var outroMin = acts.Count > 0 && acts[last].Card >= 0 ? cardSeconds[acts[last].Card] : 0;
+        var outroAt = downs.LastOrDefault(t => t <= total - outroMin + 0.05, total - outroMin);
 
-        // The reel: one bar on loud stretches (when bars are long enough), two or three when it's calmer.
-        var reel = new List<(double At, double End)>();
-        while (outroAt - cursor > 1.2 && moments.Count > 0)
+        // The fixed parts first (cards, month flashes, story moments), then the quick-cut parts share what's left.
+        double cardTime = acts.Where(a => a.Card >= 0).Sum(a => Bars(cardSeconds[a.Card]));
+        double flashTime = acts.Where(a => a.Style == WrappedActStyle.Flash).Sum(a => a.Pool.Count * quick);
+        double storyTime = acts.Where(a => a.Style == WrappedActStyle.Story).Sum(a => a.Pool.Count * Bars(a.StorySeconds));
+        var flex = total - cardTime - flashTime - storyTime;
+        var squeeze = flex >= 0 ? 1 : Math.Clamp((total - cardTime) / Math.Max(1, flashTime + storyTime), 0.25, 1);
+        flex = Math.Max(0, flex);
+        var share = new double[acts.Count];
+        var open = Enumerable.Range(0, acts.Count).Where(i => acts[i].Style is WrappedActStyle.Burst or WrappedActStyle.Mix && acts[i].Pool.Count > 0).ToList();
+        // Share by weight, but no part longer than its clips can fill; what a part can't use goes to the others.
+        for (var round = 0; round < 4 && open.Count > 0 && flex > 0.5; round++)
         {
-            var bar = downs.Count > 1 ? Math.Max(0.3, downs.Zip(downs.Skip(1), (a, b) => b - a).Where(d => d > 0.3).DefaultIfEmpty(2).Average()) : 2;
-            var e = EnergyAt(cursor, cursor + bar);
-            var want = e >= 0.66 ? 2.2 : e >= 0.33 ? 3.2 : 4.4;
-            var end = downs.Where(t => t > cursor + 1.4 && t < cursor + 6.5).OrderBy(t => Math.Abs(t - cursor - want)).Cast<double?>().FirstOrDefault()
-                      ?? Math.Min(outroAt, cursor + want);
-            var cut = mustCut.FirstOrDefault(m => m > cursor + 1.2 && m < end - 0.3, -1);
-            if (cut > 0) end = cut;
-            if (outroAt - end < 1.4) end = outroAt;
-            reel.Add((cursor, end));
-            cursor = end;
-        }
-        // More shots than moments: join the shortest neighbours (up to 7 s), and reuse moments only if still short.
-        while (reel.Count > Math.Max(1, moments.Count))
-        {
-            var bestI = -1;
-            var bestLen = double.MaxValue;
-            for (var i = 0; i + 1 < reel.Count; i++)
+            var weights = open.Sum(i => acts[i].Weight);
+            var spare = 0.0;
+            foreach (var i in open.ToList())
             {
-                var len = reel[i + 1].End - reel[i].At;
-                if (len <= 7 && len < bestLen) { bestLen = len; bestI = i; }
+                var cap = acts[i].Pool.Sum(m => Math.Min(m.DurationMs / 1000.0, 10)) * 0.8 - share[i];
+                var give = flex * acts[i].Weight / weights;
+                if (give >= cap) { share[i] += Math.Max(0, cap); spare += give - Math.Max(0, cap); open.Remove(i); }
+                else share[i] += give;
             }
-            if (bestI < 0) break;
-            reel[bestI] = (reel[bestI].At, reel[bestI + 1].End);
-            reel.RemoveAt(bestI + 1);
+            flex = spare;
         }
 
-        // The best moments go to the loudest music; each clip once while there are enough.
-        var shots = reel.Select(r => new WrappedShot { Kind = WrappedShotKind.Clip, At = r.At, Length = r.End - r.At, Energy = EnergyAt(r.At, r.End) }).ToList();
-        var pool = moments.OrderByDescending(m => m.Score).ToList();
         var used = new Dictionary<WrappedMoment, int>();
-        foreach (var shot in shots.OrderByDescending(s => s.Energy).ThenBy(s => s.At))
+        var shots = plan.Shots;
+        double cursor = 0;
+        var picked = 0;
+        for (var k = 0; k < acts.Count; k++)
         {
-            var needMs = (long)(shot.Length * 1000);
-            var fresh = pool.Where(m => !used.ContainsKey(m)).ToList();
-            var choice = fresh.FirstOrDefault(m => m.DurationMs >= needMs - 100)
-                         ?? fresh.OrderByDescending(m => m.DurationMs).FirstOrDefault()
-                         ?? pool.OrderBy(m => used.GetValueOrDefault(m)).ThenByDescending(m => m.DurationMs).First();
-            var round = used.GetValueOrDefault(choice);
-            used[choice] = round + 1;
-            // The peak lands on the strongest beat in the first part of the shot.
-            var hit = beats.Where(b => b.Time >= shot.At && b.Time < shot.At + shot.Length * 0.6).OrderByDescending(b => b.Drive).Select(b => b.Time - shot.At).FirstOrDefault(shot.Length * 0.4);
-            var focus = choice.FocusMs + round * (long)(needMs * 1.2) * (round % 2 == 1 ? -1 : 1); // a reused clip shows another part
-            var start = Math.Clamp(focus - (long)(hit * 1000), 0, Math.Max(0, choice.DurationMs - needMs));
-            shot.Path = choice.Path;
-            shot.StartMs = start;
-            var talk = choice.Voice.Sum(v => Math.Max(0, Math.Min(v.To, start + needMs) - Math.Max(v.From, start)));
-            shot.Voice = talk >= Math.Min(800, needMs * 0.15);
+            var act = acts[k];
+            var isLast = k == last;
+            var limit = isLast ? total : outroAt;
+            if (cursor >= limit - 0.5 && !isLast) continue;
+            if (act.Card >= 0)
+            {
+                var end = isLast ? total : Math.Min(Snap(cursor + cardSeconds[act.Card], cursor + 1), limit);
+                if (end - cursor > 0.4)
+                    shots.Add(new WrappedShot { Kind = WrappedShotKind.Card, Card = act.Card, At = cursor, Length = end - cursor, Energy = EnergyAt(cursor, end) });
+                cursor = end;
+                if (isLast) break;
+            }
+            switch (act.Style)
+            {
+                case WrappedActStyle.Flash:
+                {
+                    var n = (int)Math.Round(act.Pool.Count * squeeze);
+                    for (var i = 0; i < act.Pool.Count && n > 0; i++)
+                    {
+                        if (squeeze < 1 && i % Math.Max(1, act.Pool.Count / n) != 0) continue;
+                        var end = Math.Min(Snap(cursor + quick, cursor + 0.6), limit);
+                        if (end - cursor < 0.5) break;
+                        var shot = Clip(cursor, end, act.Pool[i], story: false);
+                        shot.Caption = act.Captions?.ElementAtOrDefault(i);
+                        shot.Move = WrappedMove.PushIn;
+                        shots.Add(shot);
+                        cursor = end;
+                    }
+                    break;
+                }
+                case WrappedActStyle.Story:
+                {
+                    for (var i = 0; i < act.Pool.Count; i++)
+                    {
+                        var m = act.Pool[i];
+                        var want = Math.Min(Bars(act.StorySeconds * squeeze), Math.Max(quick, m.DurationMs / 1000.0 - 0.2));
+                        var end = Math.Min(Snap(cursor + want, cursor + 1.5), limit);
+                        if (end - cursor < 1) break;
+                        var shot = Clip(cursor, end, m, story: true);
+                        shot.Caption = act.Captions?.ElementAtOrDefault(i);
+                        shots.Add(shot);
+                        cursor = end;
+                    }
+                    break;
+                }
+                case WrappedActStyle.Burst or WrappedActStyle.Mix:
+                {
+                    var stop = Math.Min(limit, cursor + share[k]);
+                    var n = 0;
+                    while (stop - cursor > quick * 0.6 && act.Pool.Count > 0)
+                    {
+                        var story = act.Style == WrappedActStyle.Mix && n % 4 == 3;
+                        var len = story ? Bars(9) : quick;
+                        var end = Snap(cursor + len, cursor + 0.6);
+                        var cut = story ? -1 : mustCut.FirstOrDefault(c => c > cursor + 0.8 && c < end - 0.3, -1);
+                        if (cut > 0) end = cut;
+                        if (stop - end < quick * 0.6) end = Math.Max(end, stop);
+                        end = Math.Min(end, limit);
+                        if (end - cursor < 0.5) break;
+                        var m = Pick(act.Pool, (long)((end - cursor) * 1000), story);
+                        shots.Add(Clip(cursor, end, m, story));
+                        cursor = end;
+                        n++;
+                    }
+                    break;
+                }
+            }
         }
-        // No two shots in a row from the same clip when it can be avoided.
-        for (var i = 1; i < shots.Count; i++)
-        {
-            if (shots[i].Path != shots[i - 1].Path) continue;
-            var j = shots.FindIndex(i + 1, s => s.Path != shots[i].Path && (i + 1 >= shots.Count || s.Path != shots[i + 1].Path));
-            if (j < 0) continue;
-            (shots[i].Path, shots[j].Path) = (shots[j].Path, shots[i].Path);
-            (shots[i].StartMs, shots[j].StartMs) = (shots[j].StartMs, shots[i].StartMs);
-            (shots[i].Voice, shots[j].Voice) = (shots[j].Voice, shots[i].Voice);
-        }
-        plan.Shots.AddRange(shots);
         plan.Moments = used.Count;
-        if (cards > 0)
-            plan.Shots.Add(new WrappedShot { Kind = WrappedShotKind.Card, Card = cards - 1, At = cursor, Length = total - cursor, Energy = EnergyAt(cursor, total) });
+
+        WrappedMoment Pick(IReadOnlyList<WrappedMoment> pool, long needMs, bool story)
+        {
+            var fresh = pool.Where(m => !used.ContainsKey(m)).ToList();
+            if (story)
+            {
+                // A longer moment is best when people talk or laugh in it.
+                var talk = fresh.Where(m => m.DurationMs >= needMs - 500).OrderByDescending(m => (m.Voice.Count > 0 ? 2 : 0) + m.Score).FirstOrDefault();
+                if (talk is not null) return talk;
+            }
+            return fresh.FirstOrDefault(m => m.DurationMs >= needMs - 100)
+                   ?? fresh.OrderByDescending(m => m.DurationMs).FirstOrDefault()
+                   ?? pool.OrderBy(m => used.GetValueOrDefault(m)).ThenByDescending(m => m.Score).First();
+        }
+
+        WrappedShot Clip(double at, double end, WrappedMoment m, bool story)
+        {
+            var shot = new WrappedShot { Kind = WrappedShotKind.Clip, At = at, Length = end - at, Energy = EnergyAt(at, end), Story = story };
+            var needMs = (long)(shot.Length * 1000);
+            var round = used.GetValueOrDefault(m);
+            used[m] = round + 1;
+            picked++;
+            long start;
+            if (story)
+            {
+                // Lead in a little before the peak so the moment has room to land.
+                start = m.FocusMs - (long)(needMs * 0.35);
+            }
+            else
+            {
+                // The peak lands on the strongest beat in the first part of the shot.
+                var hit = beats.Where(b => b.Time >= at && b.Time < at + shot.Length * 0.6).OrderByDescending(b => b.Drive).Select(b => b.Time - at).FirstOrDefault(shot.Length * 0.4);
+                start = m.FocusMs - (long)(hit * 1000);
+            }
+            if (round > 0) start += round * (long)(needMs * 1.2) * (round % 2 == 1 ? -1 : 1); // a reused clip shows another part
+            start = Math.Clamp(start, 0, Math.Max(0, m.DurationMs - needMs));
+            shot.Path = m.Path;
+            shot.StartMs = start;
+            var talk = m.Voice.Sum(v => Math.Max(0, Math.Min(v.To, start + needMs) - Math.Max(v.From, start)));
+            shot.Voice = talk >= Math.Min(800, needMs * 0.15);
+            shot.Move = story ? WrappedMove.PushIn : WrappedMove.PullOut;
+            return shot;
+        }
+    }
+
+    /// <summary>
+    /// How each shot comes in: cards slide and zoom, longer moments dissolve, the quick cuts stay straight cuts
+    /// (with a white flash at the top of a phrase), and a change of song gets a short blur.
+    /// </summary>
+    private static void Transitions(WrappedPlan plan, List<double> mustCut)
+    {
+        var quickCount = 0;
+        for (var i = 1; i < plan.Shots.Count; i++)
+        {
+            var prev = plan.Shots[i - 1];
+            var cur = plan.Shots[i];
+            (string? name, double d) = (prev.Kind, cur.Kind) switch
+            {
+                (WrappedShotKind.Card, WrappedShotKind.Card) => ("slideleft", 0.45),
+                (_, WrappedShotKind.Card) => ("smoothup", 0.5),
+                (WrappedShotKind.Card, _) => ("zoomin", 0.45),
+                _ when cur.Story || prev.Story => ("fade", 0.35),
+                _ when cur.Caption is not null => ("smoothleft", 0.3),
+                _ when mustCut.Any(c => Math.Abs(c - cur.At) < 0.1) => ("hblur", 0.35),
+                _ => (++quickCount % 8 == 0 ? "fadewhite" : null, 0.14),
+            };
+            if (name is null) continue;
+            cur.Transition = name;
+            cur.TransitionSeconds = Math.Min(d, Math.Min(prev.Length, cur.Length) * 0.4);
+        }
     }
 }

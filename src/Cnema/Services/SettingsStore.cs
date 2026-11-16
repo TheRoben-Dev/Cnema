@@ -68,6 +68,22 @@ public sealed class WrappedSettings
     public Dictionary<int, string> Made { get; set; } = new();
     /// <summary>The last year whose video was opened (the blob stops announcing it).</summary>
     public int Watched { get; set; }
+    /// <summary>A video being made: kept so it carries on after Savefile quits mid-way.</summary>
+    public WrappedJob? Job { get; set; }
+    /// <summary>The year whose gift the blob has already offered on the home page.</summary>
+    public int GiftOffered { get; set; }
+}
+
+public sealed class WrappedJob
+{
+    public int Year { get; set; }
+    public string Output { get; set; } = "";
+    /// <summary>Where the plan and the finished parts are kept.</summary>
+    public string Work { get; set; } = "";
+    public int Width { get; set; }
+    public int Height { get; set; }
+    /// <summary>Set for a friend's cut (their clips only), null for the whole year.</summary>
+    public string? Friend { get; set; }
 }
 
 public sealed class BackupSettings

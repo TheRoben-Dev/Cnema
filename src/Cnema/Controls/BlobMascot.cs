@@ -80,7 +80,27 @@ public sealed class BlobMascot : Control
     /// <summary>The clock it runs on (a test can drive it frame by frame).</summary>
     internal static Func<DateTime> Clock = () => DateTime.UtcNow;
 
-    private double Now => (Clock() - _start).TotalSeconds;
+    private double? _manual;
+    private double Now => _manual ?? (Clock() - _start).TotalSeconds;
+
+    /// <summary>
+    /// Runs the blob on a clock of its own, for drawing it frame by frame off screen (the Wrapped video):
+    /// moves the springs on to <paramref name="seconds"/> and redraws.
+    /// </summary>
+    public void DriveTo(double seconds)
+    {
+        _manual ??= seconds;
+        var from = _last >= 0 ? _last : seconds;
+        _manual = seconds;
+        for (var t = from; t < seconds - 1e-9;)
+        {
+            var dt = Math.Min(1 / 20.0, seconds - t);
+            t += dt;
+            Step(t, dt);
+        }
+        _last = seconds;
+        InvalidateVisual();
+    }
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {

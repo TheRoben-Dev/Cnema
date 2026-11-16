@@ -3,6 +3,7 @@
 What changed in each Savefile (formerly Cnema) release. The app shows the entries you have not seen yet after it updates.
 
 ## 0.34.0
+- A calmer look: Dark is now neutral dark grey and Light is white and light grey. Savefile purple is saved for what matters (buttons, switches, selection, progress, the blob), so it pops.
 - Smart features now actually get to your library: the passes take turns per video instead of waiting for each other to finish everything, so none of them sits at "0 videos" any more. Settings says why one is waiting ("Paused while you play"), a model that won't start says so instead of hanging, and Help, Diagnostics lists what each pass has done.
 - The blob is softer: it moves like a drop of liquid now (it wobbles, squashes when it lands and splashes a little), and its smiling eyes have round tips.
 - Laughter and hype: Savefile can listen for laughing, cheering and shouting, on this computer and only when it isn't busy. The videos where everyone lost it come first in Worth a rewatch, the blob tells you about them ("You and Sam couldn't stop laughing on Friday"), and searching "laughing" or "hype" finds them. It needs a small sound model, a one-time download of 15 MB, and costs about a second per minute of video. Settings, Features, Smart, Laughter and hype.

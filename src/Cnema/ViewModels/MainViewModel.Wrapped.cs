@@ -52,14 +52,12 @@ public sealed partial class MainViewModel
             var year = WrappedYear;
             var clips = WrappedService.YearClips(_items.Values.Select(v => v.Entry), year);
             if (clips.Count < 3) return F("Save a few more clips in {0} and Savefile can make a video of your year.", year);
-            var moments = Math.Min(clips.Count, 44);
-            var cards = WrappedService.Cards(WrappedStats(clips, year)).Count;
-            var length = WrappedDirector.TargetSeconds(moments, cards);
-            var music = WrappedDirector.RecommendedMusicSeconds(moments, cards);
+            var length = WrappedScriptFor(clips, year).TargetSeconds;
+            var music = WrappedDirector.RecommendedMusicSeconds(length);
             var have = WrappedSongs.Sum(s => s.Info?.Seconds ?? 0);
-            var intro = F("About {0} long: stat cards, then your best {1}, cut to the beat.", WrappedService.Span((long)(length * 1000)), P(moments, "{0} moment", "{0} moments"));
+            var intro = F("About {0} long: your year in chapters, cut to the beat.", WrappedService.Span((long)(length * 1000)));
             return WrappedSongs.Count == 0
-                ? intro + " " + F("Add about {0} of music (MP3 or similar); without songs, the clips keep their own sound.", WrappedService.Span((long)(music * 1000)))
+                ? intro + " " + F("Add about {0} of music (MP3 or similar), two or three songs you love; without songs, the clips keep their own sound.", WrappedService.Span((long)(music * 1000)))
                 : have + 5 < length
                     ? intro + " " + F("Your songs cover {0}; add about {1} more, or the video will be as long as the music.", WrappedService.Span((long)(have * 1000)), WrappedService.Span((long)((music - have) * 1000)))
                     : intro + " " + F("Your songs cover {0}: plenty. Savefile uses the parts that fit best.", WrappedService.Span((long)(have * 1000)));
@@ -71,7 +69,7 @@ public sealed partial class MainViewModel
         get
         {
             var clips = WrappedService.YearClips(_items.Values.Select(v => v.Entry), DateTime.Now.Year);
-            var length = WrappedDirector.TargetSeconds(Math.Min(clips.Count, 44), 6);
+            var length = clips.Count < 3 ? WrappedDirector.MinSeconds : WrappedScriptFor(clips, DateTime.Now.Year).TargetSeconds;
             var p = CostMeter.Of(CostMeter.Wrapped);
             var time = CostMeter.SecondsFor(CostMeter.Wrapped, (long)(length * 1000));
             return F("Once a year: {0} · about {1} MB more memory · nothing to download.", T(p.Uses), p.ExtraMemoryMb) + "\n" +
@@ -90,8 +88,6 @@ public sealed partial class MainViewModel
         OnPropertyChanged(nameof(WrappedCostText));
     }
 
-    private WrappedStats WrappedStats(IReadOnlyList<VideoEntry> clips, int year) =>
-        WrappedService.Stats(clips, year, Features.People, e => e.Tags.FirstOrDefault(GameTest(e)));
 
     // ---------- the songs ----------
 
@@ -166,6 +162,9 @@ public sealed partial class MainViewModel
 
     [RelayCommand] private void MakeWrapped() => MakeWrappedFor(WrappedYear, byItself: false);
 
+    private WrappedScript WrappedScriptFor(IReadOnlyList<VideoEntry> clips, int year) =>
+        WrappedService.Script(clips, year, Features.People, e => e.Tags.FirstOrDefault(GameTest(e)));
+
     /// <summary>Queues the year's video in the export list. Returns false when there's too little to make one.</summary>
     private bool MakeWrappedFor(int year, bool byItself)
     {
@@ -176,12 +175,7 @@ public sealed partial class MainViewModel
             if (!byItself) ShowToast(F("Save a few more clips in {0} first.", year));
             return false;
         }
-        var moments = WrappedService.Moments(clips);
-        var cards = WrappedService.Cards(WrappedStats(clips, year));
-        var songs = WrappedSongs.Select(s => s.Path).Where(File.Exists).ToList();
         var height = clips.Select(c => c.Height).OrderBy(h => h).ElementAt(clips.Count / 2) >= 1000 ? 1080 : 720;
-        var width = height * 16 / 9;
-
         var clipsDir = _settings.Current.Clip.ResolvedFolder;
         var root = _settings.Current.Folders.Any(f => Under(Path.Combine(clipsDir, "x"), f)) ? clipsDir
             : _settings.Current.Folders.FirstOrDefault() ?? clipsDir;
@@ -189,48 +183,97 @@ public sealed partial class MainViewModel
         var name = F("Savefile Wrapped {0}", year);
         var output = Path.Combine(dir, name + ".mp4");
         for (var n = 2; File.Exists(output) || Exports.IsTarget(output); n++) output = Path.Combine(dir, $"{name} ({n}).mp4");
+        var work = Path.Combine(AppPaths.DataDir, "wrapped", $"{year}-{DateTime.UtcNow:yyyyMMddHHmmss}");
+        var job = new WrappedJob { Year = year, Output = output, Work = work, Width = height * 16 / 9, Height = height };
+        _settings.Current.Wrapped.Job = job;
+        _settings.Save();
+        QueueWrapped(job, WrappedScriptFor(clips, year), WrappedSongs.Select(s => s.Path).Where(File.Exists).ToList(), byItself);
+        if (!byItself) ShowToast(T("Making your Wrapped. It shows up in your library when it's done."));
+        return true;
+    }
 
+    /// <summary>A video that was being made when Savefile last quit carries on from the parts already done.</summary>
+    private void ResumeWrapped()
+    {
+        if (!WrappedReady || _settings.Current.Wrapped.Job is not { } job || IsMakingWrapped) return;
+        if (!File.Exists(Path.Combine(job.Work, "plan.json")))
+        {
+            _settings.Current.Wrapped.Job = null;
+            _settings.Save();
+            return;
+        }
+        Log.Info($"Wrapped {job.Year}: picking up where it stopped");
+        QueueWrapped(job, null, null, byItself: true);
+    }
+
+    private sealed record WrappedSaved(WrappedPlan Plan, List<WrappedCard> Cards);
+
+    private void QueueWrapped(WrappedJob job, WrappedScript? script, List<string>? songs, bool byItself)
+    {
         WrappedStatus = T("Getting your Wrapped ready…");
-        Exports.Add(output, F("Your {0} Wrapped", year), async (progress, ct) =>
+        var year = job.Year;
+        Exports.Add(job.Output, F("Your {0} Wrapped", year), async (progress, ct) =>
         {
             var watch = System.Diagnostics.Stopwatch.StartNew();
             var finished = false; // a late progress report must not bring the status back
-            var cardDir = Path.Combine(Path.GetTempPath(), "savefile-cards-" + Guid.NewGuid().ToString("N")[..8]);
+            var planFile = Path.Combine(job.Work, "plan.json");
             try
             {
-                var analysed = new List<SongInfo>();
-                foreach (var song in songs)
+                Directory.CreateDirectory(job.Work);
+                WrappedSaved saved;
+                if (script is null)
                 {
-                    try { analysed.Add(await MusicAnalyzer.GetAsync(song, ct)); }
-                    catch (Exception ex) when (ex is not OperationCanceledException) { Log.Warn($"Song {Path.GetFileName(song)} left out: {ex.Message}"); }
+                    saved = System.Text.Json.JsonSerializer.Deserialize<WrappedSaved>(await File.ReadAllTextAsync(planFile, ct))
+                            ?? throw new InvalidOperationException("The saved plan is unreadable.");
                 }
-                var plan = await Task.Run(() => WrappedDirector.Plan(moments, cards.Select(c => c.MinSeconds).ToList(), analysed), ct);
-                Log.Info($"Wrapped {year}: {plan.Seconds:0.0} s, {plan.Shots.Count} shots, {plan.Moments} moments, {plan.Songs.Count} songs");
-                var images = await Dispatcher.UIThread.InvokeAsync(() => Views.WrappedCards.Render(cards, cardDir, width, height));
-                progress.Report(0.02);
+                else
+                {
+                    var analysed = new List<SongInfo>();
+                    foreach (var song in songs ?? new())
+                    {
+                        try { analysed.Add(await MusicAnalyzer.GetAsync(song, ct)); }
+                        catch (Exception ex) when (ex is not OperationCanceledException) { Log.Warn($"Song {Path.GetFileName(song)} left out: {ex.Message}"); }
+                    }
+                    var plan = await Task.Run(() => WrappedDirector.Plan(script.Acts, script.Cards.Select(c => c.MinSeconds).ToList(), analysed), ct);
+                    saved = new WrappedSaved(plan, script.Cards.ToList());
+                    await File.WriteAllTextAsync(planFile, System.Text.Json.JsonSerializer.Serialize(saved), ct);
+                }
+                Log.Info($"Wrapped {year}: {saved.Plan.Seconds:0.0} s, {saved.Plan.Shots.Count} shots, {saved.Plan.Moments} moments, {saved.Plan.Songs.Count} songs");
                 var inner = new Progress<double>(p =>
                 {
-                    progress.Report(0.02 + p * 0.98);
-                    Dispatcher.UIThread.Post(() => { if (!finished) WrappedStatus = F("Making your Wrapped: {0:0}%", (0.02 + p * 0.98) * 100); });
+                    progress.Report(p);
+                    Dispatcher.UIThread.Post(() => { if (!finished) WrappedStatus = F("Making your Wrapped: {0:0}%", p * 100); });
                 });
-                await WrappedService.RenderAsync(plan, images, width, height, output, inner, ct);
-                CostMeter.Record(CostMeter.Wrapped, watch.Elapsed.TotalSeconds, (long)(plan.Seconds * 1000));
+                await WrappedService.RenderAsync(saved.Plan, job.Work, job.Width, job.Height, job.Output,
+                    (card, seconds, beats, downs, path, c) => Views.WrappedMotion.RenderAsync(saved.Cards[card], seconds, beats, downs, job.Width, job.Height, WrappedService.Fps, path, c),
+                    (caption, path, c) => Dispatcher.UIThread.InvokeAsync(() => Views.WrappedMotion.RenderCaption(caption, job.Width, job.Height, path)).GetTask(),
+                    inner, ct);
+                CostMeter.Record(CostMeter.Wrapped, watch.Elapsed.TotalSeconds, (long)(saved.Plan.Seconds * 1000));
+                try { Directory.Delete(job.Work, true); } catch { /* left for the next clean-up */ }
                 Dispatcher.UIThread.Post(() =>
                 {
-                    _settings.Current.Wrapped.Made[year] = output;
+                    _settings.Current.Wrapped.Made[year] = job.Output;
+                    if (_settings.Current.Wrapped.Job?.Work == job.Work) _settings.Current.Wrapped.Job = null;
                     _settings.Save();
                     RaiseWrapped();
                     RefreshMascot();
                 });
             }
+            catch (OperationCanceledException) when (!_quitting)
+            {
+                // Cancelled by hand: start over next time.
+                Dispatcher.UIThread.Post(() =>
+                {
+                    if (_settings.Current.Wrapped.Job?.Work == job.Work) { _settings.Current.Wrapped.Job = null; _settings.Save(); }
+                });
+                try { Directory.Delete(job.Work, true); } catch { /* left for the next clean-up */ }
+                throw;
+            }
             finally
             {
                 Dispatcher.UIThread.Post(() => { finished = true; WrappedStatus = ""; });
-                try { Directory.Delete(cardDir, true); } catch { /* temp */ }
             }
         }, () => byItself ? F("Your {0} Wrapped is ready", year) : T("Your Wrapped is ready"));
-        if (!byItself) ShowToast(T("Making your Wrapped. It shows up in your library when it's done."));
-        return true;
     }
 
     [RelayCommand]

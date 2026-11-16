@@ -567,6 +567,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _ = CheckForUpdatesAsync();
         LoadWrappedSongs();
         StartWrappedSeason();
+        ResumeWrapped();
         await RescanAsync();
         await RunStorageCleanupAsync();
         await ImportRecordersAtLaunchAsync();
@@ -1301,8 +1302,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         else ShowToast(job.Status);
     }
 
+    /// <summary>Set while Savefile closes: work cancelled now is meant to carry on next time (a Wrapped video).</summary>
+    private volatile bool _quitting;
+
     public void Dispose()
     {
+        _quitting = true;
         Exports.CancelAll();
         _hotkey.Dispose();
         RegisterExtraHotkeys(null);
