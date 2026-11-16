@@ -59,7 +59,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <AvaloniaResource Include="Assets/**" Exclude="Assets/Lang/**" />
+    <AvaloniaResource Include="Assets/**" Exclude="Assets/Lang/**;Assets/rnnoise/**" />
+    <!-- RNNoise model for Clean up my voice: a plain file next to the app, since ffmpeg reads it by path -->
+    <None Include="Assets/rnnoise/voice.rnnn" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Link="rnnoise/voice.rnnn" />
     <EmbeddedResource Include="../../CHANGELOG.md" LogicalName="Cnema.CHANGELOG.md" />
     <EmbeddedResource Include="Assets/Lang/*.json" LogicalName="Cnema.Lang.%(Filename).json" />
   </ItemGroup>

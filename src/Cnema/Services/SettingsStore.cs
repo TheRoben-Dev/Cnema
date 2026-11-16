@@ -106,6 +106,8 @@ public sealed class EffectSettings
     public double VoiceBoostDb { get; set; }
     /// <summary>Lower the other tracks while the voice track is talking.</summary>
     public bool Duck { get; set; }
+    /// <summary>Clean up my voice: RNNoise and leveling on the voice track of an export.</summary>
+    public bool CleanVoice { get; set; }
 
     /// <summary>The editor's tool panel: open or folded away, and the page it shows.</summary>
     public bool ToolsOpen { get; set; } = true;

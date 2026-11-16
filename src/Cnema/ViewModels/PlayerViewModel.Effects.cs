@@ -123,6 +123,13 @@ public sealed partial class PlayerViewModel
         set { if (Fx.Normalize == value) return; Fx.Normalize = value; _settings.Save(); OnPropertyChanged(); EffectsChanged(); }
     }
 
+    /// <summary>Clean up my voice: noise removal and leveling on the voice track.</summary>
+    public bool CleanVoice
+    {
+        get => Fx.CleanVoice;
+        set { if (Fx.CleanVoice == value) return; Fx.CleanVoice = value; _settings.Save(); OnPropertyChanged(); EffectsChanged(); }
+    }
+
     public bool Duck
     {
         get => Fx.Duck;
@@ -182,7 +189,7 @@ public sealed partial class PlayerViewModel
             : new List<SpeedSpec>();
         var audio = ShowAudioTools
             ? new AudioSpec(Normalize, VoiceTrack is { } v ? (int)v.Value : -1, VoiceTrack is null ? 0 : (double)VoiceBoost.Value,
-                VoiceTrack is not null && Duck)
+                VoiceTrack is not null && Duck, VoiceTrack is not null && CleanVoice)
             : AudioSpec.None;
         WatermarkSpec? watermark = null;
         string? intro = null, outro = null;
@@ -206,7 +213,7 @@ public sealed partial class PlayerViewModel
         {
             var fx = BuildEffects();
             return fx.Captions.Count + fx.Speed.Count + fx.Blurs.Count + (fx.HasZoom ? 1 : 0) + (fx.Music is null ? 0 : 1) + (fx.Audio.Normalize ? 1 : 0) + (fx.Audio.VoiceBoostDb != 0 ? 1 : 0) +
-                   (fx.Audio.Duck ? 1 : 0) + (fx.Watermark is null ? 0 : 1) + (fx.Intro is null ? 0 : 1) + (fx.Outro is null ? 0 : 1);
+                   (fx.Audio.Duck ? 1 : 0) + (fx.Audio.CleanVoice ? 1 : 0) + (fx.Watermark is null ? 0 : 1) + (fx.Intro is null ? 0 : 1) + (fx.Outro is null ? 0 : 1);
         }
     }
 

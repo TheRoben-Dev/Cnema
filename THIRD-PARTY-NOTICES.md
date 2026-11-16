@@ -33,6 +33,12 @@ its own licence. None of them are modified.
   `vcomp140`) next to these libraries, redistributed under the Visual Studio redistributable terms.
   Linux builds carry `libgomp.so.1` (GCC's OpenMP runtime, GPL with the GCC Runtime Library Exception) so nothing extra needs installing.
 
+## Clean up my voice
+
+- `rnnoise/voice.rnnn`: the "beguiling-drafter" RNNoise model (recording, voice) from
+  https://github.com/GregorR/rnnoise-models, which states that the models are not creative work and not subject
+  to copyright. It is read by ffmpeg's `arnndn` filter.
+
 ## Visual search (downloaded only when switched on)
 
 - CLIP ViT-B/32 (OpenAI, MIT licence), as 8-bit ONNX files converted by Xenova

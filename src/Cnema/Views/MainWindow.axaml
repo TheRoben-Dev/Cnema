@@ -3533,9 +3533,16 @@
                         </StackPanel>
                         <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding Duck}" />
                       </Grid>
+                      <Grid ColumnDefinitions="*,Auto">
+                        <StackPanel Spacing="2">
+                          <TextBlock svc:Tr.Text="Clean up my voice" FontSize="12" />
+                          <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Takes out fan, keyboard and room noise, cuts low rumble and evens out how loud you are. Laughs and shouts stay. Done on this computer while exporting." />
+                        </StackPanel>
+                        <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding CleanVoice}" />
+                      </Grid>
                     </StackPanel>
                     <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" IsVisible="{Binding !HasVoiceTrackChoice}"
-                               svc:Tr.Text="Voice boost and lowering the game need the microphone on its own track: Settings, Clipping, two audio devices with Separate tracks." />
+                               svc:Tr.Text="Voice boost, cleaning up your voice and lowering the game need the microphone on its own track: Settings, Clipping, two audio devices with Separate tracks." />
                   </StackPanel>
                 </Border>
               </StackPanel>
