@@ -29,7 +29,10 @@ public sealed partial class MainViewModel
     /// <summary>Set by the view: an open dialog for several audio files.</summary>
     public Func<Task<IReadOnlyList<string>>>? PickAudios { get; set; }
 
-    public bool ShowWrapped => Features.Wrapped && Features.Recap;
+    /// <summary>Wrapped is held back until its animated version is done; nothing of it shows before then.</summary>
+    internal static bool WrappedReady = Environment.GetEnvironmentVariable("SAVEFILE_WRAPPED") == "1";
+    public bool WrappedReadyUi => WrappedReady;
+    public bool ShowWrapped => WrappedReady && Features.Wrapped && Features.Recap;
     private int WrappedYear => Recap?.SelectedYear ?? DateTime.Now.Year;
     public string WrappedTitle => F("Your {0} Wrapped", WrappedYear);
     public bool HasWrappedVideo => WrappedVideo(WrappedYear) is not null;
@@ -261,6 +264,7 @@ public sealed partial class MainViewModel
 
     private void CheckWrappedSeason()
     {
+        if (!WrappedReady) return;
         var now = DateTime.Now;
         if (!ShowWrapped || now.Month != 12 || WrappedVideo(now.Year) is not null || IsMakingWrapped) return;
         if (SmartShouldWait || Player.Current is not null) return; // not while playing or watching
@@ -272,6 +276,7 @@ public sealed partial class MainViewModel
     /// <summary>The blob's news, when this season's video is made and hasn't been watched yet.</summary>
     private string? WrappedNews(DateTime now)
     {
+        if (!WrappedReady) return null;
         var year = now.Month == 1 ? now.Year - 1 : now.Year;
         if (!ShowWrapped || now.Month is not (12 or 1) || _settings.Current.Wrapped.Watched >= year || WrappedVideo(year) is null) return null;
         return F("Your {0} Wrapped is ready! Click me to watch it.", year);
