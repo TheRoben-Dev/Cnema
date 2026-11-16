@@ -13,7 +13,7 @@ public static class PlatformShell
             if (OperatingSystem.IsMacOS())
                 Start("open", "-R", path);
             else if (OperatingSystem.IsWindows())
-                Process.Start("explorer.exe", $"/select,\"{path}\"");
+                Process.Start("explorer.exe", $"/select,\"{path}\"")?.Dispose();
             else
                 Start("xdg-open", Path.GetDirectoryName(path) ?? path);
         }
@@ -66,7 +66,7 @@ public static class PlatformShell
         try
         {
             if (OperatingSystem.IsMacOS()) Start("open", url);
-            else if (OperatingSystem.IsWindows()) Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+            else if (OperatingSystem.IsWindows()) Process.Start(new ProcessStartInfo(url) { UseShellExecute = true })?.Dispose();
             else Start("xdg-open", url);
         }
         catch (Exception ex)
@@ -313,6 +313,6 @@ public static class PlatformShell
     {
         var psi = new ProcessStartInfo(file) { UseShellExecute = false };
         foreach (var a in args) psi.ArgumentList.Add(a);
-        Process.Start(psi);
+        Process.Start(psi)?.Dispose();
     }
 }

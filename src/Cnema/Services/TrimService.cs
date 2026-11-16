@@ -82,6 +82,7 @@ public static class TrimService
                             "-ss", S(inMs), "-i", source, "-t", S(durationMs) };
 
         var temp = TempFor(output);
+        string? cwd = null;
         async Task Run(IEnumerable<string> tail, double from, double span)
         {
             ProcessResult r;
@@ -92,7 +93,7 @@ public static class TrimService
                     if (line.StartsWith("out_time_us=", StringComparison.Ordinal) &&
                         long.TryParse(line.AsSpan(12), out var us) && durationMs > 0)
                         progress?.Report(from + span * Math.Clamp(us / 1000.0 / durationMs, 0, 1));
-                }, ct);
+                }, ct, cwd);
             }
             catch (OperationCanceledException)
             {
@@ -119,14 +120,37 @@ public static class TrimService
                 break;
 
             case SharePreset.Vertical:
-                await Run(new[]
+            {
+                // A 9:16 slice of the picture, at most 1080x1920: the middle one, or one that follows the action (smart crop).
+                var crop = "crop='min(iw,trunc(ih*9/32)*2)':ih";
+                if (await MediaProbe.InfoAsync(source, ct) is { Width: > 0, Height: > 0 } info)
                 {
-                    "-map", "0:v:0",
-                    // The middle 9:16 slice of the picture, at most 1080x1920.
-                    "-vf", "crop='min(iw,trunc(ih*9/32)*2)':ih,scale=-2:'min(1920,ih)'",
-                    "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-pix_fmt", "yuv420p",
-                }.Concat(AudioMap()).Concat(new[] { "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", "-y", temp }), 0, 1);
+                    var cw = Math.Min(info.Width, info.Height * 9 / 16 / 2 * 2);
+                    var path = await SmartCrop.AnalyzeAsync(source, inMs, outMs, (double)cw / info.Width, ct);
+                    if (path is not null)
+                    {
+                        cwd = Path.Combine(Path.GetTempPath(), $"cnema-share-{Guid.NewGuid():N}");
+                        Directory.CreateDirectory(cwd);
+                        await File.WriteAllTextAsync(Path.Combine(cwd, "crop.cmd"),
+                            SmartCrop.Commands(path, durationMs / 1000.0, info.Width, cw, t => t), ct);
+                        crop = $"sendcmd=f=crop.cmd,crop@sc={cw}:ih:{SmartCrop.StartX(path, info.Width, cw)}:0";
+                    }
+                }
+                try
+                {
+                    await Run(new[]
+                    {
+                        "-map", "0:v:0",
+                        "-vf", crop + ",scale=-2:'min(1920,ih)'",
+                        "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-pix_fmt", "yuv420p",
+                    }.Concat(AudioMap()).Concat(new[] { "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", "-y", temp }), 0, 1);
+                }
+                finally
+                {
+                    if (cwd is not null) try { Directory.Delete(cwd, true); } catch { /* temp */ }
+                }
                 break;
+            }
 
             default:
                 var cap = (preset == SharePreset.Discord10 ? 10L : 50L) * 1000 * 1000;

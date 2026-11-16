@@ -22,6 +22,18 @@ public sealed record RenderJob(
 /// </summary>
 public static class RenderService
 {
+    /// <summary>The (origin-relative) source time shown at an output time, or null past the end.</summary>
+    internal static double? SourceAt(TimeMap map, double outputMs)
+    {
+        double offset = 0;
+        foreach (var p in map.Pieces)
+        {
+            if (outputMs < offset + p.OutputLength) return p.Start + (outputMs - offset) * p.Rate;
+            offset += p.OutputLength;
+        }
+        return map.Pieces.Count > 0 ? map.Pieces[^1].End : null;
+    }
+
     /// <summary>Loudness target for "Even out loudness", in LUFS: what YouTube and most streaming sites aim for.</summary>
     public const double TargetLufs = -14;
 
@@ -89,6 +101,19 @@ public static class RenderService
                 fontsDir = Path.GetRelativePath(work, fonts).Replace('\\', '/');
                 await File.WriteAllTextAsync(Path.Combine(work, "captions.ass"),
                     CaptionWriter.Write(fx.Captions.Select(c => c with { Start = c.Start - origin, End = c.End - origin }), map, sw, sh), ct);
+            }
+
+            // ---- smart crop: the vertical slice follows the action ----
+            if (crop is not null && share == SharePreset.Vertical && !fx.HasZoom)
+            {
+                progress?.Report(0.01);
+                var cropPath = await SmartCrop.AnalyzeAsync(job.Source, origin, origin + span, (double)sw / info.Width, ct);
+                if (cropPath is not null)
+                {
+                    await File.WriteAllTextAsync(Path.Combine(work, "crop.cmd"),
+                        SmartCrop.Commands(cropPath, map.OutputMs / 1000.0, info.Width, sw, t => SourceAt(map, t * 1000) / 1000.0), ct);
+                    crop = $"sendcmd=f=crop.cmd,crop@sc={sw}:{sh}:{SmartCrop.StartX(cropPath, info.Width, sw)}:0";
+                }
             }
 
             // ---- inputs ----

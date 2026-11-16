@@ -298,6 +298,6 @@ public static class UpdateService
             psi = new ProcessStartInfo("/bin/sh") { UseShellExecute = false, CreateNoWindow = true };
             psi.ArgumentList.Add(script);
         }
-        Process.Start(psi);
+        Process.Start(psi)?.Dispose(); // it runs on by itself; only our handle goes
     }
 }

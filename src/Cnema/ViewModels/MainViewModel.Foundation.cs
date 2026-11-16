@@ -27,6 +27,7 @@ public sealed partial class MainViewModel
         PlayerViewModel.TrimSuggestions = Features.TrimSuggestions;
         OnPropertyChanged(nameof(ShowBinNav));
         Player.RefreshTrimSuggestion();
+        SmartCrop.Enabled = Features.SmartCrop;
         if (ThumbnailService.SmartThumbs != Features.SmartThumbs)
         {
             ThumbnailService.SmartThumbs = Features.SmartThumbs;

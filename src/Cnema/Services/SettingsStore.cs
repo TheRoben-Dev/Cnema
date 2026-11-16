@@ -255,6 +255,8 @@ public sealed class FeatureSettings
     public bool SmartThumbs { get; set; } = true;
     /// <summary>The editor offers to cut a blank, silent start or end.</summary>
     public bool TrimSuggestions { get; set; } = true;
+    /// <summary>Smart crop: the vertical (9:16) export follows the action instead of always taking the middle slice.</summary>
+    public bool SmartCrop { get; set; } = true;
     /// <summary>Laughter and hype: a small sound model (a one-time download) listens for laughing and cheering.</summary>
     public bool Laughs { get; set; }
     /// <summary>Who's talking: a small voice model (a one-time download) tells voices apart and fills in Who was there.</summary>

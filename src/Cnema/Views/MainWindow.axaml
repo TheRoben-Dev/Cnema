@@ -3164,6 +3164,18 @@
                     <Border Classes="sep" />
                     <Grid Classes="row" ColumnDefinitions="*,Auto">
                       <StackPanel Spacing="2">
+                        <TextBlock svc:Tr.Text="Smart crop" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="The vertical (9:16) export follows where the action is instead of always cutting out the middle. A HUD that never moves is ignored, and the slice stays in the middle when nothing stands out." />
+                        <Grid ColumnDefinitions="Auto,*" Margin="0,4,0,0">
+                          <PathIcon Data="{StaticResource IcSpeed}" Width="11" Height="11" Margin="0,2,6,0" VerticalAlignment="Top" Foreground="{DynamicResource TextDim}" />
+                          <TextBlock Grid.Column="1" Classes="dim cost" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Only when you export a vertical video: a few seconds of one core looking at a small copy first." />
+                        </Grid>
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureSmartCrop}" />
+                    </Grid>
+                    <Border Classes="sep" />
+                    <Grid Classes="row" ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="2">
                         <TextBlock svc:Tr.Text="Smart titles" />
                         <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Names that say what happened: a line someone shouted at the big moment, what set off a laugh, or the game, who was there and when. Like &quot;Alex: “Behind you!” · Valorant&quot;. With Voice search and Laughter and hype on, they get better. Suggested when you edit a video, and for the whole library under Tools, Smart rename." />
                         <Grid ColumnDefinitions="Auto,*" Margin="0,4,0,0">
