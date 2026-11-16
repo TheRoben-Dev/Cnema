@@ -71,13 +71,24 @@ public static class ModelStore
         OnnxRuntime,
     };
 
+    /// <summary>
+    /// WeSpeaker ResNet34 (VoxCeleb, large-margin fine-tuned; CC BY 4.0, wenet-e2e/wespeaker): a 256-number
+    /// voiceprint for a few seconds of speech, for "who's talking". Shares the ONNX Runtime library.
+    /// </summary>
+    public static IReadOnlyList<ModelInfo> Voice { get; } = new[]
+    {
+        new ModelInfo("voice", "wespeaker-resnet34-lm.onnx", 26_530_309, "7bb2f06e9df17cdf1ef14ee8a15ab08ed28e8d0ef5054ee135741560df2ec068",
+            "https://huggingface.co/Wespeaker/wespeaker-voxceleb-resnet34-LM/resolve/main/voxceleb_resnet34_LM.onnx"),
+        OnnxRuntime,
+    };
+
     public static long BytesOf(IEnumerable<ModelInfo> pack) => pack.Sum(m => m.Bytes);
     public static bool IsInstalled(IEnumerable<ModelInfo> pack) => pack.All(IsInstalled);
     /// <summary>Removes a pack, keeping files another installed pack still uses (ONNX Runtime).</summary>
     public static void Remove(IEnumerable<ModelInfo> pack)
     {
         var list = pack.ToList();
-        var shared = new[] { Visual, Sound }.Where(p => !ReferenceEquals(p, pack) && IsInstalled(p)).SelectMany(p => p).ToHashSet();
+        var shared = new[] { Visual, Sound, Voice }.Where(p => !ReferenceEquals(p, pack) && IsInstalled(p)).SelectMany(p => p).ToHashSet();
         foreach (var m in list.Where(m => !shared.Contains(m))) Remove(m);
     }
 

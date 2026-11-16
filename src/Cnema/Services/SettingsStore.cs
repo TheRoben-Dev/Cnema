@@ -255,6 +255,8 @@ public sealed class FeatureSettings
     public bool TrimSuggestions { get; set; } = true;
     /// <summary>Laughter and hype: a small sound model (a one-time download) listens for laughing and cheering.</summary>
     public bool Laughs { get; set; }
+    /// <summary>Who's talking: a small voice model (a one-time download) tells voices apart and fills in Who was there.</summary>
+    public bool Voices { get; set; }
     /// <summary>Wrapped: a video of the year cut to the person's songs; the blob offers it as a present in November and December.</summary>
     public bool Wrapped { get; set; } = true;
     /// <summary>The blob: Savefile's mascot presents Worth a rewatch with a line about your clips.</summary>

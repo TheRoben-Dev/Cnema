@@ -231,6 +231,10 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
         UpdateSpoken();
     }
     partial void OnDurationChanged(double value) { OnPropertyChanged(nameof(DurationText)); OnPropertyChanged(nameof(RangeText)); BuildChapters(); }
+    /// <summary>Whether the video that's playing is a favourite (the star in the Quick player).</summary>
+    public bool IsFavorite => Current?.IsFavorite == true;
+    public void RefreshFavorite() => OnPropertyChanged(nameof(IsFavorite));
+
     partial void OnCurrentChanged(VideoItemViewModel? value)
     {
         RefreshSpeech();
@@ -238,6 +242,7 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(Title));
         OnPropertyChanged(nameof(Subtitle));
         OnPropertyChanged(nameof(VideoWidth));
+        OnPropertyChanged(nameof(IsFavorite));
         OnPropertyChanged(nameof(VideoHeight));
     }
     partial void OnVolumeChanged(int value) { ApplyAudio(); _settings.Current.Volume = value; }

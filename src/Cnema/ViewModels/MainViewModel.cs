@@ -671,6 +671,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 StartSpeechPass();
                 StartVisualPass();
                 StartSoundPass();
+                StartVoicePass();
             }
         }
     }

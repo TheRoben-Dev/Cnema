@@ -70,7 +70,7 @@ public static class Shortcuts
         ("General", "Quit Savefile", Mod + "+Q"),
         ("General", "Close a dialog or the player", "Esc"),
         ("General", "Select all (while selecting)", Mod + "+A"),
-        ("General", "Quick player: play/pause, previous / next video, seek, mute, captions, close", "Space ← → Shift+← → M V Esc"),
+        ("General", "Quick player: play/pause, previous / next video, seek, mute, captions, favourite, close", "Space ← → Shift+← → M V F Esc"),
     };
 
     private static string Mod => OperatingSystem.IsMacOS() ? "⌘" : "Ctrl";

@@ -163,7 +163,7 @@ public sealed class SoundService : IDisposable
         return m;
     }
 
-    private static void FftInPlace(double[] re, double[] im)
+    internal static void FftInPlace(double[] re, double[] im)
     {
         var n = re.Length;
         for (int i = 1, j = 0; i < n; i++)
