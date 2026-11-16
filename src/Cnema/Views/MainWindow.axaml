@@ -197,7 +197,7 @@
                       Command="{Binding AddFolderCommand}">
                 <StackPanel Orientation="Horizontal" Spacing="8">
                   <PathIcon Data="{StaticResource IcAdd}" Width="14" Height="14" />
-                  <TextBlock svc:Tr.Text="Add folder" FontWeight="SemiBold" />
+                  <TextBlock Text="{Binding AddFolderLabel}" FontWeight="SemiBold" />
                 </StackPanel>
               </Button>
               <Button x:Name="SettingsButton" Grid.Column="1" Classes="soft" Margin="8,0,0,0" Padding="10" VerticalAlignment="Stretch"
@@ -480,6 +480,26 @@
                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                   <Button Classes="accent" Command="{Binding OpenRecapFromBannerCommand}" svc:Tr.Content="Look back" />
                   <Button Classes="ghost" svc:Tr.Tip="Hide until next year" Command="{Binding CloseRecapBannerCommand}">
+                    <PathIcon Data="{StaticResource IcClose}" Width="12" Height="12" />
+                  </Button>
+                </StackPanel>
+              </Grid>
+            </Border>
+
+            <!-- More than three folders (or several in one-folder mode): offer to merge them into one -->
+            <Border IsVisible="{Binding ShowMergeSuggestion}" Margin="26,0,26,16" Padding="16,14" CornerRadius="14"
+                    Background="{DynamicResource Bg2}" BorderBrush="{DynamicResource Line}" BorderThickness="1">
+              <Grid ColumnDefinitions="Auto,*,Auto">
+                <Border Width="40" Height="40" CornerRadius="20" Background="{DynamicResource AccentSoft}" VerticalAlignment="Center">
+                  <PathIcon Data="{StaticResource IcFolder}" Width="18" Height="18" Foreground="{DynamicResource Highlight}" />
+                </Border>
+                <StackPanel Grid.Column="1" Margin="14,0,12,0" VerticalAlignment="Center" Spacing="2">
+                  <TextBlock svc:Tr.Text="Bring your videos into one folder?" FontSize="15" FontWeight="SemiBold" />
+                  <TextBlock Classes="dim" Text="{Binding MergeSuggestionText}" FontSize="12" TextWrapping="Wrap" />
+                </StackPanel>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                  <Button Classes="accent" Command="{Binding OpenMergeCommand}" svc:Tr.Content="See what moves" />
+                  <Button Classes="ghost" svc:Tr.Tip="Don't suggest this again" Command="{Binding CloseMergeSuggestionCommand}">
                     <PathIcon Data="{StaticResource IcClose}" Width="12" Height="12" />
                   </Button>
                 </StackPanel>
@@ -1031,7 +1051,11 @@
             </StackPanel>
           </StackPanel>
           <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Line}" BorderThickness="0,1,0,0" Padding="24,14">
-            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+            <Grid ColumnDefinitions="*,Auto">
+            <Button Classes="ghost" HorizontalAlignment="Left" svc:Tr.Content="Merge folders into one…"
+                    IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).HasSeveralFolders}"
+                    Command="{Binding #Root.((vm:MainViewModel)DataContext).OpenMergeCommand}" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
               <Button x:Name="CleanupClose" Classes="soft" svc:Tr.Content="Close" Command="{Binding #Root.((vm:MainViewModel)DataContext).CloseCleanupCommand}" />
               <!-- TextBlock content: a bound string Content kept its first measured width when the text grew -->
               <Button Classes="danger" IsEnabled="{Binding CanRemove}"
@@ -1039,6 +1063,7 @@
                 <TextBlock Text="{Binding RemoveText}" />
               </Button>
             </StackPanel>
+            </Grid>
           </Border>
           <ScrollViewer VerticalScrollBarVisibility="Auto">
             <ItemsControl ItemsSource="{Binding Rows}" Margin="24,0,24,16">
@@ -1127,6 +1152,66 @@
       </Border>
     </Border>
 
+    <!-- ======================= MERGE FOLDERS ======================= -->
+    <Border x:Name="MergeScrim" Background="{DynamicResource Scrim}" IsVisible="{Binding IsShowingMerge}">
+      <Border Width="640" MaxHeight="720" Margin="0,40" VerticalAlignment="Center" HorizontalAlignment="Center" Background="{DynamicResource Bg1}"
+              BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="16" BoxShadow="{DynamicResource DialogShadow}"
+              DataContext="{Binding Merge}" x:DataType="vm:FolderMergeViewModel">
+        <DockPanel>
+          <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="24,22,24,6">
+            <TextBlock svc:Tr.Text="Merge folders into one" FontSize="17" FontWeight="Bold" VerticalAlignment="Center" />
+            <Button Grid.Column="1" Classes="ghost" Padding="6" IsEnabled="{Binding IsIdle}" Command="{Binding #Root.((vm:MainViewModel)DataContext).CloseMergeCommand}">
+              <PathIcon Data="{StaticResource IcClose}" Width="13" Height="13" />
+            </Button>
+          </Grid>
+          <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="24,0,24,12">
+            <TextBlock Classes="dim" FontSize="12" TextWrapping="Wrap" Text="{Binding TargetText}" VerticalAlignment="Center" Margin="0,0,12,0" />
+            <Button Grid.Column="1" Classes="soft" svc:Tr.Content="Change…" IsEnabled="{Binding IsIdle}"
+                    Command="{Binding #Root.((vm:MainViewModel)DataContext).PickMergeTargetCommand}" />
+          </Grid>
+          <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Line}" BorderThickness="0,1,0,0" Padding="24,12">
+            <StackPanel Spacing="8">
+              <ProgressBar Minimum="0" Maximum="1" Value="{Binding Progress}" Height="4" MinHeight="4" CornerRadius="2" IsVisible="{Binding IsBusy}" />
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Text="{Binding Status}" FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,12,0" Classes.error="{Binding StatusIsError}" />
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                  <Button Classes="soft" svc:Tr.Content="Undo merge" IsVisible="{Binding CanUndo}" IsEnabled="{Binding IsIdle}"
+                          Command="{Binding #Root.((vm:MainViewModel)DataContext).UndoMergeCommand}" />
+                  <Button Classes="accent" svc:Tr.Content="Merge" IsEnabled="{Binding IsIdle}" IsVisible="{Binding !IsDone}"
+                          Command="{Binding #Root.((vm:MainViewModel)DataContext).RunMergeCommand}" />
+                  <Button Classes="accent" svc:Tr.Content="Done" IsVisible="{Binding IsDone}" IsEnabled="{Binding IsIdle}"
+                          Command="{Binding #Root.((vm:MainViewModel)DataContext).CloseMergeCommand}" />
+                </StackPanel>
+              </Grid>
+              <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap"
+                         svc:Tr.Text="Only videos move. Favourites, tags, friends, notes, collections, edits and backups go with them. Nothing is overwritten or deleted, and Undo merge puts everything back." />
+            </StackPanel>
+          </Border>
+          <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <ItemsControl ItemsSource="{Binding Rows}" Margin="24,0,24,16" IsEnabled="{Binding IsIdle}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:MergeRow">
+                  <Border Classes="cleanrow">
+                    <Grid ColumnDefinitions="Auto,*">
+                      <CheckBox IsChecked="{Binding IsChecked}" IsEnabled="{Binding CanMerge}" VerticalAlignment="Center" MinWidth="0" Margin="0,0,8,0" />
+                      <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                        <Grid ColumnDefinitions="*,Auto">
+                          <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Path}" />
+                          <TextBlock Grid.Column="1" Classes="dim" Text="{Binding Details}" FontSize="11" Margin="10,0,0,0" VerticalAlignment="Center" />
+                        </Grid>
+                        <TextBlock Classes="dim" Text="{Binding Path}" FontSize="11" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Text="{Binding Note}" FontSize="11" Foreground="{DynamicResource Highlight}" TextWrapping="Wrap" />
+                      </StackPanel>
+                    </Grid>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </DockPanel>
+      </Border>
+    </Border>
+
     <!-- ======================= BACKUP ======================= -->
     <Border x:Name="BackupScrim" Background="{DynamicResource Scrim}" IsVisible="{Binding IsShowingBackup}">
       <Border Width="600" MaxHeight="760" Margin="0,40" VerticalAlignment="Center" HorizontalAlignment="Center" Background="{DynamicResource Bg1}"
@@ -1140,7 +1225,7 @@
             </Button>
           </Grid>
           <TextBlock DockPanel.Dock="Top" Classes="dim" FontSize="12" TextWrapping="Wrap" Margin="24,0,24,12"
-                     svc:Tr.Text="Savefile copies your videos to a server you run yourself (Garage, SeaweedFS, MinIO or anything else that speaks S3), on your own network. Nothing is deleted there, and nothing goes anywhere else." />
+                     svc:Tr.Text="Savefile copies your videos to a server you run yourself, on your own network: a folder on any computer you can SSH into, or an S3 storage server. Nothing is deleted there, and nothing goes anywhere else." />
           <!-- actions -->
           <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Line}" BorderThickness="0,1,0,0" Padding="24,12">
             <StackPanel Spacing="8">
@@ -1167,34 +1252,121 @@
               <TextBlock Classes="label" svc:Tr.Text="SERVER" />
               <Border Classes="group">
                 <StackPanel Margin="14,12" Spacing="10">
-                  <StackPanel Spacing="4">
-                    <TextBlock FontSize="12" svc:Tr.Text="Address" />
-                    <TextBox x:Name="BackupEndpoint" Text="{Binding Endpoint}" CornerRadius="8" Watermark="http://192.168.1.20:3900" />
-                  </StackPanel>
-                  <Grid ColumnDefinitions="*,12,*">
-                    <StackPanel Spacing="4">
-                      <TextBlock FontSize="12" svc:Tr.Text="Bucket" />
-                      <TextBox Text="{Binding Bucket}" CornerRadius="8" Watermark="savefile" />
+                  <Grid ColumnDefinitions="*,Auto">
+                    <StackPanel Spacing="2" VerticalAlignment="Center">
+                      <TextBlock FontSize="12" svc:Tr.Text="Connect with" />
+                      <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" IsVisible="{Binding IsSftp}"
+                                 svc:Tr.Text="Any computer you can SSH into: a Linux server, a NAS, a Mac with Remote Login on." />
+                      <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" IsVisible="{Binding IsS3}"
+                                 svc:Tr.Text="A storage server that speaks S3: Garage, SeaweedFS, MinIO." />
                     </StackPanel>
-                    <StackPanel Grid.Column="2" Spacing="4">
-                      <TextBlock FontSize="12" svc:Tr.Text="Region" />
-                      <TextBox Text="{Binding Region}" CornerRadius="8" svc:Tr.Tip="Garage uses &quot;garage&quot;; most other servers accept anything." />
-                    </StackPanel>
+                    <ItemsControl Grid.Column="1" ItemsSource="{Binding Kind.Chips}">
+                      <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="6" /></ItemsPanelTemplate>
+                      </ItemsControl.ItemsPanel>
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:OptionChip">
+                          <Button Classes="chip" Classes.on="{Binding IsOn}" Content="{Binding Label}" Command="{Binding PickCommand}" />
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
                   </Grid>
-                  <Grid ColumnDefinitions="*,12,*">
-                    <StackPanel Spacing="4">
-                      <TextBlock FontSize="12" svc:Tr.Text="Access key" />
-                      <TextBox Text="{Binding AccessKey}" CornerRadius="8" />
+                  <Border Classes="sep" Margin="-14,0" />
+
+                  <!-- SFTP -->
+                  <StackPanel Spacing="10" IsVisible="{Binding IsSftp}">
+                    <Grid ColumnDefinitions="*,12,90">
+                      <StackPanel Spacing="4">
+                        <TextBlock FontSize="12" svc:Tr.Text="Server" />
+                        <TextBox x:Name="BackupHost" Text="{Binding Host}" CornerRadius="8" Watermark="192.168.1.20" />
+                      </StackPanel>
+                      <StackPanel Grid.Column="2" Spacing="4">
+                        <TextBlock FontSize="12" svc:Tr.Text="Port" />
+                        <TextBox Text="{Binding Port}" CornerRadius="8" Watermark="22" />
+                      </StackPanel>
+                    </Grid>
+                    <Grid ColumnDefinitions="*,12,*">
+                      <StackPanel Spacing="4">
+                        <TextBlock FontSize="12" svc:Tr.Text="User name" />
+                        <TextBox Text="{Binding User}" CornerRadius="8" />
+                      </StackPanel>
+                      <StackPanel Grid.Column="2" Spacing="4">
+                        <TextBlock FontSize="12" svc:Tr.Text="Folder on the server" />
+                        <TextBox Text="{Binding RemoteFolder}" CornerRadius="8" Watermark="savefile"
+                                 svc:Tr.Tip="A path like /srv/backups/savefile, or a folder name inside your home folder. Savefile makes it if it isn't there." />
+                      </StackPanel>
+                    </Grid>
+                    <Grid ColumnDefinitions="*,Auto">
+                      <TextBlock FontSize="12" svc:Tr.Text="Sign in with" VerticalAlignment="Center" />
+                      <ItemsControl Grid.Column="1" ItemsSource="{Binding SignIn.Chips}">
+                      <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="6" /></ItemsPanelTemplate>
+                      </ItemsControl.ItemsPanel>
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:OptionChip">
+                          <Button Classes="chip" Classes.on="{Binding IsOn}" Content="{Binding Label}" Command="{Binding PickCommand}" />
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    </Grid>
+                    <Grid ColumnDefinitions="*,12,*" IsVisible="{Binding UseKey}">
+                      <StackPanel Spacing="4">
+                        <TextBlock FontSize="12" svc:Tr.Text="Key file" />
+                        <Grid ColumnDefinitions="*,6,Auto">
+                          <TextBox Text="{Binding KeyFile}" CornerRadius="8" Watermark="{Binding KeyFileHint}" />
+                          <Button Grid.Column="2" Classes="soft" svc:Tr.Content="Choose…"
+                                  Command="{Binding #Root.((vm:MainViewModel)DataContext).PickKeyFileCommand}" />
+                        </Grid>
+                      </StackPanel>
+                      <StackPanel Grid.Column="2" Spacing="4">
+                        <TextBlock FontSize="12" svc:Tr.Text="Passphrase (if the key has one)" />
+                        <TextBox Text="{Binding SftpSecret}" CornerRadius="8" PasswordChar="•" RevealPassword="False" />
+                      </StackPanel>
+                    </Grid>
+                    <StackPanel Spacing="4" IsVisible="{Binding UsePassword}">
+                      <TextBlock FontSize="12" svc:Tr.Text="Password" />
+                      <TextBox Text="{Binding SftpSecret}" CornerRadius="8" PasswordChar="•" RevealPassword="False" />
                     </StackPanel>
-                    <StackPanel Grid.Column="2" Spacing="4">
-                      <TextBlock FontSize="12" svc:Tr.Text="Secret key" />
-                      <TextBox Text="{Binding SecretKey}" CornerRadius="8" PasswordChar="•" RevealPassword="False" />
-                    </StackPanel>
-                  </Grid>
-                  <StackPanel Spacing="4">
-                    <TextBlock FontSize="12" svc:Tr.Text="Folder in the bucket" />
-                    <TextBox Text="{Binding Prefix}" CornerRadius="8" svc:Tr.Tip="Lets one bucket hold the backups of several computers." />
+                    <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding HasHostKey}">
+                      <TextBlock Classes="dim" FontSize="11" Text="{Binding HostKeyText}" TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,12,0"
+                                 svc:Tr.Tip="Savefile only talks to the server with this key, so nothing else on the network can pretend to be it." />
+                      <Button Grid.Column="1" Classes="ghost" FontSize="11" svc:Tr.Content="Forget server key"
+                              Command="{Binding #Root.((vm:MainViewModel)DataContext).ForgetHostKeyCommand}" />
+                    </Grid>
                   </StackPanel>
+
+                  <!-- S3 -->
+                  <StackPanel Spacing="10" IsVisible="{Binding IsS3}">
+                    <StackPanel Spacing="4">
+                      <TextBlock FontSize="12" svc:Tr.Text="Address" />
+                      <TextBox x:Name="BackupEndpoint" Text="{Binding Endpoint}" CornerRadius="8" Watermark="http://192.168.1.20:3900" />
+                    </StackPanel>
+                    <Grid ColumnDefinitions="*,12,*">
+                      <StackPanel Spacing="4">
+                        <TextBlock FontSize="12" svc:Tr.Text="Bucket" />
+                        <TextBox Text="{Binding Bucket}" CornerRadius="8" Watermark="savefile" />
+                      </StackPanel>
+                      <StackPanel Grid.Column="2" Spacing="4">
+                        <TextBlock FontSize="12" svc:Tr.Text="Region" />
+                        <TextBox Text="{Binding Region}" CornerRadius="8" svc:Tr.Tip="Garage uses &quot;garage&quot;; most other servers accept anything." />
+                      </StackPanel>
+                    </Grid>
+                    <Grid ColumnDefinitions="*,12,*">
+                      <StackPanel Spacing="4">
+                        <TextBlock FontSize="12" svc:Tr.Text="Access key" />
+                        <TextBox Text="{Binding AccessKey}" CornerRadius="8" />
+                      </StackPanel>
+                      <StackPanel Grid.Column="2" Spacing="4">
+                        <TextBlock FontSize="12" svc:Tr.Text="Secret key" />
+                        <TextBox Text="{Binding SecretKey}" CornerRadius="8" PasswordChar="•" RevealPassword="False" />
+                      </StackPanel>
+                    </Grid>
+                    <StackPanel Spacing="4">
+                      <TextBlock FontSize="12" svc:Tr.Text="Folder in the bucket" />
+                      <TextBox Text="{Binding Prefix}" CornerRadius="8" svc:Tr.Tip="Lets one bucket hold the backups of several computers." />
+                    </StackPanel>
+                  </StackPanel>
+
                   <Grid ColumnDefinitions="*,Auto">
                     <TextBlock Text="{Binding Status}" FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,12,0"
                                Classes.error="{Binding StatusIsError}" IsVisible="{Binding HasStatus}" />
@@ -1202,7 +1374,7 @@
                             Command="{Binding #Root.((vm:MainViewModel)DataContext).TestBackupCommand}" />
                   </Grid>
                   <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap"
-                             svc:Tr.Text="The secret key is kept in your system's keychain, not in Savefile's settings file." />
+                             svc:Tr.Text="Passwords and keys are kept in your system's keychain, not in Savefile's settings file." />
                 </StackPanel>
               </Border>
 
@@ -2041,9 +2213,17 @@
                     <Grid Classes="row" ColumnDefinitions="*,Auto">
                       <StackPanel Spacing="2">
                         <TextBlock svc:Tr.Text="Backup to your own server" />
-                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Keep a copy of your favourites (or every video) on a server you run at home, such as Garage, SeaweedFS or MinIO, and bring them back on a new computer. Nothing goes anywhere else." />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Keep a copy of your favourites (or every video) on a server you run at home, over SSH or S3, and bring them back on a new computer. Nothing goes anywhere else." />
                       </StackPanel>
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureBackup}" />
+                    </Grid>
+                    <Border Classes="sep" />
+                    <Grid Classes="row" ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="2">
+                        <TextBlock svc:Tr.Text="Several folders" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Show videos from more than one folder. Off, your library is one folder, the same one clips are saved to. Folders you already added are never dropped." />
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureSeveralFolders}" />
                     </Grid>
                   </StackPanel>
                 </Border>

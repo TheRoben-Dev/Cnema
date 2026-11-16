@@ -1,11 +1,6 @@
-using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using Amazon.Runtime;
-using Amazon.S3;
-using Amazon.S3.Model;
-using Amazon.S3.Transfer;
 using Cnema.Models;
 
 namespace Cnema.Services;
@@ -22,6 +17,8 @@ public sealed class BackedUpVideo
 public sealed class BackupStateFile
 {
     public Dictionary<string, BackedUpVideo> Videos { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    /// <summary>Where these were backed up to (BackupService.TargetOf).</summary>
+    public string? Target { get; set; }
 }
 
 /// <summary>A video's library details as stored next to it on the server, so a restore brings them back.</summary>
@@ -39,11 +36,12 @@ public sealed record BackupProgress(int Done, int Total, long Bytes, long TotalB
 public sealed record BackupResult(string Text, bool Ok);
 
 /// <summary>
-/// Backs videos and the library up to your own server, over its S3-compatible API (Garage, SeaweedFS,
-/// MinIO and the like, on your network). Nothing is ever deleted on the server: a video removed here
+/// Backs videos and the library up to your own server: a folder on it over SFTP (SSH), or its
+/// S3-compatible API (Garage, SeaweedFS, MinIO), on your network (see BackupStores.cs).
+/// Nothing is ever deleted on the server: a video removed here
 /// stays backed up. Nothing goes anywhere else: the only address used is the one you type in.
 ///
-/// Layout in the bucket, under the prefix:
+/// Layout under the server folder (SFTP) or the bucket prefix (S3):
 ///   videos/&lt;folder&gt;-&lt;id&gt;/&lt;path inside that folder&gt;   the videos themselves
 ///   library/index.json                       favourites, tags, friends, notes per video
 ///   library/settings.json, collections.json, edits.json
@@ -90,53 +88,94 @@ public sealed class BackupService
 
     // ---------- connection ----------
 
-    private static AmazonS3Client Client(BackupSettings s, string secret)
+    /// <summary>The keychain entry holding the S3 secret key, or the SFTP password / key passphrase.</summary>
+    public static string SecretNameFor(BackupSettings s) => s.IsSftp ? SftpSecretName : SecretName;
+    public const string SftpSecretName = "backup-sftp-secret";
+
+    /// <summary>Where the backups go, as one line: marks from another place don't count here.</summary>
+    public static string TargetOf(BackupSettings s) => s.IsSftp
+        ? $"sftp://{s.User.Trim()}@{s.Host.Trim()}:{s.Port}/{s.RemoteFolder.Trim().Trim('/')}"
+        : $"s3:{s.Endpoint.Trim().TrimEnd('/')}/{s.Bucket.Trim()}/{s.Prefix.Trim().Trim('/')}";
+
+    /// <summary>
+    /// Settings now point somewhere else: forget which videos were backed up (they aren't there).
+    /// The first time (settings from v0.28, which didn't record this) the marks are kept.
+    /// </summary>
+    public void UseTarget(BackupSettings s)
     {
-        var config = new AmazonS3Config
+        if (!s.IsSetUp) return;
+        var target = TargetOf(s);
+        lock (_state)
         {
-            ServiceURL = s.Endpoint.Trim(),
-            // Home servers answer on one address for every bucket: http://server:port/bucket/key.
-            ForcePathStyle = true,
-            AuthenticationRegion = string.IsNullOrWhiteSpace(s.Region) ? "us-east-1" : s.Region.Trim(),
-            // Only send checksums when a request needs one; newer default checksums trip up some home servers.
-            RequestChecksumCalculation = RequestChecksumCalculation.WHEN_REQUIRED,
-            ResponseChecksumValidation = ResponseChecksumValidation.WHEN_REQUIRED,
-            Timeout = TimeSpan.FromMinutes(5),
-            MaxErrorRetry = 3,
-        };
-        return new AmazonS3Client(new BasicAWSCredentials(s.AccessKey.Trim(), secret), config);
+            if (_state.Target == target) return;
+            if (_state.Target is not null) _state.Videos.Clear();
+            _state.Target = target;
+        }
+        Save();
     }
 
-    private static string Root(BackupSettings s)
+    /// <summary>The SSH key to sign in with: the one picked, or the usual ones in ~/.ssh.</summary>
+    public static string? KeyFileFor(BackupSettings s)
     {
-        var p = s.Prefix.Trim().Trim('/');
-        return p.Length == 0 ? "" : p + "/";
+        if (s.KeyFile.Trim() is { Length: > 0 } picked)
+        {
+            if (picked.StartsWith('~')) picked = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), picked.TrimStart('~', '/', '\\'));
+            return picked;
+        }
+        var ssh = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".ssh");
+        return new[] { "id_ed25519", "id_ecdsa", "id_rsa" }.Select(n => Path.Combine(ssh, n)).FirstOrDefault(File.Exists);
     }
 
-    /// <summary>Checks that the server answers, the keys work, and the bucket can be written to. Null when all is well.</summary>
-    public async Task<string?> TestAsync(BackupSettings s, string secret, CancellationToken ct = default)
+    private static async Task<IBackupStore> OpenAsync(BackupSettings s, string? secret, CancellationToken ct)
     {
-        if (Problem(s, secret) is { } problem) return problem;
+        IBackupStore store = s.IsSftp ? new SftpBackupStore(s, secret) : new S3BackupStore(s, secret ?? "");
         try
         {
-            using var client = Client(s, secret);
-            await client.ListObjectsV2Async(new ListObjectsV2Request { BucketName = s.Bucket.Trim(), MaxKeys = 1, Prefix = Root(s) }, ct);
-            var key = Root(s) + ".savefile-test";
-            await client.PutObjectAsync(new PutObjectRequest { BucketName = s.Bucket.Trim(), Key = key, ContentBody = "ok" }, ct);
-            // A key that may only add (a sensible setup against ransomware) can't delete: that's fine.
-            try { await client.DeleteObjectAsync(s.Bucket.Trim(), key, ct); }
-            catch (AmazonS3Exception) { /* left behind; harmless */ }
+            await store.ConnectAsync(ct);
+            // First connection to this SSH server: remember its key, so a server pretending to be it is refused later.
+            if (store is SftpBackupStore { NewHostKey: { } key }) s.HostKey = key;
+            return store;
+        }
+        catch
+        {
+            store.Dispose();
+            throw;
+        }
+    }
+
+    /// <summary>Checks that the server answers, signing in works, and backups can be written. Null when all is well.</summary>
+    public async Task<string?> TestAsync(BackupSettings s, string? secret, CancellationToken ct = default)
+    {
+        if (Problem(s, secret) is { } problem) return problem;
+        IBackupStore? store = null;
+        try
+        {
+            store = await OpenAsync(s, secret, ct);
+            await store.CheckWritableAsync(ct);
             return null;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Explain(ex, s);
         }
+        finally
+        {
+            store?.Dispose();
+        }
     }
 
     /// <summary>What's missing before a backup can run, in words; null when nothing is.</summary>
     public static string? Problem(BackupSettings s, string? secret)
     {
+        if (s.IsSftp)
+        {
+            if (s.Host.Trim().Length == 0 || s.Host.Contains("://")) return T("Type the server's name or address, such as 192.168.1.20 or myserver.local.");
+            if (s.User.Trim().Length == 0) return T("Type your user name on the server.");
+            if (s.UseKey && KeyFileFor(s) is null) return T("No SSH key found in your .ssh folder. Pick the key file, or sign in with a password.");
+            if (s.UseKey && !File.Exists(KeyFileFor(s))) return F("Couldn't find the key file {0}.", KeyFileFor(s)!);
+            if (!s.UseKey && string.IsNullOrEmpty(secret)) return T("Type the password.");
+            return null;
+        }
         if (!Uri.TryCreate(s.Endpoint.Trim(), UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https"))
             return T("Type the server's address, such as http://192.168.1.20:3900.");
         if (s.Bucket.Trim().Length == 0) return T("Type the name of the bucket to back up to.");
@@ -147,16 +186,8 @@ public sealed class BackupService
     private static string Explain(Exception ex, BackupSettings s)
     {
         Log.Warn($"Backup: {ex.GetType().Name}: {ex.Message}");
-        return ex switch
-        {
-            AmazonS3Exception { ErrorCode: "NoSuchBucket" } => F("The server has no bucket called \"{0}\". Make it on the server first.", s.Bucket.Trim()),
-            AmazonS3Exception { StatusCode: HttpStatusCode.Forbidden } or AmazonS3Exception { ErrorCode: "InvalidAccessKeyId" or "SignatureDoesNotMatch" }
-                => T("The server refused the keys. Check the access key and the secret key, and that they may use this bucket."),
-            AmazonS3Exception a => F("The server said: {0}", a.Message),
-            HttpRequestException or WebException or TaskCanceledException or AmazonServiceException { InnerException: HttpRequestException }
-                => T("Couldn't reach the server. Check the address and that the server is on and on this network."),
-            _ => ex.Message,
-        };
+        if (ex is SftpBackupStore.KeyFileException k) return k.Message;
+        return s.IsSftp ? SftpBackupStore.Describe(ex, s) : S3BackupStore.Describe(ex, s);
     }
 
     // ---------- backing up ----------
@@ -165,42 +196,37 @@ public sealed class BackupService
     /// Uploads every chosen video that isn't on the server yet (or changed since), then the library
     /// details. Returns a line to show; throws OperationCanceledException when stopped.
     /// </summary>
-    public async Task<BackupResult> BackUpAsync(BackupSettings s, string secret, IReadOnlyList<VideoEntry> library,
+    public async Task<BackupResult> BackUpAsync(BackupSettings s, string? secret, IReadOnlyList<VideoEntry> library,
         IReadOnlyList<string> folders, IProgress<BackupProgress>? progress, CancellationToken ct)
     {
         if (Problem(s, secret) is { } problem) return new(problem, false);
         if (!await _run.WaitAsync(0, ct)) return new(T("A backup is already running."), false);
+        IBackupStore? store = null;
         try
         {
-            using var client = Client(s, secret);
-            using var transfer = new TransferUtility(client);
-            var bucket = s.Bucket.Trim();
+            UseTarget(s);
             var chosen = library.Where(e => (s.Everything || e.Favorite) && File.Exists(e.Path)).ToList();
             var todo = chosen.Where(e => !IsBackedUp(e)).OrderBy(e => e.ModifiedUtc).ToList();
             var totalBytes = todo.Sum(e => e.Size);
+            progress?.Report(new BackupProgress(0, todo.Count, 0, totalBytes, ""));
+            try { store = await OpenAsync(s, secret, ct); }
+            catch (Exception ex) when (ex is not OperationCanceledException) { return new(Explain(ex, s), false); }
             long doneBytes = 0;
             var done = 0;
             var failed = 0;
             foreach (var e in todo)
             {
                 ct.ThrowIfCancellationRequested();
-                progress?.Report(new BackupProgress(done, todo.Count, doneBytes, totalBytes, Path.GetFileName(e.Path)));
-                var key = Root(s) + KeyFor(e.Path, folders);
-                var request = new TransferUtilityUploadRequest
-                {
-                    BucketName = bucket,
-                    Key = key,
-                    FilePath = e.Path,
-                    PartSize = 16 * 1024 * 1024,
-                };
+                var name = Path.GetFileName(e.Path);
+                progress?.Report(new BackupProgress(done, todo.Count, doneBytes, totalBytes, name));
+                var key = KeyFor(e.Path, folders);
                 var before = doneBytes;
-                request.UploadProgressEvent += (_, p) =>
-                    progress?.Report(new BackupProgress(done, todo.Count, before + p.TransferredBytes, totalBytes, Path.GetFileName(e.Path)));
+                var count = done;
                 try
                 {
-                    await transfer.UploadAsync(request, ct);
+                    await store.PutFileAsync(key, e.Path, sent => progress?.Report(new BackupProgress(count, todo.Count, before + sent, totalBytes, name)), ct);
                 }
-                catch (Exception ex) when (ex is not OperationCanceledException && ex is AmazonS3Exception or IOException)
+                catch (Exception ex) when (ex is not OperationCanceledException && store.IsFileProblem(ex))
                 {
                     // One file that can't be read (in use, gone) doesn't stop the rest.
                     Log.Warn($"Backup of {e.Path} failed: {ex.Message}");
@@ -220,7 +246,7 @@ public sealed class BackupService
             progress?.Report(new BackupProgress(done, todo.Count, doneBytes, totalBytes, ""));
             try
             {
-                await UploadLibraryAsync(client, s, library);
+                await UploadLibraryAsync(store, library, ct);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
@@ -234,45 +260,33 @@ public sealed class BackupService
         }
         finally
         {
+            store?.Dispose();
             _run.Release();
         }
     }
 
     /// <summary>Favourites, tags, friends and notes, plus Savefile's own files, next to the videos.</summary>
-    private async Task UploadLibraryAsync(AmazonS3Client client, BackupSettings s, IReadOnlyList<VideoEntry> library)
+    private async Task UploadLibraryAsync(IBackupStore store, IReadOnlyList<VideoEntry> library, CancellationToken ct)
     {
-        var bucket = s.Bucket.Trim();
         List<BackupIndexEntry> index;
         lock (_state)
             index = library.Where(e => _state.Videos.ContainsKey(e.Path)).Select(e => new BackupIndexEntry
             {
-                Key = _state.Videos[e.Path].Key,
+                Key = Rel(_state.Videos[e.Path].Key),
                 OriginalPath = e.Path,
                 Size = e.Size,
                 ModifiedUtc = e.ModifiedUtc,
                 Details = UserData(e),
             }).ToList();
         // Keep what an earlier index knew about videos no longer in this library (deleted here, still on the server).
-        var known = await ReadIndexAsync(client, s, CancellationToken.None);
+        var known = await ReadIndexAsync(store, ct);
         var keys = index.Select(i => i.Key).ToHashSet(StringComparer.Ordinal);
         index.AddRange(known.Where(k => !keys.Contains(k.Key)));
-        await client.PutObjectAsync(new PutObjectRequest
-        {
-            BucketName = bucket,
-            Key = Root(s) + "library/index.json",
-            ContentBody = JsonSerializer.Serialize(index, new JsonSerializerOptions { WriteIndented = true }),
-            ContentType = "application/json",
-        });
+        await store.PutTextAsync("library/index.json", JsonSerializer.Serialize(index, new JsonSerializerOptions { WriteIndented = true }), ct);
         foreach (var file in new[] { AppPaths.SettingsFile, AppPaths.CollectionsFile, Path.Combine(AppPaths.DataDir, "edits.json") })
         {
             if (!File.Exists(file)) continue;
-            await client.PutObjectAsync(new PutObjectRequest
-            {
-                BucketName = bucket,
-                Key = Root(s) + "library/" + Path.GetFileName(file),
-                ContentBody = await File.ReadAllTextAsync(file),
-                ContentType = "application/json",
-            });
+            await store.PutTextAsync("library/" + Path.GetFileName(file), await File.ReadAllTextAsync(file, ct), ct);
         }
     }
 
@@ -283,17 +297,20 @@ public sealed class BackupService
         return copy;
     }
 
-    private static async Task<List<BackupIndexEntry>> ReadIndexAsync(AmazonS3Client client, BackupSettings s, CancellationToken ct)
+    private static async Task<List<BackupIndexEntry>> ReadIndexAsync(IBackupStore store, CancellationToken ct)
     {
-        try
-        {
-            using var r = await client.GetObjectAsync(s.Bucket.Trim(), Root(s) + "library/index.json", ct);
-            return await JsonSerializer.DeserializeAsync<List<BackupIndexEntry>>(r.ResponseStream, cancellationToken: ct) ?? new();
-        }
-        catch (AmazonS3Exception ex) when (ex.StatusCode == HttpStatusCode.NotFound)
-        {
-            return new();
-        }
+        if (await store.GetTextAsync("library/index.json", ct) is not { } json) return new();
+        var list = JsonSerializer.Deserialize<List<BackupIndexEntry>>(json) ?? new();
+        foreach (var i in list) i.Key = Rel(i.Key);
+        return list;
+    }
+
+    /// <summary>Keys from v0.28 carry the bucket prefix ("savefile/videos/…"): drop it.</summary>
+    private static string Rel(string key)
+    {
+        if (key.StartsWith("videos/", StringComparison.Ordinal)) return key;
+        var i = key.IndexOf("/videos/", StringComparison.Ordinal);
+        return i >= 0 ? key[(i + 1)..] : key;
     }
 
     /// <summary>
@@ -331,10 +348,10 @@ public sealed class BackupService
     public sealed record RestorePlan(List<BackupIndexEntry> Missing, long Bytes);
 
     /// <summary>The backed-up videos that aren't in this library (a new computer, or deleted here).</summary>
-    public async Task<RestorePlan> PlanRestoreAsync(BackupSettings s, string secret, IReadOnlyList<VideoEntry> library, CancellationToken ct)
+    public async Task<RestorePlan> PlanRestoreAsync(BackupSettings s, string? secret, IReadOnlyList<VideoEntry> library, CancellationToken ct)
     {
-        using var client = Client(s, secret);
-        var index = await ReadIndexAsync(client, s, ct);
+        using var store = await OpenAsync(s, secret, ct);
+        var index = await ReadIndexAsync(store, ct);
         var here = library.Select(e => (e.Size, e.ModifiedUtc, Name: Path.GetFileName(e.Path)))
             .ToHashSet();
         var missing = index.Where(i => !here.Contains((i.Size, i.ModifiedUtc, NameOf(i)))).ToList();
@@ -345,21 +362,23 @@ public sealed class BackupService
     /// Downloads the given videos into <paramref name="target"/>, keeping their folders, dates and (through
     /// <paramref name="adopt"/>) their favourites, tags, friends and notes.
     /// </summary>
-    public async Task<BackupResult> RestoreAsync(BackupSettings s, string secret, RestorePlan plan, string target,
+    public async Task<BackupResult> RestoreAsync(BackupSettings s, string? secret, RestorePlan plan, string target,
         Action<string, VideoEntry> adopt, IProgress<BackupProgress>? progress, CancellationToken ct)
     {
         if (!await _run.WaitAsync(0, ct)) return new(T("A backup is already running."), false);
+        IBackupStore? store = null;
         try
         {
-            using var client = Client(s, secret);
-            using var transfer = new TransferUtility(client);
-            var prefix = Root(s) + "videos/";
+            try { store = await OpenAsync(s, secret, ct); }
+            catch (Exception ex) when (ex is not OperationCanceledException) { return new(Explain(ex, s), false); }
+            UseTarget(s);
             long doneBytes = 0;
             var done = 0;
             foreach (var item in plan.Missing)
             {
                 ct.ThrowIfCancellationRequested();
-                var inside = item.Key.StartsWith(prefix, StringComparison.Ordinal) ? item.Key[prefix.Length..] : NameOf(item);
+                var key = Rel(item.Key);
+                var inside = key.StartsWith("videos/", StringComparison.Ordinal) ? key["videos/".Length..] : NameOf(item);
                 // "Clips-3f9a1c/Valorant/x.mp4" → "Clips/Valorant/x.mp4"
                 var parts = inside.Split('/');
                 if (parts.Length > 1 && parts[0].LastIndexOf('-') is var dash and > 0) parts[0] = parts[0][..dash];
@@ -372,7 +391,7 @@ public sealed class BackupService
                         // Restored before (a restore that was stopped): just give it its details again.
                         adopt(local, item.Details);
                         lock (_state)
-                            _state.Videos[local] = new BackedUpVideo { Key = item.Key, Size = item.Size, ModifiedUtc = item.ModifiedUtc, UploadedUtc = DateTime.UtcNow };
+                            _state.Videos[local] = new BackedUpVideo { Key = key, Size = item.Size, ModifiedUtc = item.ModifiedUtc, UploadedUtc = DateTime.UtcNow };
                         Save();
                         done++;
                         continue;
@@ -384,13 +403,16 @@ public sealed class BackupService
                 }
                 Directory.CreateDirectory(Path.GetDirectoryName(local)!);
                 var partial = local + ".part";
-                var request = new TransferUtilityDownloadRequest { BucketName = s.Bucket.Trim(), Key = item.Key, FilePath = partial };
                 var before = doneBytes;
-                request.WriteObjectProgressEvent += (_, p) =>
-                    progress?.Report(new BackupProgress(done, plan.Missing.Count, before + p.TransferredBytes, plan.Bytes, Path.GetFileName(local)));
+                var count = done;
+                var name = Path.GetFileName(local);
                 try
                 {
-                    await transfer.DownloadAsync(request, ct);
+                    if (!await store.GetFileAsync(key, partial, got => progress?.Report(new BackupProgress(count, plan.Missing.Count, before + got, plan.Bytes, name)), ct))
+                    {
+                        try { File.Delete(partial); } catch { /* nothing written */ }
+                        continue;
+                    }
                     File.SetLastWriteTimeUtc(partial, item.ModifiedUtc);
                     // Details first, so a folder scan that sees the file right away already finds them.
                     adopt(local, item.Details);
@@ -399,7 +421,6 @@ public sealed class BackupService
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
                     try { File.Delete(partial); } catch { /* nothing written */ }
-                    if (ex is AmazonS3Exception { StatusCode: HttpStatusCode.NotFound }) continue;
                     return new(Explain(ex, s), false);
                 }
                 catch (OperationCanceledException)
@@ -409,7 +430,7 @@ public sealed class BackupService
                 }
                 // It's on the server already: no need to upload it again.
                 lock (_state)
-                    _state.Videos[local] = new BackedUpVideo { Key = item.Key, Size = item.Size, ModifiedUtc = item.ModifiedUtc, UploadedUtc = DateTime.UtcNow };
+                    _state.Videos[local] = new BackedUpVideo { Key = key, Size = item.Size, ModifiedUtc = item.ModifiedUtc, UploadedUtc = DateTime.UtcNow };
                 Save();
                 doneBytes += item.Size;
                 done++;
@@ -418,6 +439,7 @@ public sealed class BackupService
         }
         finally
         {
+            store?.Dispose();
             _run.Release();
         }
     }

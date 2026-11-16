@@ -120,6 +120,7 @@ public sealed partial class MainViewModel
         OnPropertyChanged(nameof(ShowFeatured));
         OnPropertyChanged(nameof(ShowMemory));
         OnPropertyChanged(nameof(ShowRecapBanner));
+        OnPropertyChanged(nameof(ShowMergeSuggestion));
         OnPropertyChanged(nameof(RecapBannerTitle));
         OnPropertyChanged(nameof(RecapBannerText));
     }
