@@ -162,6 +162,39 @@
                                 OnContent="" OffContent="" MinWidth="0" Margin="0,-6,-6,-6" svc:Tr.Tip="Turn background clipping on or off" />
                 </Grid>
                 <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="{Binding ClipDetail}" IsVisible="{Binding HasClipDetail}" />
+                <Button x:Name="SquadButton" Classes="squad" Classes.on="{Binding HasSquad}" IsVisible="{Binding ShowPlayingWith}"
+                        Command="{Binding EditSquadCommand}" svc:Tr.Tip="Friends you're playing with get tagged on every clip you save">
+                  <Grid ColumnDefinitions="Auto,*">
+                    <PathIcon Data="{StaticResource IcPeople}" Width="13" Height="13" Margin="0,0,7,0" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1" Text="{Binding PlayingWithLabel}" FontSize="11" TextWrapping="Wrap" VerticalAlignment="Center" />
+                  </Grid>
+                  <Button.Flyout>
+                    <Flyout Placement="RightEdgeAlignedTop">
+                      <StackPanel Width="260" Spacing="10" Margin="4">
+                        <TextBlock svc:Tr.Text="Who are you playing with?" FontWeight="SemiBold" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap"
+                                   svc:Tr.Text="They get tagged on every clip and session you save, until you clear it." />
+                        <TextBox x:Name="SquadBox" Classes="field" Text="{Binding SquadText}" svc:Tr.Watermark="Names, separated by commas"
+                                 KeyDown="OnSquadKeyDown" />
+                        <ItemsControl ItemsSource="{Binding SquadSuggestions}">
+                          <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                          </ItemsControl.ItemsPanel>
+                          <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="x:String">
+                              <Button Classes="chip" Content="{Binding}" Margin="0,0,6,6"
+                                      Command="{Binding #Root.((vm:MainViewModel)DataContext).AddToSquadCommand}" CommandParameter="{Binding}" />
+                            </DataTemplate>
+                          </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                          <Button Classes="soft" svc:Tr.Content="Clear" Command="{Binding ClearSquadCommand}" Click="OnSquadDone" />
+                          <Button Classes="accent" svc:Tr.Content="Save" Command="{Binding SaveSquadCommand}" Click="OnSquadDone" />
+                        </StackPanel>
+                      </StackPanel>
+                    </Flyout>
+                  </Button.Flyout>
+                </Button>
                 <Button x:Name="SaveClipButton" Classes="accent" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Padding="10,7"
                         Command="{Binding SaveClipCommand}" IsVisible="{Binding IsClipRecording}">
                   <StackPanel Orientation="Horizontal" Spacing="7">
@@ -271,6 +304,13 @@
                     <TextBlock svc:Tr.Text="Stats" FontSize="13" VerticalAlignment="Center" />
                   </StackPanel>
                 </Button>
+                <Button x:Name="RecapButton" Classes="navbutton" IsVisible="{Binding ShowRecap}" Command="{Binding OpenRecapCommand}"
+                        svc:Tr.Tip="Look back on a year of moments with your friends">
+                  <StackPanel Orientation="Horizontal" Spacing="10">
+                    <PathIcon Data="{StaticResource IcSparkle}" Width="15" Height="15" Foreground="{DynamicResource TextDim}" />
+                    <TextBlock svc:Tr.Text="Year in clips" FontSize="13" VerticalAlignment="Center" />
+                  </StackPanel>
+                </Button>
                 <Button x:Name="MontageButton" Classes="navbutton" IsVisible="{Binding ShowMontage}" Command="{Binding OpenMontageCommand}"
                         svc:Tr.Tip="Stitch the best moments of your favourites into one video">
                   <StackPanel Orientation="Horizontal" Spacing="10">
@@ -286,6 +326,22 @@
                   </StackPanel>
                 </Button>
               </StackPanel>
+              <TextBlock Classes="label" svc:Tr.Text="FRIENDS" Margin="10,22,0,8" IsVisible="{Binding HasFriends}" />
+              <ListBox x:Name="FriendList" Classes="nav" ItemsSource="{Binding Friends}" SelectedItem="{Binding SelectedFriend}" IsVisible="{Binding HasFriends}">
+                <ListBox.ItemTemplate>
+                  <DataTemplate x:DataType="vm:FolderViewModel">
+                    <Grid ColumnDefinitions="Auto,*,Auto" ToolTip.Tip="{Binding Tooltip}" Background="Transparent">
+                      <Border Grid.Column="0" Width="18" Height="18" CornerRadius="9" Margin="-1,0,9,0" VerticalAlignment="Center"
+                              Background="{DynamicResource AccentSoft}">
+                        <TextBlock Text="{Binding Initial}" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource Accent}"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+                      </Border>
+                      <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="13" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="2" Classes="dim" Text="{Binding Count}" FontSize="11" VerticalAlignment="Center" Margin="6,0,0,0" />
+                    </Grid>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
               <TextBlock Classes="label" svc:Tr.Text="TAGS" Margin="10,22,0,8" IsVisible="{Binding HasTags}" />
               <ListBox x:Name="TagList" Classes="nav" ItemsSource="{Binding Tags}" SelectedItem="{Binding SelectedTag}" IsVisible="{Binding HasTags}">
                 <ListBox.ItemTemplate>
@@ -1151,6 +1207,169 @@
       </Border>
     </Border>
 
+    <!-- ======================= YEAR IN CLIPS ======================= -->
+    <Border x:Name="RecapScrim" Background="{DynamicResource Scrim}" IsVisible="{Binding IsShowingRecap}">
+      <Border Width="680" MaxHeight="760" Margin="0,40" VerticalAlignment="Center" HorizontalAlignment="Center" Background="{DynamicResource Bg1}"
+              BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="16" BoxShadow="{DynamicResource DialogShadow}"
+              DataContext="{Binding Recap}" x:DataType="vm:RecapViewModel">
+        <DockPanel>
+          <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="24,22,24,4">
+            <StackPanel Spacing="3">
+              <TextBlock Text="{Binding Title}" FontSize="22" FontWeight="Bold" />
+              <TextBlock Classes="dim" Text="{Binding Subtitle}" FontSize="12" TextWrapping="Wrap" />
+            </StackPanel>
+            <Button x:Name="RecapClose" Grid.Column="1" Classes="ghost" Padding="6" VerticalAlignment="Top"
+                    Command="{Binding #Root.((vm:MainViewModel)DataContext).CloseRecapCommand}">
+              <PathIcon Data="{StaticResource IcClose}" Width="13" Height="13" />
+            </Button>
+          </Grid>
+          <ItemsControl DockPanel.Dock="Top" ItemsSource="{Binding Year.Chips}" Margin="24,10,24,6" IsVisible="{Binding HasSeveralYears}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="6" /></ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:OptionChip">
+                <Button Classes="chip" Classes.on="{Binding IsOn}" Content="{Binding Label}" Command="{Binding PickCommand}" />
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <!-- actions -->
+          <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" Margin="24,12,24,22">
+            <Button Classes="soft" svc:Tr.Content="Close" Command="{Binding #Root.((vm:MainViewModel)DataContext).CloseRecapCommand}" />
+            <Button x:Name="RecapMontage" Classes="accent" Command="{Binding #Root.((vm:MainViewModel)DataContext).MakeRecapMontageCommand}"
+                    IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).ShowRecapMontage}"
+                    svc:Tr.Tip="Your favourites from the year (and clips with friends) in one video">
+              <StackPanel Orientation="Horizontal" Spacing="7">
+                <PathIcon Data="{StaticResource IcFilm}" Width="13" Height="13" />
+                <TextBlock svc:Tr.Text="Make a montage of the year" FontWeight="SemiBold" />
+              </StackPanel>
+            </Button>
+          </StackPanel>
+          <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="18" Margin="24,8,24,4">
+              <ItemsControl ItemsSource="{Binding Tiles}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate><UniformGrid Columns="4" /></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:StatTile">
+                    <Border Classes="tile">
+                      <StackPanel Spacing="2">
+                        <TextBlock Text="{Binding Value}" FontSize="22" FontWeight="Bold" Foreground="{DynamicResource Accent}" />
+                        <TextBlock Classes="dim" Text="{Binding Label}" FontSize="12" TextWrapping="Wrap" />
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+
+              <!-- moments to go back to -->
+              <Grid ColumnDefinitions="*,12,*">
+                <Button Classes="recapmoment" Command="{Binding #Root.((vm:MainViewModel)DataContext).WatchRecapClipCommand}"
+                        CommandParameter="{Binding FirstSave}" IsEnabled="{Binding FirstSave, Converter={x:Static ObjectConverters.IsNotNull}}">
+                  <Grid ColumnDefinitions="96,*">
+                    <Border Width="96" Height="54" CornerRadius="8" ClipToBounds="True" Background="{DynamicResource Bg3}">
+                      <Image Source="{Binding FirstSave.Thumbnail}" Stretch="UniformToFill" />
+                    </Border>
+                    <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center" Spacing="2">
+                      <TextBlock Classes="label" svc:Tr.Text="FIRST SAVE OF THE YEAR" />
+                      <TextBlock Text="{Binding FirstSaveText}" FontSize="12" TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                  </Grid>
+                </Button>
+                <Button Grid.Column="2" Classes="recapmoment" Command="{Binding #Root.((vm:MainViewModel)DataContext).WatchRecapClipCommand}"
+                        CommandParameter="{Binding BestDay}" IsVisible="{Binding BestDay, Converter={x:Static ObjectConverters.IsNotNull}}">
+                  <Grid ColumnDefinitions="96,*">
+                    <Border Width="96" Height="54" CornerRadius="8" ClipToBounds="True" Background="{DynamicResource Bg3}">
+                      <Image Source="{Binding BestDay.Thumbnail}" Stretch="UniformToFill" />
+                    </Border>
+                    <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center" Spacing="2">
+                      <TextBlock Classes="label" svc:Tr.Text="YOUR BIGGEST DAY" />
+                      <TextBlock Text="{Binding BestDayText}" FontSize="12" TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                  </Grid>
+                </Button>
+              </Grid>
+
+              <StackPanel Spacing="8">
+                <TextBlock Classes="label" svc:Tr.Text="MONTH BY MONTH" />
+                <Border Classes="group" Padding="16,14">
+                  <StackPanel Spacing="10">
+                    <ItemsControl ItemsSource="{Binding Months}">
+                      <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><UniformGrid Rows="1" /></ItemsPanelTemplate>
+                      </ItemsControl.ItemsPanel>
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:StatBar">
+                          <StackPanel Spacing="4" VerticalAlignment="Bottom">
+                            <TextBlock Classes="dim" Text="{Binding CountText}" FontSize="10" HorizontalAlignment="Center" />
+                            <Border Height="{Binding Height}" Width="22" CornerRadius="4" Background="{DynamicResource Accent}" HorizontalAlignment="Center" />
+                            <TextBlock Classes="dim" Text="{Binding Label}" FontSize="10" HorizontalAlignment="Center" />
+                          </StackPanel>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Text="{Binding Busiest}" FontSize="12" Classes="dim" TextWrapping="Wrap"
+                               IsVisible="{Binding Busiest, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                  </StackPanel>
+                </Border>
+              </StackPanel>
+
+              <Grid ColumnDefinitions="*,12,*">
+                <StackPanel Spacing="8" IsVisible="{Binding PeopleEnabled}">
+                  <TextBlock Classes="label" svc:Tr.Text="WHO WAS THERE MOST" />
+                  <Border Classes="group" Padding="14,10">
+                    <Panel>
+                      <TextBlock Classes="dim" FontSize="12" TextWrapping="Wrap" IsVisible="{Binding !HasFriends}"
+                                 svc:Tr.Text="Tag your friends under Rename, tag or move, and the people you played with most show up here." />
+                      <ItemsControl ItemsSource="{Binding Friends}">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate x:DataType="vm:RecapRow">
+                            <Grid ColumnDefinitions="Auto,*" Margin="0,4">
+                              <Border Width="26" Height="26" CornerRadius="13" Background="{DynamicResource AccentSoft}" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding Initial}" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource Accent}"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+                              </Border>
+                              <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                <TextBlock Classes="dim" Text="{Binding Detail}" FontSize="11" />
+                              </StackPanel>
+                            </Grid>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </Panel>
+                  </Border>
+                </StackPanel>
+                <StackPanel Grid.Column="2" Spacing="8">
+                  <TextBlock Classes="label" svc:Tr.Text="WHAT YOU PLAYED" />
+                  <Border Classes="group" Padding="14,10">
+                    <Panel>
+                      <TextBlock Classes="dim" FontSize="12" TextWrapping="Wrap" IsVisible="{Binding !HasGames}"
+                                 svc:Tr.Text="Clips get tagged with their game when you save them, so your games show up here." />
+                      <ItemsControl ItemsSource="{Binding Games}">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate x:DataType="vm:RecapRow">
+                            <StackPanel Margin="0,4" Spacing="4">
+                              <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Text="{Binding Name}" FontSize="13" TextTrimming="CharacterEllipsis" />
+                                <TextBlock Grid.Column="1" Classes="dim" Text="{Binding Detail}" FontSize="11" Margin="8,0,0,0" VerticalAlignment="Center" />
+                              </Grid>
+                              <Border Height="6" Width="{Binding Width}" CornerRadius="3" Background="{DynamicResource Highlight}" HorizontalAlignment="Left" />
+                            </StackPanel>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </Panel>
+                  </Border>
+                </StackPanel>
+              </Grid>
+            </StackPanel>
+          </ScrollViewer>
+        </DockPanel>
+      </Border>
+    </Border>
+
     <!-- ======================= KEYBOARD SHORTCUTS ======================= -->
     <Border x:Name="ShortcutsScrim" Background="{DynamicResource Scrim}" IsVisible="{Binding IsShowingShortcuts}">
       <Border Width="560" MaxHeight="700" Margin="0,40" VerticalAlignment="Center" HorizontalAlignment="Center" Background="{DynamicResource Bg1}"
@@ -1623,7 +1842,7 @@
                     <Grid Classes="row" ColumnDefinitions="*,Auto">
                       <StackPanel Spacing="2">
                         <TextBlock svc:Tr.Text="Who was there" />
-                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Tag the friends in a clip under Rename, tag or move. Their names show on the card, and @name finds them." />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Tag the friends in a clip under Rename, tag or move. Their names show on the card, they get a Friends list in the sidebar, and @name finds them." />
                       </StackPanel>
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeaturePeople}" />
                     </Grid>
@@ -1634,6 +1853,14 @@
                         <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="A small celebration for your first save, your 100th, and so on." />
                       </StackPanel>
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureMilestones}" />
+                    </Grid>
+                    <Border Classes="sep" />
+                    <Grid Classes="row" ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="2">
+                        <TextBlock svc:Tr.Text="Year in clips" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Look back on a year: your moments, the friends you played with most, your games, and a montage of the best bits." />
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureRecap}" />
                     </Grid>
                   </StackPanel>
                 </Border>

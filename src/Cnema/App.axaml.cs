@@ -159,13 +159,19 @@ public partial class App : Application
         {
             _traySession.Header = _vm.SessionLabel;
             _traySession.IsEnabled = _vm.CanToggleSession;
+            _traySession.IsVisible = _vm.ShowSessionButton || _vm.IsSession;
         }
         if (_trayUpdate is not null)
         {
             _trayUpdate.IsVisible = _vm.HasUpdate;
             if (_vm.HasUpdate) _trayUpdate.Header = _vm.UpdateText + T(" · get it");
         }
-        if (_trayToggle is not null) _trayToggle.IsChecked = _vm.IsClipEnabled;
+        if (_trayToggle is not null)
+        {
+            _trayToggle.IsChecked = _vm.IsClipEnabled;
+            _trayToggle.IsVisible = _vm.ShowClipping;
+        }
+        if (_traySave is not null) _traySave.IsVisible = _vm.ShowClipping;
     }
 
     public void ShowWindow()

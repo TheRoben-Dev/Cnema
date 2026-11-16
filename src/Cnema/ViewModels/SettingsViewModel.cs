@@ -490,6 +490,18 @@ public sealed partial class SettingsViewModel : ObservableObject
             .Prepend(ClipSettings.FormatHotkey(HotkeyCtrl, HotkeyAlt, HotkeyShift, HotkeyMeta, HotkeyKey)).ToList();
         if (combos.Distinct().Count() != combos.Count)
             return T("Two save-clip hotkeys use the same keys. Give each one its own.");
+        // Every check comes before the first change, so a refused save leaves the settings as they were.
+        if (UsesArchive && ArchiveFolder.Trim().Length > 0)
+        {
+            var clips = Path.GetFullPath(string.IsNullOrWhiteSpace(Folder) ? AppPaths.DefaultClipsDir : Folder.Trim())
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            var archive = Path.GetFullPath(ArchiveFolder.Trim()).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            if (string.Equals(archive, clips, StringComparison.OrdinalIgnoreCase))
+                return T("The archive folder has to be a different folder from the clips folder.");
+            // Inside the clips folder, archived clips would be found and archived again on every run.
+            if (archive.StartsWith(clips + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+                return T("The archive folder can't be inside the clips folder.");
+        }
         var c = settings.Clip;
         settings.KeepInBackground = KeepInBackground;
         settings.ControllerMode = ControllerMode;
@@ -528,7 +540,7 @@ public sealed partial class SettingsViewModel : ObservableObject
             Notes = FeatureNotes, DragOut = FeatureDragOut, Recorders = FeatureRecorders,
             ZoomPan = FeatureZoomPan, Blur = FeatureBlur, Music = FeatureMusic, Montage = FeatureMontage,
             RecoverSessions = FeatureRecoverSessions,
-            Rewatch = FeatureRewatch, OnThisDay = FeatureOnThisDay, People = FeaturePeople, Milestones = FeatureMilestones,
+            Rewatch = FeatureRewatch, OnThisDay = FeatureOnThisDay, People = FeaturePeople, Milestones = FeatureMilestones, Recap = FeatureRecap,
         };
         WriteEditing(settings);
         // Switching a module off switches off what it was doing, not only its buttons.
@@ -543,8 +555,6 @@ public sealed partial class SettingsViewModel : ObservableObject
         c.HotkeyShift = HotkeyShift;
         c.HotkeyMeta = HotkeyMeta;
         c.HotkeyKey = HotkeyKey;
-        if (UsesArchive && string.Equals(Path.GetFullPath(ArchiveFolder.Trim()), Path.GetFullPath(Folder.Trim()), StringComparison.OrdinalIgnoreCase))
-            return T("The archive folder has to be a different folder from the clips folder.");
         c.SeparateTracks = SeparateTracks;
         c.Profiles = Profiles.Where(p => p.Game.Trim().Length > 0).Select(p => p.ToProfile()).ToList();
         c.ExtraHotkeys = ExtraHotkeys.Select(h => h.ToHotkey()).ToList();

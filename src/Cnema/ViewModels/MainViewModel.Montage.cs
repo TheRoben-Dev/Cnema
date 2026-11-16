@@ -18,17 +18,33 @@ public sealed partial class MainViewModel
     {
         MontageSource.Selected => Videos.Where(v => v.IsSelected).ToList(),
         MontageSource.View => Videos.ToList(),
+        MontageSource.Custom => _montageCustom ?? (IReadOnlyList<VideoItemViewModel>)Array.Empty<VideoItemViewModel>(),
         _ => _items.Values.Where(v => v.Entry.Favorite).ToList(),
     };
 
     [RelayCommand]
     private void OpenMontage()
     {
+        _montageCustom = null;
         var hasSelection = IsSelecting && Videos.Any(v => v.IsSelected);
         var source = hasSelection ? MontageSource.Selected
             : _items.Values.Any(v => v.Entry.Favorite) ? MontageSource.Favorites : MontageSource.View;
         var fx = _settings.Current.Effects;
         Montage = new MontageViewModel(MontageVideos, source, hasSelection, fx.MusicVolumeDb, fx.MusicDuck);
+    }
+
+    /// <summary>The videos behind the montage dialog's first chip when it was opened from Year in clips.</summary>
+    private IReadOnlyList<VideoItemViewModel>? _montageCustom;
+    private string? _montageCustomName;
+
+    /// <summary>Opens Auto montage with a ready-made list (the year's highlights) as the first choice.</summary>
+    private void OpenMontageWith(IReadOnlyList<VideoItemViewModel> videos, string label)
+    {
+        _montageCustom = videos;
+        _montageCustomName = label;
+        var fx = _settings.Current.Effects;
+        Montage = new MontageViewModel(MontageVideos, MontageSource.Custom, false, fx.MusicVolumeDb, fx.MusicDuck, label);
+        Montage.Order.Value = 0;
     }
 
     [RelayCommand] private void CloseMontage() => Montage = null;
@@ -58,7 +74,12 @@ public sealed partial class MainViewModel
         var root = _settings.Current.Folders.Any(f => Under(Path.Combine(clips, "x"), f)) ? clips
             : _settings.Current.Folders.FirstOrDefault() ?? clips;
         var dir = Path.Combine(root, "Montages");
-        var output = Path.Combine(dir, $"Montage {DateTime.Now:yyyy-MM-dd HH-mm-ss}.mp4");
+        var name = (MontageSource)m.Source.Value == MontageSource.Custom && _montageCustomName is { } custom
+            ? $"{string.Concat(custom.Split(Path.GetInvalidFileNameChars()))} {DateTime.Now:yyyy-MM-dd HH-mm-ss}"
+            : $"Montage {DateTime.Now:yyyy-MM-dd HH-mm-ss}";
+        var output = Path.Combine(dir, name + ".mp4");
+        // Never replace an earlier montage, or one still being made.
+        for (var n = 2; File.Exists(output) || Exports.IsTarget(output); n++) output = Path.Combine(dir, $"{name} ({n}).mp4");
         Montage = null;
         Exports.Add(output, P(videos.Count, "Montage of {0} video", "Montage of {0} videos"), async (progress, ct) =>
         {

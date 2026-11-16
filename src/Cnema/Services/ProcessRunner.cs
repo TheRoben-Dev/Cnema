@@ -42,6 +42,8 @@ public static class ProcessRunner
         catch (OperationCanceledException)
         {
             try { p.Kill(entireProcessTree: true); } catch { /* already gone */ }
+            // Wait (briefly) for it to be gone, so its files are closed before the caller cleans up.
+            try { p.WaitForExit(3000); } catch { /* already gone */ }
             throw;
         }
         return new ProcessResult(p.ExitCode, stdout.ToString(), stderr.ToString());

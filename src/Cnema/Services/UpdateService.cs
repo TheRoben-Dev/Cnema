@@ -223,6 +223,9 @@ public static class UpdateService
         var root = InstallRoot ?? throw new InvalidOperationException("Not an installed build.");
         var pid = Environment.ProcessId;
         Log.Info($"Installing update from {newApp} over {root}");
+        // The new build may be packaged as Savefile instead of Cnema; start whichever it ships.
+        var exeName = new[] { "Savefile", "Cnema" }.FirstOrDefault(n =>
+            File.Exists(Path.Combine(newApp, OperatingSystem.IsWindows() ? n + ".exe" : n))) ?? "Cnema";
         ProcessStartInfo psi;
         if (OperatingSystem.IsWindows())
         {
@@ -233,7 +236,7 @@ public static class UpdateService
                 ":wait",
                 $"tasklist /FI \"PID eq {pid}\" 2>nul | find \" {pid} \" >nul && (timeout /t 1 /nobreak >nul & goto wait)",
                 $"robocopy \"{newApp}\" \"{root}\" /E /R:5 /W:1 /NFL /NDL /NJH /NJS /NP >nul",
-                $"start \"\" \"{Path.Combine(root, "Cnema.exe")}\"{(background ? " --background" : "")}",
+                $"start \"\" \"{Path.Combine(root, exeName + ".exe")}\"{(background ? " --background" : "")}",
                 $"rmdir /S /Q \"{Path.GetDirectoryName(newApp)}\"",
             }));
             psi = new ProcessStartInfo("cmd.exe") { UseShellExecute = false, CreateNoWindow = true };
@@ -245,7 +248,7 @@ public static class UpdateService
             static string Q(string s) => "'" + s.Replace("'", "'\\''") + "'";
             var launch = OperatingSystem.IsMacOS()
                 ? $"/usr/bin/open {Q(root)}{(background ? " --args --background" : "")}"
-                : $"nohup {Q(Path.Combine(root, "Cnema"))}{(background ? " --background" : "")} >/dev/null 2>&1 &";
+                : $"nohup {Q(Path.Combine(root, exeName))}{(background ? " --background" : "")} >/dev/null 2>&1 &";
             var script = Path.Combine(StageDir, "apply.sh");
             File.WriteAllText(script, string.Join("\n", new[]
             {

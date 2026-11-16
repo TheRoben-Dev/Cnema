@@ -2,6 +2,26 @@
 
 What changed in each Savefile (formerly Cnema) release. The app shows the entries you have not seen yet after it updates.
 
+## 0.25.0
+- Friends in the sidebar: everyone you've tagged under Who was there gets a row, with the people you play with most on top. Click a name to see every clip you have together.
+- Year in clips (sidebar, Tools): look back on a year. How many moments you kept, the days you saved something, your busiest month, the friends who were there most, what you played, your first save of the year and your biggest day. Pick an earlier year at the top.
+- Make a montage of the year: one click from Year in clips starts Auto montage with that year's favourites (topped up with clips with friends), oldest first.
+- Playing with: while clipping is on, tell Savefile who you're playing with (under the clipping box) and every clip and session you save is tagged with them until you clear it.
+- Fixed: if a library folder was on a drive that wasn't plugged in (an external SSD, a NAS) when Savefile started, its favourites, tags, friends and notes could be lost. They now wait for the drive to come back.
+- Fixed: saving Settings, even just to change the theme, restarted capture. That split a running session in two and emptied the replay buffer. Capture now only restarts when a capture setting changed.
+- Fixed: two clips saved in the same second (a double press, or two hotkeys) lost the second one. Both are kept now.
+- Fixed: Steam clips you deleted (or that the storage limits removed) came back at the next start.
+- Fixed: with OBS or NVIDIA added under Other recorders, Savefile's own clips got a "Savefile Clips" game tag.
+- Fixed: a video renamed or moved outside Savefile dropped out of its collections and lost its remembered edits.
+- Fixed: the Vertical share preset failed on tall phone recordings.
+- Fixed: a cancelled export could leave a large temporary file behind on Windows.
+- Fixed: when Clipping or Sessions are switched off under Settings, Features, the tray menu no longer offers them.
+- Fixed: a Settings change that was refused (for example an archive folder inside the clips folder, which is now caught) could still be saved later by accident.
+- Capture that can't start (a full disk, for example) says so instead of showing "Starting capture…" forever.
+- Settings, the library and collections are written more safely, so a power cut right after a change can't leave an empty file. A file that can't be read is kept aside instead of being overwritten.
+- Adding a whole drive as a library folder works on Windows.
+- Year in clips can be switched off under Settings, Features, Memories. The Friends list and Playing with go with Who was there.
+
 ## 0.24.0
 - Fixed: jumping to the previous or next video with ← / → in the Quick player (and the editor) could leave a black picture until the player was closed and opened again. The next video now always shows up, and switching is a little smoother too.
 - The Quick player has the same previous / next video buttons as the editor, next to Edit.

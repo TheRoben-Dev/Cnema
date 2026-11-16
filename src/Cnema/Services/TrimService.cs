@@ -84,19 +84,29 @@ public static class TrimService
         var temp = TempFor(output);
         async Task Run(IEnumerable<string> tail, double from, double span)
         {
-            var r = await ProcessRunner.RunAsync(ffmpeg, input.Concat(tail).ToList(), line =>
+            ProcessResult r;
+            try
             {
-                if (line.StartsWith("out_time_us=", StringComparison.Ordinal) &&
-                    long.TryParse(line.AsSpan(12), out var us) && durationMs > 0)
-                    progress?.Report(from + span * Math.Clamp(us / 1000.0 / durationMs, 0, 1));
-            }, ct);
+                r = await ProcessRunner.RunAsync(ffmpeg, input.Concat(tail).ToList(), line =>
+                {
+                    if (line.StartsWith("out_time_us=", StringComparison.Ordinal) &&
+                        long.TryParse(line.AsSpan(12), out var us) && durationMs > 0)
+                        progress?.Report(from + span * Math.Clamp(us / 1000.0 / durationMs, 0, 1));
+                }, ct);
+            }
+            catch (OperationCanceledException)
+            {
+                try { File.Delete(temp); } catch { /* temp dir */ }
+                throw;
+            }
             if (r.ExitCode == 0) return;
             try { File.Delete(temp); } catch { /* ignore */ }
             var msg = r.StdErr.Trim();
             throw new InvalidOperationException(string.IsNullOrEmpty(msg) ? $"ffmpeg exited with {r.ExitCode}" : msg);
         }
 
-        using var cleanup = ct.Register(() => { try { File.Delete(temp); } catch { /* temp dir */ } });
+        // On cancel the temp file goes once ffmpeg has quit (ProcessRunner waits for it), also on Windows.
+        using var cleanup = ct.Register(() => { try { File.Delete(temp); } catch { /* still open; deleted below */ } });
         switch (preset)
         {
             case SharePreset.Gif:
@@ -113,7 +123,7 @@ public static class TrimService
                 {
                     "-map", "0:v:0",
                     // The middle 9:16 slice of the picture, at most 1080x1920.
-                    "-vf", "crop=trunc(ih*9/32)*2:ih,scale=-2:'min(1920,ih)'",
+                    "-vf", "crop='min(iw,trunc(ih*9/32)*2)':ih,scale=-2:'min(1920,ih)'",
                     "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-pix_fmt", "yuv420p",
                 }.Concat(AudioMap()).Concat(new[] { "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", "-y", temp }), 0, 1);
                 break;
@@ -192,7 +202,7 @@ public static class TrimService
         var temp = TempFor(output);
         args.AddRange(new[] { "-y", temp });
 
-        using var cleanup = ct.Register(() => { try { File.Delete(temp); } catch { /* still open; temp dir */ } });
+        using var cleanup = ct.Register(() => { try { File.Delete(temp); } catch { /* still open; deleted below */ } });
         ProcessResult r;
         try
         {
@@ -203,6 +213,11 @@ public static class TrimService
                     long.TryParse(line.AsSpan(12), out var us) && durationMs > 0)
                     progress?.Report(Math.Clamp(us / 1000.0 / durationMs, 0, 1));
             }, ct);
+        }
+        catch (OperationCanceledException)
+        {
+            try { File.Delete(temp); } catch { /* temp dir */ }
+            throw;
         }
         finally
         {

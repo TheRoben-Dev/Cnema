@@ -9,6 +9,8 @@ public sealed record StatBar(string Label, int Count, double Fraction)
 {
     public double Width => 6 + Fraction * 260;
     public double Height => 4 + Fraction * 96;
+    /// <summary>The count over the bar, left out for empty bars so a sparse chart stays quiet.</summary>
+    public string CountText => Count > 0 ? Count.ToString(System.Globalization.CultureInfo.CurrentCulture) : "";
 }
 
 /// <summary>Numbers about the library and the clips folder, worked out once when the panel opens.</summary>

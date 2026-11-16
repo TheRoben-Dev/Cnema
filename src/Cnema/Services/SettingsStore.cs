@@ -46,6 +46,8 @@ public sealed class AppSettings
     public List<RecorderImport> Recorders { get; set; } = new();
     /// <summary>Tag videos from other recorders with their game, when the recorder tells.</summary>
     public bool RecorderTags { get; set; } = true;
+    /// <summary>"Playing with": friends tagged on every clip and session saved until it's cleared.</summary>
+    public List<string> PlayingWith { get; set; } = new();
 }
 
 /// <summary>Effects that stay as you left them from one export to the next.</summary>
@@ -136,6 +138,8 @@ public sealed class FeatureSettings
     public bool People { get; set; } = true;
     /// <summary>A small celebration on the 1st, 10th, 100th… clip saved.</summary>
     public bool Milestones { get; set; } = true;
+    /// <summary>"Your year in clips": the moments, friends and games of a year, with a montage of it.</summary>
+    public bool Recap { get; set; } = true;
 
     public FeatureSettings Clone() => (FeatureSettings)MemberwiseClone();
 }

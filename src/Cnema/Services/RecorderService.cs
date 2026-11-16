@@ -12,6 +12,8 @@ public sealed class RecorderImport
     public string Path { get; set; } = "";
     /// <summary>Cnema added the library folder for it (so removing the recorder removes the folder too).</summary>
     public bool AddedFolder { get; set; }
+    /// <summary>Steam: the clip folders already copied, so a copy you deleted doesn't come back.</summary>
+    public List<string> Converted { get; set; } = new();
 }
 
 /// <summary>What Cnema found on this computer for one recorder.</summary>
@@ -258,10 +260,11 @@ public static partial class RecorderService
     [GeneratedRegex("\"name\"\\s+\"([^\"]+)\"")]
     private static partial Regex VdfName();
 
-    public sealed record SteamClip(string Manifest, string OutputPath, string? Game);
+    public sealed record SteamClip(string Manifest, string OutputPath, string? Game, string Id = "");
 
     /// <summary>Steam clips not converted yet. Each becomes &lt;output&gt;/&lt;Game&gt;/&lt;Game&gt; YYYY-MM-DD HH-MM-SS.mp4.</summary>
-    public static List<SteamClip> PendingSteamClips(string recordings, string output)
+    /// <param name="converted">Clip folders copied before; ones found already copied are added to it.</param>
+    public static List<SteamClip> PendingSteamClips(string recordings, string output, ISet<string> converted)
     {
         var list = new List<SteamClip>();
         var clips = System.IO.Path.Combine(recordings, "clips");
@@ -271,8 +274,9 @@ public static partial class RecorderService
         {
             foreach (var dir in Directory.EnumerateDirectories(clips))
             {
-                var m = SteamClipName().Match(System.IO.Path.GetFileName(dir));
-                if (!m.Success) continue;
+                var id = System.IO.Path.GetFileName(dir);
+                var m = SteamClipName().Match(id);
+                if (!m.Success || converted.Contains(id)) continue;
                 var mpd = Directory.EnumerateFiles(dir, "session.mpd", SearchOption.AllDirectories).FirstOrDefault();
                 if (mpd is null) continue;
                 var app = m.Groups[1].Value;
@@ -282,7 +286,8 @@ public static partial class RecorderService
                 var label = game is null ? "Steam " + app : SafeName(game);
                 var file = $"{label} {d[..4]}-{d[4..6]}-{d[6..]} {t[..2]}-{t[2..4]}-{t[4..]}.mp4";
                 var outPath = System.IO.Path.Combine(output, label, file);
-                if (!File.Exists(outPath)) list.Add(new SteamClip(mpd, outPath, game));
+                if (File.Exists(outPath)) converted.Add(id);
+                else list.Add(new SteamClip(mpd, outPath, game, id));
             }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)

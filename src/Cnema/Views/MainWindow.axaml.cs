@@ -150,17 +150,17 @@ public partial class MainWindow : Window
     private List<Control> SidebarStops()
     {
         var stops = new List<Control>();
-        foreach (var list in new[] { FolderList, CollectionList, TagList })
+        foreach (var list in new[] { FolderList, CollectionList, FriendList, TagList })
             for (var i = 0; list.IsVisible && i < list.ItemCount; i++)
                 if (list.ContainerFromIndex(i) is { } item) stops.Add(item);
-        stops.AddRange(new Control[] { CleanupButton, StatsButton, MontageButton, RecordersButton, ClipToggle, SaveClipButton, SessionButton, AddFolderButton, SettingsButton }
+        stops.AddRange(new Control[] { CleanupButton, StatsButton, RecapButton, MontageButton, RecordersButton, ClipToggle, SaveClipButton, SessionButton, AddFolderButton, SettingsButton }
             .Where(c => c.IsEffectivelyVisible && c.IsEffectivelyEnabled));
         return stops;
     }
 
     private bool FocusSidebar()
     {
-        var list = Vm?.SelectedTag is not null ? TagList : Vm?.SelectedCollection is not null ? CollectionList : FolderList;
+        var list = Vm?.SelectedTag is not null ? TagList : Vm?.SelectedFriend is not null ? FriendList : Vm?.SelectedCollection is not null ? CollectionList : FolderList;
         var item = list.ContainerFromIndex(Math.Max(0, list.SelectedIndex)) as Control;
         return item?.Focus(NavigationMethod.Directional) == true;
     }
@@ -231,6 +231,7 @@ public partial class MainWindow : Window
         : Vm?.IsShowingShortcuts == true ? ShortcutsScrim
         : Vm?.IsCleaningUp == true ? CleanupScrim
         : Vm?.IsShowingStats == true ? StatsScrim
+        : Vm?.IsShowingRecap == true ? RecapScrim
         : Vm?.IsShowingRecorders == true ? RecordersScrim
         : Vm?.IsMakingMontage == true ? MontageScrim
         : Vm?.IsConfirmingDelete == true ? DeleteScrim
@@ -340,6 +341,13 @@ public partial class MainWindow : Window
         if (vm.IsShowingStats)
         {
             if (b is PadButton.B or PadButton.A) vm.CloseStatsCommand.Execute(null);
+            return;
+        }
+        if (vm.IsShowingRecap)
+        {
+            if (b == PadButton.B) vm.CloseRecapCommand.Execute(null);
+            else if (b == PadButton.A) SendKey(Key.Enter);
+            else if (direction) MoveInDialog(b);
             return;
         }
         if (vm.IsMakingMontage)
@@ -812,6 +820,18 @@ public partial class MainWindow : Window
         else if (e.Key == Key.Escape) { Vm?.CancelNamingCommand.Execute(null); e.Handled = true; }
     }
 
+    private void OnSquadKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter) return;
+        Vm?.SaveSquadCommand.Execute(null);
+        SquadButton.Flyout?.Hide();
+        e.Handled = true;
+    }
+
+    // Posted, like the bulk flyouts: hiding right away detaches the button before its Command runs.
+    private void OnSquadDone(object? sender, RoutedEventArgs e) =>
+        Avalonia.Threading.Dispatcher.UIThread.Post(() => SquadButton.Flyout?.Hide());
+
     private void OnBulkTagKeyDown(object? sender, KeyEventArgs e)
     {
         if (e.Key != Key.Enter) return;
@@ -902,6 +922,11 @@ public partial class MainWindow : Window
         if (vm.IsShowingStats)
         {
             if (e.Key == Key.Escape) { vm.CloseStatsCommand.Execute(null); e.Handled = true; }
+            return;
+        }
+        if (vm.IsShowingRecap)
+        {
+            if (e.Key == Key.Escape) { vm.CloseRecapCommand.Execute(null); e.Handled = true; }
             return;
         }
         if (vm.IsMakingMontage)

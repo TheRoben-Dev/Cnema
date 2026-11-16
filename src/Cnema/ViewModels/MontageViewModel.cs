@@ -3,7 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Cnema.ViewModels;
 
-public enum MontageSource { Favorites, Selected, View }
+public enum MontageSource { Favorites, Selected, View, Custom }
 
 /// <summary>The Auto montage dialog: which videos, how much of each, the transition and an optional song.</summary>
 public sealed partial class MontageViewModel : ObservableObject
@@ -26,10 +26,12 @@ public sealed partial class MontageViewModel : ObservableObject
     public string MusicName => HasMusic ? Path.GetFileName(MusicPath!) : T("No song (the clips keep their own sound)");
 
     public MontageViewModel(Func<MontageSource, IReadOnlyList<VideoItemViewModel>> videos, MontageSource initial, bool hasSelection,
-        double musicDb, bool musicDuck)
+        double musicDb, bool musicDuck, string? customLabel = null)
     {
         _videos = videos;
-        var options = new List<(string, object)> { ("Favourites", MontageSource.Favorites) };
+        var options = new List<(string, object)>();
+        if (customLabel is not null) options.Add((customLabel, MontageSource.Custom));
+        options.Add(("Favourites", MontageSource.Favorites));
         if (hasSelection) options.Add(("Selected", MontageSource.Selected));
         options.Add(("This view", MontageSource.View));
         Source = new ChipGroup(initial, options.ToArray());
