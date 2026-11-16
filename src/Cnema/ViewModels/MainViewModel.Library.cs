@@ -417,6 +417,17 @@ public sealed partial class MainViewModel
         await vm.ScanAsync(_items.Values.Select(v => v.Entry).ToList(), p => _items.TryGetValue(p, out var v) ? v : null);
     }
 
+    private static void MergeDetails(VideoEntry from, VideoEntry into)
+    {
+        into.Favorite |= from.Favorite;
+        foreach (var t in from.Tags.Where(t => !into.Tags.Contains(t, StringComparer.OrdinalIgnoreCase))) into.Tags.Add(t);
+        foreach (var p in from.People.Where(p => !into.People.Contains(p, StringComparer.OrdinalIgnoreCase))) into.People.Add(p);
+        foreach (var b in from.Bookmarks.Where(b => !into.Bookmarks.Contains(b))) into.Bookmarks.Add(b);
+        into.Bookmarks.Sort();
+        if (!string.IsNullOrWhiteSpace(from.Note) && into.Note?.Contains(from.Note.Trim(), StringComparison.Ordinal) != true)
+            into.Note = string.IsNullOrWhiteSpace(into.Note) ? from.Note : into.Note.TrimEnd() + "\n" + from.Note.Trim();
+    }
+
     [RelayCommand] private void CloseCleanup() { Cleanup?.Cancel(); Cleanup = null; }
 
     [RelayCommand]
@@ -425,6 +436,14 @@ public sealed partial class MainViewModel
         if (Cleanup is not { } c) return;
         var chosen = c.Checked.Select(r => r.Item).OfType<VideoItemViewModel>().ToList();
         if (chosen.Count == 0) return;
+        // A copy going to the trash hands its favourite, tags, friends, notes and bookmarks to the copy that stays.
+        foreach (var group in c.Rows.Where(r => r.Group >= 0 && r.Item is not null).GroupBy(r => r.Group))
+        {
+            if (group.FirstOrDefault(r => !r.IsChecked)?.Item is not { } keep) continue;
+            foreach (var gone in group.Where(r => r.IsChecked).Select(r => r.Item!))
+                MergeDetails(gone.Entry, keep.Entry);
+            keep.RefreshAll();
+        }
         var failed = DeleteMany(chosen);
         Cleanup = null;
         RefreshView();

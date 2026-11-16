@@ -730,7 +730,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 : v.Entry.Path.Contains(t, StringComparison.OrdinalIgnoreCase) ||
                   v.Entry.Tags.Any(tag => tag.Contains(t, StringComparison.OrdinalIgnoreCase)) ||
                   (notes && v.Entry.Note is { } n && n.Contains(t, StringComparison.OrdinalIgnoreCase)) ||
-                  (people && v.Entry.People.Any(p => p.Contains(t, StringComparison.OrdinalIgnoreCase)))));
+                  (people && v.Entry.People.Any(p => p.Contains(t, StringComparison.OrdinalIgnoreCase))) ||
+                  MatchesWhen(v.Entry, t)));
         }
         q = ApplyFilters(q);
         q = SortIndex switch
@@ -749,6 +750,33 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(CanPlayAll));
         OnPropertyChanged(nameof(ShowFriendMontage));
         UpdateCounts();
+    }
+
+    /// <summary>
+    /// Search words about when and what: a year ("2025"), a month ("march", "mar"), "today",
+    /// "yesterday", and "favourite" / "fav".
+    /// </summary>
+    private static bool MatchesWhen(Models.VideoEntry e, string term)
+    {
+        var t = term.ToLowerInvariant();
+        var when = e.ModifiedUtc.ToLocalTime();
+        if (t.Length == 4 && int.TryParse(t, out var year) && year is >= 1990 and <= 2100) return when.Year == year;
+        if (t is "fav" or "favs" or "favourite" or "favourites" or "favorite" or "favorites") return e.Favorite;
+        if (t == T("today").ToLowerInvariant() || t == "today") return when.Date == DateTime.Today;
+        if (t == T("yesterday").ToLowerInvariant() || t == "yesterday") return when.Date == DateTime.Today.AddDays(-1);
+        if (t.Length >= 3 && MonthFor(t) is { } month) return when.Month == month;
+        return false;
+    }
+
+    private static int? MonthFor(string t)
+    {
+        foreach (var names in new[] { System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat, System.Globalization.CultureInfo.InvariantCulture.DateTimeFormat })
+            for (var m = 1; m <= 12; m++)
+            {
+                var full = names.GetMonthName(m).ToLowerInvariant();
+                if (full.Length > 0 && (full == t || (t.Length == 3 && full.StartsWith(t, StringComparison.Ordinal)))) return m;
+            }
+        return null;
     }
 
     private void UpdateCounts()
