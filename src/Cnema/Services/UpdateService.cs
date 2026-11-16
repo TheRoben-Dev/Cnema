@@ -229,19 +229,48 @@ public static class UpdateService
         ProcessStartInfo psi;
         if (OperatingSystem.IsWindows())
         {
+            // The paths go in as environment variables: cmd reads a .bat in the OEM code page, so a
+            // user name like "José" written into the script itself would be garbled. The script text
+            // stays plain ASCII. The new app is copied next to the old one first and the folders are
+            // swapped only when the copy worked, so a locked file can't leave a half-updated app.
             var script = Path.Combine(StageDir, "apply.cmd");
             File.WriteAllText(script, string.Join("\r\n", new[]
             {
                 "@echo off",
+                "set N=0",
                 ":wait",
-                $"tasklist /FI \"PID eq {pid}\" 2>nul | find \" {pid} \" >nul && (timeout /t 1 /nobreak >nul & goto wait)",
-                $"robocopy \"{newApp}\" \"{root}\" /E /R:5 /W:1 /NFL /NDL /NJH /NJS /NP >nul",
-                $"start \"\" \"{Path.Combine(root, exeName + ".exe")}\"{(background ? " --background" : "")}",
-                $"rmdir /S /Q \"{Path.GetDirectoryName(newApp)}\"",
+                $"tasklist /FI \"PID eq {pid}\" 2>nul | find \" {pid} \" >nul || goto ready",
+                "set /a N+=1",
+                "if %N% GEQ 180 goto launch",
+                "timeout /t 1 /nobreak >nul",
+                "goto wait",
+                ":ready",
+                "if exist \"%SF_DEST%.new\" rmdir /S /Q \"%SF_DEST%.new\"",
+                "robocopy \"%SF_NEW%\" \"%SF_DEST%.new\" /E /R:5 /W:1 /NFL /NDL /NJH /NJS /NP >nul",
+                "if errorlevel 8 goto cleanup",
+                "if exist \"%SF_DEST%.old\" rmdir /S /Q \"%SF_DEST%.old\"",
+                "move \"%SF_DEST%\" \"%SF_DEST%.old\" >nul || goto cleanup",
+                "move \"%SF_DEST%.new\" \"%SF_DEST%\" >nul || (move \"%SF_DEST%.old\" \"%SF_DEST%\" >nul & goto cleanup)",
+                "rmdir /S /Q \"%SF_DEST%.old\"",
+                "goto launch",
+                ":cleanup",
+                "if exist \"%SF_DEST%.new\" rmdir /S /Q \"%SF_DEST%.new\"",
+                ":launch",
+                // Whichever app is in place now: the new one, or the old one if the swap didn't happen.
+                "if exist \"%SF_DEST%\\%SF_EXE%\" (start \"\" \"%SF_DEST%\\%SF_EXE%\" %SF_ARGS%) else (start \"\" \"%SF_DEST%\\Cnema.exe\" %SF_ARGS%)",
+                "rmdir /S /Q \"%SF_STAGE%\"",
+                "",
             }));
             psi = new ProcessStartInfo("cmd.exe") { UseShellExecute = false, CreateNoWindow = true };
             psi.ArgumentList.Add("/c");
             psi.ArgumentList.Add(script);
+            psi.Environment["SF_NEW"] = newApp;
+            psi.Environment["SF_DEST"] = root;
+            psi.Environment["SF_EXE"] = exeName + ".exe";
+            psi.Environment["SF_ARGS"] = background ? "--background" : "";
+            psi.Environment["SF_STAGE"] = Path.GetDirectoryName(newApp)!;
+            // Not inside the app folder, or Windows won't let the script move it.
+            psi.WorkingDirectory = Path.GetTempPath();
         }
         else
         {
@@ -253,12 +282,12 @@ public static class UpdateService
             File.WriteAllText(script, string.Join("\n", new[]
             {
                 "#!/bin/sh",
-                // Give up rather than swap the app under a Cnema that never quit.
-                $"n=0; while kill -0 {pid} 2>/dev/null; do n=$((n+1)); [ $n -gt 200 ] && exit 1; sleep 0.3; done",
+                // Give up on the swap (not on the relaunch) if Cnema takes more than about two minutes to quit.
+                $"n=0; swap=1; while kill -0 {pid} 2>/dev/null; do n=$((n+1)); [ $n -gt 400 ] && {{ swap=0; break; }}; sleep 0.3; done",
                 $"NEW={Q(newApp)}; DEST={Q(root)}; OLD=\"$DEST.old-$$\"",
                 // Downloads made by Cnema itself are not quarantined, but an unpacked bundle must never be.
                 OperatingSystem.IsMacOS() ? "/usr/bin/xattr -dr com.apple.quarantine \"$NEW\" 2>/dev/null" : ":",
-                "if mv \"$DEST\" \"$OLD\"; then",
+                "if [ $swap = 1 ] && mv \"$DEST\" \"$OLD\"; then",
                 "  if mv \"$NEW\" \"$DEST\" 2>/dev/null || cp -Rp \"$NEW\" \"$DEST\"; then rm -rf \"$OLD\"",
                 "  else rm -rf \"$DEST\"; mv \"$OLD\" \"$DEST\"; fi",
                 "fi",

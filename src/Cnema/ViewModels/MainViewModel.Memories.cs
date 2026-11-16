@@ -231,7 +231,7 @@ public sealed partial class MainViewModel
     {
         if (Recap is not { } r || CaptureRecap is null) return;
         var name = F("Savefile {0} in clips", r.SelectedYear);
-        foreach (var dir in new[] { Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), _settings.Current.Clip.Folder })
+        foreach (var dir in new[] { Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), _settings.Current.Clip.ResolvedFolder })
         {
             if (string.IsNullOrEmpty(dir) || !Directory.Exists(dir)) continue;
             var target = Path.Combine(dir, name + ".png");

@@ -332,5 +332,10 @@ public static partial class RecorderService
             try { if (File.Exists(temp)) File.Delete(temp); } catch { }
             return false;
         }
+        catch (OperationCanceledException)
+        {
+            try { if (File.Exists(temp)) File.Delete(temp); } catch { /* temp file */ }
+            throw;
+        }
     }
 }

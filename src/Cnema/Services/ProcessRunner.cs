@@ -35,9 +35,12 @@ public static class ProcessRunner
         p.Start();
         p.BeginOutputReadLine();
         p.BeginErrorReadLine();
+        // Kill straight from the token, not from the await's continuation: when the app quits, the UI
+        // thread's dispatcher may never run that continuation, and ffmpeg would keep encoding alone.
+        using var killOnCancel = ct.Register(() => { try { p.Kill(entireProcessTree: true); } catch { /* already gone */ } });
         try
         {
-            await p.WaitForExitAsync(ct);
+            await p.WaitForExitAsync(ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
