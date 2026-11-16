@@ -48,6 +48,8 @@ public sealed class AppSettings
     public bool RecorderTags { get; set; } = true;
     /// <summary>"Playing with": friends tagged on every clip and session saved until it's cleared.</summary>
     public List<string> PlayingWith { get; set; } = new();
+    /// <summary>The year whose "Your year in clips is ready" banner was closed.</summary>
+    public int RecapBannerClosed { get; set; }
 }
 
 /// <summary>Effects that stay as you left them from one export to the next.</summary>
@@ -140,6 +142,8 @@ public sealed class FeatureSettings
     public bool Milestones { get; set; } = true;
     /// <summary>"Your year in clips": the moments, friends and games of a year, with a montage of it.</summary>
     public bool Recap { get; set; } = true;
+    /// <summary>Play all: the Quick player goes on to the next video when one ends.</summary>
+    public bool PlayAll { get; set; } = true;
 
     public FeatureSettings Clone() => (FeatureSettings)MemberwiseClone();
 }

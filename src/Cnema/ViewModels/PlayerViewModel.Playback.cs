@@ -150,7 +150,11 @@ public sealed partial class PlayerViewModel
         }
         IsPlaying = false;
         Position = Duration;
+        Finished?.Invoke();
     }
+
+    /// <summary>The video played to its end (not looping); Play all moves on to the next one.</summary>
+    public event Action? Finished;
 
     // ---------- chapters ----------
     public ObservableCollection<ChapterViewModel> ChapterList { get; } = new();

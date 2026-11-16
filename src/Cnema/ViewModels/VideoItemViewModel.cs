@@ -98,6 +98,17 @@ public sealed partial class VideoItemViewModel : ObservableObject
     }
 
     /// <summary>Second line on a "Worth a rewatch" card: who was there and when, or just when.</summary>
+    /// <summary>Under the title in the Quick player: when it was, and who was there.</summary>
+    public string PlayerLine
+    {
+        get
+        {
+            var date = Entry.ModifiedUtc.ToLocalTime();
+            var when = date.ToString(date.Year == DateTime.Now.Year ? "dddd d MMMM" : "d MMMM yyyy", System.Globalization.CultureInfo.CurrentCulture);
+            return HasPeople ? $"{when} · {PeopleText}" : when;
+        }
+    }
+
     public string MemoryLine => HasPeople ? $"{PeopleText} · {AgoText}" : AgoText;
 
     /// <summary>The card's second line: the note, then who was there, otherwise resolution, codec and size.</summary>

@@ -27,7 +27,8 @@ Savefile updates itself after that.
 
 - **Memories:** a "Worth a rewatch" row of old favourites and clips with friends, an "On this day" card,
   "Who was there" tags that search finds with `@name` (with a Friends list in the sidebar and "Playing with"
-  to tag everyone on every save), Year in clips (a look back on a year, with a montage of it), and small
+  to tag everyone on every save), Year in clips (a look back on a year, with a montage of it), Play all (a
+  slideshow of any view in the Quick player), and small
   milestones as your saves add up.
 - **Library:** watched folders, thumbnails with hover scrub, search, filters, tags, favourites, collections,
   bulk select, duplicate finder and stats.

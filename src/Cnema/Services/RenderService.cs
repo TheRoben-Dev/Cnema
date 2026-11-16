@@ -151,6 +151,9 @@ public static class RenderService
                 // A steady frame rate: joined pieces have none of their own, and the encoder would fall back to 25.
                 var chain = new List<string> { $"fps={F(fps)}" };
                 if (crop is not null) chain.Add(crop);
+                // Odd sizes (a screen-region recording) are trimmed to even ones: x264, concat with
+                // intro / outro and the captions' play size all expect the even stage size.
+                else if (sw != info.Width || sh != info.Height) chain.Add($"crop={sw}:{sh}:0:0");
                 chain.Add("setsar=1");
                 if (fontsDir is not null) chain.Add($"subtitles=filename=captions.ass:fontsdir={fontsDir}");
                 g.Add("[vcat]" + string.Join(",", chain) + "[vbase]");

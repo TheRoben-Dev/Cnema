@@ -24,7 +24,12 @@ public partial class MainWindow : Window
         FrameEdit.RegionPicked += tag => Vm?.Player.PickFrameRegion(tag);
 
         VideoGrid.ElementPrepared += (_, e) => (e.Element.DataContext as VideoItemViewModel)?.AcquireThumbnail();
-        VideoGrid.ElementClearing += (_, e) => (e.Element.DataContext as VideoItemViewModel)?.ReleaseThumbnail();
+        VideoGrid.ElementClearing += (_, e) =>
+        {
+            if (e.Element.DataContext is not VideoItemViewModel item) return;
+            item.EndScrub(); // recycled while hovered: let go of the filmstrip too
+            item.ReleaseThumbnail();
+        };
         VideoGrid.ElementIndexChanged += (_, e) => (e.Element.DataContext as VideoItemViewModel)?.AcquireThumbnail();
 
         SurfaceHit.Tapped += (_, _) =>
@@ -818,6 +823,32 @@ public partial class MainWindow : Window
     {
         if (e.Key == Key.Enter) { Vm?.ConfirmCollectionNameCommand.Execute(null); e.Handled = true; }
         else if (e.Key == Key.Escape) { Vm?.CancelNamingCommand.Execute(null); e.Handled = true; }
+    }
+
+    private void OnRenameNameClick(object? sender, RoutedEventArgs e)
+    {
+        Vm?.BeginRenameName((sender as Control)?.DataContext as FolderViewModel);
+        // Focus the box that just appeared, with the old name selected.
+        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            var box = Vm?.IsRenamingFriend == true ? FriendRenameBox : TagRenameBox;
+            box.Focus();
+            box.SelectAll();
+        }, Avalonia.Threading.DispatcherPriority.Background);
+    }
+
+    private void OnRemoveNameClick(object? sender, RoutedEventArgs e) =>
+        Vm?.RemoveName((sender as Control)?.DataContext as FolderViewModel);
+
+    private void OnRenameNameKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter) { Vm?.ConfirmRenameCommand.Execute(null); e.Handled = true; }
+        else if (e.Key == Key.Escape) { Vm?.CancelRenameCommand.Execute(null); e.Handled = true; }
+    }
+
+    private void OnTogglePlayAll(object? sender, RoutedEventArgs e)
+    {
+        Vm?.TogglePlayAllCommand.Execute(null);
     }
 
     private void OnSquadKeyDown(object? sender, KeyEventArgs e)

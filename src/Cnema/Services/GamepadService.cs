@@ -112,7 +112,10 @@ public sealed class GamepadService : IDisposable
     {
         if (IsActive?.Invoke() == false)
         {
-            Array.Clear(_down); // do not fire a held button when the window comes back
+            // Count everything as held, so a button still down when the window comes back doesn't fire;
+            // the first poll after that sees which ones were really let go.
+            Array.Fill(_down, true);
+            Array.Fill(_nextRepeat, DateTime.MaxValue); // and a held direction doesn't start repeating
             return;
         }
         try
@@ -171,13 +174,20 @@ public sealed class GamepadService : IDisposable
         {
             _down[i] = true;
             _nextRepeat[i] = now + RepeatDelay;
-            Pressed?.Invoke(button);
+            Fire(button);
         }
         else if (Repeats(button) && now >= _nextRepeat[i])
         {
             _nextRepeat[i] = now + RepeatRate;
-            Pressed?.Invoke(button);
+            Fire(button);
         }
+    }
+
+    /// <summary>A bug in one handler is logged; it must not switch the controller off for the rest of the run.</summary>
+    private void Fire(PadButton button)
+    {
+        try { Pressed?.Invoke(button); }
+        catch (Exception ex) { Log.Error($"Controller button {button} failed", ex); }
     }
 
     private void OpenFirstPad()

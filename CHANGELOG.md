@@ -2,6 +2,27 @@
 
 What changed in each Savefile (formerly Cnema) release. The app shows the entries you have not seen yet after it updates.
 
+## 0.26.0
+- Play all: watch a whole view one clip after another in the Quick player, like a slideshow. Use Play all in the header (a friend, a collection, a tag, a year of search results, anything), or switch it on for the video you're watching with the button next to the arrows. Switch it off under Settings, Features, Memories.
+- A friend's page says how long you've been saving moments together, and what you mostly play ("24 moments together since March 2025 · mostly Valorant").
+- Rename or merge friends and tags: right-click one in the sidebar. Renaming "Jo" to "Joanna" fixes every clip at once, and renaming to a name that already exists merges the two. You can also take a tag or a friend off every video.
+- The Quick player shows when a clip was recorded and who was there, next to the time.
+- From December to mid-January, All videos shows a card when your year in clips is ready.
+- Fixed: after leaving a video while it was in a slow-motion part, the next video played at the wrong speed.
+- Fixed: closing the Quick player right after picking another video could leave that video playing with nothing on screen, and lose where you were in the last one.
+- Fixed: phone videos recorded upright showed captions, blur and zoom boxes in the wrong place (and the blur landed in the wrong spot in the export). Videos added from now on get this right.
+- Fixed: exports with effects failed for videos with an odd width or height, such as a screen recording of part of the screen.
+- Fixed: dragging on the timeline or a blur box could get stuck if the player closed mid-drag, and the box then followed the mouse.
+- Fixed: a thumbnail cut off halfway through stayed broken until the video changed.
+- Fixed: one error in a controller action switched the controller off until restart, and a button held while the window was in the background fired when it came back.
+- Fixed: Clean up suggested binning videos that were still being recorded.
+- Fixed: keyboard shortcuts you changed weren't remembered if you saved Settings afterwards (since 0.25.0).
+- Fixed: switching off Sessions under Settings, Features while a session was recording left it running with no way to stop it. It's now finished and saved.
+- Fixed: renamed or removed tags and friends came back on videos stored on a drive that was unplugged at the time.
+- Fixed: Play all stayed on after going from the Quick player to the editor, and the Play all button could select a video in select mode.
+- Fixed: renaming a tag or a friend in the sidebar no longer jumps to it, and clicking through videos quickly no longer loses where you were in one.
+- The loud-moments scan stops when the player closes, instead of reading the rest of a long session recording.
+
 ## 0.25.0
 - Friends in the sidebar: everyone you've tagged under Who was there gets a row, with the people you play with most on top. Click a name to see every clip you have together.
 - Year in clips (sidebar, Tools): look back on a year. How many moments you kept, the days you saved something, your busiest month, the friends who were there most, what you played, your first save of the year and your biggest day. Pick an earlier year at the top.

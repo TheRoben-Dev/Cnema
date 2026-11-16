@@ -118,6 +118,9 @@ public sealed partial class MainViewModel
         if (!ReferenceEquals(item, MemoryItem)) MemoryItem = item;
         OnPropertyChanged(nameof(ShowFeatured));
         OnPropertyChanged(nameof(ShowMemory));
+        OnPropertyChanged(nameof(ShowRecapBanner));
+        OnPropertyChanged(nameof(RecapBannerTitle));
+        OnPropertyChanged(nameof(RecapBannerText));
     }
 
     // ---------- who was there ----------
@@ -158,6 +161,18 @@ public sealed partial class MainViewModel
     /// <summary>"214 moments kept since March 2025" on All videos; a plain count everywhere else.</summary>
     private string FriendlyCount()
     {
+        // A friend's page: how long you've been saving moments together, and what you mostly play.
+        if (ActiveNav is { Kind: NavKind.Person } && Videos.Count > 0 && SearchText.Trim().Length == 0 && !HasFilters)
+        {
+            var together = P(Videos.Count, "{0:N0} moment together", "{0:N0} moments together");
+            var since = Videos.Min(v => v.Entry.ModifiedUtc).ToLocalTime();
+            var text = (DateTime.Now - since).TotalDays > 31
+                ? F("{0} since {1}", together, since.ToString("MMMM yyyy", System.Globalization.CultureInfo.CurrentCulture))
+                : together;
+            var game = Videos.SelectMany(v => v.Entry.Tags).GroupBy(t => t, StringComparer.OrdinalIgnoreCase)
+                .OrderByDescending(g => g.Count()).FirstOrDefault();
+            return game is not null && game.Count() * 2 >= Videos.Count ? F("{0} · mostly {1}", text, game.First()) : text;
+        }
         if (!IsPlainLibraryView || Videos.Count == 0)
             return Videos.Count == 1 ? T("1 video") : F("{0:N0} videos", Videos.Count);
         var first = _items.Values.Min(v => v.Entry.ModifiedUtc).ToLocalTime();
@@ -176,6 +191,33 @@ public sealed partial class MainViewModel
 
     [RelayCommand]
     private void OpenRecap() => Recap = new RecapViewModel(_items.Values.ToList(), Features.People);
+
+    /// <summary>The year the season's banner is about: this year in December, last year in early January.</summary>
+    private static int RecapSeasonYear => DateTime.Now.Month == 12 ? DateTime.Now.Year : DateTime.Now.Year - 1;
+    private static bool IsRecapSeason => DateTime.Now is { Month: 12 } or { Month: 1, Day: <= 15 };
+
+    /// <summary>From December to mid-January, a card on All videos says the year's look back is ready.</summary>
+    public bool ShowRecapBanner => Features.Recap && IsRecapSeason && IsPlainLibraryView &&
+                                   _settings.Current.RecapBannerClosed != RecapSeasonYear &&
+                                   _items.Values.Count(v => v.Entry.ModifiedUtc.ToLocalTime().Year == RecapSeasonYear) >= 5;
+    public string RecapBannerTitle => F("Your {0} in clips is ready", RecapSeasonYear);
+    public string RecapBannerText => F("{0} with your friends. Take a look back.",
+        P(_items.Values.Count(v => v.Entry.ModifiedUtc.ToLocalTime().Year == RecapSeasonYear), "{0:N0} moment", "{0:N0} moments"));
+
+    [RelayCommand]
+    private void OpenRecapFromBanner()
+    {
+        OpenRecap();
+        if (Recap is { } r && r.Year.Chips.Any(c => Equals(c.Value, RecapSeasonYear))) r.Year.Value = RecapSeasonYear;
+    }
+
+    [RelayCommand]
+    private void CloseRecapBanner()
+    {
+        _settings.Current.RecapBannerClosed = RecapSeasonYear;
+        _settings.Save();
+        OnPropertyChanged(nameof(ShowRecapBanner));
+    }
 
     [RelayCommand] private void CloseRecap() => Recap = null;
 

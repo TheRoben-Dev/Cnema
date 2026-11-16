@@ -572,6 +572,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
         _library.FoldersChanged += () => Dispatcher.UIThread.Post(() => _ = RescanAsync());
         _library.GameTagger = GameTagFor;
+        Player.Finished += OnPlayerFinished;
         // A file renamed or moved outside the app keeps its collections and remembered edits.
         _library.EntryMoved += (from, to) => Dispatcher.UIThread.Post(() =>
         {
@@ -815,6 +816,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         RefreshMemories();
         OnPropertyChanged(nameof(HeaderCount));
         OnPropertyChanged(nameof(HasNoResults));
+        OnPropertyChanged(nameof(CanPlayAll));
         UpdateCounts();
     }
 
@@ -1172,10 +1174,14 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             return;
         }
         _settings.ReplaceWith(draft); // saves
+        // The shortcut sheet edits the live dictionary; point it at the one that is now saved.
+        Shortcuts.Load(_settings.Current.Shortcuts);
         SettingsEditor = null;
         OnPropertyChanged(nameof(IsControllerMode));
         ControllerModeChanged?.Invoke();
         RaiseFeatures();
+        // Sessions switched off mid-session: save it now, or it would record on with no stop button.
+        if (!Features.Sessions && IsSession) await ToggleSessionAsync();
         await ApplyClipSettingsAsync();
         await RunStorageCleanupAsync();
     }

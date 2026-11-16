@@ -269,7 +269,7 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
         }
         HideToast();
         // Switching videos in the quick player or with ← / →: remember where the last one was left.
-        if (_active && Current is { } previous && !ReferenceEquals(previous, item))
+        if (_active && !_openInFlight && Current is { } previous && !ReferenceEquals(previous, item))
         {
             SaveProgress(previous);
             RememberEdits(previous);
@@ -283,7 +283,12 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
             _pendingStop = Task.Run(() => p.Stop());
         }
         _active = true;
-        await _pendingStop;
+        // A close, or another open, while the old video is still stopping wins over this one.
+        var gen = ++_openGen;
+        _openInFlight = true;
+        try { await _pendingStop; }
+        finally { if (gen == _openGen) _openInFlight = false; }
+        if (gen != _openGen) return;
         Frames?.Reset();
         Current = item;
         InPoint = OutPoint = -1;
@@ -314,6 +319,9 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
     }
 
     private bool _active;
+    private int _openGen;
+    /// <summary>An open is waiting for the previous video to stop; its progress was already saved.</summary>
+    private bool _openInFlight;
 
     private void SaveProgress(VideoItemViewModel item)
     {
@@ -327,7 +335,13 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
 
     public void Close()
     {
-        if (Current is { } cur && _active)
+        _openGen++;
+        _highlightCts?.Cancel(); // the loud-moments pass reads the whole file; no need once closed
+        var opening = _openInFlight;
+        _openInFlight = false;
+        // While a switch was stopping the old video, its position was saved already and the
+        // half-stopped player would report 0.
+        if (!opening && Current is { } cur && _active)
         {
             SaveProgress(cur);
             RememberEdits(cur);
@@ -655,6 +669,8 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
     {
         if (Current is { } cur && _active) RememberEdits(cur);
         _exportCts?.Cancel();
+        // A stop started by Close() may still be running on another thread.
+        try { _pendingStop.Wait(3000); } catch { /* it failed; stop again below */ }
         _player?.Stop();
         _player?.Dispose();
         Frames?.Dispose();

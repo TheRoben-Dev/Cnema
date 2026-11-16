@@ -74,6 +74,9 @@ public static class MediaProbe
                         e.Width = s.TryGetProperty("width", out var w) ? w.GetInt32() : 0;
                         e.Height = s.TryGetProperty("height", out var h) ? h.GetInt32() : 0;
                         e.FrameRate = ParseRate(s.TryGetProperty("avg_frame_rate", out var fr) ? fr.GetString() : null);
+                        // Phone videos are stored sideways with a rotation flag; players (and the
+                        // overlays drawn over them) show them upright, so store the upright size.
+                        if (IsQuarterTurn(StreamRotation(s))) (e.Width, e.Height) = (e.Height, e.Width);
                     }
                     else if (type == "audio" && e.AudioCodec is null)
                     {
@@ -85,6 +88,18 @@ public static class MediaProbe
         }
         catch (OperationCanceledException) { throw; }
         catch { return false; }
+    }
+
+    private static bool IsQuarterTurn(double degrees) => Math.Abs(Math.Abs(degrees % 180) - 90) < 1;
+
+    private static double StreamRotation(JsonElement s)
+    {
+        if (s.TryGetProperty("side_data_list", out var list) && list.ValueKind == JsonValueKind.Array)
+            foreach (var sd in list.EnumerateArray())
+                if (sd.TryGetProperty("rotation", out var r) && r.TryGetDouble(out var deg)) return deg;
+        if (s.TryGetProperty("tags", out var tags) && tags.TryGetProperty("rotate", out var rot) &&
+            double.TryParse(rot.GetString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var d)) return d;
+        return 0;
     }
 
     private static readonly System.Text.RegularExpressions.Regex DurationRx =
@@ -102,7 +117,11 @@ public static class MediaProbe
         try
         {
             var r = await ProcessRunner.RunAsync(ffmpeg, new[] { "-hide_banner", "-i", e.Path }, ct: ct);
-            return ParseFfmpegInfo(r.StdErr, e);
+            var ok = ParseFfmpegInfo(r.StdErr, e);
+            if (RotationRx.Match(r.StdErr) is { Success: true } rot &&
+                double.TryParse(rot.Groups[1].Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var deg) && IsQuarterTurn(deg))
+                (e.Width, e.Height) = (e.Height, e.Width);
+            return ok;
         }
         catch (OperationCanceledException) { throw; }
         catch { return false; }

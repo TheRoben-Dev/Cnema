@@ -1,3 +1,4 @@
+using Cnema.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -17,6 +18,7 @@ public sealed partial class MainViewModel
     private void ExpandMiniPlayer()
     {
         if (!IsMiniPlayerOpen) return;
+        PlayAll = false; // the editor is for one video
         IsMiniPlayerOpen = false;
         IsPlayerOpen = true;
     }
@@ -82,10 +84,59 @@ public sealed partial class MainViewModel
     [RelayCommand]
     private Task NextClip() => StepClipAsync(1);
 
+    // ---------- play all ----------
+    /// <summary>In the Quick player, each video is followed by the next one in the library's order.</summary>
+    [ObservableProperty] private bool _playAll;
+    public bool ShowPlayAll => Features.PlayAll && UseMiniPlayer;
+    public bool CanPlayAll => ShowPlayAll && Videos.Count > 1 && !IsSelecting;
+
+    [RelayCommand]
+    private void TogglePlayAll()
+    {
+        PlayAll = !PlayAll;
+        Player.ShowToast(PlayAll ? T("Play all: the next video starts when this one ends.") : T("Play all off."));
+    }
+
+    /// <summary>The header's Play all: the whole view, from the top, one after another.</summary>
+    [RelayCommand]
+    private async Task PlayAllFromStartAsync()
+    {
+        if (!CanPlayAll) return;
+        await OpenAsync(Videos[0]);
+        if (!IsMiniPlayerOpen) return;
+        PlayAll = true;
+        Player.ShowToast(P(Videos.Count, "Playing {0} video, one after another", "Playing all {0} videos, one after another"));
+    }
+
+    private async void OnPlayerFinished()
+    {
+        try
+        {
+            if (!PlayAll || !IsMiniPlayerOpen || Player.Current is not { } current) return;
+            var i = Videos.IndexOf(current);
+            if (i < 0 || i + 1 >= Videos.Count)
+            {
+                PlayAll = false;
+                Player.ShowToast(T("That was the last one. Thanks for the memories."));
+                return;
+            }
+            // A short breath between clips, like a slideshow.
+            await Task.Delay(600);
+            if (!PlayAll || !IsMiniPlayerOpen || !ReferenceEquals(Player.Current, current)) return;
+            _lastStep = DateTime.MinValue;
+            await StepClipAsync(1);
+        }
+        catch (Exception ex)
+        {
+            Log.Warn($"Play all: {ex.Message}");
+        }
+    }
+
     [RelayCommand]
     private void CloseMiniPlayer()
     {
         if (!IsMiniPlayerOpen) return;
+        PlayAll = false;
         var watched = Player.Current;
         Player.Close();
         IsMiniPlayerOpen = false;

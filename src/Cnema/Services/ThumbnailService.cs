@@ -20,8 +20,11 @@ public static class ThumbnailService
     public static async Task<string?> EnsureAsync(VideoEntry e, CancellationToken ct)
     {
         var target = PathFor(e);
-        if (File.Exists(target)) return target;
+        if (File.Exists(target) && new FileInfo(target).Length > 0) return target;
         if (ToolLocator.Ffmpeg is not { } ffmpeg) return null;
+        // Written beside it and moved in when complete: a scan cancelled mid-write must not leave
+        // a broken thumbnail that every later scan would reuse.
+        var temp = target[..^4] + ".tmp.jpg";
 
         // ~12% in avoids black intros/fade-ins; clamp for very short clips. A frame the user picked
         // is taken as it is, without the "most representative of the next 12 frames" filter.
@@ -35,10 +38,15 @@ public static class ThumbnailService
             var r = await ProcessRunner.RunAsync(ffmpeg, new[]
             {
                 "-v", "error", "-ss", attempt, "-i", e.Path, "-frames:v", "1",
-                "-vf", filter, "-q:v", "4", "-y", target,
+                "-vf", filter, "-q:v", "4", "-y", temp,
             }, ct: ct);
-            if (r.ExitCode == 0 && File.Exists(target)) return target;
+            if (r.ExitCode == 0 && File.Exists(temp) && new FileInfo(temp).Length > 0)
+            {
+                File.Move(temp, target, overwrite: true);
+                return target;
+            }
         }
+        try { File.Delete(temp); } catch { /* nothing written */ }
         return null;
     }
     public const int StripFrames = 10;

@@ -132,6 +132,7 @@ public sealed class FrameEditor : Control, Avalonia.Rendering.ICustomHitTest
         base.OnPointerMoved(e);
         var pic = Picture();
         var p = e.GetPosition(this);
+        if (_drag is not null && !e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) _drag = null;
         if (_drag is null)
         {
             UpdateCursor(p, pic);
@@ -178,6 +179,14 @@ public sealed class FrameEditor : Control, Avalonia.Rendering.ICustomHitTest
         _drag = null;
         e.Pointer.Capture(null);
         e.Handled = true;
+    }
+
+    protected override void OnPointerCaptureLost(PointerCaptureLostEventArgs e)
+    {
+        base.OnPointerCaptureLost(e);
+        // Lost mid-drag (Esc, the page changed): let go, or the box would follow the bare mouse.
+        _drag = null;
+        _corner = -1;
     }
 
     private void UpdateCursor(Point p, Rect pic)
