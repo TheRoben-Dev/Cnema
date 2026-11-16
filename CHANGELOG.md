@@ -2,6 +2,10 @@
 
 What changed in each Savefile (formerly Cnema) release. The app shows the entries you have not seen yet after it updates.
 
+## 0.39.0
+- Make room (under Tools): Savefile finds big videos you haven't watched in three months or more, skipping favourites and anything newer than a month, and can encode them again as HEVC. They look the same in about half the space. You see the list first, tick what you want, and can try one first. Every new copy is checked to be the same length, keep every sound track and be clearly smaller before it replaces the original. Name, date, favourite, tags, friends and notes all stay, and the original waits in the bin for 24 hours.
+- When there's 2 GB or more to win, Mochi mentions it.
+
 ## 0.38.0
 - Badges: 12 to earn from what your clips show, like Night owl, Full squad, On a roll (clips 7 days in a row), Explorer and Throwback. Mochi holds up each new one, and Stats shows them all with the date you earned them. Switch them off under Settings, Features, Badges.
 - Old favourites: every few days at most, Mochi brings up a favourite you haven't watched in a couple of months, with a Watch it button right in its speech bubble. It's under Settings, Features, Mochi.

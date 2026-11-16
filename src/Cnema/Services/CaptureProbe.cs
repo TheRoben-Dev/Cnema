@@ -121,7 +121,7 @@ public static class CaptureProbe
     public static string? SystemAudioHelper =>
         OperatingSystem.IsMacOSVersionAtLeast(13) ? ToolLocator.Find("cnema-audio") : null;
 
-    private static async Task<bool> EncoderWorksAsync(string ffmpeg, string encoder)
+    internal static async Task<bool> EncoderWorksAsync(string ffmpeg, string encoder)
     {
         lock (Gate) if (EncoderOk.TryGetValue(encoder, out var hit)) return hit;
         var r = await RunQuiet(ffmpeg, "-hide_banner", "-loglevel", "error", "-f", "lavfi",

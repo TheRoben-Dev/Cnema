@@ -282,6 +282,8 @@ public sealed class FeatureSettings
     public bool Badges { get; set; } = true;
     /// <summary>Hours played per game while Savefile runs, counted on this computer from when it's switched on.</summary>
     public bool Playtime { get; set; }
+    /// <summary>Make room: big, rarely watched videos encoded again as HEVC at the same look (Tools, Make room).</summary>
+    public bool MakeRoom { get; set; } = true;
     /// <summary>The loading screen at start: logo, name, the blob and what's being got ready.</summary>
     public bool Splash { get; set; } = true;
     /// <summary>

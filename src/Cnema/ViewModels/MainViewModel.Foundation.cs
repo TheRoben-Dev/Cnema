@@ -61,7 +61,7 @@ public sealed partial class MainViewModel
         foreach (var name in new[]
                  {
                      nameof(ShowClipping), nameof(ShowSessionButton), nameof(ShowCollections),
-                     nameof(ShowCleanUp), nameof(ShowStats), nameof(ShowTools), nameof(ShowUnwatchedFilter),
+                     nameof(ShowCleanUp), nameof(ShowStats), nameof(ShowShrink), nameof(ShowTools), nameof(ShowUnwatchedFilter),
                      nameof(ShowMiniPlayerButton), nameof(ShowRecorders), nameof(ShowNotes), nameof(ShowMontage), nameof(ShowPeople), nameof(ShowRecap), nameof(ShowRecapMontage), nameof(ShowPlayingWith), nameof(HasSquad), nameof(PlayingWithLabel), nameof(ShowPlayAll), nameof(CanPlayAll), nameof(ShowFriendMontage), nameof(ShowBackup), nameof(ShowSmartTitles), nameof(ShowSpeech), nameof(ShowVisual), nameof(ShowMascot), nameof(ReducedMotion),
                  })
             OnPropertyChanged(name);
