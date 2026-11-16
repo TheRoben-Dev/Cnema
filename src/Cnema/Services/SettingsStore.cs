@@ -50,6 +50,25 @@ public sealed class AppSettings
 
 public sealed class BackupSettings
 {
+    /// <summary>"sftp" (a folder on any SSH server) or "s3". Null in settings from before SFTP: S3 when one was set up.</summary>
+    public string? Kind { get; set; }
+    public bool IsSftp => (Kind ?? (Endpoint.Length > 0 ? "s3" : "sftp")) == "sftp";
+
+    // ----- SFTP -----
+    /// <summary>The server's name or address, such as 192.168.1.20 or nas.local.</summary>
+    public string Host { get; set; } = "";
+    public int Port { get; set; } = 22;
+    public string User { get; set; } = "";
+    /// <summary>Where on the server: an absolute path, or one inside the user's home folder.</summary>
+    public string RemoteFolder { get; set; } = "savefile";
+    /// <summary>Sign in with an SSH key (true) or a password.</summary>
+    public bool UseKey { get; set; } = true;
+    /// <summary>The private key file; empty uses the first of ~/.ssh/id_ed25519, id_ecdsa, id_rsa.</summary>
+    public string KeyFile { get; set; } = "";
+    /// <summary>The server's key fingerprint ("SHA256:…"), trusted the first time Savefile connected.</summary>
+    public string HostKey { get; set; } = "";
+
+    // ----- S3 -----
     /// <summary>The server's address, such as http://192.168.1.20:3900. Empty: not set up.</summary>
     public string Endpoint { get; set; } = "";
     /// <summary>Garage wants "garage"; most others accept anything, so "us-east-1".</summary>
@@ -63,7 +82,9 @@ public sealed class BackupSettings
     /// <summary>Back up new clips and favourites on their own, a little while after they change.</summary>
     public bool Automatic { get; set; } = true;
     public DateTime? LastRunUtc { get; set; }
-    public bool IsSetUp => Endpoint.Length > 0 && Bucket.Length > 0 && AccessKey.Length > 0;
+    public bool IsSetUp => IsSftp
+        ? Host.Length > 0 && User.Length > 0
+        : Endpoint.Length > 0 && Bucket.Length > 0 && AccessKey.Length > 0;
 }
 
 /// <summary>Effects that stay as you left them from one export to the next.</summary>

@@ -119,6 +119,7 @@ public partial class MainWindow : Window
         vm.CopyText = async text => { if (Clipboard is { } clipboard) await clipboard.SetTextAsync(text); };
         vm.PickFolder = PickFolderAsync;
         vm.PickFile = PickMediaFileAsync;
+        vm.PickAnyFile = PickAnyFileAsync;
         vm.PickAudio = PickAudioFileAsync;
         vm.CaptureRecap = CaptureRecap;
         vm.Player.PickAudio = PickAudioFileAsync;
@@ -232,6 +233,18 @@ public partial class MainWindow : Window
     private void OnClearMontageMusicClick(object? sender, RoutedEventArgs e)
     {
         if (Vm?.Montage is { } m) m.MusicPath = null;
+    }
+
+    private async Task<string?> PickAnyFileAsync(string title)
+    {
+        var ssh = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".ssh");
+        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = title,
+            AllowMultiple = false,
+            SuggestedStartLocation = Directory.Exists(ssh) ? await StorageProvider.TryGetFolderFromPathAsync(ssh) : null,
+        });
+        return files.FirstOrDefault()?.TryGetLocalPath();
     }
 
     private async Task<string?> PickMediaFileAsync(string title, bool image)

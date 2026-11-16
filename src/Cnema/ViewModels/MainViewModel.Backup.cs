@@ -21,12 +21,16 @@ public sealed partial class MainViewModel
 
     private BackupSettings BackupConfig => _settings.Current.Backup;
 
+    /// <summary>Any file (an SSH key): the window's file picker.</summary>
+    public Func<string, Task<string?>>? PickAnyFile { get; set; }
+
     [RelayCommand]
     private async Task OpenBackupAsync()
     {
         // The keychain may take a moment (or ask to be unlocked): read it off the UI thread.
-        var secret = await Task.Run(() => SecretStore.Get(BackupService.SecretName));
-        var panel = new BackupViewModel(BackupConfig, secret);
+        var (secret, sftpSecret) = await Task.Run(() =>
+            (SecretStore.Get(BackupService.SecretName), SecretStore.Get(BackupService.SftpSecretName)));
+        var panel = new BackupViewModel(BackupConfig, secret, sftpSecret);
         panel.Summary = BackupSummary();
         panel.IsBusy = _backup.IsRunning;
         BackupPanel = panel;
@@ -44,9 +48,39 @@ public sealed partial class MainViewModel
     {
         panel.WriteTo(BackupConfig);
         _settings.Save();
-        var secret = panel.SecretKey;
-        if (!await Task.Run(() => SecretStore.Set(BackupService.SecretName, secret)))
-            ShowToast(T("Couldn't store the secret key in the system keychain."));
+        var (secret, sftpSecret) = (panel.SecretKey, panel.SftpSecret);
+        if (!await Task.Run(() => SecretStore.Set(BackupService.SecretName, secret) & SecretStore.Set(BackupService.SftpSecretName, sftpSecret)))
+            ShowToast(T("Couldn't store the password in the system keychain."));
+        // Pointed somewhere else: the backed-up marks were for the old place.
+        var before = _backup.BackedUpCount;
+        _backup.UseTarget(BackupConfig);
+        if (_backup.BackedUpCount != before)
+        {
+            foreach (var v in _items.Values) v.RefreshBackup();
+            panel.Summary = BackupSummary();
+        }
+    }
+
+    /// <summary>A first connection to an SSH server trusts its key: keep it, and show it.</summary>
+    private void KeepHostKey()
+    {
+        if (BackupPanel is { } open && open.HostKey != BackupConfig.HostKey) open.HostKey = BackupConfig.HostKey;
+        _settings.Save();
+    }
+
+    [RelayCommand]
+    private void ForgetHostKey()
+    {
+        BackupConfig.HostKey = "";
+        if (BackupPanel is { } open) { open.HostKey = ""; open.ShowStatus(T("Forgotten. Test the connection to trust the server's key again."), false); }
+        _settings.Save();
+    }
+
+    [RelayCommand]
+    private async Task PickKeyFileAsync()
+    {
+        if (BackupPanel is not { } panel || PickAnyFile is null) return;
+        if (await PickAnyFile(T("Pick your SSH private key")) is { } picked) panel.KeyFile = picked;
     }
 
     private string BackupSummary()
@@ -66,8 +100,13 @@ public sealed partial class MainViewModel
         panel.IsBusy = true;
         try
         {
-            var problem = await Task.Run(() => _backup.TestAsync(BackupConfig, panel.SecretKey));
-            panel.ShowStatus(problem ?? T("Connected. Savefile can back up to this bucket."), problem is not null);
+            var known = BackupConfig.HostKey;
+            var problem = await Task.Run(() => _backup.TestAsync(BackupConfig, panel.CurrentSecret));
+            var trusted = BackupConfig.HostKey != known && BackupConfig.HostKey.Length > 0;
+            KeepHostKey();
+            panel.ShowStatus(problem ?? (trusted
+                ? T("Connected. Savefile can back up here, and from now on it only talks to this server (see its key below).")
+                : T("Connected. Savefile can back up here.")), problem is not null);
         }
         finally { panel.IsBusy = false; }
     }
@@ -84,7 +123,8 @@ public sealed partial class MainViewModel
     {
         if (!Features.Backup) return;
         if (_backup.IsRunning) { _backupAgain = true; return; }
-        var secret = await Task.Run(() => SecretStore.Get(BackupService.SecretName));
+        var secretName = BackupService.SecretNameFor(BackupConfig);
+        var secret = await Task.Run(() => SecretStore.Get(secretName));
         if (BackupService.Problem(BackupConfig, secret) is { } problem)
         {
             if (!quiet) BackupPanel?.ShowStatus(problem, true);
@@ -102,7 +142,7 @@ public sealed partial class MainViewModel
         BackupResult result;
         try
         {
-            result = await Task.Run(() => _backup.BackUpAsync(BackupConfig, secret!, library, folders, progress, _backupCts.Token));
+            result = await Task.Run(() => _backup.BackUpAsync(BackupConfig, secret, library, folders, progress, _backupCts.Token));
             if (result.Ok)
             {
                 _settings.Current.Backup.LastRunUtc = DateTime.UtcNow;
@@ -118,6 +158,7 @@ public sealed partial class MainViewModel
             BackupActivity = "";
             _backupCts = null;
         }
+        KeepHostKey();
         foreach (var v in _items.Values) v.RefreshBackup();
         if (BackupPanel is { } panel)
         {
@@ -163,20 +204,21 @@ public sealed partial class MainViewModel
     {
         if (BackupPanel is not { } panel) return;
         await SaveBackupSettingsAsync(panel);
-        if (BackupService.Problem(BackupConfig, panel.SecretKey) is { } problem) { panel.ShowStatus(problem, true); return; }
+        if (BackupService.Problem(BackupConfig, panel.CurrentSecret) is { } problem) { panel.ShowStatus(problem, true); return; }
         panel.IsBusy = true;
         panel.ShowStatus(T("Looking at the server…"), false);
         try
         {
             var library = _items.Values.Select(v => v.Entry).ToList();
-            var plan = await Task.Run(() => _backup.PlanRestoreAsync(BackupConfig, panel.SecretKey, library, CancellationToken.None));
+            var plan = await Task.Run(() => _backup.PlanRestoreAsync(BackupConfig, panel.CurrentSecret, library, CancellationToken.None));
+            KeepHostKey();
             panel.RestorePlan = plan;
             panel.ShowStatus(plan.Missing.Count == 0 ? T("Everything on the server is on this computer too.") : "", false);
         }
         catch (Exception ex)
         {
             Log.Warn($"Restore check failed: {ex.Message}");
-            panel.ShowStatus(await Task.Run(() => _backup.TestAsync(BackupConfig, panel.SecretKey)) ?? ex.Message, true);
+            panel.ShowStatus(await Task.Run(() => _backup.TestAsync(BackupConfig, panel.CurrentSecret)) ?? ex.Message, true);
         }
         finally { panel.IsBusy = false; }
     }
@@ -206,7 +248,8 @@ public sealed partial class MainViewModel
         BackupResult result;
         try
         {
-            result = await Task.Run(() => _backup.RestoreAsync(BackupConfig, panel.SecretKey, plan, target,
+            var secret = panel.CurrentSecret;
+            result = await Task.Run(() => _backup.RestoreAsync(BackupConfig, secret, plan, target,
                 (path, details) => _library.Adopt(path, details), progress, _backupCts.Token));
         }
         catch (OperationCanceledException)
@@ -218,6 +261,7 @@ public sealed partial class MainViewModel
             BackupActivity = "";
             _backupCts = null;
         }
+        KeepHostKey();
         _library.SaveCache();
         await RescanAsync();
         // The panel may have been closed and opened again meanwhile: update the one on screen.
