@@ -506,6 +506,14 @@
   <Style Selector="Button.indexcard:pointerover /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource Bg3}" />
   </Style>
+  <!-- A small sidebar card with Mochi in it (the backup buddy) -->
+  <Style Selector="Border.mochicard">
+    <Setter Property="Background" Value="{DynamicResource Bg2}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Line}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="Padding" Value="6,6,10,6" />
+  </Style>
   <Style Selector="Button.danger">
     <Setter Property="Background" Value="{DynamicResource Danger}" />
     <Setter Property="Foreground" Value="#FFFFFF" />

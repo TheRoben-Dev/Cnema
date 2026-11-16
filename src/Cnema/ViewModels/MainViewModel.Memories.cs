@@ -157,14 +157,14 @@ public sealed partial class MainViewModel
     private static readonly int[] Milestones = { 1, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000 };
 
     /// <summary>The toast for a saved clip: a milestone when one is reached, otherwise a friendly line.</summary>
-    private string SavedToastText(string path)
+    private (string Text, bool Milestone) SavedToastText(string path)
     {
         var name = Path.GetFileNameWithoutExtension(path);
         var n = ++_settings.Current.ClipsSaved;
         _settings.Save();
         if (Features.Milestones && Milestones.Contains(n))
-            return n == 1 ? T("Your first save. Plenty more to come.") : F("{0:N0} moments saved. Here's to the next {0:N0}.", n);
-        return F("{0} · {1}", T(SavedLines[Random.Shared.Next(SavedLines.Length)]), name);
+            return (n == 1 ? T("Your first save. Plenty more to come.") : F("{0:N0} moments saved. Here's to the next {0:N0}.", n), true);
+        return (F("{0} · {1}", T(SavedLines[Random.Shared.Next(SavedLines.Length)]), name), false);
     }
 
     /// <summary>"214 moments kept since March 2025" on All videos; a plain count everywhere else.</summary>

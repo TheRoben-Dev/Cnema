@@ -324,6 +324,9 @@ public partial class MainWindow : Window
     private void OnPlayItemClick(object? sender, RoutedEventArgs e) =>
         Vm?.OpenCommand.Execute((sender as Control)?.DataContext as VideoItemViewModel);
 
+    /// <summary>Ten quick pokes: Mochi spins and gets dizzy.</summary>
+    private void OnMochiEasterEgg() => Vm?.MochiDizzy();
+
     private void OnMascotPressed(object? sender, Avalonia.Input.PointerPressedEventArgs e)
     {
         Vm?.PokeMascot();
