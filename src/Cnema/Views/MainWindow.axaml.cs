@@ -577,6 +577,11 @@ public partial class MainWindow : Window
             if (e.Key == Key.Escape) { vm.CloseRecordersCommand.Execute(null); e.Handled = true; }
             return;
         }
+        if (vm.IsShowingRename)
+        {
+            if (e.Key == Key.Escape) { vm.CloseSmartRenameCommand.Execute(null); e.Handled = true; }
+            return;
+        }
         if (vm.IsShowingMerge)
         {
             if (e.Key == Key.Escape) { vm.CloseMergeCommand.Execute(null); e.Handled = true; }

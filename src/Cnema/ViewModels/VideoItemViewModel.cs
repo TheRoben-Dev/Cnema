@@ -14,7 +14,7 @@ public sealed partial class VideoItemViewModel : ObservableObject
 
     public VideoItemViewModel(VideoEntry entry) => Entry = entry;
 
-    public string Title => Path.GetFileNameWithoutExtension(Entry.Path);
+    public string Title => Entry.Title is { Length: > 0 } t ? t : Path.GetFileNameWithoutExtension(Entry.Path);
     public string Extension => Path.GetExtension(Entry.Path).TrimStart('.').ToUpperInvariant();
     public string DurationText => Entry.DurationMs > 0 ? TrimTimeline.FormatTime(Entry.DurationMs) : "";
     public bool HasDuration => Entry.DurationMs > 0;
@@ -74,6 +74,11 @@ public sealed partial class VideoItemViewModel : ObservableObject
     public static bool PeopleEnabled { get; set; } = true;
     /// <summary>Whether this exact file is on the backup server; set by the main view model.</summary>
     public static Func<VideoEntry, bool>? BackedUp { get; set; }
+
+    /// <summary>Excitement at or above this marks a card as a Highlight (the library's top tenth).</summary>
+    public static double HighlightThreshold { get; set; } = double.MaxValue;
+    public bool IsHighlight => Entry.Smart is { } s && s.Excitement >= HighlightThreshold;
+    public void RefreshHighlight() => OnPropertyChanged(nameof(IsHighlight));
     public bool IsBackedUp => BackedUp?.Invoke(Entry) == true;
     public void RefreshBackup() => OnPropertyChanged(nameof(IsBackedUp));
     public bool HasPeople => PeopleEnabled && Entry.People.Count > 0;

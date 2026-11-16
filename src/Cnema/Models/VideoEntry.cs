@@ -25,6 +25,10 @@ public sealed class VideoEntry
     public string? Note { get; set; }
     /// <summary>Friends who were there when this was recorded ("Who was there"); search finds them.</summary>
     public List<string> People { get; set; } = new();
+    /// <summary>The name shown in Savefile (Smart titles, or one typed in); null shows the file name.</summary>
+    public string? Title { get; set; }
+    /// <summary>What the smart features worked out about the video; null until it has been looked at.</summary>
+    public SmartInfo? Smart { get; set; }
 
     [System.Text.Json.Serialization.JsonIgnore]
     public string FileName => System.IO.Path.GetFileName(Path);
@@ -40,7 +44,23 @@ public sealed class VideoEntry
         ThumbAtMs = other.ThumbAtMs;
         Note = other.Note;
         People = other.People.ToList();
+        Title = other.Title;
     }
+}
+
+/// <summary>Found by looking at (and listening to) a video, on this computer. Redone when the file changes.</summary>
+public sealed class SmartInfo
+{
+    /// <summary>The analysis version; a higher one in a newer Savefile means "look again".</summary>
+    public int Version { get; set; }
+    /// <summary>How eventful the video is, 0 (quiet, still) to 1 (loud spikes, lots going on).</summary>
+    public double Excitement { get; set; }
+    /// <summary>The middle of its best few seconds, in ms; -1 when nothing stands out.</summary>
+    public long BestMs { get; set; } = -1;
+    /// <summary>Sudden loud moments (shouts, gunfire, a crowd).</summary>
+    public int Spikes { get; set; }
+    /// <summary>How much the picture changes, 0 to 1.</summary>
+    public double Motion { get; set; }
 }
 
 public sealed class LibraryCacheFile

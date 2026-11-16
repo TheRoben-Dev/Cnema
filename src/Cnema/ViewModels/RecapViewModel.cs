@@ -85,7 +85,7 @@ public sealed partial class RecapViewModel : ObservableObject
         var picks = year.Where(v => v.Entry.Favorite).ToList();
         if (picks.Count < 12)
             picks.AddRange(year.Where(v => !v.Entry.Favorite)
-                .OrderByDescending(v => v.Entry.People.Count > 0 ? 2 : 0)
+                .OrderByDescending(v => (v.Entry.People.Count > 0 ? 2 : 0) + (v.Entry.Smart?.Excitement ?? 0) * 3)
                 .ThenByDescending(v => string.IsNullOrWhiteSpace(v.Entry.Note) ? 0 : 1)
                 .ThenBy(v => v.Entry.ModifiedUtc)
                 .Take(12 - picks.Count));

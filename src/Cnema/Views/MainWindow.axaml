@@ -284,6 +284,13 @@
                     <TextBlock svc:Tr.Text="Stats" FontSize="13" VerticalAlignment="Center" />
                   </StackPanel>
                 </Button>
+                <Button x:Name="SmartRenameButton" Classes="navbutton" IsVisible="{Binding ShowSmartTitles}" Command="{Binding OpenSmartRenameCommand}"
+                        svc:Tr.Tip="Better names for your clips, from the game, who was there and when">
+                  <StackPanel Orientation="Horizontal" Spacing="10">
+                    <PathIcon Data="{StaticResource IcEdit}" Width="15" Height="15" Foreground="{DynamicResource TextDim}" />
+                    <TextBlock svc:Tr.Text="Smart rename" FontSize="13" VerticalAlignment="Center" />
+                  </StackPanel>
+                </Button>
                 <Button x:Name="RecapButton" Classes="navbutton" IsVisible="{Binding ShowRecap}" Command="{Binding OpenRecapCommand}"
                         svc:Tr.Tip="Look back on a year of moments with your friends">
                   <StackPanel Orientation="Horizontal" Spacing="10">
@@ -644,10 +651,14 @@
                                        Maximum="1" Value="{Binding Progress}" IsVisible="{Binding HasProgress}"
                                        Background="#55000000" />
                           <!-- favourite marker (always) and quick actions (on hover) -->
-                          <Border Classes="badge fav" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="8" Padding="5"
-                                  IsVisible="{Binding IsFavorite}">
-                            <PathIcon Data="{StaticResource IcStar}" Width="12" Height="12" Foreground="#FFD166" />
-                          </Border>
+                          <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="8">
+                            <Border Classes="badge fav" Padding="5" IsVisible="{Binding IsHighlight}" svc:Tr.Tip="One of your best moments">
+                              <PathIcon Data="{StaticResource IcSparkle}" Width="12" Height="12" Foreground="White" />
+                            </Border>
+                            <Border Classes="badge fav" Padding="5" IsVisible="{Binding IsFavorite}">
+                              <PathIcon Data="{StaticResource IcStar}" Width="12" Height="12" Foreground="#FFD166" />
+                            </Border>
+                          </StackPanel>
                           <StackPanel Classes="actions" Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="6" IsVisible="{Binding !ShowSelectBox}">
                             <Button Classes="mini" Focusable="False" svc:Tr.Tip="Rename, tag or move"
                                     Command="{Binding #Root.((vm:MainViewModel)DataContext).BeginEditCommand}" CommandParameter="{Binding}">
@@ -894,12 +905,16 @@
           </Grid>
 
           <StackPanel Spacing="6">
-            <TextBlock Classes="label" svc:Tr.Text="FILE NAME" />
-            <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Classes="label" Text="{Binding NameLabel}" />
+            <Grid ColumnDefinitions="*,Auto,Auto">
               <TextBox x:Name="EditName" Text="{Binding Name}" CornerRadius="8" />
-              <TextBlock Grid.Column="1" Classes="dim mono" Text="{Binding Extension}" VerticalAlignment="Center" Margin="8,0,0,0" />
+              <TextBlock Grid.Column="1" Classes="dim mono" Text="{Binding Extension}" VerticalAlignment="Center" Margin="8,0,0,0" IsVisible="{Binding ShowExtension}" />
+              <Button Grid.Column="2" Classes="ghost" Padding="7" Margin="4,0,0,0" IsVisible="{Binding CanSuggest}" svc:Tr.Tip="Suggest a name from the game, who was there and the date"
+                      Command="{Binding SuggestNameCommand}">
+                <PathIcon Data="{StaticResource IcSparkle}" Width="14" Height="14" />
+              </Button>
             </Grid>
-            <TextBlock Classes="dim" FontSize="11" svc:Tr.Text="Renames the actual file on disk." />
+            <TextBlock Classes="dim" FontSize="11" Text="{Binding NameHint}" TextWrapping="Wrap" />
           </StackPanel>
 
           <StackPanel Spacing="6" IsVisible="{Binding CanMove}">
@@ -1147,6 +1162,58 @@
                 </StackPanel>
               </StackPanel>
             </StackPanel>
+          </ScrollViewer>
+        </DockPanel>
+      </Border>
+    </Border>
+
+    <!-- ======================= SMART RENAME ======================= -->
+    <Border x:Name="RenameScrim" Background="{DynamicResource Scrim}" IsVisible="{Binding IsShowingRename}">
+      <Border Width="760" MaxHeight="760" Margin="0,40" VerticalAlignment="Center" HorizontalAlignment="Center" Background="{DynamicResource Bg1}"
+              BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="16" BoxShadow="{DynamicResource DialogShadow}"
+              DataContext="{Binding Rename}" x:DataType="vm:SmartRenameViewModel">
+        <DockPanel>
+          <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="24,22,24,6">
+            <TextBlock svc:Tr.Text="Smart rename" FontSize="17" FontWeight="Bold" VerticalAlignment="Center" />
+            <Button Grid.Column="1" Classes="ghost" Padding="6" IsEnabled="{Binding IsIdle}" Command="{Binding #Root.((vm:MainViewModel)DataContext).CloseSmartRenameCommand}">
+              <PathIcon Data="{StaticResource IcClose}" Width="13" Height="13" />
+            </Button>
+          </Grid>
+          <TextBlock DockPanel.Dock="Top" Classes="dim" FontSize="12" TextWrapping="Wrap" Margin="24,0,24,12" Text="{Binding Intro}" />
+          <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Line}" BorderThickness="0,1,0,0" Padding="24,12">
+            <StackPanel Spacing="8">
+              <CheckBox IsChecked="{Binding RenameFiles}" IsEnabled="{Binding IsIdle}" IsVisible="{Binding HasRows}">
+                <TextBlock svc:Tr.Text="Rename the files too (otherwise only the name shown in Savefile changes)" FontSize="12" />
+              </CheckBox>
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Text="{Binding Status}" FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,12,0" />
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                  <Button Classes="soft" svc:Tr.Content="Undo" IsVisible="{Binding CanUndo}" IsEnabled="{Binding IsIdle}"
+                          Command="{Binding #Root.((vm:MainViewModel)DataContext).UndoSmartRenameCommand}" />
+                  <Button Classes="accent" svc:Tr.Content="Rename" IsEnabled="{Binding IsIdle}" IsVisible="{Binding HasRows}"
+                          Command="{Binding #Root.((vm:MainViewModel)DataContext).ApplySmartRenameCommand}" />
+                </StackPanel>
+              </Grid>
+            </StackPanel>
+          </Border>
+          <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <ItemsControl ItemsSource="{Binding Rows}" Margin="24,0,24,16" IsEnabled="{Binding IsIdle}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><VirtualizingStackPanel /></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:SmartRenameRow">
+                  <Border Classes="cleanrow">
+                    <Grid ColumnDefinitions="Auto,*,Auto,1.3*">
+                      <CheckBox IsChecked="{Binding IsChecked}" VerticalAlignment="Center" MinWidth="0" Margin="0,0,8,0" />
+                      <TextBlock Grid.Column="1" Classes="dim" Text="{Binding OldTitle}" FontSize="12" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTip.Tip="{Binding Item.Entry.Path}" />
+                      <TextBlock Grid.Column="2" Classes="dim" Text="→" Margin="10,0" VerticalAlignment="Center" />
+                      <TextBox Grid.Column="3" Text="{Binding NewTitle}" CornerRadius="8" FontSize="12" />
+                    </Grid>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
           </ScrollViewer>
         </DockPanel>
       </Border>
@@ -2224,6 +2291,37 @@
                         <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Show videos from more than one folder. Off, your library is one folder, the same one clips are saved to. Folders you already added are never dropped." />
                       </StackPanel>
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureSeveralFolders}" />
+                    </Grid>
+                  </StackPanel>
+                </Border>
+
+                <TextBlock Classes="label" svc:Tr.Text="SMART" Margin="0,8,0,0" />
+                <Border Classes="group">
+                  <StackPanel>
+                    <Grid Classes="row" ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="2">
+                        <TextBlock svc:Tr.Text="Best moments" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Savefile listens to and watches your videos, on this computer and only when it's not busy, to find the moments that stand out. They get a sparkle, come first under Best moments, and lead Worth a rewatch, montages and Year in clips. It waits while you play." />
+                        <TextBlock Classes="dim" FontSize="11" Foreground="{DynamicResource Highlight}" Text="{Binding #Root.((vm:MainViewModel)DataContext).SmartActivity}"
+                                   IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).SmartActivity, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureHighlights}" />
+                    </Grid>
+                    <Border Classes="sep" />
+                    <Grid Classes="row" ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="2">
+                        <TextBlock svc:Tr.Text="Smart titles" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Names from the game, who was there and when, like &quot;Late-night Valorant with Alex · 16 Nov&quot;. Suggested when you edit a video, and for the whole library under Tools, Smart rename." />
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureSmartTitles}" />
+                    </Grid>
+                    <Border Classes="sep" />
+                    <Grid Classes="row" ColumnDefinitions="*,Auto" IsEnabled="{Binding FeatureSmartTitles}">
+                      <StackPanel Spacing="2">
+                        <TextBlock svc:Tr.Text="Name new clips by themselves" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="New clips with a name a recorder made up get a smart title in Savefile. The file keeps its name." />
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureAutoTitles}" />
                     </Grid>
                   </StackPanel>
                 </Border>

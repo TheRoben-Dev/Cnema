@@ -7,9 +7,16 @@ public sealed record ProcessResult(int ExitCode, string StdOut, string StdErr);
 
 public static class ProcessRunner
 {
+    /// <summary>Background work (the smart features): give way to games and everything else.</summary>
+    public static void Lower(Process p)
+    {
+        try { p.PriorityClass = ProcessPriorityClass.Idle; }
+        catch { /* gone already, or not allowed: runs at normal priority */ }
+    }
+
     public static async Task<ProcessResult> RunAsync(
         string file, IEnumerable<string> args, Action<string>? onStdOutLine = null, CancellationToken ct = default,
-        string? workingDirectory = null)
+        string? workingDirectory = null, bool background = false)
     {
         var psi = new ProcessStartInfo(file)
         {
@@ -33,6 +40,7 @@ public static class ProcessRunner
         p.ErrorDataReceived += (_, e) => { if (e.Data is not null) stderr.AppendLine(e.Data); };
 
         p.Start();
+        if (background) Lower(p);
         p.BeginOutputReadLine();
         p.BeginErrorReadLine();
         // Kill straight from the token, not from the await's continuation: when the app quits, the UI

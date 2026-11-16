@@ -33,6 +33,9 @@ public sealed partial class SettingsViewModel
     [ObservableProperty] private bool _featurePlayAll;
     [ObservableProperty] private bool _featureBackup;
     [ObservableProperty] private bool _featureSeveralFolders;
+    [ObservableProperty] private bool _featureHighlights;
+    [ObservableProperty] private bool _featureSmartTitles;
+    [ObservableProperty] private bool _featureAutoTitles;
     public bool ShowBrandingOffNotice => !FeatureBranding;
 
     // ---------- watermark ----------
@@ -83,6 +86,9 @@ public sealed partial class SettingsViewModel
         FeaturePlayAll = f.PlayAll;
         FeatureBackup = f.Backup;
         FeatureSeveralFolders = f.SeveralFolders == true;
+        FeatureHighlights = f.Highlights;
+        FeatureSmartTitles = f.SmartTitles;
+        FeatureAutoTitles = f.AutoTitles;
         var e = settings.Effects;
         WatermarkPath = e.WatermarkPath;
         WatermarkCorner = new ChipGroup(e.WatermarkCorner,
