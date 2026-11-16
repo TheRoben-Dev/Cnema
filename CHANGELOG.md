@@ -2,6 +2,15 @@
 
 What changed in each Savefile (formerly Cnema) release. The app shows the entries you have not seen yet after it updates.
 
+## 0.37.0
+- Mochi comes alive: smoother, springier animation with a crouch before every hop, a squash on landing, a jelly wobble and little idle habits (glances, stretches, double blinks, the odd small hop), never the same one twice in a row.
+- Mochi reacts when you save a clip: a squish and sparkles in the "Saved" message, and a big hop when a clip you just saved turns out to be a great moment. For a milestone it holds up a gold badge.
+- Mochi fills empty pages: it peeks up when the bin is empty, when a search finds nothing ("Mochi looked everywhere") and on a friend's page with no clips yet.
+- Seasonal looks: a Santa hat in December, a party hat on Savefile's birthday (the day you installed it) and tinsel on the Wrapped present.
+- After midnight Mochi gets sleepy and asks if it's a late session. Its eyes follow your pointer when it's idle, and clicking it makes it wobble (click it ten times quickly…).
+- While a backup runs, Mochi carries a box in the sidebar. Next to a problem (ffmpeg missing, the video player failing, a model download that went wrong) it looks puzzled and says how to fix it in plain words.
+- Each of these has its own switch under Settings, Features, Mochi, and Reduced motion keeps Mochi still.
+
 ## 0.36.1
 - Smart features get through your library again: on a Mac they managed about one video every few minutes. macOS was putting Savefile to sleep in the background (App Nap) and holding its helper back on the slowest cores, so a big library would have taken days. Now Savefile stays awake while it works (your Mac can still sleep), and a video that takes far too long is skipped instead of holding up the rest.
 - Meet Mochi: the blob has a name. While Savefile looks through your clips, Mochi sits at the bottom of the sidebar flipping through them ("Looking through your clips… 15 of 645") and hops when it finds a really good moment. Click it to see what each smart feature is doing, how long is left, and to pause for now.

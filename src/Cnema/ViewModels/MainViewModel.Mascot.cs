@@ -28,6 +28,7 @@ public sealed partial class MainViewModel
     /// <summary>Rebuilds the lines (the library or the day changed) and keeps them turning while the shelf shows.</summary>
     private void RefreshMascot()
     {
+        StartMochiClock();
         if (!Features.Mascot || _items.Count == 0)
         {
             _mascotTimer?.Stop();
@@ -100,6 +101,7 @@ public sealed partial class MainViewModel
         var lines = new List<string>();
         var all = _items.Values.Select(v => v.Entry).Where(e => e.DurationMs > 0).ToList();
         if (all.Count == 0) return lines;
+        if (LateLine(now) is { } late) lines.Add(late);
         if (WrappedNews(now) is { } news) lines.Add(news);
         DateTime Local(VideoEntry e) => e.ModifiedUtc.ToLocalTime();
         var week = all.Where(e => (now - Local(e)).TotalDays < 7).ToList();

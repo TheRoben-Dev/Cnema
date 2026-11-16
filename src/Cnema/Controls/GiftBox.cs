@@ -18,6 +18,7 @@ public sealed class GiftBox : Control
     public static readonly StyledProperty<bool> StillProperty = AvaloniaProperty.Register<GiftBox, bool>(nameof(Still));
     public static readonly StyledProperty<IImage?> PictureProperty = AvaloniaProperty.Register<GiftBox, IImage?>(nameof(Picture));
     public static readonly StyledProperty<double> ProgressProperty = AvaloniaProperty.Register<GiftBox, double>(nameof(Progress), -1);
+    public static readonly StyledProperty<bool> TinselProperty = AvaloniaProperty.Register<GiftBox, bool>(nameof(Tinsel));
 
     /// <summary>Unwrapped: lid off, the video's card showing. Switching it on plays the unwrap.</summary>
     public bool Opened { get => GetValue(OpenedProperty); set => SetValue(OpenedProperty, value); }
@@ -27,6 +28,8 @@ public sealed class GiftBox : Control
     public IImage? Picture { get => GetValue(PictureProperty); set => SetValue(PictureProperty, value); }
     /// <summary>0..1 while the video is being made, else below 0.</summary>
     public double Progress { get => GetValue(ProgressProperty); set => SetValue(ProgressProperty, value); }
+    /// <summary>A string of tinsel beads draped over the front (Mochi dressing up for December).</summary>
+    public bool Tinsel { get => GetValue(TinselProperty); set => SetValue(TinselProperty, value); }
 
     private const double WiggleEvery = 4.5, WiggleFor = 0.7, ShineEvery = 3.2, ShineFor = 0.9, UnwrapFor = 0.75;
     private readonly DateTime _start = DateTime.UtcNow;
@@ -39,7 +42,7 @@ public sealed class GiftBox : Control
 
     static GiftBox()
     {
-        AffectsRender<GiftBox>(OpenedProperty, StillProperty, PictureProperty, ProgressProperty);
+        AffectsRender<GiftBox>(OpenedProperty, StillProperty, PictureProperty, ProgressProperty, TinselProperty);
     }
 
     private double Now => (DateTime.UtcNow - _start).TotalSeconds;
@@ -114,6 +117,7 @@ public sealed class GiftBox : Control
                 DrawLid(ctx, brand, R(0.10, 0.38, 0.90, 0.52));
                 ctx.DrawRectangle(Ribbon, null, R(0.45, 0.38, 0.55, 0.52));
                 DrawBow(ctx, P(0.5, 0.38), s);
+                if (Tinsel) DrawTinsel(ctx, brand, P, s, 0.53, t);
             }
             return;
         }
@@ -205,6 +209,7 @@ public sealed class GiftBox : Control
         ctx.DrawRectangle(Shade, null, R(0.18, 0.50, 0.86, 0.56));
         ctx.DrawRectangle(brand, null, R(0.18, 0.54, 0.86, 0.94), 4, 4);
         ctx.DrawRectangle(Ribbon, null, R(0.47, 0.54, 0.57, 0.94));
+        if (Tinsel) DrawTinsel(ctx, brand, P, s, 0.57, t);
 
         // a few flecks burst out while it opens
         if (u is > 0 and < 1 && !Still)
@@ -216,6 +221,26 @@ public sealed class GiftBox : Control
                 var p = new Point(P(0.5, 0.45).X + Math.Cos(a) * d, P(0.5, 0.45).Y + Math.Sin(a) * d + ease * ease * s * 0.15);
                 ctx.DrawEllipse(i % 2 == 0 ? brand : Ribbon, null, p, s * 0.025 * (1 - u), s * 0.025 * (1 - u));
             }
+        }
+    }
+
+    private static readonly IBrush[] Beads =
+    {
+        new SolidColorBrush(Color.Parse("#F5C451")), new SolidColorBrush(Color.Parse("#E5484D")),
+        new SolidColorBrush(Color.FromArgb(240, 255, 255, 255)), new SolidColorBrush(Color.Parse("#3FB27F")),
+    };
+
+    /// <summary>Beads on a drooping string across the front; one twinkles brighter now and then.</summary>
+    private static void DrawTinsel(DrawingContext ctx, IBrush brand, Func<double, double, Point> at, double s, double y, double t)
+    {
+        const int n = 11;
+        var lit = (int)(t * 2.5) % n;
+        for (var i = 0; i < n; i++)
+        {
+            var f = i / (double)(n - 1);
+            var p = at(0.17 + f * 0.66, y + Math.Sin(f * Math.PI) * 0.09);
+            var r = s * (i == lit ? 0.034 : 0.027);
+            ctx.DrawEllipse(Beads[i % Beads.Length], null, p, r, r);
         }
     }
 

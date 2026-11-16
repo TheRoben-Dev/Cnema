@@ -19,6 +19,7 @@ public sealed partial class MainViewModel
 
     private void RaiseFeatures()
     {
+        RaiseMochi();
         VideoItemViewModel.HoverPreview = Features.HoverPreview;
         VideoItemViewModel.UnwatchedBadges = Features.Unwatched;
         VideoItemViewModel.NotesEnabled = Features.Notes;

@@ -666,6 +666,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 IsScanning = false;
                 ScanStatus = "";
                 OnPropertyChanged(nameof(HasNoResults));
+                RaiseEmpty();
                 StartSmartPass();
                 StartSpeechPass();
                 StartVisualPass();
@@ -758,6 +759,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     partial void OnIsScanningChanged(bool value)
     {
         OnPropertyChanged(nameof(HasNoResults));
+        RaiseEmpty();
         OnPropertyChanged(nameof(IsScanIndeterminate));
     }
 
@@ -827,6 +829,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         RefreshMemories();
         OnPropertyChanged(nameof(HeaderCount));
         OnPropertyChanged(nameof(HasNoResults));
+        RaiseEmpty();
         OnPropertyChanged(nameof(CanPlayAll));
         OnPropertyChanged(nameof(ShowFriendMontage));
         OnPropertyChanged(nameof(ShowFriendWrapped));
@@ -1180,7 +1183,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         if (_settings.Current.Clip.Sound) PlatformShell.PlayConfirmSound();
         QueueSquad(path);
         QueueAutoBackup();
-        ShowToast(SavedToastText(path));
+        var (savedText, milestone) = SavedToastText(path);
+        ShowSavedToast(savedText, milestone);
         if (_settings.Current.Clip.Notify)
             PlatformShell.Notify(T("Clip saved"), F("Last {0} · {1}", LengthText(seconds), Path.GetFileName(path)));
         _ = RescanAsync();
@@ -1194,12 +1198,16 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         await RunStorageCleanupAsync();
     }
 
-    public void ShowToast(string text)
+    public void ShowToast(string text) => ShowToast(text, null);
+
+    /// <summary>A toast, with Mochi in it when <paramref name="mochi"/> is given (it reacts; otherwise a tick).</summary>
+    public void ShowToast(string text, Controls.MochiMood? mochi, double seconds = 4)
     {
         _toastCts?.Cancel();
         var cts = _toastCts = new CancellationTokenSource();
         Toast = text;
-        _ = Task.Delay(4000, cts.Token).ContinueWith(_ => Dispatcher.UIThread.Post(() => Toast = null),
+        ToastMochi = mochi;
+        _ = Task.Delay(TimeSpan.FromSeconds(seconds), cts.Token).ContinueWith(_ => Dispatcher.UIThread.Post(() => Toast = null),
             TaskContinuationOptions.OnlyOnRanToCompletion);
     }
 

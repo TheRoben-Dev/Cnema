@@ -27,9 +27,9 @@ Savefile updates itself after that.
 
 - **Memories:** a "Worth a rewatch" row of old favourites and clips with friends, an "On this day" card,
   "Who was there" tags that search finds with `@name` (with a Friends list in the sidebar and "Playing with"
-  to tag everyone on every save), Year in clips (a look back on a year, with a montage of it and a picture to share), Savefile Wrapped (a 5–10 minute video of your year cut to the beat of your own songs, with animated chapters about your games, your people and your best laughs, plus a shorter cut with any friend; the blob hands it over as a present in November and December), Play all (a
+  to tag everyone on every save), Year in clips (a look back on a year, with a montage of it and a picture to share), Savefile Wrapped (a 5–10 minute video of your year cut to the beat of your own songs, with animated chapters about your games, your people and your best laughs, plus a shorter cut with any friend; Mochi hands it over as a present in November and December), Play all (a
   slideshow of any view in the Quick player), and small
-  milestones as your saves add up. The blob, Savefile's mascot, presents Worth a rewatch with a line about your clips.
+  milestones as your saves add up. Mochi, Savefile's blob mascot, presents Worth a rewatch with a line about your clips, reacts to your saves, dresses up for December and helps out with backups and problems (every behaviour can be switched off).
 - **Library:** one library folder (or several, if you like), merging scattered folders into one, thumbnails with hover scrub, search (names, `#tags`, `@friends`, years, months),
   filters, tags, favourites, collections, bulk select, duplicate finder and stats.
 - **Backup to your own server:** favourites or every video, with their tags, friends and notes, to a folder

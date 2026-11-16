@@ -7,6 +7,8 @@ public sealed class AppSettings
     public List<string> GameTags { get; set; } = new();
     /// <summary>When "Name new clips by themselves" was switched on: only clips from then on are named.</summary>
     public DateTime AutoTitlesSinceUtc { get; set; }
+    /// <summary>When Savefile first ran here: Mochi wears a party hat on the day, every year.</summary>
+    public DateTime? FirstSeenUtc { get; set; }
     /// <summary>"Merge your folders into one?" was closed for good.</summary>
     public bool MergeSuggestionClosed { get; set; }
     public int SortIndex { get; set; }
@@ -248,6 +250,25 @@ public sealed class FeatureSettings
     public bool Wrapped { get; set; } = true;
     /// <summary>The blob: Savefile's mascot presents Worth a rewatch with a line about your clips.</summary>
     public bool Mascot { get; set; } = true;
+    // What Mochi does besides presenting the shelf; each its own switch, all on unless Mochi is off.
+    /// <summary>Squishes and sparkles in the toast when a clip is saved, and hops when a fresh one turns out big.</summary>
+    public bool MochiSaves { get; set; } = true;
+    /// <summary>Peeks in when there's nothing to show: an empty bin, no results, a friend with no clips yet.</summary>
+    public bool MochiEmpty { get; set; } = true;
+    /// <summary>Holds up the badge when a milestone is reached.</summary>
+    public bool MochiBadges { get; set; } = true;
+    /// <summary>A Santa hat in December, a party hat on the day Savefile came to this computer, tinsel on the present.</summary>
+    public bool MochiSeasonal { get; set; } = true;
+    /// <summary>Sleepy after midnight.</summary>
+    public bool MochiSleepy { get; set; } = true;
+    /// <summary>Its eyes follow the pointer when it's idle.</summary>
+    public bool MochiFollow { get; set; } = true;
+    /// <summary>A click wobbles it like jelly (and lots of quick clicks do something silly).</summary>
+    public bool MochiPoke { get; set; } = true;
+    /// <summary>Carries a box in the sidebar while a backup runs.</summary>
+    public bool MochiBackup { get; set; } = true;
+    /// <summary>Looks puzzled next to a problem and says how to fix it in plain words.</summary>
+    public bool MochiHelper { get; set; } = true;
     /// <summary>The loading screen at start: logo, name, the blob and what's being got ready.</summary>
     public bool Splash { get; set; } = true;
     /// <summary>

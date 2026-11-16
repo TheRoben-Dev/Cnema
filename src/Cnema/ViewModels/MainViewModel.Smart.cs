@@ -217,7 +217,8 @@ public sealed partial class MainViewModel
                     if (_items.TryGetValue(item.Entry.Path, out var still) && ReferenceEquals(still, item))
                     {
                         item.Entry.Smart = info ?? new SmartInfo { Version = SmartAnalyzer.Version };
-                        if (info is { Excitement: >= 0.8 }) IndexCheer++; // a really good one: the blob hops
+                        if (info is { Excitement: >= 0.8 }) IndexCheer++; // a really good one: Mochi hops
+                        MaybeCheerFreshClip(item.Entry, info);
                         AutoTitle(item);
                         if (ReferenceEquals(Player.Current, item)) Player.RefreshTrimSuggestion();
                         if (Features.SmartThumbs && item.Entry.Smart.ThumbMs > 0 && item.Entry.ThumbAtMs == 0)
