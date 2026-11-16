@@ -113,6 +113,7 @@ public sealed partial class MainViewModel
         if (NudgeLine(now) is { } nudge) lines.Add(nudge);
         if (ShrinkLine() is { } room) lines.Add(room);
         if (WrappedNews(now) is { } news) lines.Add(news);
+        if (FriendShelfHint() is { } hint) lines.Add(hint);
         DateTime Local(VideoEntry e) => e.ModifiedUtc.ToLocalTime();
         var week = all.Where(e => (now - Local(e)).TotalDays < 7).ToList();
         var month = all.Where(e => Local(e).Year == now.Year && Local(e).Month == now.Month).ToList();

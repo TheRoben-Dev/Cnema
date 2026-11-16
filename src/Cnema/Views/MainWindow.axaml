@@ -676,6 +676,17 @@
                   </Border>
                 </Panel>
               </Grid>
+              <!-- Friend picks: the shelf for you, or the best of your clips with one friend (Settings, Memories) -->
+              <ItemsControl ItemsSource="{Binding ShelfChips.Chips}" Margin="28,0,28,0" IsVisible="{Binding ShowShelfFriends}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:OptionChip">
+                    <Button Classes="chip" Classes.on="{Binding IsOn}" Content="{Binding Label}" Command="{Binding PickCommand}" Margin="0,0,6,0" />
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
               <!-- The shelf scrolls sideways with a trackpad, Shift+wheel or the arrows that show on hover; no bar -->
               <Panel x:Name="ShelfPanel">
               <ScrollViewer x:Name="ShelfScroll" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled">
@@ -2941,6 +2952,14 @@
                         <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="A row at the top of the library with old favourites and clips with friends. A new pick every day." />
                       </StackPanel>
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureRewatch}" />
+                    </Grid>
+                    <Border Classes="sep" />
+                    <Grid Classes="row" ColumnDefinitions="*,Auto" IsEnabled="{Binding FeatureRewatch}">
+                      <StackPanel Spacing="2">
+                        <TextBlock svc:Tr.Text="Friend picks" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Your closest friends' names above Worth a rewatch. Pick one for the best of your clips together, and Mochi tells you about the two of you." />
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureFriendShelf}" />
                     </Grid>
                     <Border Classes="sep" />
                     <Grid Classes="row" ColumnDefinitions="*,Auto" IsEnabled="{Binding FeatureRewatch}">

@@ -2,6 +2,9 @@
 
 What changed in each Savefile (formerly Cnema) release. The app shows the entries you have not seen yet after it updates.
 
+## 0.42.0
+- Friend picks: the names of the friends you have the most clips with sit above Worth a rewatch. Pick one and the shelf fills with the best of your clips together, and Mochi says something about the two of you: how many clips you share, your game together, the biggest laugh, your first clip, or the clips it recognised them in by voice. For you takes it back to the usual mix. You can turn it off in Settings › Memories.
+
 ## 0.41.1
 - Who's talking: Savefile can now tell your friends' voices apart and fill in Who was there by itself. Turn it on in Settings › Smart features (it needs Voice search, and a one-time 26 MB download). It all happens on this computer.
 - "Who's that?", Mochi's little voice game: listen to a short snippet, then say who it is. Mochi offers its best guesses, or you can pick Someone else (a new name becomes a new friend), That's me, Not sure, or Not a person for game voices and music. Undo takes an answer back. After a few answers per friend, Mochi recognises them in your other clips too, and only adds a name it's sure about. If you take a name off a clip, it stays off.

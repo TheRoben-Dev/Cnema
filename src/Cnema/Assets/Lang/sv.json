@@ -1787,5 +1787,16 @@
   "Help recognise voices…": "Hjälp till att känna igen röster…",
   "Savefile tells your friends' voices apart in the lines Voice search writes down, and fills in Who was there for the clips it's sure about. Mochi learns the voices from a little game: you listen to a few snippets and say who it is.": "Savefile skiljer dina kompisars röster åt i replikerna som Röstsökning skriver ner och fyller i Vilka som var med för klippen den är säker på. Mochi lär sig rösterna genom ett litet spel: du lyssnar på några korta snuttar och säger vem det är.",
   "Who's talking": "Vem som pratar",
-  "two CPU cores at low priority, a moment per line said": "två processorkärnor med låg prioritet, ett ögonblick per replik"
+  "two CPU cores at low priority, a moment per line said": "två processorkärnor med låg prioritet, ett ögonblick per replik",
+  "For you": "För dig",
+  "Friend picks": "Kompisval",
+  "Your closest friends' names above Worth a rewatch. Pick one for the best of your clips together, and Mochi tells you about the two of you.": "Dina närmaste kompisars namn ovanför Värd att se igen. Välj en för det bästa av era klipp tillsammans, så berättar Mochi om er två.",
+  "You and {1}: {0} clip together. Here's the best of it.": "Du och {1}: {0} klipp tillsammans. Här är det bästa.",
+  "You and {1}: {0:N0} clips together. Here's the best of them.": "Du och {1}: {0:N0} klipp tillsammans. Här är de bästa.",
+  "The biggest laugh with {0} was {1}. It's on the shelf.": "Det största skrattet med {0} var {1}. Det ligger på hyllan.",
+  "{0} is your game with {1}: {2} clips. These are the ones that stand out.": "{0} är ert spel, du och {1}: {2} klipp. Här är de som sticker ut.",
+  "Your first clip with {0} is from {1}. Look how far you've come.": "Ditt första klipp med {0} är från {1}. Se hur långt ni har kommit.",
+  "Mochi heard {1} in {0} clip you hadn't tagged. It's in here too.": "Mochi hörde {1} i {0} klipp som du inte hade taggat. Det finns med här också.",
+  "Mochi heard {1} in {0} clips you hadn't tagged. They're in here too.": "Mochi hörde {1} i {0} klipp som du inte hade taggat. De finns med här också.",
+  "Pick {0} above the shelf for the best of your clips together.": "Välj {0} ovanför hyllan för det bästa av era klipp tillsammans."
 }
