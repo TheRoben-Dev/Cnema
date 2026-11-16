@@ -12,6 +12,8 @@ public sealed partial class CleanupRow : ObservableObject
     public string Details { get; init; } = "";
     public string Reason { get; init; } = "";
     public bool IsKept { get; init; }
+    /// <summary>Copies of one video share a group; -1 for broken or empty files.</summary>
+    public int Group { get; init; } = -1;
     [ObservableProperty] private bool _isChecked;
 }
 
@@ -73,6 +75,7 @@ public sealed partial class CleanupViewModel : ObservableObject
         Reason = reason,
         IsKept = !f.Suggested,
         IsChecked = f.Suggested,
+        Group = f.Reason == CleanupReason.Duplicate ? f.Group : -1,
     };
 
     private void Recount(string trash)

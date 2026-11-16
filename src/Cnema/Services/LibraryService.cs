@@ -150,8 +150,10 @@ public sealed class LibraryService : IDisposable
         {
             var live = new HashSet<string>(result.Select(r => r.Path), StringComparer.OrdinalIgnoreCase);
             var offline = folders.Where(f => !Directory.Exists(f)).ToList();
-            foreach (var stale in _cache.Entries.Keys.Where(k => !live.Contains(k) && !offline.Any(f => IsUnder(k, f))).ToList())
+            foreach (var stale in _cache.Entries.Keys.Where(k => !live.Contains(k) && !offline.Any(f => IsUnder(k, f)) && !_adopted.Contains(k)).ToList())
                 _cache.Entries.Remove(stale);
+            // An adopted row has done its job once a scan has seen its file.
+            _adopted.RemoveWhere(live.Contains);
         }
         SaveCache();
         return result;
@@ -216,6 +218,24 @@ public sealed class LibraryService : IDisposable
         catch { /* an orphaned thumbnail is harmless */ }
         SaveCache();
     }
+
+    /// <summary>
+    /// A file about to appear (restored from a backup) takes over these favourites, tags, friends and
+    /// notes; the next scan reads the file itself and keeps them.
+    /// </summary>
+    public void Adopt(string path, VideoEntry details)
+    {
+        var e = new VideoEntry { Path = path };
+        e.CopyUserDataFrom(details);
+        lock (_cacheLock)
+        {
+            _cache.Entries[path] = e;
+            // A scan that listed the folder before this file arrived must not throw the row away.
+            _adopted.Add(path);
+        }
+    }
+
+    private readonly HashSet<string> _adopted = new(StringComparer.OrdinalIgnoreCase);
 
     public void SaveCache()
     {

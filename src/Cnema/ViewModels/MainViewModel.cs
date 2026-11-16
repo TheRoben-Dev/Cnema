@@ -241,7 +241,6 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             $"Library: {_items.Count} videos in {_settings.Current.Folders.Count} folders",
             $"Clipping: enabled={clip.Enabled} state={Clips.State} encoder={Clips.Encoder ?? "-"} error={Clips.Error ?? "-"}",
             $"Clip settings: {clip.Seconds}s {clip.Fps}fps height={clip.Height} {clip.BitrateMbps}Mbps codec={clip.Codec} hw={clip.HardwareEncoder} audio1={(clip.Audio1 is null ? "-" : "set")} audio2={(clip.Audio2 is null ? "-" : "set")} hotkey={clip.HotkeyText} hotkeyRefused={_hotkeyRefused} extraHotkeys={clip.ExtraHotkeys.Count} extraRefused={_refusedExtras.Count}",
-            $"Controller mode: {_settings.Current.ControllerMode}",
             "",
             "--- log ---",
             Log.Tail(80),
@@ -296,65 +295,6 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         }
     }
 
-    // ---------- controller mode ----------
-    public bool IsControllerMode => _settings.Current.ControllerMode;
-    public bool ControllerFullscreen => _settings.Current.ControllerFullscreen;
-    /// <summary>Raised after settings were saved; the window re-applies layout and input.</summary>
-    public event Action? ControllerModeChanged;
-    [ObservableProperty] private string _padStatus = "";
-    /// <summary>The cursor is on the player's tools rather than driving playback.</summary>
-    [ObservableProperty] private bool _padInPlayerTools;
-    partial void OnPadInPlayerToolsChanged(bool value) => OnPropertyChanged(nameof(PadHints));
-    private bool IsInPadDialog => IsShowingRecorders || IsMakingMontage || IsCleaningUp || IsShowingStats || IsShowingRecap ||
-                                  IsShowingShortcuts || IsConfirmingDelete || IsShowingWhatsNew;
-
-    /// <summary>What the pad buttons do right now; shown along the bottom in Controller mode.</summary>
-    public IReadOnlyList<PadHint> PadHints
-    {
-        get
-        {
-            if (IsEditing)
-                return new PadHint[] { new("A", T("Select"), "a"), new("B", T("Cancel"), "b"), new("☰", T("Save"), "") };
-            if (IsPlayerOpen && PadInPlayerTools)
-                return new PadHint[]
-                {
-                    new("A", T("Select"), "a"), new("B", T("Back to the video"), "b"), new("X", T("Mark in"), "x"), new("Y", T("Mark out"), "y"),
-                    new("✥", T("Move"), ""), new("LB RB", T("Frame"), ""), new("☰", T("Export clip"), ""),
-                };
-            if (IsPlayerOpen)
-                return new PadHint[]
-                {
-                    new("A", T("Play / pause"), "a"), new("B", T("Back"), "b"), new("X", T("Mark in"), "x"), new("Y", T("Mark out"), "y"),
-                    new("◀ ▶", T("Seek"), ""), new("▲ ▼", T("Tools"), ""), new("LB RB", T("Frame"), ""), new("LT RT", T("Volume"), ""),
-                    new("☰", T("Export clip"), ""),
-                };
-            if (IsSettingsOpen)
-                return new PadHint[] { new("A", T("Select"), "a"), new("B", T("Cancel"), "b"), new("LB RB", T("Page"), ""), new("☰", T("Save"), "") };
-            if (IsInPadDialog)
-                return new PadHint[] { new("A", T("Select"), "a"), new("B", T("Close"), "b") };
-            var hints = new List<PadHint>
-            {
-                new("A", T("Play"), "a"), new("B", T("Sidebar / videos"), "b"), new("X", T("Favourite"), "x"), new("Y", T("Rename & tags"), "y"),
-                new("LB RB", T("Folder"), ""), new("☰", T("Settings"), ""),
-            };
-            if (IsClipRecording) hints.Add(new PadHint("⧉", SaveClipLabel, ""));
-            return hints;
-        }
-    }
-
-    /// <summary>LB / RB: step through the sidebar (folders, then tags) without moving focus there.</summary>
-    public void CycleNav(int delta)
-    {
-        var all = Folders.Concat(Collections).Concat(HasFriends ? Friends : Enumerable.Empty<FolderViewModel>()).Concat(Tags).ToList();
-        if (all.Count == 0) return;
-        var index = ActiveNav is null ? 0 : all.IndexOf(ActiveNav);
-        var next = all[((index + delta) % all.Count + all.Count) % all.Count];
-        if (next.Kind == NavKind.Tag) SelectedTag = next;
-        else if (next.Kind == NavKind.Person) SelectedFriend = next;
-        else if (next.Kind == NavKind.Collection) SelectedCollection = next;
-        else SelectedFolder = next;
-    }
-
     // ---------- clipping status (sidebar + tray) ----------
     public bool IsClipEnabled => _settings.Current.Clip.Enabled;
     public bool IsClipRecording => Clips.State == ClipState.Recording;
@@ -405,6 +345,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     {
         _pendingBookmarks[path] = bookmarks;
         QueueSquad(path);
+        QueueAutoBackup();
         var name = Path.GetFileNameWithoutExtension(path);
         var tag = name.EndsWith(" session", StringComparison.Ordinal) ? null : SessionGame(name);
         if (tag is not null) _pendingTags[path] = tag;
@@ -546,18 +487,6 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _settings = settings;
         _library = library;
         Clips = clips;
-        PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName is nameof(IsPlayerOpen) or nameof(Editor) or nameof(SettingsEditor) or nameof(IsClipRecording)
-                or nameof(IsShowingRecorders) or nameof(Montage) or nameof(IsCleaningUp) or nameof(IsShowingStats) or nameof(IsShowingRecap)
-                or nameof(IsShowingShortcuts) or nameof(IsConfirmingDelete) or nameof(IsShowingWhatsNew)
-                or nameof(ShortcutSheet) or nameof(Cleanup) or nameof(Stats) or nameof(Recorders) or nameof(WhatsNew)
-                or nameof(PendingDelete) or nameof(PendingBulkDelete))
-            {
-                if (e.PropertyName == nameof(IsPlayerOpen)) PadInPlayerTools = false;
-                OnPropertyChanged(nameof(PadHints));
-            }
-        };
         _hotkey = new GlobalHotkey(() => Dispatcher.UIThread.Post(() => SaveClipCommand.Execute(null)));
         Clips.Changed += () => Dispatcher.UIThread.Post(RaiseClipState);
         Clips.ClipSaved += (path, seconds) => Dispatcher.UIThread.Post(() => OnClipSaved(path, seconds));
@@ -573,11 +502,13 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _library.FoldersChanged += () => Dispatcher.UIThread.Post(() => _ = RescanAsync());
         _library.GameTagger = GameTagFor;
         Player.Finished += OnPlayerFinished;
+        VideoItemViewModel.BackedUp = e => Features.Backup && _backup.IsBackedUp(e);
         // A file renamed or moved outside the app keeps its collections and remembered edits.
         _library.EntryMoved += (from, to) => Dispatcher.UIThread.Post(() =>
         {
             CollectionPathChanged(from, to);
             EditStore.Move(from, to);
+            _backup.Moved(from, to);
         });
         RebuildFolders();
         Loc.Changed += OnLanguageChanged;
@@ -608,7 +539,6 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         VideoItemViewModel.PeopleEnabled = Features.People;
         Chapters.Enabled = Features.Chapters;
         Player.Queue = Features.ExportQueue ? Exports : null;
-        Player.IsSimpleEditor = IsControllerMode && _settings.Current.ControllerSimpleEditor;
         RebuildCollections();
         IsSetupOpen = _settings.IsFirstRun || Environment.GetEnvironmentVariable("CNEMA_SETUP") == "1";
         _ = RecoverThenApplyClipsAsync();
@@ -800,7 +730,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 : v.Entry.Path.Contains(t, StringComparison.OrdinalIgnoreCase) ||
                   v.Entry.Tags.Any(tag => tag.Contains(t, StringComparison.OrdinalIgnoreCase)) ||
                   (notes && v.Entry.Note is { } n && n.Contains(t, StringComparison.OrdinalIgnoreCase)) ||
-                  (people && v.Entry.People.Any(p => p.Contains(t, StringComparison.OrdinalIgnoreCase)))));
+                  (people && v.Entry.People.Any(p => p.Contains(t, StringComparison.OrdinalIgnoreCase))) ||
+                  MatchesWhen(v.Entry, t)));
         }
         q = ApplyFilters(q);
         q = SortIndex switch
@@ -819,6 +750,33 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(CanPlayAll));
         OnPropertyChanged(nameof(ShowFriendMontage));
         UpdateCounts();
+    }
+
+    /// <summary>
+    /// Search words about when and what: a year ("2025"), a month ("march", "mar"), "today",
+    /// "yesterday", and "favourite" / "fav".
+    /// </summary>
+    private static bool MatchesWhen(Models.VideoEntry e, string term)
+    {
+        var t = term.ToLowerInvariant();
+        var when = e.ModifiedUtc.ToLocalTime();
+        if (t.Length == 4 && int.TryParse(t, out var year) && year is >= 1990 and <= 2100) return when.Year == year;
+        if (t is "fav" or "favs" or "favourite" or "favourites" or "favorite" or "favorites") return e.Favorite;
+        if (t == T("today").ToLowerInvariant() || t == "today") return when.Date == DateTime.Today;
+        if (t == T("yesterday").ToLowerInvariant() || t == "yesterday") return when.Date == DateTime.Today.AddDays(-1);
+        if (t.Length >= 3 && MonthFor(t) is { } month) return when.Month == month;
+        return false;
+    }
+
+    private static int? MonthFor(string t)
+    {
+        foreach (var names in new[] { System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat, System.Globalization.CultureInfo.InvariantCulture.DateTimeFormat })
+            for (var m = 1; m <= 12; m++)
+            {
+                var full = names.GetMonthName(m).ToLowerInvariant();
+                if (full.Length > 0 && (full == t || (t.Length == 3 && full.StartsWith(t, StringComparison.Ordinal)))) return m;
+            }
+        return null;
     }
 
     private void UpdateCounts()
@@ -887,6 +845,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         item.RefreshAll();
         _library.SaveCache();
         if (ActiveNav?.Kind == NavKind.Favorites) RefreshView(); else UpdateCounts();
+        if (item.Entry.Favorite) QueueAutoBackup();
     }
 
     [RelayCommand]
@@ -916,6 +875,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 _items.Remove(oldPath);
                 _items[newPath] = item;
                 CollectionPathChanged(oldPath, newPath);
+                _backup.Moved(oldPath, newPath);
             }
         }
         catch (InvalidOperationException ex)
@@ -1097,6 +1057,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     {
         if (_settings.Current.Clip.Sound) PlatformShell.PlayConfirmSound();
         QueueSquad(path);
+        QueueAutoBackup();
         ShowToast(SavedToastText(path));
         if (_settings.Current.Clip.Notify)
             PlatformShell.Notify(T("Clip saved"), F("Last {0} · {1}", LengthText(seconds), Path.GetFileName(path)));
@@ -1178,8 +1139,6 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         // The shortcut sheet edits the live dictionary; point it at the one that is now saved.
         Shortcuts.Load(_settings.Current.Shortcuts);
         SettingsEditor = null;
-        OnPropertyChanged(nameof(IsControllerMode));
-        ControllerModeChanged?.Invoke();
         RaiseFeatures();
         // Sessions switched off mid-session: save it now, or it would record on with no stop button.
         if (!Features.Sessions && IsSession) await ToggleSessionAsync();

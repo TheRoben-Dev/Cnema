@@ -83,26 +83,6 @@
 
   <LayoutTransformControl x:Name="Scaler">
   <DockPanel>
-    <!-- ======================= CONTROLLER LEGEND ======================= -->
-    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Bg1}" BorderBrush="{DynamicResource Line}" BorderThickness="0,1,0,0"
-            Padding="22,9" IsVisible="{Binding IsControllerMode}">
-      <ItemsControl ItemsSource="{Binding PadHints}" HorizontalAlignment="Right">
-        <ItemsControl.ItemsPanel>
-          <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="20" /></ItemsPanelTemplate>
-        </ItemsControl.ItemsPanel>
-        <ItemsControl.ItemTemplate>
-          <DataTemplate x:DataType="vm:PadHint">
-            <StackPanel Orientation="Horizontal" Spacing="7">
-              <Border Classes="padkey" Classes.a="{Binding IsA}" Classes.b="{Binding IsB}" Classes.x="{Binding IsX}" Classes.y="{Binding IsY}">
-                <TextBlock Text="{Binding Glyph}" />
-              </Border>
-              <TextBlock Text="{Binding Label}" FontSize="12" VerticalAlignment="Center" Foreground="{DynamicResource TextDim}" />
-            </StackPanel>
-          </DataTemplate>
-        </ItemsControl.ItemTemplate>
-      </ItemsControl>
-    </Border>
-
   <Panel x:Name="RootPanel">
     <!-- ======================= LIBRARY ======================= -->
     <Grid ColumnDefinitions="248,*" IsVisible="{Binding !IsPlayerOpen}">
@@ -323,6 +303,17 @@
                   <StackPanel Orientation="Horizontal" Spacing="10">
                     <PathIcon Data="{StaticResource IcImport}" Width="15" Height="15" Foreground="{DynamicResource TextDim}" />
                     <TextBlock svc:Tr.Text="Other recorders" FontSize="13" VerticalAlignment="Center" />
+                  </StackPanel>
+                </Button>
+                <Button x:Name="BackupButton" Classes="navbutton" IsVisible="{Binding ShowBackup}" Command="{Binding OpenBackupCommand}"
+                        svc:Tr.Tip="Back your videos up to your own server">
+                  <StackPanel Orientation="Horizontal" Spacing="10">
+                    <PathIcon Data="{StaticResource IcCloud}" Width="15" Height="15" Foreground="{DynamicResource TextDim}" />
+                    <StackPanel VerticalAlignment="Center">
+                      <TextBlock svc:Tr.Text="Backup" FontSize="13" />
+                      <TextBlock Text="{Binding BackupActivity}" FontSize="10" Foreground="{DynamicResource Highlight}"
+                                 IsVisible="{Binding BackupActivity, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                    </StackPanel>
                   </StackPanel>
                 </Button>
               </StackPanel>
@@ -668,6 +659,8 @@
                         <Grid ColumnDefinitions="Auto,*" ToolTip.Tip="{Binding SubtitleTip}">
                           <PathIcon Data="{StaticResource IcNote}" Width="11" Height="11" Margin="0,0,5,0" Foreground="{DynamicResource Highlight}"
                                     IsVisible="{Binding HasNote}" VerticalAlignment="Center" />
+                          <PathIcon Data="{StaticResource IcCloudDone}" Width="12" Height="12" Margin="0,0,5,0" Foreground="{DynamicResource TextDim}"
+                                    IsVisible="{Binding IsBackedUp}" VerticalAlignment="Center" svc:Tr.Tip="Backed up" />
                           <TextBlock Grid.Column="1" Classes="dim" Text="{Binding Subtitle}" FontSize="11" TextTrimming="CharacterEllipsis" />
                         </Grid>
                         <!-- Always takes its row, empty or not: the grid sizes every card like the first one, so
@@ -1134,6 +1127,137 @@
       </Border>
     </Border>
 
+    <!-- ======================= BACKUP ======================= -->
+    <Border x:Name="BackupScrim" Background="{DynamicResource Scrim}" IsVisible="{Binding IsShowingBackup}">
+      <Border Width="600" MaxHeight="760" Margin="0,40" VerticalAlignment="Center" HorizontalAlignment="Center" Background="{DynamicResource Bg1}"
+              BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="16" BoxShadow="{DynamicResource DialogShadow}"
+              DataContext="{Binding BackupPanel}" x:DataType="vm:BackupViewModel">
+        <DockPanel>
+          <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="24,22,24,6">
+            <TextBlock svc:Tr.Text="Backup to your own server" FontSize="17" FontWeight="Bold" VerticalAlignment="Center" />
+            <Button x:Name="BackupClose" Grid.Column="1" Classes="ghost" Padding="6" Command="{Binding #Root.((vm:MainViewModel)DataContext).CloseBackupCommand}">
+              <PathIcon Data="{StaticResource IcClose}" Width="13" Height="13" />
+            </Button>
+          </Grid>
+          <TextBlock DockPanel.Dock="Top" Classes="dim" FontSize="12" TextWrapping="Wrap" Margin="24,0,24,12"
+                     svc:Tr.Text="Savefile copies your videos to a server you run yourself (Garage, SeaweedFS, MinIO or anything else that speaks S3), on your own network. Nothing is deleted there, and nothing goes anywhere else." />
+          <!-- actions -->
+          <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Line}" BorderThickness="0,1,0,0" Padding="24,12">
+            <StackPanel Spacing="8">
+              <StackPanel Spacing="4" IsVisible="{Binding IsBusy}">
+                <ProgressBar Minimum="0" Maximum="1" Value="{Binding Progress}" Height="4" MinHeight="4" CornerRadius="2" />
+                <TextBlock Classes="dim" FontSize="11" Text="{Binding ProgressText}" />
+              </StackPanel>
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Classes="dim" FontSize="12" Text="{Binding Summary}" TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,12,0" />
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                  <Button Classes="soft" svc:Tr.Content="Stop" IsVisible="{Binding IsBusy}" Command="{Binding #Root.((vm:MainViewModel)DataContext).StopBackupCommand}" />
+                  <Button x:Name="BackupNow" Classes="accent" IsEnabled="{Binding IsIdle}" Command="{Binding #Root.((vm:MainViewModel)DataContext).BackUpNowCommand}">
+                    <StackPanel Orientation="Horizontal" Spacing="7">
+                      <PathIcon Data="{StaticResource IcCloud}" Width="13" Height="13" />
+                      <TextBlock svc:Tr.Text="Back up now" FontWeight="SemiBold" />
+                    </StackPanel>
+                  </Button>
+                </StackPanel>
+              </Grid>
+            </StackPanel>
+          </Border>
+          <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="12" Margin="24,0,24,16">
+              <TextBlock Classes="label" svc:Tr.Text="SERVER" />
+              <Border Classes="group">
+                <StackPanel Margin="14,12" Spacing="10">
+                  <StackPanel Spacing="4">
+                    <TextBlock FontSize="12" svc:Tr.Text="Address" />
+                    <TextBox x:Name="BackupEndpoint" Text="{Binding Endpoint}" CornerRadius="8" Watermark="http://192.168.1.20:3900" />
+                  </StackPanel>
+                  <Grid ColumnDefinitions="*,12,*">
+                    <StackPanel Spacing="4">
+                      <TextBlock FontSize="12" svc:Tr.Text="Bucket" />
+                      <TextBox Text="{Binding Bucket}" CornerRadius="8" Watermark="savefile" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" Spacing="4">
+                      <TextBlock FontSize="12" svc:Tr.Text="Region" />
+                      <TextBox Text="{Binding Region}" CornerRadius="8" svc:Tr.Tip="Garage uses &quot;garage&quot;; most other servers accept anything." />
+                    </StackPanel>
+                  </Grid>
+                  <Grid ColumnDefinitions="*,12,*">
+                    <StackPanel Spacing="4">
+                      <TextBlock FontSize="12" svc:Tr.Text="Access key" />
+                      <TextBox Text="{Binding AccessKey}" CornerRadius="8" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" Spacing="4">
+                      <TextBlock FontSize="12" svc:Tr.Text="Secret key" />
+                      <TextBox Text="{Binding SecretKey}" CornerRadius="8" PasswordChar="•" RevealPassword="False" />
+                    </StackPanel>
+                  </Grid>
+                  <StackPanel Spacing="4">
+                    <TextBlock FontSize="12" svc:Tr.Text="Folder in the bucket" />
+                    <TextBox Text="{Binding Prefix}" CornerRadius="8" svc:Tr.Tip="Lets one bucket hold the backups of several computers." />
+                  </StackPanel>
+                  <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Text="{Binding Status}" FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,12,0"
+                               Classes.error="{Binding StatusIsError}" IsVisible="{Binding HasStatus}" />
+                    <Button Grid.Column="1" Classes="soft" svc:Tr.Content="Test connection" IsEnabled="{Binding IsIdle}"
+                            Command="{Binding #Root.((vm:MainViewModel)DataContext).TestBackupCommand}" />
+                  </Grid>
+                  <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap"
+                             svc:Tr.Text="The secret key is kept in your system's keychain, not in Savefile's settings file." />
+                </StackPanel>
+              </Border>
+
+              <TextBlock Classes="label" svc:Tr.Text="WHAT TO BACK UP" />
+              <Border Classes="group">
+                <StackPanel>
+                  <Grid Classes="row" ColumnDefinitions="*,Auto">
+                    <TextBlock svc:Tr.Text="Videos" VerticalAlignment="Center" />
+                    <ItemsControl Grid.Column="1" ItemsSource="{Binding What.Chips}">
+                      <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="6" /></ItemsPanelTemplate>
+                      </ItemsControl.ItemsPanel>
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:OptionChip">
+                          <Button Classes="chip" Classes.on="{Binding IsOn}" Content="{Binding Label}" Command="{Binding PickCommand}" />
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </Grid>
+                  <Border Classes="sep" />
+                  <Grid Classes="row" ColumnDefinitions="*,Auto">
+                    <StackPanel Spacing="2">
+                      <TextBlock svc:Tr.Text="Back up on its own" />
+                      <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="New clips and new favourites are backed up a little while after they're saved, while Savefile is open." />
+                    </StackPanel>
+                    <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding Automatic}" />
+                  </Grid>
+                  <Border Classes="sep" />
+                  <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Margin="14,10"
+                             svc:Tr.Text="Favourites, tags, friends and notes go along with the videos, so a restore brings them back too." />
+                </StackPanel>
+              </Border>
+
+              <TextBlock Classes="label" svc:Tr.Text="NEW COMPUTER" />
+              <Border Classes="group">
+                <StackPanel Margin="14,12" Spacing="10">
+                  <TextBlock Classes="dim" FontSize="12" TextWrapping="Wrap"
+                             svc:Tr.Text="Bring back videos that are on the server but not on this computer. They go to a Restored folder in your clips folder, with their favourites, tags, friends and notes." />
+                  <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Text="{Binding RestoreText}" FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,12,0" />
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                      <Button Classes="soft" svc:Tr.Content="Find videos to restore" IsEnabled="{Binding IsIdle}"
+                              Command="{Binding #Root.((vm:MainViewModel)DataContext).FindRestoreCommand}" />
+                      <Button Classes="accent" svc:Tr.Content="Restore" IsVisible="{Binding HasRestorePlan}" IsEnabled="{Binding IsIdle}"
+                              Command="{Binding #Root.((vm:MainViewModel)DataContext).RestoreCommand}" />
+                    </StackPanel>
+                  </Grid>
+                </StackPanel>
+              </Border>
+            </StackPanel>
+          </ScrollViewer>
+        </DockPanel>
+      </Border>
+    </Border>
+
     <!-- ======================= OTHER RECORDERS ======================= -->
     <Border x:Name="RecordersScrim" Background="{DynamicResource Scrim}" IsVisible="{Binding IsShowingRecorders}">
       <Border Width="640" MaxHeight="720" Margin="0,40" VerticalAlignment="Center" HorizontalAlignment="Center" Background="{DynamicResource Bg1}"
@@ -1563,7 +1687,6 @@
                 <StackPanel Margin="14,8" Spacing="2">
                   <CheckBox IsChecked="{Binding SetupClipping}" svc:Tr.Content="Background clipping: save past moments with a hotkey" />
                   <CheckBox IsChecked="{Binding SetupSessions}" IsEnabled="{Binding SetupClipping}" svc:Tr.Content="Session recording: record a whole session as one video" />
-                  <CheckBox IsChecked="{Binding SetupController}" svc:Tr.Content="Controller support, for handhelds and TVs" />
                   <CheckBox IsChecked="{Binding SetupHoverPreview}" svc:Tr.Content="Hover preview: skim a video by moving the pointer over it" />
                   <CheckBox IsChecked="{Binding SetupLoudMarkers}" svc:Tr.Content="Loud moment markers on the timeline" />
                   <CheckBox IsChecked="{Binding SetupHoverGlow}" svc:Tr.Content="Hover glow around videos" />
@@ -1682,37 +1805,6 @@
                 </StackPanel>
               </Border>
 
-              <TextBlock Classes="label" svc:Tr.Text="CONTROLLER" Margin="0,8,0,0" IsVisible="{Binding FeatureController}" />
-              <Border Classes="group" IsVisible="{Binding FeatureController}">
-                <StackPanel>
-                  <Grid Classes="row" ColumnDefinitions="*,Auto">
-                    <StackPanel Spacing="2">
-                      <TextBlock svc:Tr.Text="Controller mode" />
-                      <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap"
-                                 svc:Tr.Text="Bigger layout and full gamepad navigation, for handhelds and TVs." />
-                      <TextBlock FontSize="11" TextWrapping="Wrap" Foreground="{DynamicResource Highlight}"
-                                 Text="{Binding #Root.((vm:MainViewModel)DataContext).PadStatus}"
-                                 IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).IsControllerMode}" />
-                    </StackPanel>
-                    <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding ControllerMode}" />
-                  </Grid>
-                  <Border Classes="sep" />
-                  <Grid Classes="row" ColumnDefinitions="*,Auto">
-                    <TextBlock svc:Tr.Text="Open full screen in Controller mode" />
-                    <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding ControllerFullscreen}" />
-                  </Grid>
-                  <Border Classes="sep" />
-                  <Grid Classes="row" ColumnDefinitions="*,Auto">
-                    <StackPanel Spacing="2">
-                      <TextBlock svc:Tr.Text="Simple editor in Controller mode" />
-                      <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap"
-                                 svc:Tr.Text="Only trimming, parts and export, so everything can be reached with the controller. Turn off for every tool." />
-                    </StackPanel>
-                    <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding ControllerSimpleEditor}" />
-                  </Grid>
-                </StackPanel>
-              </Border>
-
               <TextBlock Classes="label" svc:Tr.Text="KEYBOARD" Margin="0,8,0,0" />
               <Border Classes="group">
                 <Grid Classes="row" ColumnDefinitions="*,Auto">
@@ -1796,14 +1888,6 @@
                         <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="If Savefile or your computer stops in the middle of a session, what was recorded is saved the next time Savefile starts." />
                       </StackPanel>
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureRecoverSessions}" />
-                    </Grid>
-                    <Border Classes="sep" />
-                    <Grid Classes="row" ColumnDefinitions="*,Auto">
-                      <StackPanel Spacing="2">
-                        <TextBlock svc:Tr.Text="Controller support" />
-                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Controller mode, for handhelds and TVs." />
-                      </StackPanel>
-                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureController}" />
                     </Grid>
                     <Border Classes="sep" />
                     <Grid Classes="row" ColumnDefinitions="*,Auto">
@@ -1952,6 +2036,14 @@
                         <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Watch a whole view one clip after another in the Quick player, like a slideshow of a night, a friend or a year." />
                       </StackPanel>
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeaturePlayAll}" />
+                    </Grid>
+                    <Border Classes="sep" />
+                    <Grid Classes="row" ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="2">
+                        <TextBlock svc:Tr.Text="Backup to your own server" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Keep a copy of your favourites (or every video) on a server you run at home, such as Garage, SeaweedFS or MinIO, and bring them back on a new computer. Nothing goes anywhere else." />
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureBackup}" />
                     </Grid>
                   </StackPanel>
                 </Border>
@@ -3142,13 +3234,13 @@
             </StackPanel>
 
             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right" VerticalAlignment="Center">
-              <Button Classes="ghost" Classes.on="{Binding LoopRange}" Command="{Binding AbLoopCommand}" ToolTip.Tip="{Binding AbTip}" MinWidth="54" IsVisible="{Binding IsFullEditor}">
+              <Button Classes="ghost" Classes.on="{Binding LoopRange}" Command="{Binding AbLoopCommand}" ToolTip.Tip="{Binding AbTip}" MinWidth="54">
                 <StackPanel Orientation="Horizontal" Spacing="5">
                   <PathIcon Data="{StaticResource IcLoop}" Width="13" Height="13" />
                   <TextBlock Text="{Binding AbText}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
                 </StackPanel>
               </Button>
-              <Button Classes="ghost" Classes.on="{Binding IsRateChanged}" svc:Tr.Tip="Playback speed (Shift+, slower, Shift+. faster)" MinWidth="52" IsVisible="{Binding IsFullEditor}">
+              <Button Classes="ghost" Classes.on="{Binding IsRateChanged}" svc:Tr.Tip="Playback speed (Shift+, slower, Shift+. faster)" MinWidth="52">
                 <TextBlock Text="{Binding RateText}" FontSize="13" FontWeight="SemiBold" />
                 <Button.Flyout>
                   <Flyout Placement="TopEdgeAlignedRight">
@@ -3233,7 +3325,7 @@
                   <TextBlock Classes="hint" Text="N" />
                 </StackPanel>
               </Button>
-              <Border Classes="toolsep" IsVisible="{Binding IsFullEditor}" />
+              <Border Classes="toolsep" />
               <Button Classes="tool" Command="{Binding AddCaptionCommand}" svc:Tr.Tip="Add a caption at the playhead (C)" IsVisible="{Binding ShowCaptionsTool}">
                 <StackPanel Orientation="Horizontal" Spacing="6">
                   <PathIcon Data="{StaticResource IcText}" />

@@ -12,7 +12,6 @@ public sealed partial class MainViewModel
     public AccessibilitySettings Accessibility => _settings.Current.Accessibility;
     public bool ShowClipping => Features.Clipping;
     public bool ShowSessionButton => Features.Sessions && CanToggleSession;
-    public bool ShowController => Features.Controller;
     public bool ShowUnwatchedFilter => Features.Unwatched;
 
     /// <summary>Raised when scale, motion or glow change, so the window can restyle itself.</summary>
@@ -27,7 +26,6 @@ public sealed partial class MainViewModel
         Chapters.Enabled = Features.Chapters;
         Player.RefreshChapters();
         Player.Queue = Features.ExportQueue ? Exports : null;
-        Player.IsSimpleEditor = IsControllerMode && _settings.Current.ControllerSimpleEditor;
         Player.RefreshEffectFeatures();
         if (IsMiniPlayerOpen && !UseMiniPlayer) ExpandMiniPlayer();
         foreach (var v in _items.Values) v.RefreshAll();
@@ -40,9 +38,9 @@ public sealed partial class MainViewModel
         OnPropertyChanged(nameof(HeaderCount));
         foreach (var name in new[]
                  {
-                     nameof(ShowClipping), nameof(ShowSessionButton), nameof(ShowController), nameof(ShowCollections),
+                     nameof(ShowClipping), nameof(ShowSessionButton), nameof(ShowCollections),
                      nameof(ShowCleanUp), nameof(ShowStats), nameof(ShowTools), nameof(ShowUnwatchedFilter),
-                     nameof(ShowMiniPlayerButton), nameof(ShowRecorders), nameof(ShowNotes), nameof(ShowMontage), nameof(ShowPeople), nameof(ShowRecap), nameof(ShowRecapMontage), nameof(ShowPlayingWith), nameof(HasSquad), nameof(PlayingWithLabel), nameof(ShowPlayAll), nameof(CanPlayAll), nameof(ShowFriendMontage),
+                     nameof(ShowMiniPlayerButton), nameof(ShowRecorders), nameof(ShowNotes), nameof(ShowMontage), nameof(ShowPeople), nameof(ShowRecap), nameof(ShowRecapMontage), nameof(ShowPlayingWith), nameof(HasSquad), nameof(PlayingWithLabel), nameof(ShowPlayAll), nameof(CanPlayAll), nameof(ShowFriendMontage), nameof(ShowBackup),
                  })
             OnPropertyChanged(name);
         AppearanceChanged?.Invoke();
@@ -111,14 +109,12 @@ public sealed partial class MainViewModel
         ShowToast(T("Settings imported"));
     }
 
-    /// <summary>Puts look, keys, features and controller mode in line with the stored settings.</summary>
+    /// <summary>Puts look, keys and features in line with the stored settings.</summary>
     private void ApplyAllSettings()
     {
         ThemeService.Mode = _settings.Current.ThemeMode;
         ThemeService.Apply(_settings.Current.ColorScheme, Accessibility.HighContrast);
         Shortcuts.Load(_settings.Current.Shortcuts);
-        OnPropertyChanged(nameof(IsControllerMode));
-        ControllerModeChanged?.Invoke();
         RaiseFeatures();
     }
 
@@ -140,7 +136,6 @@ public sealed partial class MainViewModel
     partial void OnSetupLanguageChanged(LanguageOption? value) { if (value is not null) Loc.Apply(value.Code); }
     [ObservableProperty] private bool _setupClipping = true;
     [ObservableProperty] private bool _setupSessions = true;
-    [ObservableProperty] private bool _setupController = true;
     [ObservableProperty] private bool _setupHoverPreview = true;
     [ObservableProperty] private bool _setupLoudMarkers = true;
     [ObservableProperty] private bool _setupHoverGlow = true;
@@ -168,7 +163,7 @@ public sealed partial class MainViewModel
         if (SetupLanguage is { } lang) s.Language = lang.Code == Loc.SystemLanguage ? "" : lang.Code;
         // Only the switches shown in setup; everything else (other features, folders, hotkeys) stays.
         var f = s.Features;
-        f.Clipping = SetupClipping; f.Sessions = SetupSessions; f.Controller = SetupController;
+        f.Clipping = SetupClipping; f.Sessions = SetupSessions;
         f.HoverPreview = SetupHoverPreview; f.LoudMarkers = SetupLoudMarkers; f.HoverGlow = SetupHoverGlow;
         _settings.Save();
         IsSetupOpen = false;
@@ -188,7 +183,7 @@ public sealed partial class MainViewModel
         SetupScheme = ThemeService.Find(s.ColorScheme);
         SetupMode = ThemeService.FindMode(s.ThemeMode);
         SetupLanguage = SetupLanguages.FirstOrDefault(l => l.Code == Loc.Current);
-        SetupClipping = f.Clipping; SetupSessions = f.Sessions; SetupController = f.Controller;
+        SetupClipping = f.Clipping; SetupSessions = f.Sessions;
         SetupHoverPreview = f.HoverPreview; SetupLoudMarkers = f.LoudMarkers; SetupHoverGlow = f.HoverGlow;
         OnPropertyChanged(nameof(SetupFolders));
         IsSetupOpen = true;

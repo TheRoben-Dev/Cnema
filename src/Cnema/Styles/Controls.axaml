@@ -210,7 +210,7 @@
       </Transitions>
     </Setter>
   </Style>
-  <Style Selector="Button.card:pointerover Border.glow, Window.pad Button.card:focus Border.glow">
+  <Style Selector="Button.card:pointerover Border.glow, Button.card:focus-visible Border.glow">
     <Setter Property="Opacity" Value="1" />
     <Setter Property="RenderTransform" Value="scale(1.02)" />
   </Style>
@@ -416,37 +416,18 @@
     <Setter Property="Foreground" Value="{DynamicResource Text}" />
     <Setter Property="BorderBrush" Value="{DynamicResource Accent}" />
   </Style>
-  <!-- Controller mode: button legend -->
-  <Style Selector="Border.padkey">
-    <Setter Property="Background" Value="{DynamicResource Bg3}" />
-    <Setter Property="CornerRadius" Value="11" />
-    <Setter Property="MinWidth" Value="22" />
-    <Setter Property="Height" Value="22" />
-    <Setter Property="Padding" Value="7,0" />
-  </Style>
-  <Style Selector="Border.padkey TextBlock">
-    <Setter Property="FontSize" Value="11" />
-    <Setter Property="FontWeight" Value="Bold" />
-    <Setter Property="HorizontalAlignment" Value="Center" />
-    <Setter Property="VerticalAlignment" Value="Center" />
-  </Style>
-  <Style Selector="Border.padkey.a"><Setter Property="Background" Value="#2E9E5B" /></Style>
-  <Style Selector="Border.padkey.b"><Setter Property="Background" Value="#D2453F" /></Style>
-  <Style Selector="Border.padkey.x"><Setter Property="Background" Value="#2F7FD8" /></Style>
-  <Style Selector="Border.padkey.y"><Setter Property="Background" Value="#C99A1E" /></Style>
-
-  <!-- Controller mode: the focused card looks like the hovered one, so the cursor is obvious from the sofa -->
-  <Style Selector="Window.pad Button.card:focus Border.ring">
+  <!-- Keyboard focus: the focused card looks like the hovered one, so it is easy to see where you are -->
+  <Style Selector="Button.card:focus-visible Border.ring">
     <Setter Property="Opacity" Value="1" />
   </Style>
-  <Style Selector="Window.pad Button.card:focus Border.playhint">
+  <Style Selector="Button.card:focus-visible Border.playhint">
     <Setter Property="Opacity" Value="1" />
   </Style>
-  <Style Selector="Window.pad Button.card:focus /template/ ContentPresenter#PART_ContentPresenter">
+  <Style Selector="Button.card:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource Bg2}" />
   </Style>
   <!--
-    Keyboard and controller focus: a rounded ring in the colour scheme's accent with a soft glow, the same
+    Keyboard focus: a rounded ring in the colour scheme's accent with a soft glow, the same
     language as a hovered card, in place of Fluent's sharp white-and-black rectangle. Cards draw their own
     (the hover look), so they opt out of the adorner.
   -->
@@ -471,7 +452,7 @@
   <Style Selector="Button.card:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource Bg2}" />
   </Style>
-  <Style Selector="Window.pad ListBox.nav ListBoxItem:focus /template/ ContentPresenter#PART_ContentPresenter">
+  <Style Selector="ListBox.nav ListBoxItem:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource AccentSoft}" />
   </Style>
   <Style Selector="Button.updatebar">
@@ -605,7 +586,7 @@
     <Setter Property="Background" Value="{DynamicResource Bg2}" />
     <Setter Property="Foreground" Value="{DynamicResource Text}" />
   </Style>
-  <Style Selector="Window.pad Button.navbutton:focus /template/ ContentPresenter#PART_ContentPresenter">
+  <Style Selector="Button.navbutton:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource AccentSoft}" />
   </Style>
 
@@ -666,7 +647,7 @@
     <Setter Property="Foreground" Value="{DynamicResource OnAccent}" />
   </Style>
   <!-- While selecting, a click picks the card, so the play hint would be misleading -->
-  <Style Selector="Window.selecting Button.card:pointerover Border.playhint, Window.selecting.pad Button.card:focus Border.playhint">
+  <Style Selector="Window.selecting Button.card:pointerover Border.playhint, Window.selecting Button.card:focus-visible Border.playhint">
     <Setter Property="Opacity" Value="0" />
   </Style>
   <Style Selector="Button.card Border.ring.selected">
@@ -905,5 +886,8 @@
   <Style Selector="Button.preset:pointerover /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource Bg3}" />
     <Setter Property="BorderBrush" Value="{DynamicResource Accent}" />
+  </Style>
+  <Style Selector="TextBlock.error">
+    <Setter Property="Foreground" Value="{DynamicResource Danger}" />
   </Style>
 </Styles>

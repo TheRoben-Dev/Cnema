@@ -2,6 +2,14 @@
 
 What changed in each Savefile (formerly Cnema) release. The app shows the entries you have not seen yet after it updates.
 
+## 0.28.0
+- Backup to your own server: keep a copy of your favourites (or every video) on a server you run at home, such as Garage, SeaweedFS or MinIO. Set it up under Tools, Backup. New clips and favourites are backed up on their own a little while after they're saved, a cloud mark shows on every video that's backed up, and nothing is ever deleted on the server. Switch it on under Settings, Features, Memories.
+- Restore on a new computer: Backup finds the videos on your server that aren't on this computer and brings them back into a Restored folder, with their dates, favourites, tags, friends and notes.
+- The secret key for your server is kept in the system keychain (Keychain on macOS, encrypted for your account on Windows), not in Savefile's settings.
+- Search understands when: type a year ("2025"), a month ("march" or "mar"), "today" or "yesterday", or "fav" for favourites. Mix them with names, tags and friends, like "@alex 2025".
+- Clean up: when you bin a copy of a video, its favourite, tags, friends, notes and bookmarks move to the copy you keep.
+- Controller mode is gone, along with the gamepad support and the simple editor. Keyboard focus now gets the same clear highlight on videos and in the sidebar that Controller mode had.
+
 ## 0.27.0
 - Save Year in clips as a picture: one click makes a tidy image of your year (moments, friends, games, best day) to post in the group chat. It goes to your Pictures folder.
 - Make a montage with a friend: on a friend's page, Make a montage puts your best moments together in one video.
