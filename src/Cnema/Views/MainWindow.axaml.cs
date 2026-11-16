@@ -24,7 +24,12 @@ public partial class MainWindow : Window
         FrameEdit.RegionPicked += tag => Vm?.Player.PickFrameRegion(tag);
 
         VideoGrid.ElementPrepared += (_, e) => (e.Element.DataContext as VideoItemViewModel)?.AcquireThumbnail();
-        VideoGrid.ElementClearing += (_, e) => (e.Element.DataContext as VideoItemViewModel)?.ReleaseThumbnail();
+        VideoGrid.ElementClearing += (_, e) =>
+        {
+            if (e.Element.DataContext is not VideoItemViewModel item) return;
+            item.EndScrub(); // recycled while hovered: let go of the filmstrip too
+            item.ReleaseThumbnail();
+        };
         VideoGrid.ElementIndexChanged += (_, e) => (e.Element.DataContext as VideoItemViewModel)?.AcquireThumbnail();
 
         SurfaceHit.Tapped += (_, _) =>

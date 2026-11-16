@@ -23,6 +23,9 @@ public static class CleanupService
         var junk = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var e in entries)
         {
+            // A file written in the last few minutes may still be recording (OBS, a session): its
+            // length isn't known yet, which is not the same as broken.
+            if (DateTime.UtcNow - e.ModifiedUtc < TimeSpan.FromMinutes(10)) continue;
             CleanupReason? why = e.Size == 0 ? CleanupReason.Empty
                 : e.DurationMs <= 0 ? CleanupReason.Unreadable
                 : e.DurationMs < ShortMs ? CleanupReason.TooShort

@@ -102,6 +102,8 @@ public sealed class TrimTimeline : Control
         base.OnPointerMoved(e);
         var x = e.GetPosition(this).X;
         _hoverX = x;
+        // The button came up somewhere we never heard about (the player closed mid-drag): stop dragging.
+        if (_drag != Drag.None && !e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) { _drag = Drag.None; _dragPos = -1; }
         switch (_drag)
         {
             case Drag.Seek: Seek(x); break;
@@ -123,6 +125,14 @@ public sealed class TrimTimeline : Control
         _drag = Drag.None;
         _dragPos = -1;
         e.Pointer.Capture(null);
+    }
+
+    protected override void OnPointerCaptureLost(PointerCaptureLostEventArgs e)
+    {
+        base.OnPointerCaptureLost(e);
+        _drag = Drag.None;
+        _dragPos = -1;
+        InvalidateVisual();
     }
 
     protected override void OnPointerExited(PointerEventArgs e)

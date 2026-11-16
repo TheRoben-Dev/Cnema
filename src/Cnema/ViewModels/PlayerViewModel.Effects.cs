@@ -260,6 +260,8 @@ public sealed partial class PlayerViewModel
         ClearFrameTools();
         MusicPath = null;
         _previewRate = 1;
+        // libVLC keeps the speed across videos: drop a slow-motion preview from the last one.
+        _player?.SetRate((float)Rate);
         SpeedPreviewText = null;
         VoiceTrack = null;
         EffectsChanged();
