@@ -30,7 +30,7 @@ public sealed partial class MainViewModel
     public Func<Task<IReadOnlyList<string>>>? PickAudios { get; set; }
 
     /// <summary>Wrapped is held back until its animated version is done; nothing of it shows before then.</summary>
-    internal static bool WrappedReady = Environment.GetEnvironmentVariable("SAVEFILE_WRAPPED") == "1";
+    internal static bool WrappedReady = Environment.GetEnvironmentVariable("SAVEFILE_WRAPPED") != "0";
     public bool WrappedReadyUi => WrappedReady;
     public bool ShowWrapped => WrappedReady && Features.Wrapped && Features.Recap;
     private int WrappedYear => Recap?.SelectedYear ?? DateTime.Now.Year;

@@ -2,6 +2,12 @@
 
 What changed in each Savefile (formerly Cnema) release. The app shows the entries you have not seen yet after it updates.
 
+## 0.36.0
+- Savefile Wrapped: your year as a 5–10 minute video, cut to the beat of your own songs. Chapters on your games, your people, your biggest night and your best laughs, a card for each of your crew, a month-by-month flash, your first and last clip of the year, a hidden gem and the funniest moment to close. Every number counts clips, never guessed hours.
+- From 1 November to 31 December the blob has a present for you. Open it, add a few of your own MP3s (Savefile says how many minutes of music it needs) and it makes your Wrapped on this computer while you do other things. It picks up where it left off if you quit. The first time, it plays full screen with only pause and scrubbing; after that the open box next to the blob replays it, with Export.
+- Wrapped with a friend: on a friend's page, make a shorter cut of only your clips together.
+- Make it any time from Year in clips, or turn it off under Settings, Features, Wrapped.
+
 ## 0.35.0
 - Big libraries scroll smoothly: the library grid no longer bends out of shape far down a long list, and scrolling to the bottom of hundreds of clips doesn't freeze any more. Every card is now the same size, only the rows on screen are built, and thumbnails you've already scrolled past aren't loaded. Tested with 1,140 clips.
 - The bin: deleting a video anywhere in Savefile (the card's delete button, right-click, select and delete, Clean up, storage limits and the Quick player) moves it to Savefile's bin instead of the system Trash. Each video waits there for 24 hours from when you deleted it, on its own clock, then it's deleted for good. Bin in the sidebar shows how long each one has left, and Put back brings it back with its favourite, tags, friends and notes. You can turn it off under Settings, Features, Savefile bin.
