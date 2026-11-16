@@ -58,6 +58,7 @@ public sealed partial class SettingsViewModel
     [ObservableProperty] private bool _featureFriendShelf;
     [ObservableProperty] private bool _featureWrapped;
     [ObservableProperty] private bool _featureSmartThumbs;
+    [ObservableProperty] private bool _featureSmartCrop;
     [ObservableProperty] private bool _featureTrimSuggestions;
     [ObservableProperty] private bool _featureSplash;
     [ObservableProperty] private bool _featureSmartTitles;
@@ -139,6 +140,7 @@ public sealed partial class SettingsViewModel
         FeatureVoices = f.Voices;
         FeatureWrapped = f.Wrapped;
         FeatureSmartThumbs = f.SmartThumbs;
+        FeatureSmartCrop = f.SmartCrop;
         FeatureTrimSuggestions = f.TrimSuggestions;
         FeatureSplash = f.Splash;
         var e = settings.Effects;

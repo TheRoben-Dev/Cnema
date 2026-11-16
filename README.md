@@ -53,7 +53,7 @@ Savefile updates itself after that.
 - **Editor:** a tool rail with Trim, Captions, Speed, Sound, Brand and Export. Lossless or frame-accurate trims,
   multi-part export, captions, slow-mo with ramps, loudness and voice tools (including noise removal), watermark and intro/outro,
   and a background export queue. Optionally remembers your edits per video until you start over.
-- **Share:** one-click presets for Discord (10 / 50 MB), vertical 9:16 and GIF.
+- **Share:** one-click presets for Discord (10 / 50 MB), vertical 9:16 (smart crop follows the action) and GIF.
 - **Clipping:** a rolling replay buffer with GPU encoding (H.264, HEVC, AV1). Several hotkeys with their own
   clip lengths, webcam overlay, session recording with bookmarks, separate game and mic tracks,
   per-game profiles and storage limits.
