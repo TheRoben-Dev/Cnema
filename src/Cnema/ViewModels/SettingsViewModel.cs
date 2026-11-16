@@ -516,7 +516,7 @@ public sealed partial class SettingsViewModel : ObservableObject
             MiniPlayer = FeatureMiniPlayer, Chapters = FeatureChapters,
             Captions = FeatureCaptions, SpeedEffects = FeatureSpeedEffects, AudioTools = FeatureAudioTools,
             Branding = FeatureBranding, ExportQueue = FeatureExportQueue, KeepEdits = FeatureKeepEdits,
-            Notes = FeatureNotes, DragOut = FeatureDragOut, Recorders = FeatureRecorders,
+            Notes = FeatureNotes, DragOut = FeatureDragOut, DragDiscord = FeatureDragDiscord, DiscordNitro = FeatureDiscordNitro, Recorders = FeatureRecorders,
             ZoomPan = FeatureZoomPan, Blur = FeatureBlur, Music = FeatureMusic, Montage = FeatureMontage,
             RecoverSessions = FeatureRecoverSessions,
             Rewatch = FeatureRewatch, OnThisDay = FeatureOnThisDay, People = FeaturePeople, Milestones = FeatureMilestones, Recap = FeatureRecap, PlayAll = FeaturePlayAll, Backup = FeatureBackup, SeveralFolders = FeatureSeveralFolders,

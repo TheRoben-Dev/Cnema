@@ -564,6 +564,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         RebuildCollections();
         IsSetupOpen = _settings.IsFirstRun || Environment.GetEnvironmentVariable("CNEMA_SETUP") == "1";
         _ = RecoverThenApplyClipsAsync();
+        _ = Task.Run(TrimDragCopies);
         _ = CheckForUpdatesAsync();
         LoadWrappedSongs();
         StartWrappedSeason();
@@ -1184,7 +1185,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         await RunStorageCleanupAsync();
     }
 
-    private void ShowToast(string text)
+    public void ShowToast(string text)
     {
         _toastCts?.Cancel();
         var cts = _toastCts = new CancellationTokenSource();

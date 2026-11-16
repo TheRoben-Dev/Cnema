@@ -6,6 +6,7 @@ using Avalonia.Platform.Storage;
 using Avalonia.VisualTree;
 using Cnema.Services;
 using Cnema.ViewModels;
+using static Cnema.Services.Loc;
 
 namespace Cnema.Views;
 
@@ -15,13 +16,15 @@ public partial class MainWindow
     private Point? _dragStart;
     private VideoItemViewModel? _dragItem;
     private bool _dragging;
+    /// <summary>The mouse button is still down since the drag began (a Discord-sized copy waits for it).</summary>
+    private bool _held;
 
     private void SetUpDragOut()
     {
         // Cards are Buttons, which mark the press as handled; listen to handled events too.
         VideoGrid.AddHandler(PointerPressedEvent, OnCardPointerPressed, RoutingStrategies.Tunnel | RoutingStrategies.Bubble, handledEventsToo: true);
         VideoGrid.AddHandler(PointerMovedEvent, OnCardPointerMoved, RoutingStrategies.Bubble, handledEventsToo: true);
-        VideoGrid.AddHandler(PointerReleasedEvent, (_, _) => { _dragStart = null; _dragItem = null; },
+        VideoGrid.AddHandler(PointerReleasedEvent, (_, _) => { _dragStart = null; _dragItem = null; _held = false; },
             RoutingStrategies.Tunnel, handledEventsToo: true);
     }
 
@@ -34,7 +37,7 @@ public partial class MainWindow
         // Not from the small buttons on the card (favourite, edit, delete).
         if (e.Source is Visual src && src.FindAncestorOfType<Button>(includeSelf: true) is { } b && !b.Classes.Contains("card")) return;
         _dragItem = (e.Source as Visual)?.FindAncestorOfType<Button>(includeSelf: true)?.DataContext as VideoItemViewModel;
-        if (_dragItem is not null) _dragStart = e.GetPosition(VideoGrid);
+        if (_dragItem is not null) { _dragStart = e.GetPosition(VideoGrid); _held = true; }
     }
 
     private async void OnCardPointerMoved(object? sender, PointerEventArgs e)
@@ -56,6 +59,31 @@ public partial class MainWindow
         {
             // The card would otherwise stay pressed and open the video when the drag ends.
             e.Pointer.Capture(null);
+            // Too big for Discord: drag a copy that fits, made now (while the button is held) or earlier.
+            if (Vm is { } main && paths.Any(main.NeedsDragCopy))
+            {
+                var missing = paths.Where(p => main.NeedsDragCopy(p) && main.ReadyDragCopy(p) is null).ToList();
+                if (missing.Count > 0)
+                {
+                    var mb = main.DragLimitBytes / 1_000_000;
+                    main.ShowToast(F("Making a {0} MB copy for Discord. Keep holding, or drag it again in a moment.", mb));
+                    try
+                    {
+                        foreach (var p in missing) await main.MakeDragCopyAsync(p, null, CancellationToken.None);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Warn("Couldn't make the Discord-sized copy: " + ex.Message);
+                        main.ShowToast(T("Couldn't make a smaller copy, so the original goes instead."));
+                    }
+                    if (!_held)
+                    {
+                        main.ShowToast(T("The Discord-sized copy is ready: drag the video again."));
+                        return;
+                    }
+                }
+                paths = paths.Select(p => main.NeedsDragCopy(p) ? main.ReadyDragCopy(p) ?? p : p).ToList();
+            }
             var data = new DataTransfer();
             foreach (var p in paths)
                 if (await StorageProvider.TryGetFileFromPathAsync(p) is { } f) data.Add(DataTransferItem.CreateFile(f));

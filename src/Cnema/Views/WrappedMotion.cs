@@ -190,6 +190,15 @@ public sealed class WrappedMotionCard : Control
                 Line(ctx, "savefile", W - 300, H - 140, 40, _p.Fg, FontWeight.SemiBold, 1.9, 0.8);
                 break;
             }
+            case "chapter":
+            {
+                // A chapter title: a small kicker, the title rising in, an accent bar wiping under it.
+                Line(ctx, _card.Kicker, x, 360, 52, _p.Small, FontWeight.SemiBold, 0.1);
+                var h = Words(ctx, _card.Big, x, 430, 150, _p.Big, FontWeight.Bold, 0.25, 0.1, 1200);
+                var bar = OutCubic(Phase(0.7, 0.6));
+                ctx.DrawRectangle(new SolidColorBrush(_p.Violet), null, new RoundedRect(new Rect(x, 430 + h + 24, 260 * bar, 14), 7));
+                break;
+            }
             case "squad":
             {
                 Line(ctx, _card.Kicker, x, 250, 58, _p.Fg, FontWeight.SemiBold, 0.1, 0.85);
@@ -251,6 +260,8 @@ public sealed class WrappedMotionCard : Control
                 {
                     Line(ctx, _card.Small, x, 690, 50, _p.Small, FontWeight.Normal, 1.0, 0.9);
                 }
+                if (_card.Quote.Length > 0)
+                    Line(ctx, _card.Quote, x, kind == "game" ? 830 : 790, 40, _p.Fg, FontWeight.Normal, 1.6, 0.7);
                 break;
             }
         }
@@ -270,8 +281,8 @@ public static class WrappedMotion
         Color Mix(Color a, Color b, double k) => Color.FromRgb((byte)(a.R + (b.R - a.R) * k), (byte)(a.G + (b.G - a.G) * k), (byte)(a.B + (b.B - a.B) * k));
         return kind switch
         {
-            "intro" or "squad" or "outro" => new(night, Mix(night, violet, 0.14), Colors.White, Colors.White, Color.Parse(dark.Highlight), violet),
-            "game" or "laughs" => new(paper, Mix(paper, violet, 0.12), Color.Parse(light.Text), Color.Parse(light.Accent), Color.Parse(light.Text), violet),
+            "intro" or "squad" or "outro" or "chapter" or "gem" => new(night, Mix(night, violet, 0.14), Colors.White, Colors.White, Color.Parse(dark.Highlight), violet),
+            "game" or "laughs" or "personality" => new(paper, Mix(paper, violet, 0.12), Color.Parse(light.Text), Color.Parse(light.Accent), Color.Parse(light.Text), violet),
             _ => new(violet, Mix(violet, Colors.White, 0.1), Colors.White, Colors.White, Colors.White, Mix(violet, night, 0.35)),
         };
     }
@@ -284,16 +295,17 @@ public static class WrappedMotion
         var root = new Grid { Width = WrappedMotionCard.W, Height = WrappedMotionCard.H };
         root.Children.Add(canvas);
         BlobMascot? blob = null;
-        if (card.Kind is "intro" or "outro")
+        if (card.Kind is "intro" or "outro" or "chapter")
         {
             blob = new BlobMascot
             {
-                Width = card.Kind == "intro" ? 520 : 460, Height = card.Kind == "intro" ? 470 : 415,
+                Width = card.Kind switch { "intro" => 520, "chapter" => 360, _ => 460 },
+                Height = card.Kind switch { "intro" => 470, "chapter" => 325, _ => 415 },
                 Body = new SolidColorBrush(Color.Parse(ThemeService.Resolve(ThemeService.Schemes[0], false).Accent)),
                 Shadow = new SolidColorBrush(Colors.Black, 0.35),
-                HorizontalAlignment = card.Kind == "intro" ? HorizontalAlignment.Right : HorizontalAlignment.Left,
+                HorizontalAlignment = card.Kind == "outro" ? HorizontalAlignment.Left : HorizontalAlignment.Right,
                 VerticalAlignment = VerticalAlignment.Bottom,
-                Margin = card.Kind == "intro" ? new Thickness(0, 0, 150, 150) : new Thickness(170, 0, 0, 200),
+                Margin = card.Kind switch { "intro" => new Thickness(0, 0, 150, 150), "chapter" => new Thickness(0, 0, 200, 120), _ => new Thickness(170, 0, 0, 200) },
                 RenderTransform = new TranslateTransform(),
             };
             root.Children.Add(blob);

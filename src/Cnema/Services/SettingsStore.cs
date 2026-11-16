@@ -194,6 +194,10 @@ public sealed class FeatureSettings
     public bool Notes { get; set; } = true;
     /// <summary>Drag videos out of the library into other apps (Discord, a browser, Finder).</summary>
     public bool DragOut { get; set; } = true;
+    /// <summary>A dragged-out video bigger than Discord allows becomes a copy that fits (10 MB, or 50 MB with Nitro).</summary>
+    public bool DragDiscord { get; set; } = true;
+    /// <summary>The person has Discord Nitro: dragged-out copies may be up to 50 MB.</summary>
+    public bool DiscordNitro { get; set; }
     /// <summary>Bring in videos from OBS, NVIDIA, Xbox Game Bar and Steam.</summary>
     public bool Recorders { get; set; } = true;
     /// <summary>Zoom and pan with keyframes in the editor.</summary>
