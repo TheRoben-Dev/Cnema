@@ -101,7 +101,7 @@ public sealed partial class SpeechService : IDisposable
     }
 
     /// <summary>A stretch of the sound as 16 kHz mono floats, all tracks mixed.</summary>
-    private static async Task<float[]> ReadAudioAsync(string ffmpeg, string path, TimeSpan at, int tracks, CancellationToken ct)
+    internal static async Task<float[]> ReadAudioAsync(string ffmpeg, string path, TimeSpan at, int tracks, CancellationToken ct)
     {
         var psi = new ProcessStartInfo(ffmpeg)
         {

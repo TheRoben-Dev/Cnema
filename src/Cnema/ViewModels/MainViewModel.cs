@@ -642,6 +642,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 StartSmartPass();
                 StartSpeechPass();
                 StartVisualPass();
+                StartSoundPass();
             }
         }
     }
@@ -814,6 +815,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         var when = e.ModifiedUtc.ToLocalTime();
         if (t.Length == 4 && int.TryParse(t, out var year) && year is >= 1990 and <= 2100) return when.Year == year;
         if (t is "fav" or "favs" or "favourite" or "favourites" or "favorite" or "favorites") return e.Favorite;
+        // Laughter and hype, once the sound model has listened.
+        if (t is "laugh" or "laughs" or "laughing" or "laughter" or "funny" or "lol") return LaughSeconds(e) > 0;
+        if (t is "hype" or "cheering" or "cheer" or "shouting" or "screaming") return HypeSeconds(e) > 0;
         if (t == T("today").ToLowerInvariant() || t == "today") return when.Date == DateTime.Today;
         if (t == T("yesterday").ToLowerInvariant() || t == "yesterday") return when.Date == DateTime.Today.AddDays(-1);
         if (t.Length >= 3 && MonthFor(t) is { } month) return when.Month == month;

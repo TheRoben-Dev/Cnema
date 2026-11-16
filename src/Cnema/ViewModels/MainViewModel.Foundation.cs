@@ -48,6 +48,7 @@ public sealed partial class MainViewModel
         if (Features.Highlights) StartSmartPass(); else StopSmartPass();
         if (Features.Speech) StartSpeechPass(); else StopSpeechPass();
         if (Features.Visual) StartVisualPass(); else StopVisualPass();
+        if (Features.Laughs) StartSoundPass(); else StopSoundPass();
         if (!Features.Visual && SimilarTo is not null) ClearSimilar();
         Player.RefreshSpeech();
         UpdateHighlightMarks();

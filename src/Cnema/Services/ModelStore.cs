@@ -45,9 +45,27 @@ public static class ModelStore
         OnnxRuntime,
     };
 
+    /// <summary>
+    /// YAMNet (AudioSet sound classes; the PyTorch port by w-hc, MIT, as ONNX by Qualcomm AI Hub): laughter and
+    /// hype. The .onnx file reads its weights from yamnet.data beside it, so both keep these names. Shares the
+    /// ONNX Runtime library with visual search.
+    /// </summary>
+    public static IReadOnlyList<ModelInfo> Sound { get; } = new[]
+    {
+        new ModelInfo("sound", "yamnet.onnx", 166_464, "9261fbe1f196c8bb695933845af28df0a155845c9ec5e37ec96295e82c96f096", null),
+        new ModelInfo("sound", "yamnet.data", 14_915_108, "0b4de0b14bf2b528d51e3cd84e2d3e2ae826b942fbec6001c654605f1f2ceb60", null),
+        OnnxRuntime,
+    };
+
     public static long BytesOf(IEnumerable<ModelInfo> pack) => pack.Sum(m => m.Bytes);
     public static bool IsInstalled(IEnumerable<ModelInfo> pack) => pack.All(IsInstalled);
-    public static void Remove(IEnumerable<ModelInfo> pack) { foreach (var m in pack) Remove(m); }
+    /// <summary>Removes a pack, keeping files another installed pack still uses (ONNX Runtime).</summary>
+    public static void Remove(IEnumerable<ModelInfo> pack)
+    {
+        var list = pack.ToList();
+        var shared = new[] { Visual, Sound }.Where(p => !ReferenceEquals(p, pack) && IsInstalled(p)).SelectMany(p => p).ToHashSet();
+        foreach (var m in list.Where(m => !shared.Contains(m))) Remove(m);
+    }
 
     /// <summary>Downloads what's missing of a set of files, one after the other (progress 0..1 over all of them).</summary>
     public static async Task DownloadAsync(IReadOnlyList<ModelInfo> pack, IProgress<double>? progress, CancellationToken ct)

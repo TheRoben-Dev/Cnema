@@ -206,6 +206,8 @@ public sealed class FeatureSettings
     public bool SmartThumbs { get; set; } = true;
     /// <summary>The editor offers to cut a blank, silent start or end.</summary>
     public bool TrimSuggestions { get; set; } = true;
+    /// <summary>Laughter and hype: a small sound model (a one-time download) listens for laughing and cheering.</summary>
+    public bool Laughs { get; set; }
     /// <summary>The blob: Savefile's mascot presents Worth a rewatch with a line about your clips.</summary>
     public bool Mascot { get; set; } = true;
     /// <summary>The loading screen at start: logo, name, the blob and what's being got ready.</summary>

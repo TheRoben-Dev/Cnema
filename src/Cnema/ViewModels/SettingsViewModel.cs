@@ -521,7 +521,7 @@ public sealed partial class SettingsViewModel : ObservableObject
             RecoverSessions = FeatureRecoverSessions,
             Rewatch = FeatureRewatch, OnThisDay = FeatureOnThisDay, People = FeaturePeople, Milestones = FeatureMilestones, Recap = FeatureRecap, PlayAll = FeaturePlayAll, Backup = FeatureBackup, SeveralFolders = FeatureSeveralFolders,
             Highlights = FeatureHighlights, SmartTitles = FeatureSmartTitles, AutoTitles = FeatureAutoTitles && FeatureSmartTitles,
-            Speech = FeatureSpeech, Visual = FeatureVisual, Mascot = FeatureMascot, Splash = FeatureSplash,
+            Speech = FeatureSpeech, Visual = FeatureVisual, Mascot = FeatureMascot, Splash = FeatureSplash, Laughs = FeatureLaughs,
             SmartThumbs = FeatureSmartThumbs, TrimSuggestions = FeatureTrimSuggestions,
         };
         WriteEditing(settings);

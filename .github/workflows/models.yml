@@ -45,6 +45,12 @@ jobs:
           win-x64/native/onnxruntime.dll onnxruntime-1.23.2-win-x64.dll dec964ab1ee36cc9b0ae247d13b376627992fc57dec0454354017ab8fd84f1ea
           LIST
           rm -rf ort ort.nupkg
+          # YAMNet for laughter and hype (the MIT PyTorch port, exported to ONNX by Qualcomm AI Hub).
+          curl -fsSL --retry 3 -o yamnet.zip https://qaihub-public-assets.s3.us-west-2.amazonaws.com/qai-hub-models/models/yamnet/releases/v0.66.0/yamnet-onnx-float.zip
+          unzip -q -j yamnet.zip 'yamnet-onnx-float/yamnet.onnx' 'yamnet-onnx-float/yamnet.data'
+          rm yamnet.zip
+          echo "9261fbe1f196c8bb695933845af28df0a155845c9ec5e37ec96295e82c96f096  yamnet.onnx" | sha256sum -c -
+          echo "0b4de0b14bf2b528d51e3cd84e2d3e2ae826b942fbec6001c654605f1f2ceb60  yamnet.data" | sha256sum -c -
           ls -la
       - name: Publish
         run: |
@@ -55,7 +61,7 @@ jobs:
           if ! gh release view models --repo "$PUBLIC_REPO" >/dev/null 2>&1; then
             gh release create models --repo "$PUBLIC_REPO" --prerelease --latest=false \
               --title "Optional models" \
-              --notes "Models for Savefile's optional smart features (voice search and captions, visual search). Savefile downloads them itself when you switch a feature on in Settings and checks each one's SHA-256. Whisper (MIT, ggerganov/whisper.cpp), CLIP ViT-B/32 (MIT, OpenAI; ONNX by Xenova), ONNX Runtime 1.23.2 (MIT, Microsoft)."
+              --notes "Models for Savefile's optional smart features (voice search and captions, visual search). Savefile downloads them itself when you switch a feature on in Settings and checks each one's SHA-256. Whisper (MIT, ggerganov/whisper.cpp), CLIP ViT-B/32 (MIT, OpenAI; ONNX by Xenova), YAMNet (MIT port by w-hc; ONNX by Qualcomm AI Hub), ONNX Runtime 1.23.2 (MIT, Microsoft)."
           fi
           # Upload only what isn't there yet (the files never change: a new version gets a new name).
           have=$(gh release view models --repo "$PUBLIC_REPO" --json assets -q '.assets[].name')

@@ -33,6 +33,12 @@ its own licence. None of them are modified.
   `vcomp140`) next to these libraries, redistributed under the Visual Studio redistributable terms.
   Linux builds carry `libgomp.so.1` (GCC's OpenMP runtime, GPL with the GCC Runtime Library Exception) so nothing extra needs installing.
 
+## Laughter and hype (downloaded only when switched on)
+
+- YAMNet, the AudioSet sound classifier: weights from the PyTorch port https://github.com/w-hc/torch_audioset (MIT
+  licence, Copyright (c) 2021 Haochen), exported to ONNX by Qualcomm AI Hub (`yamnet.onnx`, `yamnet.data`). Run with
+  ONNX Runtime, shared with visual search.
+
 ## Clean up my voice
 
 - `rnnoise/voice.rnnn`: the "beguiling-drafter" RNNoise model (recording, voice) from

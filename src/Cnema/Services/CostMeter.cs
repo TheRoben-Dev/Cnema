@@ -12,6 +12,7 @@ public static class CostMeter
     public const string Moments = "moments";
     public const string Speech = "speech";
     public const string Visual = "visual";
+    public const string Sound = "sound";
 
     /// <summary>How a feature spends the computer, apart from time.</summary>
     public sealed record Profile(string Key, double SecondsPerMinute, double SecondsPerVideo, string Uses, int ExtraMemoryMb);
@@ -23,6 +24,7 @@ public static class CostMeter
         new(Moments, 0.5, 0.4, "one CPU core at low priority, no GPU", 30),
         new(Speech, 22, 1.5, "half your CPU cores (at most 4) at low priority", 400),
         new(Visual, 0, 3.5, "half your CPU cores (at most 4) at low priority, a few seconds per video", 250),
+        new(Sound, 0.8, 0.5, "one or two CPU cores at low priority, no GPU", 40),
     };
 
     public static Profile Of(string key) => Profiles.First(p => p.Key == key);

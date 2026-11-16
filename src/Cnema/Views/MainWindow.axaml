@@ -2480,6 +2480,37 @@
                                 svc:Tr.Tip="Frees the space. Videos already looked at stay searchable once it's back." />
                       </StackPanel>
                     </StackPanel>
+                    <Border Classes="sep" />
+                    <Grid Classes="row" ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="2">
+                        <TextBlock svc:Tr.Text="Laughter and hype" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Savefile listens for laughing, cheering and shouting, on this computer and only when it's not busy. The videos where everyone lost it come first in Worth a rewatch, the blob tells you about them, and search finds them with &quot;laughing&quot; or &quot;hype&quot;." />
+                        <Grid ColumnDefinitions="Auto,*" Margin="0,4,0,0">
+                          <PathIcon Data="{StaticResource IcSpeed}" Width="11" Height="11" Margin="0,2,6,0" VerticalAlignment="Top" Foreground="{DynamicResource TextDim}" />
+                          <TextBlock Grid.Column="1" Classes="dim cost" FontSize="11" TextWrapping="Wrap" Text="{Binding #Root.((vm:MainViewModel)DataContext).SoundCostText}" />
+                        </Grid>
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureLaughs}" />
+                    </Grid>
+                    <StackPanel Spacing="8" Margin="14,0,14,14" IsVisible="{Binding FeatureLaughs}">
+                      <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="{Binding #Root.((vm:MainViewModel)DataContext).SoundModelText}"
+                                 Classes.err="{Binding #Root.((vm:MainViewModel)DataContext).SoundModelError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                      <ProgressBar Minimum="0" Maximum="1" Value="{Binding #Root.((vm:MainViewModel)DataContext).SoundDownloadProgress}" Height="4" MinHeight="4" CornerRadius="2"
+                                   IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).IsDownloadingSound}" />
+                      <TextBlock Classes="dim" FontSize="11" Foreground="{DynamicResource Highlight}" Text="{Binding #Root.((vm:MainViewModel)DataContext).SoundActivity}"
+                                 IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).SoundActivity, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                      <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Classes="accent" Command="{Binding #Root.((vm:MainViewModel)DataContext).DownloadSoundModelCommand}" IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).CanDownloadSound}">
+                          <StackPanel Orientation="Horizontal" Spacing="6">
+                            <PathIcon Data="{StaticResource IcImport}" Width="12" Height="12" Foreground="{DynamicResource OnAccent}" />
+                            <TextBlock svc:Tr.Text="Download the sound model" />
+                          </StackPanel>
+                        </Button>
+                        <Button Classes="soft" svc:Tr.Content="Cancel" Command="{Binding #Root.((vm:MainViewModel)DataContext).CancelSoundDownloadCommand}" IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).IsDownloadingSound}" />
+                        <Button Classes="soft" svc:Tr.Content="Remove the model" Command="{Binding #Root.((vm:MainViewModel)DataContext).RemoveSoundModelCommand}" IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).SoundModelReady}"
+                                svc:Tr.Tip="Frees the space. What was already heard stays." />
+                      </StackPanel>
+                    </StackPanel>
                   </StackPanel>
                 </Border>
                 <TextBlock Classes="label" svc:Tr.Text="EDITING AND EXPORT" Margin="0,8,0,0" />
