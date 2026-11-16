@@ -969,6 +969,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             var newPath = _library.Relocate(entry, hadTitle ? fileName : ed.Name, targetDir);
             // Cleared: "" (not null), so Name new clips by themselves doesn't name it again.
             if (hadTitle) entry.Title = ed.Name.Trim() is { Length: > 0 } t && t != fileName ? t : "";
+            entry.TitleAuto = false;
             if (!string.Equals(newPath, oldPath, StringComparison.Ordinal))
             {
                 _items.Remove(oldPath);

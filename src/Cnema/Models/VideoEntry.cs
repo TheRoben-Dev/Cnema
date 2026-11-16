@@ -27,6 +27,8 @@ public sealed class VideoEntry
     public List<string> People { get; set; } = new();
     /// <summary>The name shown in Savefile (Smart titles, or one typed in); null shows the file name.</summary>
     public string? Title { get; set; }
+    /// <summary>The title was given by Name new clips by themselves, so it may be improved once the clip has been listened to.</summary>
+    public bool TitleAuto { get; set; }
     /// <summary>What the smart features worked out about the video; null until it has been looked at.</summary>
     public SmartInfo? Smart { get; set; }
     /// <summary>What's said in the video (voice search and captions); null until it has been listened to.</summary>

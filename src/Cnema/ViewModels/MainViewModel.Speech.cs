@@ -175,6 +175,7 @@ public sealed partial class MainViewModel
                     if (_items.TryGetValue(item.Entry.Path, out var still) && ReferenceEquals(still, item))
                     {
                         item.Entry.Speech = info ?? new SpeechInfo { Version = SpeechService.Version };
+                        Retitle(item);
                         if (ReferenceEquals(Player.Current, item)) Player.RefreshSpeech();
                     }
                     if (++done % 10 == 0) { _library.SaveCache(); OnPropertyChanged(nameof(SpeechModelText)); OnCostsChanged(); }

@@ -54,7 +54,7 @@ public sealed partial class MainViewModel
     }
 
     public string? SuggestTitle(VideoEntry e, bool withTime = false) =>
-        Features.SmartTitles ? SmartTitles.Suggest(e, GameTest(e), withTime) : null;
+        Features.SmartTitles ? SmartTitles.Suggest(e, GameTest(e), withTime, Features.Voices ? VoiceName : null) : null;
 
     // ---------- best moments, in the background ----------
 
@@ -289,8 +289,22 @@ public sealed partial class MainViewModel
         if (e.ModifiedUtc < _settings.Current.AutoTitlesSinceUtc || !SmartTitles.IsGeneric(e.FileName)) return;
         if (SuggestTitle(e) is not { } title) return;
         e.Title = title;
+        e.TitleAuto = true;
         item.RefreshAll();
         _library.SaveCache();
+    }
+
+    /// <summary>
+    /// A clip that named itself gets a better name once it's been listened to (what was said, a laugh). Only names
+    /// Savefile gave: a title you typed or picked is never touched.
+    /// </summary>
+    private void Retitle(VideoItemViewModel item)
+    {
+        var e = item.Entry;
+        if (!e.TitleAuto || !Features.AutoTitles || !Features.SmartTitles) return;
+        if (SuggestTitle(e) is not { } title || title == e.Title) return;
+        e.Title = title;
+        item.RefreshAll();
     }
 
     // ---------- smart rename ----------
@@ -358,7 +372,7 @@ public sealed partial class MainViewModel
                         CollectionPathChanged(oldPath, newPath);
                         _backup.Moved(oldPath, newPath);
                     }
-                    e.Title = null;
+                    e.Title = null; e.TitleAuto = false;
                 }
                 catch (Exception ex)
                 {
@@ -367,7 +381,7 @@ public sealed partial class MainViewModel
                     continue;
                 }
             }
-            else e.Title = title;
+            else { e.Title = title; e.TitleAuto = false; }
             undo.Items.Add(new[] { e.Path, oldPath, oldTitle });
             item.RefreshAll();
             await Task.Yield();
@@ -404,7 +418,7 @@ public sealed partial class MainViewModel
                 }
                 catch (Exception ex) { Log.Warn($"Undo rename of {now}: {ex.Message}"); continue; }
             }
-            e.Title = title;
+            e.Title = title; e.TitleAuto = false;
             item.RefreshAll();
             back++;
         }
@@ -419,7 +433,8 @@ public sealed partial class MainViewModel
     private static string FileSafe(string title)
     {
         var bad = Path.GetInvalidFileNameChars().Concat(new[] { ':', '*', '?', '"', '<', '>', '|', '/', '\\' }).ToHashSet();
-        var clean = new string(title.Replace(" · ", " - ").Select(c => bad.Contains(c) ? ' ' : c).ToArray()).Trim().TrimEnd('.');
+        var clean = new string(title.Replace(" · ", " - ").Replace(": ", " - ").Select(c => bad.Contains(c) ? ' ' : c).ToArray());
+        clean = string.Join(' ', clean.Split(' ', StringSplitOptions.RemoveEmptyEntries)).Trim().TrimEnd('.');
         return clean.Length == 0 ? "Clip" : clean;
     }
 }
