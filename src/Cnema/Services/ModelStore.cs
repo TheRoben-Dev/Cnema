@@ -14,8 +14,22 @@ public static class ModelStore
 {
     public const string Mirror = "https://github.com/TheRoben-Dev/Cnema-releases/releases/download/models/";
 
+    /// <summary>Which speech model the person picked: "standard" (Whisper base) or "swedish" (KB-Whisper small).</summary>
+    public static string SpeechChoice { get; set; } = "standard";
+
+    /// <summary>The speech model in use (see <see cref="SpeechChoice"/>).</summary>
+    public static ModelInfo Speech => SpeechChoice == "swedish" ? SpeechSwedish : SpeechStandard;
+
+    /// <summary>
+    /// KB-Whisper small from the National Library of Sweden (Apache-2.0), 5-bit: much better at Swedish,
+    /// still fine with English mixed in.
+    /// </summary>
+    public static readonly ModelInfo SpeechSwedish = new("speech-sv", "kb-whisper-small-q5_0.bin", 175_209_680,
+        "6768836a51abc902e420c613153e6d418c90ea2774e913274d02ab23170225b7",
+        "https://huggingface.co/KBLab/kb-whisper-small/resolve/main/ggml-model-q5_0.bin");
+
     /// <summary>Whisper base, multilingual, 5-bit (whisper.cpp format): voice search and captions.</summary>
-    public static readonly ModelInfo Speech = new("speech", "ggml-base-q5_1.bin", 59_707_625,
+    public static readonly ModelInfo SpeechStandard = new("speech", "ggml-base-q5_1.bin", 59_707_625,
         "422f1ae452ade6f30a004d7e5c6a43195e4433bc370bf23fac9cc591f01a8898",
         "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base-q5_1.bin");
 

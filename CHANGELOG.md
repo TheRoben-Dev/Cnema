@@ -3,6 +3,8 @@
 What changed in each Savefile (formerly Cnema) release. The app shows the entries you have not seen yet after it updates.
 
 ## 0.34.0
+- Swedish speech: pick Better Swedish under Settings, Features, Voice search and captions to use KB-Whisper from the National Library of Sweden (175 MB download). It's far more accurate in Swedish and still handles English mixed in. Search also ignores accents now, so "rakna" finds "räkna".
+- Drag a video into Discord and it fits: a video too big for Discord's 10 MB limit becomes a copy that fits while you hold it (50 MB if you switch on I have Discord Nitro). Smaller videos go as they are, and you can switch it off to always drag the original.
 - A calmer look: Dark is now neutral dark grey and Light is white and light grey. Savefile purple is saved for what matters (buttons, switches, selection, progress, the blob), so it pops.
 - Smart features now actually get to your library: the passes take turns per video instead of waiting for each other to finish everything, so none of them sits at "0 videos" any more. Settings says why one is waiting ("Paused while you play"), a model that won't start says so instead of hanging, and Help, Diagnostics lists what each pass has done.
 - The blob is softer: it moves like a drop of liquid now (it wobbles, squashes when it lands and splashes a little), and its smiling eyes have round tips.

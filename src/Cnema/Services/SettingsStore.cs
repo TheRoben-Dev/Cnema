@@ -16,6 +16,8 @@ public sealed class AppSettings
     public bool ShowFrames { get; set; }
     /// <summary>The player shows what's said as captions (voice search must be on).</summary>
     public bool SpokenCaptions { get; set; }
+    /// <summary>The speech model: "standard" or "swedish" (see ModelStore.SpeechChoice).</summary>
+    public string SpeechModel { get; set; } = "standard";
 
     /// <summary>Stay alive in the tray / menu bar when the window is closed.</summary>
     public bool KeepInBackground { get; set; }

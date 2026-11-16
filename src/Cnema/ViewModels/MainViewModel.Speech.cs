@@ -22,7 +22,36 @@ public sealed partial class MainViewModel
     /// <summary>"Listening: 12 to go" while the background pass runs.</summary>
     [ObservableProperty] private string _speechActivity = "";
 
+    private static string SpeechCostKey => ModelStore.SpeechChoice == "swedish" ? CostMeter.SpeechSwedish : CostMeter.Speech;
+
     public bool CanDownloadSpeech => !SpeechModelReady && !IsDownloadingSpeech;
+
+    /// <summary>The speech models to pick from, in the order of <see cref="SpeechModelIndex"/>.</summary>
+    public IReadOnlyList<string> SpeechModelOptions { get; } = new[]
+    {
+        F("Standard ({0}): quick, many languages", BackupViewModel.SizeText(ModelStore.SpeechStandard.Bytes)),
+        F("Better Swedish ({0}): KB-Whisper, about 3 times slower", BackupViewModel.SizeText(ModelStore.SpeechSwedish.Bytes)),
+    };
+
+    public int SpeechModelIndex
+    {
+        get => ModelStore.SpeechChoice == "swedish" ? 1 : 0;
+        set
+        {
+            var choice = value == 1 ? "swedish" : "standard";
+            if (choice == ModelStore.SpeechChoice || IsDownloadingSpeech) return;
+            StopSpeechPass();
+            ModelStore.SpeechChoice = choice;
+            _settings.Current.SpeechModel = choice;
+            _settings.Save();
+            SpeechModelReady = ModelStore.IsInstalled(ModelStore.Speech);
+            SpeechModelError = null;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(SpeechModelText));
+            OnPropertyChanged(nameof(SpeechCostText));
+            if (Features.Speech && SpeechModelReady) StartSpeechPass();
+        }
+    }
 
     public string SpeechModelText =>
         IsDownloadingSpeech ? F("Downloading the speech model: {0:0}%", SpeechDownloadProgress * 100)
@@ -113,7 +142,7 @@ public sealed partial class MainViewModel
                     var item = todo[i];
                     tried.Add(item);
                     if (item.Entry.Speech is { Version: SpeechService.Version } || !File.Exists(item.Entry.Path)) continue;
-                    var working = F("Listening for what's said: {0} to go, {1}.", (todo.Count - i).ToString("N0"), CostMeter.Span(LeftSeconds(CostMeter.Speech, todo.Skip(i))));
+                    var working = F("Listening for what's said: {0} to go, {1}.", (todo.Count - i).ToString("N0"), CostMeter.Span(LeftSeconds(SpeechCostKey, todo.Skip(i))));
                     if (speech is null)
                     {
                         // Loaded only once there's something to do, and let go of when the pass ends (it holds memory).
@@ -129,7 +158,7 @@ public sealed partial class MainViewModel
                         var watch = System.Diagnostics.Stopwatch.StartNew();
                         info = await Task.Run(() => speech.TranscribeAsync(path, length, ct), ct);
                         // A video with no sound is skipped in a blink; that says nothing about this computer's pace.
-                        if (info.Language is not null || watch.Elapsed.TotalSeconds >= 1) CostMeter.Record(CostMeter.Speech, watch.Elapsed.TotalSeconds, length);
+                        if (info.Language is not null || watch.Elapsed.TotalSeconds >= 1) CostMeter.Record(SpeechCostKey, watch.Elapsed.TotalSeconds, length);
                     }
                     catch (OperationCanceledException) { throw; }
                     catch (Exception ex)

@@ -2507,6 +2507,12 @@
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureSpeech}" />
                     </Grid>
                     <StackPanel Spacing="8" Margin="14,0,14,14" IsVisible="{Binding FeatureSpeech}">
+                      <Grid ColumnDefinitions="Auto,*">
+                        <TextBlock svc:Tr.Text="Model" FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0" />
+                        <ComboBox Grid.Column="1" HorizontalAlignment="Stretch" ItemsSource="{Binding #Root.((vm:MainViewModel)DataContext).SpeechModelOptions}"
+                                  SelectedIndex="{Binding #Root.((vm:MainViewModel)DataContext).SpeechModelIndex}"
+                                  svc:Tr.Tip="Both understand Swedish and English mixed together; the Swedish one is much more accurate in Swedish." />
+                      </Grid>
                       <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="{Binding #Root.((vm:MainViewModel)DataContext).SpeechModelText}"
                                  Classes.err="{Binding #Root.((vm:MainViewModel)DataContext).SpeechModelError, Converter={x:Static ObjectConverters.IsNotNull}}" />
                       <ProgressBar Minimum="0" Maximum="1" Value="{Binding #Root.((vm:MainViewModel)DataContext).SpeechDownloadProgress}" Height="4" MinHeight="4" CornerRadius="2"
