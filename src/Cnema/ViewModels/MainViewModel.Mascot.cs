@@ -102,6 +102,7 @@ public sealed partial class MainViewModel
         var all = _items.Values.Select(v => v.Entry).Where(e => e.DurationMs > 0).ToList();
         if (all.Count == 0) return lines;
         if (LateLine(now) is { } late) lines.Add(late);
+        if (NudgeLine(now) is { } nudge) lines.Add(nudge);
         if (WrappedNews(now) is { } news) lines.Add(news);
         DateTime Local(VideoEntry e) => e.ModifiedUtc.ToLocalTime();
         var week = all.Where(e => (now - Local(e)).TotalDays < 7).ToList();
@@ -184,7 +185,7 @@ public sealed partial class MainViewModel
         }
 
         // An old favourite on the shelf.
-        var old = Featured.Select(v => v.Entry).FirstOrDefault(e => e.Favorite && (now - Local(e)).TotalDays > 60);
+        var old = Featured.Select(v => v.Entry).FirstOrDefault(e => e.Favorite && (now - Local(e)).TotalDays > 60 && !ReferenceEquals(e, Nudge?.Entry));
         if (old is not null) lines.Add(F("Still a favourite: {0}, from {1}.", Short(old), WhenWords(Local(old), now).Replace(T("in "), "")));
 
         // One on the shelf that's never been rewatched.

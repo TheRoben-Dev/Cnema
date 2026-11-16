@@ -653,6 +653,14 @@
                       <TextBlock svc:Tr.Text="Worth a rewatch" FontSize="11" FontWeight="Bold" LetterSpacing="0.6" Foreground="{DynamicResource Highlight}" />
                       <TextBlock Classes="mascotline" Text="{Binding MascotLine}" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap"
                                  Opacity="{Binding MascotLineShown, Converter={x:Static c:Converters.BoolToOpacity}}" />
+                      <!-- a favourite Mochi is reminding you of: play it from here -->
+                      <Button Classes="soft" Padding="10,3" Margin="0,5,0,0" HorizontalAlignment="Left" FontSize="12" IsVisible="{Binding ShowNudge}"
+                              Command="{Binding WatchNudgeCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                          <PathIcon Data="{StaticResource IcPlay}" Width="10" Height="10" />
+                          <TextBlock svc:Tr.Text="Watch it" />
+                        </StackPanel>
+                      </Button>
                     </StackPanel>
                   </Border>
                 </Panel>
@@ -1884,6 +1892,63 @@
                   </ItemsControl>
                 </Border>
               </StackPanel>
+
+              <!-- Badges (Settings, Features, Badges) -->
+              <StackPanel Spacing="8" IsVisible="{Binding HasBadges}">
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Classes="label" svc:Tr.Text="BADGES" />
+                  <TextBlock Grid.Column="1" Classes="dim" Text="{Binding BadgeCount}" FontSize="11" />
+                </Grid>
+                <ItemsControl ItemsSource="{Binding Badges}">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate><UniformGrid Columns="2" /></ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:BadgeRow">
+                      <Border Classes="tile" Margin="0,0,8,8" Opacity="{Binding Faded}">
+                        <Grid ColumnDefinitions="Auto,*">
+                          <Panel Width="34" Height="34" VerticalAlignment="Top">
+                            <Ellipse Fill="#E09B1A" IsVisible="{Binding Earned}" />
+                            <Ellipse Margin="2" Fill="#FFC53D" IsVisible="{Binding Earned}" />
+                            <Ellipse Fill="{DynamicResource Bg3}" IsVisible="{Binding !Earned}" />
+                            <Path Data="M 12,2 L 14.9,8.3 L 21.8,9 L 16.6,13.6 L 18.1,20.4 L 12,16.9 L 5.9,20.4 L 7.4,13.6 L 2.2,9 L 9.1,8.3 Z"
+                                  Fill="White" Width="16" Height="16" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                          </Panel>
+                          <StackPanel Grid.Column="1" Margin="10,0,0,0" Spacing="1">
+                            <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold" />
+                            <TextBlock Classes="dim" Text="{Binding Description}" FontSize="11" TextWrapping="Wrap" />
+                            <TextBlock Classes="dim" Text="{Binding When}" FontSize="10" IsVisible="{Binding Earned}" Foreground="{DynamicResource Highlight}" />
+                          </StackPanel>
+                        </Grid>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+
+              <!-- Playtime (Settings, Features, Playtime): only what was counted here, and it says since when -->
+              <StackPanel Spacing="8" IsVisible="{Binding HasPlaytime}">
+                <TextBlock Classes="label" svc:Tr.Text="PLAYTIME" />
+                <Border Classes="group" Padding="16,12">
+                  <StackPanel Spacing="6">
+                    <ItemsControl ItemsSource="{Binding Playtime}" IsVisible="{Binding HasPlaytimeBars}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:PlayBar">
+                          <Grid ColumnDefinitions="150,*,Auto" Margin="0,4">
+                            <TextBlock Text="{Binding Label}" FontSize="13" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                            <Border Grid.Column="1" Height="10" Width="{Binding Width}" CornerRadius="5" Background="{DynamicResource Highlight}"
+                                    HorizontalAlignment="Left" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="2" Classes="dim" Text="{Binding Text}" FontSize="12" VerticalAlignment="Center" Margin="8,0,0,0" />
+                          </Grid>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Classes="dim" FontSize="12" IsVisible="{Binding !HasPlaytimeBars}" TextWrapping="Wrap"
+                               svc:Tr.Text="Nothing counted yet. Play a game Savefile knows (one you've clipped, or a well-known one) and it shows up here." />
+                    <TextBlock Classes="dim" FontSize="11" Text="{Binding PlaytimeSince}" TextWrapping="Wrap" />
+                  </StackPanel>
+                </Border>
+              </StackPanel>
             </StackPanel>
           </ScrollViewer>
         </DockPanel>
@@ -2647,6 +2712,12 @@
                     </Grid>
                     <!-- What Mochi does besides the shelf: each its own switch -->
                     <StackPanel Margin="28,0,14,12" Spacing="8" IsVisible="{Binding FeatureMascot}">
+                      <CheckBox IsChecked="{Binding FeatureRewatchReminders}">
+                        <StackPanel Spacing="1">
+                          <TextBlock svc:Tr.Text="Reminds you of old favourites" FontSize="12" />
+                          <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Every few days at most, Mochi brings up a favourite you haven't watched in a couple of months, with a button to play it." />
+                        </StackPanel>
+                      </CheckBox>
                       <CheckBox IsChecked="{Binding FeatureMochiSaves}">
                         <StackPanel Spacing="1">
                           <TextBlock svc:Tr.Text="Reacts when you save" FontSize="12" />
@@ -2725,6 +2796,24 @@
                         <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="A small celebration for your first save, your 100th, and so on." />
                       </StackPanel>
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureMilestones}" />
+                    </Grid>
+                    <Border Classes="sep" />
+                    <Grid Classes="row" ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="2">
+                        <TextBlock svc:Tr.Text="Badges" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Earn badges for what your clips show: a night owl, a full squad, clips 7 days in a row. They're under Tools, Stats." />
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureBadges}" />
+                    </Grid>
+                    <Border Classes="sep" />
+                    <Grid Classes="row" ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="2">
+                        <TextBlock svc:Tr.Text="Playtime" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Count hours played per game while Savefile runs, like Steam does. Only games Savefile knows, only from when you turn it on, and it stays on this computer. Shown under Tools, Stats." />
+                        <Button Classes="soft" Padding="10,3" Margin="0,4,0,0" HorizontalAlignment="Left" FontSize="12" IsVisible="{Binding FeaturePlaytime}"
+                                svc:Tr.Content="Start counting again" Command="{Binding #Root.((vm:MainViewModel)DataContext).ResetPlaytimeCommand}" />
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeaturePlaytime}" />
                     </Grid>
                     <Border Classes="sep" />
                     <Grid Classes="row" ColumnDefinitions="*,Auto">

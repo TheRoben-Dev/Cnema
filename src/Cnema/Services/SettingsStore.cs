@@ -9,6 +9,13 @@ public sealed class AppSettings
     public DateTime AutoTitlesSinceUtc { get; set; }
     /// <summary>When Savefile first ran here: Mochi wears a party hat on the day, every year.</summary>
     public DateTime? FirstSeenUtc { get; set; }
+    /// <summary>Badges earned, by id, with when.</summary>
+    public Dictionary<string, DateTime> BadgesEarned { get; set; } = new();
+    /// <summary>The badges already earned when the feature arrived were taken in quietly, without a fanfare each.</summary>
+    public bool BadgesSeeded { get; set; }
+    /// <summary>Favourites Mochi reminded you of, by path, so none comes back too soon.</summary>
+    public Dictionary<string, DateTime> Reminded { get; set; } = new();
+    public DateTime? LastReminderUtc { get; set; }
     /// <summary>"Merge your folders into one?" was closed for good.</summary>
     public bool MergeSuggestionClosed { get; set; }
     public int SortIndex { get; set; }
@@ -269,6 +276,12 @@ public sealed class FeatureSettings
     public bool MochiBackup { get; set; } = true;
     /// <summary>Looks puzzled next to a problem and says how to fix it in plain words.</summary>
     public bool MochiHelper { get; set; } = true;
+    /// <summary>Now and then Mochi brings up a favourite you haven't watched in a long time.</summary>
+    public bool RewatchReminders { get; set; } = true;
+    /// <summary>Badges for things your clips show: a night owl, a full squad, 7 days in a row.</summary>
+    public bool Badges { get; set; } = true;
+    /// <summary>Hours played per game while Savefile runs, counted on this computer from when it's switched on.</summary>
+    public bool Playtime { get; set; }
     /// <summary>The loading screen at start: logo, name, the blob and what's being got ready.</summary>
     public bool Splash { get; set; } = true;
     /// <summary>

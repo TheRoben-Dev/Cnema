@@ -2,6 +2,12 @@
 
 What changed in each Savefile (formerly Cnema) release. The app shows the entries you have not seen yet after it updates.
 
+## 0.38.0
+- Badges: 12 to earn from what your clips show, like Night owl, Full squad, On a roll (clips 7 days in a row), Explorer and Throwback. Mochi holds up each new one, and Stats shows them all with the date you earned them. Switch them off under Settings, Features, Badges.
+- Old favourites: every few days at most, Mochi brings up a favourite you haven't watched in a couple of months, with a Watch it button right in its speech bubble. It's under Settings, Features, Mochi.
+- Playtime (off unless you turn it on): Savefile counts hours per game while a game it knows is in front, like Steam does. It only counts from the moment you switch it on, says so, and stays on this computer. You'll find it in Stats.
+- The indexing card says when it's waiting, for example while your Wrapped is being made, instead of looking stuck.
+
 ## 0.37.0
 - Mochi comes alive: smoother, springier animation with a crouch before every hop, a squash on landing, a jelly wobble and little idle habits (glances, stretches, double blinks, the odd small hop), never the same one twice in a row.
 - Mochi reacts when you save a clip: a squish and sparkles in the "Saved" message, and a big hop when a clip you just saved turns out to be a great moment. For a milestone it holds up a gold badge.

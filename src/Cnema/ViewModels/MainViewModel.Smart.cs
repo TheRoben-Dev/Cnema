@@ -83,6 +83,7 @@ public sealed partial class MainViewModel
         IsIndexPaused ? T("Paused for now.")
         : Clips.IsSession ? T("Paused while a session records.")
         : Clips.ActiveGame is not null ? T("Paused while you play.")
+        : IsMakingWrapped ? T("Waiting while your Wrapped is made. It carries on by itself after.")
         : Exports.IsBusy || Player.IsExporting ? T("Paused until the export is done.")
         : IsScanning ? T("Paused while the library is scanned.")
         : "";

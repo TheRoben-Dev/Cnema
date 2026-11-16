@@ -71,6 +71,7 @@ public sealed partial class MainViewModel
     private void StartMochiClock()
     {
         FirstSeen();
+        UpdatePlaytime();
         if (_mochiTimer is not null) return;
         _mochiTimer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(1) };
         _mochiTimer.Tick += (_, _) =>
@@ -98,6 +99,7 @@ public sealed partial class MainViewModel
         OnPropertyChanged(nameof(ShowBackupBuddy));
         RaiseEmpty();
         RaiseMochiHelp();
+        UpdatePlaytime();
     }
 
     // ---------- saves and milestones ----------

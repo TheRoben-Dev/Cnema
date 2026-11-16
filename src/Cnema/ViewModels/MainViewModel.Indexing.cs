@@ -19,7 +19,11 @@ public sealed partial class MainViewModel
     public bool IsIndexing => SmartActivity.Length > 0 || SpeechActivity.Length > 0 || VisualActivity.Length > 0 || SoundActivity.Length > 0;
     public bool ShowIndexing => IsIndexing && IndexTotal > 0 && IndexDone < IndexTotal;
     public double IndexProgress => IndexTotal == 0 ? 0 : (double)IndexDone / IndexTotal;
-    public string IndexTitle => IsIndexPaused ? T("Taking a break") : T("Looking through your clips…");
+    public string IndexTitle =>
+        IsIndexPaused ? T("Taking a break")
+        : IsMakingWrapped ? T("Waiting for your Wrapped")
+        : SmartShouldWait ? T("Waiting for a moment")
+        : T("Looking through your clips…");
     public string IndexCount => F("{0} of {1}", IndexDone.ToString("N0"), IndexTotal.ToString("N0"));
     public string IndexPauseText => IsIndexPaused ? T("Carry on") : T("Pause for now");
 
@@ -66,6 +70,7 @@ public sealed partial class MainViewModel
 
     private void RaiseIndexCounts()
     {
+        OnPropertyChanged(nameof(IndexTitle));
         OnPropertyChanged(nameof(IndexCount));
         OnPropertyChanged(nameof(IndexProgress));
         OnPropertyChanged(nameof(ShowIndexing));
@@ -88,6 +93,7 @@ public sealed partial class MainViewModel
         }
         IndexTotal = total;
         IndexDone = done;
+        OnPropertyChanged(nameof(IndexTitle)); // waiting for a game, an export or Wrapped comes and goes
     }
 
     [RelayCommand] private void ToggleIndexOpen() => IsIndexOpen = !IsIndexOpen;
