@@ -781,14 +781,14 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             var people = Features.People;
             var said = Features.Speech;
             q = q.Where(v => terms.All(t => t.StartsWith('#')
-                ? t.Length > 1 && v.Entry.Tags.Any(tag => tag.Contains(t[1..], StringComparison.OrdinalIgnoreCase))
+                ? t.Length > 1 && v.Entry.Tags.Any(tag => TextMatch.Has(tag, t[1..]))
                 : t.StartsWith('@')
-                ? t.Length > 1 && people && v.Entry.People.Any(p => p.Contains(t[1..], StringComparison.OrdinalIgnoreCase))
-                : v.Entry.Path.Contains(t, StringComparison.OrdinalIgnoreCase) ||
-                  (v.Entry.Title is { } title && title.Contains(t, StringComparison.OrdinalIgnoreCase)) ||
-                  v.Entry.Tags.Any(tag => tag.Contains(t, StringComparison.OrdinalIgnoreCase)) ||
-                  (notes && v.Entry.Note is { } n && n.Contains(t, StringComparison.OrdinalIgnoreCase)) ||
-                  (people && v.Entry.People.Any(p => p.Contains(t, StringComparison.OrdinalIgnoreCase))) ||
+                ? t.Length > 1 && people && v.Entry.People.Any(p => TextMatch.Has(p, t[1..]))
+                : TextMatch.Has(v.Entry.Path, t) ||
+                  (v.Entry.Title is { } title && TextMatch.Has(title, t)) ||
+                  v.Entry.Tags.Any(tag => TextMatch.Has(tag, t)) ||
+                  (notes && v.Entry.Note is { } n && TextMatch.Has(n, t)) ||
+                  (people && v.Entry.People.Any(p => TextMatch.Has(p, t))) ||
                   MatchesWhen(v.Entry, t) ||
                   (said && SaidMatches(v.Entry, t))));
         }

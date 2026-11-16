@@ -173,7 +173,7 @@ public sealed partial class MainViewModel
     // ---------- search ----------
 
     private static bool SaidMatches(VideoEntry e, string term) =>
-        e.Speech is { Lines.Count: > 0 } s && s.Lines.Any(l => l.Text.Contains(term, StringComparison.OrdinalIgnoreCase));
+        e.Speech is { Lines.Count: > 0 } s && s.Lines.Any(l => TextMatch.Has(l.Text, term));
 
     /// <summary>On each card in the results: the line where the searched words are said, if any.</summary>
     private void MarkSaid(IEnumerable<VideoItemViewModel> shown, string search)
@@ -186,9 +186,9 @@ public sealed partial class MainViewModel
             {
                 visible.Add(v);
                 if (v.Entry.Speech is not { Lines.Count: > 0 } s) { v.Said = null; continue; }
-                var line = s.Lines.FirstOrDefault(l => l.Text.Contains(phrase, StringComparison.OrdinalIgnoreCase))
-                           ?? s.Lines.FirstOrDefault(l => words.Any(w => l.Text.Contains(w, StringComparison.OrdinalIgnoreCase)));
-                v.Said = line is null ? null : Snippet(line.Text, phrase.Length > 0 && line.Text.Contains(phrase, StringComparison.OrdinalIgnoreCase) ? phrase : words.First(w => line.Text.Contains(w, StringComparison.OrdinalIgnoreCase)));
+                var line = s.Lines.FirstOrDefault(l => TextMatch.Has(l.Text, phrase))
+                           ?? s.Lines.FirstOrDefault(l => words.Any(w => TextMatch.Has(l.Text, w)));
+                v.Said = line is null ? null : Snippet(line.Text, phrase.Length > 0 && TextMatch.Has(line.Text, phrase) ? phrase : words.First(w => TextMatch.Has(line.Text, w)));
                 v.SaidAtMs = line?.Start ?? -1;
             }
         foreach (var v in _items.Values)
@@ -200,7 +200,7 @@ public sealed partial class MainViewModel
     {
         const int Room = 50;
         if (text.Length <= Room) return text;
-        var at = Math.Max(0, text.IndexOf(match, StringComparison.OrdinalIgnoreCase));
+        var at = Math.Max(0, TextMatch.IndexOf(text, match));
         var start = Math.Clamp(at - (Room - match.Length) / 2, 0, text.Length - Room);
         var s = text.Substring(start, Room).Trim();
         return (start > 0 ? "…" : "") + s + (start + Room < text.Length ? "…" : "");
