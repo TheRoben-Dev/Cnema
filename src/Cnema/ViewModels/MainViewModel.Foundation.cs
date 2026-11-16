@@ -35,6 +35,7 @@ public sealed partial class MainViewModel
         if (!Features.People && SelectedFriend is not null) SelectedFolder = Folders.FirstOrDefault();
         RebuildTags();
         RefreshMemories();
+        RaiseMergeSuggestion();
         OnPropertyChanged(nameof(HeaderCount));
         foreach (var name in new[]
                  {

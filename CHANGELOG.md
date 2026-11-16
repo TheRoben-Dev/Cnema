@@ -2,6 +2,12 @@
 
 What changed in each Savefile (formerly Cnema) release. The app shows the entries you have not seen yet after it updates.
 
+## 0.29.0
+- Backup over SSH: back up to a folder on any computer you can SSH into (your Linux server, a NAS, a Mac with Remote Login on), no extra server software needed. Sign in with your SSH key (the one in your .ssh folder is found by itself; a passphrase is kept in the system keychain) or a password. SFTP (SSH) is the default in Backup now; S3 servers work as before.
+- Savefile remembers your server's key the first time it connects, like ssh does, and refuses a server that answers with a different one. Forget server key starts over if you reinstalled the server.
+- One library folder: your library is now one folder by default, the same one clips are saved to, and Add folder becomes Change folder. Want videos from several places? Switch on Settings, Features, Several folders. If you already had several folders, nothing changes for you.
+- Merge folders into one: with more than three folders, Savefile offers to move your videos into one folder (each old folder becomes a subfolder there). You see first what moves where, unplugged drives and recorder folders are left alone, nothing is overwritten, favourites, tags, friends, notes, collections, edits and backups go with the videos, and Undo merge puts it all back. Also under Clean up.
+
 ## 0.28.0
 - Backup to your own server: keep a copy of your favourites (or every video) on a server you run at home, such as Garage, SeaweedFS or MinIO. Set it up under Tools, Backup. New clips and favourites are backed up on their own a little while after they're saved, a cloud mark shows on every video that's backed up, and nothing is ever deleted on the server. Switch it on under Settings, Features, Memories.
 - Restore on a new computer: Backup finds the videos on your server that aren't on this computer and brings them back into a Restored folder, with their dates, favourites, tags, friends and notes.

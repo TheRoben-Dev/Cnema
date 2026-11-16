@@ -30,11 +30,11 @@ Savefile updates itself after that.
   to tag everyone on every save), Year in clips (a look back on a year, with a montage of it and a picture to share), Play all (a
   slideshow of any view in the Quick player), and small
   milestones as your saves add up.
-- **Library:** watched folders, thumbnails with hover scrub, search (names, `#tags`, `@friends`, years, months),
+- **Library:** one library folder (or several, if you like), merging scattered folders into one, thumbnails with hover scrub, search (names, `#tags`, `@friends`, years, months),
   filters, tags, favourites, collections, bulk select, duplicate finder and stats.
-- **Backup to your own server:** favourites or every video, with their tags, friends and notes, to any
-  S3-compatible server you run (Garage, SeaweedFS, MinIO), and restore on a new computer. Off by default;
-  nothing leaves your network.
+- **Backup to your own server:** favourites or every video, with their tags, friends and notes, to a folder
+  on any computer you can SSH into (SFTP, key or password) or to an S3-compatible server (Garage, SeaweedFS,
+  MinIO), and restore on a new computer. Off by default; nothing leaves your network.
 - **Quick player:** videos open in a large player over the library; **Edit** takes you to the full editor.
 - **Editor:** a tool rail with Trim, Captions, Speed, Sound, Brand and Export. Lossless or frame-accurate trims,
   multi-part export, captions, slow-mo with ramps, loudness and voice tools, watermark and intro/outro,

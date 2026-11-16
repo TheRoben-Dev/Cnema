@@ -510,6 +510,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             EditStore.Move(from, to);
             _backup.Moved(from, to);
         });
+        MigrateFolderMode();
         RebuildFolders();
         Loc.Changed += OnLanguageChanged;
         _setupLanguage = SetupLanguages.FirstOrDefault(l => l.Code == Loc.Current);
@@ -558,6 +559,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         SelectedFolder = (select is null ? null : Folders.FirstOrDefault(f => f.Path == select)) ?? Folders[0];
         _library.Watch(_settings.Current.Folders);
         OnPropertyChanged(nameof(HasNoFolders));
+        RaiseMergeSuggestion();
         UpdateCounts();
     }
 
@@ -570,6 +572,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         path = NormalizeFolder(path);
         if (path.Length == 0) path = "/";
         if (_settings.Current.Folders.Any(f => string.Equals(f, path, StringComparison.OrdinalIgnoreCase))) return;
+        // One library folder (the default): the picked folder replaces it, and clips are saved there too.
+        if (!SeveralFolders && LibraryFolders().Count > 0) { await UseLibraryFolderAsync(path, clipsToo: true); return; }
+        if (!SeveralFolders) _settings.Current.Clip.Folder = path;
         _settings.Current.Folders.Add(path);
         _settings.Save();
         RebuildFolders(path);
@@ -953,10 +958,20 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 Directory.CreateDirectory(folder);
                 if (!_settings.Current.Folders.Any(f => Under(Path.Combine(folder, "x"), f)))
                 {
-                    _settings.Current.Folders.Add(folder);
-                    _settings.Save();
-                    RebuildFolders(SelectedFolder?.Path);
-                    _ = RescanAsync();
+                    if (!SeveralFolders && LibraryFolders() is { Count: > 0 } library)
+                    {
+                        // One library folder: clips go into it, unless a clips folder was picked in Settings,
+                        // which then becomes the library.
+                        if (clip.Folder is null) { clip.Folder = library[0]; _settings.Save(); }
+                        else _ = UseLibraryFolderAsync(folder, clipsToo: false);
+                    }
+                    else
+                    {
+                        _settings.Current.Folders.Add(folder);
+                        _settings.Save();
+                        RebuildFolders(SelectedFolder?.Path);
+                        _ = RescanAsync();
+                    }
                 }
             }
             catch (Exception ex)

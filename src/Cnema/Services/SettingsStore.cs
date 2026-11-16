@@ -3,6 +3,8 @@ namespace Cnema.Services;
 public sealed class AppSettings
 {
     public List<string> Folders { get; set; } = new();
+    /// <summary>"Merge your folders into one?" was closed for good.</summary>
+    public bool MergeSuggestionClosed { get; set; }
     public int SortIndex { get; set; }
     public bool PreciseExport { get; set; }
     public int Volume { get; set; } = 80;
@@ -180,6 +182,11 @@ public sealed class FeatureSettings
     public bool PlayAll { get; set; } = true;
     /// <summary>Backup to your own server. Off until switched on.</summary>
     public bool Backup { get; set; }
+    /// <summary>
+    /// Watch several folders. Off: the library is one folder, the one clips are saved to.
+    /// Null in settings from before this existed: on when more than one folder was already added.
+    /// </summary>
+    public bool? SeveralFolders { get; set; }
 
     public FeatureSettings Clone() => (FeatureSettings)MemberwiseClone();
 }

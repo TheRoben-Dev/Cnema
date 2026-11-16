@@ -577,6 +577,11 @@ public partial class MainWindow : Window
             if (e.Key == Key.Escape) { vm.CloseRecordersCommand.Execute(null); e.Handled = true; }
             return;
         }
+        if (vm.IsShowingMerge)
+        {
+            if (e.Key == Key.Escape) { vm.CloseMergeCommand.Execute(null); e.Handled = true; }
+            return;
+        }
         if (vm.IsShowingBackup)
         {
             if (e.Key == Key.Escape) { vm.CloseBackupCommand.Execute(null); e.Handled = true; }
