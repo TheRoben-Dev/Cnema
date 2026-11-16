@@ -19,8 +19,12 @@ public static partial class SmartAnalyzer
     public static async Task<SmartInfo?> AnalyzeAsync(string path, long durationMs, CancellationToken ct)
     {
         if (ToolLocator.Ffmpeg is not { } ffmpeg || !File.Exists(path)) return null;
+        var watch = System.Diagnostics.Stopwatch.StartNew();
         var levels = await Task.Run(() => HighlightService.ReadLevels(ffmpeg, path, ct, background: true), ct);
-        var frames = await FramesAsync(ffmpeg, path, ct);
+        var sound = watch.Elapsed.TotalSeconds;
+        var frames = await FramesAsync(ffmpeg, path, durationMs, ct);
+        if (watch.Elapsed.TotalSeconds > 30)
+            Log.Info($"Best moments: {Path.GetFileName(path)}: sound {sound:0.0} s, picture {watch.Elapsed.TotalSeconds - sound:0.0} s, {frames.Count} samples for {durationMs / 1000} s");
         var info = Score(levels, frames.Select(f => f.Scene).ToList(), durationMs);
         Look(info, levels, frames, durationMs);
         return info;
@@ -33,17 +37,25 @@ public static partial class SmartAnalyzer
     /// Two samples a second (taken from keyframes), 64 pixels wide: how different each is from the one before
     /// (0 to 1), its average brightness and the spread between its dark and light parts (0 to 255).
     /// </summary>
-    private static async Task<List<Frame>> FramesAsync(string ffmpeg, string path, CancellationToken ct)
+    private static async Task<List<Frame>> FramesAsync(string ffmpeg, string path, long durationMs, CancellationToken ct)
     {
         var frames = new List<Frame>();
+        // Some recorders mark every frame as a keyframe (or none), and then "keyframes only" means decoding the
+        // whole video on one core: minutes per clip on a Mac. The Mac's own video decoder does that part
+        // nearly for free, and a picture pass that still runs long is cut off: the sound alone still finds the moments.
+        using var budget = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        budget.CancelAfter(TimeSpan.FromSeconds(30) + TimeSpan.FromMilliseconds(Math.Max(0, durationMs) / 4));
         try
         {
-            var r = await ProcessRunner.RunAsync(ffmpeg, new[]
+            var args = new List<string> { "-hide_banner", "-nostats", "-v", "info", "-threads", "1", "-skip_frame", "nokey" };
+            if (OperatingSystem.IsMacOS()) args.AddRange(new[] { "-hwaccel", "videotoolbox" });
+            args.AddRange(new[]
             {
-                "-hide_banner", "-nostats", "-v", "info", "-threads", "1", "-skip_frame", "nokey", "-an", "-sn", "-dn", "-i", path,
+                "-an", "-sn", "-dn", "-i", path,
                 "-vf", "fps=2,scale=64:-2,signalstats,select='gte(scene\\,0)',metadata=print",
                 "-f", "null", "-",
-            }, ct: ct, background: true);
+            });
+            var r = await ProcessRunner.RunAsync(ffmpeg, args, ct: budget.Token, background: true);
             double low = 0, avg = 0, high = 0;
             foreach (Match m in StatLine().Matches(r.StdErr))
             {
@@ -56,6 +68,11 @@ public static partial class SmartAnalyzer
                     case "scene_score": frames.Add(new Frame(v, avg, high - low)); break; // the last key printed for a frame
                 }
             }
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+            Log.Warn($"Picture pass for {Path.GetFileName(path)} took too long; its best moments come from the sound only.");
+            frames.Clear();
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception ex) { Log.Warn($"Picture pass for {Path.GetFileName(path)}: {ex.Message}"); }

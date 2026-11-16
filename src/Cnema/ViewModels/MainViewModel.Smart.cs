@@ -89,11 +89,11 @@ public sealed partial class MainViewModel
         : "";
 
     /// <summary>
-    /// The smart features take turns, one video at a time, so only one of them works at once and each makes
-    /// progress (before, each waited for the one before it to finish the whole library, which on a big library
-    /// looked like nothing was happening).
+    /// The smart features take turns, one video at a time, at most two working at once, so each makes progress
+    /// and a slow video in one never holds up the others for long (one at a time had the quick ones wait
+    /// minutes behind a slow Best moments video).
     /// </summary>
-    private readonly SemaphoreSlim _workGate = new(1, 1);
+    private readonly SemaphoreSlim _workGate = new(2, 2);
 
     /// <summary>Waits until the computer is free and it's this feature's turn, saying so; release <see cref="_workGate"/> after.</summary>
     private async Task<TimeSpan> TakeTurnAsync(Action<string> show, string working, string feature, CancellationToken ct)
