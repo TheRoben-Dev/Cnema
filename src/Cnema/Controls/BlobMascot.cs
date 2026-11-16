@@ -25,6 +25,8 @@ public enum MochiMood
     Proud,
     /// <summary>Only the top of it shows, peeking over the bottom edge (an empty page).</summary>
     Peek,
+    /// <summary>Leaning in to hear, eyes towards the sound, sound waves coming in (the voice game).</summary>
+    Listening,
 }
 
 /// <summary>A hat for the season.</summary>
@@ -342,6 +344,7 @@ public sealed class BlobMascot : Control
         {
             MochiMood.Sleepy => new[] { 1.0, 2.5, 0, 0.5, 0, 0 },   // a big slow stretch, like a yawn
             MochiMood.Puzzled => new[] { 2.0, 0, 1.5, 1.0, 2.0, 0 },
+            MochiMood.Listening => new[] { 0.5, 0, 1.0, 2.0, 0.5, 0 },
             MochiMood.Peek => new[] { 3.0, 0, 1.0, 1.5, 1.0, 0 },
             _ => new[] { 2.0, 1.4, 1.2, 1.2, 1.0, 0.8 },
         };
@@ -396,6 +399,7 @@ public sealed class BlobMascot : Control
                 _nextLook = t + 1.6 + _rng.NextDouble() * 3.2;
             }
             if (mood == MochiMood.Puzzled && _idleUntil < 0) _lookYTo = -0.7;
+            if (mood == MochiMood.Listening && _idleUntil < 0) { _lookTo = -0.75; _lookYTo = -0.15; }
             if (mood == MochiMood.Proud) _lookYTo = -0.8;
         }
 
@@ -418,6 +422,7 @@ public sealed class BlobMascot : Control
         var leanTarget = mood switch
         {
             MochiMood.Puzzled => 0.05 + Math.Sin(t * 0.9) * 0.012,
+            MochiMood.Listening => -0.06 + Math.Sin(t * 1.3) * 0.01,
             MochiMood.Carrying => 0.02,
             MochiMood.Sleepy => Math.Sin(t * 0.5) * 0.015,
             _ => 0,
@@ -581,6 +586,7 @@ public sealed class BlobMascot : Control
 
         if (mood == MochiMood.Puzzled) DrawQuestion(ctx, w, h, top, rx, t, still);
         if (mood == MochiMood.Sleepy) DrawZs(ctx, w, h, top, rx, t);
+        if (mood == MochiMood.Listening) DrawWaves(ctx, h, cx + lean, cy, rx, t, still);
         foreach (var p in _sparks) DrawSpark(ctx, w, h, cx, ground, p);
     }
 
@@ -798,6 +804,33 @@ public sealed class BlobMascot : Control
         var text = new FormattedText("?", CultureInfo.InvariantCulture, FlowDirection.LeftToRight,
             new Typeface(FontFamily.Default, FontStyle.Normal, FontWeight.Bold), Math.Max(8, h * 0.32), Res("TextDim", Brushes.Gray));
         ctx.DrawText(text, new Point(top.X + rx * 0.55, top.Y - text.Height * 0.85 + bob));
+    }
+
+    /// <summary>Sound coming in from the left: three arcs that travel towards Mochi and fade as they arrive.</summary>
+    private void DrawWaves(DrawingContext ctx, double h, double cx, double cy, double rx, double t, bool still)
+    {
+        var brush = Res("Highlight", Brushes.MediumPurple);
+        var thick = Math.Max(1.2, h * 0.035);
+        for (var i = 0; i < 3; i++)
+        {
+            // Each arc starts far out and moves in; with Reduced motion they simply stand still, evenly spaced.
+            var phase = still ? i / 3.0 : (t * 0.7 + i / 3.0) % 1.0;
+            var r = rx * (1.45 - phase * 0.35);
+            var dist = rx * (0.55 + (1 - phase) * 0.55);
+            var centre = new Point(cx - rx - dist + r * 0.9, cy);
+            var a = Math.PI * 0.78;
+            var b = Math.PI * 1.22;
+            var geo = new StreamGeometry();
+            using (var g = geo.Open())
+            {
+                g.BeginFigure(new Point(centre.X + r * 0.32 * Math.Cos(a), centre.Y + r * 0.5 * Math.Sin(a)), false);
+                g.ArcTo(new Point(centre.X + r * 0.32 * Math.Cos(b), centre.Y + r * 0.5 * Math.Sin(b)), new Size(r * 0.32, r * 0.5), 0, false, SweepDirection.Clockwise);
+                g.EndFigure(false);
+            }
+            var fade = still ? 0.8 : Math.Sin(phase * Math.PI);
+            using (ctx.PushOpacity(fade))
+                ctx.DrawGeometry(null, new Pen(brush, thick, lineCap: PenLineCap.Round), geo);
+        }
     }
 
     /// <summary>Little z's floating up and away while it dozes.</summary>
