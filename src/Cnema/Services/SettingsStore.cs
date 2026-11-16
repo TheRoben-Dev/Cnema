@@ -196,6 +196,8 @@ public sealed class FeatureSettings
     public bool AutoTitles { get; set; }
     /// <summary>Voice search and captions: what's said in videos is written down by a speech model (a one-time download).</summary>
     public bool Speech { get; set; }
+    /// <summary>Visual search, similar videos and look-alike copies: a visual model (a one-time download) looks at a few frames of each video.</summary>
+    public bool Visual { get; set; }
     /// <summary>
     /// Watch several folders. Off: the library is one folder, the one clips are saved to.
     /// Null in settings from before this existed: on when more than one folder was already added.

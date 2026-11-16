@@ -85,6 +85,14 @@ public sealed partial class VideoItemViewModel : ObservableObject
     /// <summary>Where those words are said (ms), so opening the video starts there.</summary>
     public long SaidAtMs { get; set; } = -1;
     public bool HasSaid => Said is not null;
+
+    /// <summary>While searching: shown only because it looks like the words (visual search).</summary>
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(ShowSeen))] private bool _hasSeen;
+    public long SeenAtMs { get; set; } = -1;
+    public bool ShowSeen => HasSeen && !HasSaid;
+    public bool ShowTags => !HasSaid && !HasSeen;
+    partial void OnSaidChanged(string? value) { OnPropertyChanged(nameof(ShowSeen)); OnPropertyChanged(nameof(ShowTags)); }
+    partial void OnHasSeenChanged(bool value) => OnPropertyChanged(nameof(ShowTags));
     public bool IsBackedUp => BackedUp?.Invoke(Entry) == true;
     public void RefreshBackup() => OnPropertyChanged(nameof(IsBackedUp));
     public bool HasPeople => PeopleEnabled && Entry.People.Count > 0;

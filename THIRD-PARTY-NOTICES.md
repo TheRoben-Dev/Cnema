@@ -33,6 +33,13 @@ its own licence. None of them are modified.
   `vcomp140`) next to these libraries, redistributed under the Visual Studio redistributable terms.
   Linux needs `libgomp1` (GCC's OpenMP runtime), which most distributions install by default.
 
+## Visual search (downloaded only when switched on)
+
+- CLIP ViT-B/32 (OpenAI, MIT licence), as 8-bit ONNX files converted by Xenova
+  (https://huggingface.co/Xenova/clip-vit-base-patch32).
+- ONNX Runtime 1.23.2 (Microsoft, MIT licence): the managed `Microsoft.ML.OnnxRuntime.Managed` package ships
+  with the app; its native library for your platform is part of the download.
+
 ## .NET runtime and libraries
 
 - .NET runtime (MIT), Avalonia (MIT), LibVLCSharp (LGPL-2.1-or-later), CommunityToolkit.Mvvm (MIT),

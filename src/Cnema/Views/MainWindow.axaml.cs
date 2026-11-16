@@ -304,6 +304,9 @@ public partial class MainWindow : Window
     private void OnPlayItemClick(object? sender, RoutedEventArgs e) =>
         Vm?.OpenCommand.Execute((sender as Control)?.DataContext as VideoItemViewModel);
 
+    private void OnSimilarItemClick(object? sender, RoutedEventArgs e) =>
+        Vm?.FindSimilarCommand.Execute((sender as Control)?.DataContext as VideoItemViewModel);
+
     private void OnRevealItemClick(object? sender, RoutedEventArgs e) =>
         Vm?.RevealCommand.Execute((sender as Control)?.DataContext as VideoItemViewModel);
 
@@ -385,6 +388,10 @@ public partial class MainWindow : Window
             {
                 case "watched":
                     mi.IsVisible = vm.Features.Unwatched;
+                    break;
+                case "similar":
+                    mi.IsVisible = vm.ShowVisual;
+                    mi.IsEnabled = vm.CanFindSimilar(item);
                     break;
                 case "uncollect":
                     mi.IsVisible = vm.ShowCollections && vm.IsInCollectionView;

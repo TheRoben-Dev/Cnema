@@ -19,6 +19,59 @@ public static class ModelStore
         "422f1ae452ade6f30a004d7e5c6a43195e4433bc370bf23fac9cc591f01a8898",
         "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base-q5_1.bin");
 
+    /// <summary>ONNX Runtime 1.23.2 (MIT) for this computer, from the official NuGet package; only on the mirror.</summary>
+    public static ModelInfo OnnxRuntime { get; } =
+        OperatingSystem.IsWindows() ? new("visual", "onnxruntime-1.23.2-win-x64.dll", 14_186_016, "dec964ab1ee36cc9b0ae247d13b376627992fc57dec0454354017ab8fd84f1ea", null)
+        : OperatingSystem.IsMacOS() && System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture == System.Runtime.InteropServices.Architecture.Arm64
+            ? new("visual", "onnxruntime-1.23.2-osx-arm64.dylib", 35_138_784, "d306d2bc768540766c7ed8a1e0ff05d2870c77a934ebeee4a7bafa1b732ef299", null)
+        : OperatingSystem.IsMacOS()
+            ? new("visual", "onnxruntime-1.23.2-osx-x64.dylib", 39_742_608, "8c9c78de65ea3786f987c0d980e9c1b13a3a5fbc6b3e2965ba05b450e6e4c054", null)
+        : new("visual", "onnxruntime-1.23.2-linux-x64.so", 22_326_072, "13ab8084954fa4a47c777880180b90810d6020f021441395712b48a75b74c68b", null);
+
+    /// <summary>
+    /// CLIP ViT-B/32 (OpenAI, MIT), 8-bit ONNX: visual search, similar videos, look-alike copies. With the
+    /// ONNX Runtime library for this computer, which only this feature needs, so it's downloaded with it.
+    /// </summary>
+    public static IReadOnlyList<ModelInfo> Visual { get; } = new[]
+    {
+        new ModelInfo("visual", "clip-vit-b32-vision-q8.onnx", 89_117_001, "583fd1110a514667812fee7d684952aaf82a99b959760c8d7dca7e0ab9839299",
+            "https://huggingface.co/Xenova/clip-vit-base-patch32/resolve/main/onnx/vision_model_quantized.onnx"),
+        new ModelInfo("visual", "clip-vit-b32-text-q8.onnx", 64_504_507, "73baab855d406190da9faa498cfedf65f15cf309f4cc7385b7b032e6d08e5c3a",
+            "https://huggingface.co/Xenova/clip-vit-base-patch32/resolve/main/onnx/text_model_quantized.onnx"),
+        new ModelInfo("visual", "clip-vocab.json", 862_328, "5047b556ce86ccaf6aa22b3ffccfc52d391ea4accdab9c2f2407da5b742d4363",
+            "https://huggingface.co/Xenova/clip-vit-base-patch32/resolve/main/vocab.json"),
+        new ModelInfo("visual", "clip-merges.txt", 524_619, "9fd691f7c8039210e0fced15865466c65820d09b63988b0174bfe25de299051a",
+            "https://huggingface.co/Xenova/clip-vit-base-patch32/resolve/main/merges.txt"),
+        OnnxRuntime,
+    };
+
+    public static long BytesOf(IEnumerable<ModelInfo> pack) => pack.Sum(m => m.Bytes);
+    public static bool IsInstalled(IEnumerable<ModelInfo> pack) => pack.All(IsInstalled);
+    public static void Remove(IEnumerable<ModelInfo> pack) { foreach (var m in pack) Remove(m); }
+
+    /// <summary>Downloads what's missing of a set of files, one after the other (progress 0..1 over all of them).</summary>
+    public static async Task DownloadAsync(IReadOnlyList<ModelInfo> pack, IProgress<double>? progress, CancellationToken ct)
+    {
+        var total = (double)BytesOf(pack);
+        long before = 0;
+        foreach (var m in pack)
+        {
+            if (!IsInstalled(m))
+            {
+                var start = before;
+                await DownloadAsync(m, progress is null ? null : new SyncProgress(p => progress.Report((start + p * m.Bytes) / total)), ct);
+            }
+            before += m.Bytes;
+            progress?.Report(before / total);
+        }
+    }
+
+    /// <summary>Reports on the calling thread, so the outer Progress posts only once per step.</summary>
+    private sealed class SyncProgress(Action<double> report) : IProgress<double>
+    {
+        public void Report(double value) => report(value);
+    }
+
     public static string Dir => Path.Combine(AppPaths.DataDir, "models");
     public static string PathOf(ModelInfo m) => Path.Combine(Dir, m.File);
 

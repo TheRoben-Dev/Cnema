@@ -414,7 +414,8 @@ public sealed partial class MainViewModel
     {
         var vm = new CleanupViewModel();
         Cleanup = vm;
-        await vm.ScanAsync(_items.Values.Select(v => v.Entry).ToList(), p => _items.TryGetValue(p, out var v) ? v : null);
+        await vm.ScanAsync(_items.Values.Select(v => v.Entry).ToList(), p => _items.TryGetValue(p, out var v) ? v : null,
+            Features.Visual ? LooksSame : null);
     }
 
     private static void MergeDetails(VideoEntry from, VideoEntry into)

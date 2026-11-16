@@ -3,7 +3,7 @@ using Cnema.Models;
 
 namespace Cnema.Services;
 
-public enum CleanupReason { Duplicate, TooShort, Unreadable, Empty }
+public enum CleanupReason { Duplicate, TooShort, Unreadable, Empty, LookAlike }
 
 /// <summary>A file the clean-up found, and why. <see cref="Group"/> ties duplicates of one video together.</summary>
 public sealed record CleanupFinding(VideoEntry Entry, CleanupReason Reason, int Group, bool Suggested);
@@ -17,7 +17,10 @@ public static class CleanupService
     public const long ShortMs = 2000;
     private const int SampleBytes = 256 * 1024;
 
-    public static async Task<List<CleanupFinding>> FindAsync(IReadOnlyCollection<VideoEntry> entries, CancellationToken ct)
+    /// <param name="looksSame">With visual search: two different files that show the same video (a re-encoded or
+    /// exported copy). Those are listed for the user to decide, never ticked.</param>
+    public static async Task<List<CleanupFinding>> FindAsync(IReadOnlyCollection<VideoEntry> entries, CancellationToken ct,
+        Func<VideoEntry, VideoEntry, bool>? looksSame = null)
     {
         var found = new List<CleanupFinding>();
         var junk = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -56,6 +59,33 @@ public static class CleanupService
                 for (var i = 0; i < ordered.Count; i++)
                     found.Add(new CleanupFinding(ordered[i], CleanupReason.Duplicate, group, i > 0));
                 group++;
+            }
+        }
+
+        if (looksSame is not null)
+        {
+            // Neighbours by length only: look-alikes are about the same length.
+            var taken = new HashSet<string>(found.Select(f => f.Entry.Path), StringComparer.OrdinalIgnoreCase);
+            var byLength = entries.Where(e => e.DurationMs > 0 && !taken.Contains(e.Path)).OrderBy(e => e.DurationMs).ToList();
+            var used = new HashSet<VideoEntry>();
+            for (var i = 0; i < byLength.Count; i++)
+            {
+                ct.ThrowIfCancellationRequested();
+                var a = byLength[i];
+                if (used.Contains(a)) continue;
+                var same = new List<VideoEntry> { a };
+                for (var j = i + 1; j < byLength.Count && byLength[j].DurationMs - a.DurationMs <= Math.Max(1500, a.DurationMs / 50); j++)
+                    if (!used.Contains(byLength[j]) && looksSame(a, byLength[j])) same.Add(byLength[j]);
+                if (same.Count < 2) continue;
+                // The biggest file is likely the best quality: that one is the one to keep.
+                var ordered = same.OrderByDescending(e => e.Size).ToList();
+                for (var k = 0; k < ordered.Count; k++)
+                {
+                    used.Add(ordered[k]);
+                    found.Add(new CleanupFinding(ordered[k], CleanupReason.LookAlike, group, false));
+                }
+                group++;
+                await Task.Yield();
             }
         }
         return found;

@@ -40,6 +40,8 @@ Savefile updates itself after that.
   Smart rename for the whole library. No account, no cloud, nothing downloaded.
 - **Voice search and captions:** what's said in your videos is written down on your computer, so you can
   search for it, watch with captions, and turn it into captions for an export (optional 57 MB speech model).
+- **Visual search and similar videos:** search for what's on screen ("snow", "a car"), see Videos like this one,
+  and let Clean up spot copies saved twice (optional 169 MB visual model; runs on your computer).
 - **Quick player:** videos open in a large player over the library; **Edit** takes you to the full editor.
 - **Editor:** a tool rail with Trim, Captions, Speed, Sound, Brand and Export. Lossless or frame-accurate trims,
   multi-part export, captions, slow-mo with ramps, loudness and voice tools, watermark and intro/outro,

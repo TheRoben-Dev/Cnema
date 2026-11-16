@@ -2,6 +2,13 @@
 
 What changed in each Savefile (formerly Cnema) release. The app shows the entries you have not seen yet after it updates.
 
+## 0.32.0
+- Visual search: Savefile can look at a few frames of each video, on this computer and only when it isn't busy, and then find videos by what's on screen. Search for "snow", "a car", "night" or "a boss fight" and the videos that look like it come after the ones whose names match, marked "Looks like it". Opening one starts near the frame that matched.
+- Videos like this one: right-click a video to see the ones that look most alike (the same map, the same game, the same evening). Done takes you back.
+- Clean up now also spots look-alikes: the same video saved twice in different files, like an export or a re-encoded copy. They're listed with the biggest file first and never ticked for you.
+- It needs a visual model, a one-time download of 169 MB (the model plus the engine that runs it). Switch on Settings, Features, Smart, Visual search and similar videos, then Download the visual model. After that nothing leaves your computer, and Remove the model frees the space again.
+- Clean up: the summary no longer lists "0 duplicates" when it only found other things.
+
 ## 0.31.0
 - Voice search: Savefile can write down what's said in your videos (voice chat included, even on its own audio track), on this computer and only when it isn't busy. Search for something someone said, like "behind you", and the video comes up with the words on its card; open it and it starts right where they're said.
 - Captions while you watch: the new CC button in the player (or V) shows what's said as captions.

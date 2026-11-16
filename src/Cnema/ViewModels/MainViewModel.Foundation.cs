@@ -40,6 +40,8 @@ public sealed partial class MainViewModel
         if (!Features.AutoTitles && _settings.Current.AutoTitlesSinceUtc != default) { _settings.Current.AutoTitlesSinceUtc = default; _settings.Save(); }
         if (Features.Highlights) StartSmartPass(); else StopSmartPass();
         if (Features.Speech) StartSpeechPass(); else StopSpeechPass();
+        if (Features.Visual) StartVisualPass(); else StopVisualPass();
+        if (!Features.Visual && SimilarTo is not null) ClearSimilar();
         Player.RefreshSpeech();
         UpdateHighlightMarks();
         RefreshMemories();
@@ -48,7 +50,7 @@ public sealed partial class MainViewModel
                  {
                      nameof(ShowClipping), nameof(ShowSessionButton), nameof(ShowCollections),
                      nameof(ShowCleanUp), nameof(ShowStats), nameof(ShowTools), nameof(ShowUnwatchedFilter),
-                     nameof(ShowMiniPlayerButton), nameof(ShowRecorders), nameof(ShowNotes), nameof(ShowMontage), nameof(ShowPeople), nameof(ShowRecap), nameof(ShowRecapMontage), nameof(ShowPlayingWith), nameof(HasSquad), nameof(PlayingWithLabel), nameof(ShowPlayAll), nameof(CanPlayAll), nameof(ShowFriendMontage), nameof(ShowBackup), nameof(ShowSmartTitles), nameof(ShowSpeech),
+                     nameof(ShowMiniPlayerButton), nameof(ShowRecorders), nameof(ShowNotes), nameof(ShowMontage), nameof(ShowPeople), nameof(ShowRecap), nameof(ShowRecapMontage), nameof(ShowPlayingWith), nameof(HasSquad), nameof(PlayingWithLabel), nameof(ShowPlayAll), nameof(CanPlayAll), nameof(ShowFriendMontage), nameof(ShowBackup), nameof(ShowSmartTitles), nameof(ShowSpeech), nameof(ShowVisual),
                  })
             OnPropertyChanged(name);
         AppearanceChanged?.Invoke();
