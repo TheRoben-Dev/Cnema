@@ -145,6 +145,10 @@
                         <TextBlock svc:Tr.Text="Laughter and hype" FontSize="12" FontWeight="SemiBold" />
                         <TextBlock Classes="dim" Text="{Binding SoundActivity}" FontSize="11" TextWrapping="Wrap" />
                       </StackPanel>
+                      <StackPanel Spacing="1" IsVisible="{Binding HasVoiceActivity}">
+                        <TextBlock svc:Tr.Text="Who's talking" FontSize="12" FontWeight="SemiBold" />
+                        <TextBlock Classes="dim" Text="{Binding VoiceActivity}" FontSize="11" TextWrapping="Wrap" />
+                      </StackPanel>
                     </StackPanel>
                     <Button Classes="soft" HorizontalAlignment="Left" Content="{Binding IndexPauseText}" Command="{Binding ToggleIndexPauseCommand}" />
                   </StackPanel>
@@ -1026,7 +1030,8 @@
                     <Panel x:Name="QuickFavStar" RenderTransform="scale(1)">
                       <PathIcon Data="{StaticResource IcStarOutline}" Width="16" Height="16" IsVisible="{Binding !IsFavorite}" />
                       <Border IsVisible="{Binding IsFavorite}" CornerRadius="8" BoxShadow="0 0 10 1 #66FFD166">
-                        <PathIcon Data="{StaticResource IcStar}" Width="16" Height="16" Foreground="#FFD166" />
+                        <c:GoldStar x:Name="QuickGoldStar" Width="16" Height="16"
+                                    Still="{Binding #Root.((vm:MainViewModel)DataContext).ReducedMotion}" />
                       </Border>
                     </Panel>
                   </Panel>
@@ -3269,6 +3274,43 @@
                         <Button Classes="soft" svc:Tr.Content="Cancel" Command="{Binding #Root.((vm:MainViewModel)DataContext).CancelSoundDownloadCommand}" IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).IsDownloadingSound}" />
                         <Button Classes="soft" svc:Tr.Content="Remove the model" Command="{Binding #Root.((vm:MainViewModel)DataContext).RemoveSoundModelCommand}" IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).SoundModelReady}"
                                 svc:Tr.Tip="Frees the space. What was already heard stays." />
+                      </StackPanel>
+                    </StackPanel>
+                    <Border Classes="sep" />
+                    <Grid Classes="row" ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="2">
+                        <TextBlock svc:Tr.Text="Who's talking" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Savefile tells your friends' voices apart in the lines Voice search writes down, and fills in Who was there for the clips it's sure about. Mochi learns the voices from a little game: you listen to a few snippets and say who it is." />
+                        <Grid ColumnDefinitions="Auto,*" Margin="0,4,0,0">
+                          <PathIcon Data="{StaticResource IcSpeed}" Width="11" Height="11" Margin="0,2,6,0" VerticalAlignment="Top" Foreground="{DynamicResource TextDim}" />
+                          <TextBlock Grid.Column="1" Classes="dim cost" FontSize="11" TextWrapping="Wrap" Text="{Binding #Root.((vm:MainViewModel)DataContext).VoicesCostText}" />
+                        </Grid>
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureVoices}" />
+                    </Grid>
+                    <StackPanel Spacing="8" Margin="14,0,14,14" IsVisible="{Binding FeatureVoices}">
+                      <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="{Binding #Root.((vm:MainViewModel)DataContext).VoiceModelText}"
+                                 Classes.err="{Binding #Root.((vm:MainViewModel)DataContext).VoiceModelError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                      <ProgressBar Minimum="0" Maximum="1" Value="{Binding #Root.((vm:MainViewModel)DataContext).VoiceDownloadProgress}" Height="4" MinHeight="4" CornerRadius="2"
+                                   IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).IsDownloadingVoice}" />
+                      <TextBlock Classes="dim" FontSize="11" Foreground="{DynamicResource Highlight}" Text="{Binding #Root.((vm:MainViewModel)DataContext).VoiceActivity}"
+                                 IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).VoiceActivity, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                      <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Classes="accent" Command="{Binding #Root.((vm:MainViewModel)DataContext).DownloadVoiceModelCommand}" IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).CanDownloadVoice}">
+                          <StackPanel Orientation="Horizontal" Spacing="6">
+                            <PathIcon Data="{StaticResource IcImport}" Width="12" Height="12" Foreground="{DynamicResource OnAccent}" />
+                            <TextBlock svc:Tr.Text="Download the voice model" />
+                          </StackPanel>
+                        </Button>
+                        <Button Classes="accent" Command="{Binding #Root.((vm:MainViewModel)DataContext).OpenVoiceGameCommand}" IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).CanPlayVoiceGame}">
+                          <StackPanel Orientation="Horizontal" Spacing="6">
+                            <c:BlobMascot Width="18" Height="16" Mood="Listening" Still="True" />
+                            <TextBlock svc:Tr.Text="Help recognise voices…" />
+                          </StackPanel>
+                        </Button>
+                        <Button Classes="soft" svc:Tr.Content="Cancel" Command="{Binding #Root.((vm:MainViewModel)DataContext).CancelVoiceDownloadCommand}" IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).IsDownloadingVoice}" />
+                        <Button Classes="soft" svc:Tr.Content="Remove the model" Command="{Binding #Root.((vm:MainViewModel)DataContext).RemoveVoiceModelCommand}" IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).VoiceModelReady}"
+                                svc:Tr.Tip="Frees the space. The voices Mochi knows stay." />
                       </StackPanel>
                     </StackPanel>
                   </StackPanel>

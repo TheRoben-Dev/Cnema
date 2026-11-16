@@ -1345,6 +1345,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         Clips.Dispose();
         _scanCts?.Cancel();
         Player.Dispose();
+        _voiceCts?.Cancel();
+        _voicePlayer?.Dispose();
         _library.SaveCache();
         _library.Dispose();
     }

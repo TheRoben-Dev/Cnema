@@ -46,7 +46,9 @@ Savefile updates itself after that.
   and let Clean up spot copies saved twice (optional 169 MB visual model; runs on your computer).
 - **Laughter and hype:** the videos where everyone lost it come first in Worth a rewatch, and search finds
   "laughing" or "hype" (optional 15 MB sound model).
-- **Quick player:** videos open in a large player over the library; **Edit** takes you to the full editor.
+- **Who's talking:** tells your friends' voices apart and fills in Who was there. Mochi learns the voices in
+  "Who's that?", a short listening game (optional 26 MB voice model; needs Voice search).
+- **Quick player:** videos open in a large player shaped to the video, with a gold favourite star (F); **Edit** takes you to the full editor.
 - **Editor:** a tool rail with Trim, Captions, Speed, Sound, Brand and Export. Lossless or frame-accurate trims,
   multi-part export, captions, slow-mo with ramps, loudness and voice tools (including noise removal), watermark and intro/outro,
   and a background export queue. Optionally remembers your edits per video until you start over.
