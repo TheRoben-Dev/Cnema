@@ -37,6 +37,8 @@ public sealed partial class SettingsViewModel
     [ObservableProperty] private bool _featureSpeech;
     [ObservableProperty] private bool _featureVisual;
     [ObservableProperty] private bool _featureMascot;
+    [ObservableProperty] private bool _featureSmartThumbs;
+    [ObservableProperty] private bool _featureTrimSuggestions;
     [ObservableProperty] private bool _featureSplash;
     [ObservableProperty] private bool _featureSmartTitles;
     [ObservableProperty] private bool _featureAutoTitles;
@@ -96,6 +98,8 @@ public sealed partial class SettingsViewModel
         FeatureSpeech = f.Speech;
         FeatureVisual = f.Visual;
         FeatureMascot = f.Mascot;
+        FeatureSmartThumbs = f.SmartThumbs;
+        FeatureTrimSuggestions = f.TrimSuggestions;
         FeatureSplash = f.Splash;
         var e = settings.Effects;
         WatermarkPath = e.WatermarkPath;

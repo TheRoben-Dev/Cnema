@@ -77,6 +77,13 @@ public sealed class SmartInfo
     public int Spikes { get; set; }
     /// <summary>How much the picture changes, 0 to 1.</summary>
     public double Motion { get; set; }
+    /// <summary>A good frame for the thumbnail (not black, not a loading screen), in ms; 0 when none was picked.</summary>
+    public long ThumbMs { get; set; }
+    /// <summary>Dead air at the start to trim away, ending here (ms); 0 when there's none.</summary>
+    public long TrimStartMs { get; set; }
+    /// <summary>Dead air at the end to trim away, starting here (ms); 0 when there's none.</summary>
+    public long TrimEndMs { get; set; }
+    [System.Text.Json.Serialization.JsonIgnore] public bool HasTrimSuggestion => TrimStartMs > 0 || TrimEndMs > 0;
 }
 
 /// <summary>The words spoken in a video, written down on this computer by the speech model.</summary>

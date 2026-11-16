@@ -2375,6 +2375,30 @@
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureHighlights}" />
                     </Grid>
                     <Border Classes="sep" />
+                    <Grid Classes="row" ColumnDefinitions="*,Auto" IsEnabled="{Binding FeatureHighlights}">
+                      <StackPanel Spacing="2">
+                        <TextBlock svc:Tr.Text="Smart thumbnails" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Thumbnails from a lively frame near the best moment, never a black screen or a loading screen. A frame you picked yourself stays." />
+                        <Grid ColumnDefinitions="Auto,*" Margin="0,4,0,0">
+                          <PathIcon Data="{StaticResource IcSpeed}" Width="11" Height="11" Margin="0,2,6,0" VerticalAlignment="Top" Foreground="{DynamicResource TextDim}" />
+                          <TextBlock Grid.Column="1" Classes="dim cost" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Costs next to nothing: Best moments already looked; this grabs one small frame per video." />
+                        </Grid>
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureSmartThumbs}" />
+                    </Grid>
+                    <Border Classes="sep" />
+                    <Grid Classes="row" ColumnDefinitions="*,Auto" IsEnabled="{Binding FeatureHighlights}">
+                      <StackPanel Spacing="2">
+                        <TextBlock svc:Tr.Text="Trim suggestions" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="When a video starts or ends with a blank screen and no sound (a loading screen, a fade, the menu before the round), the editor offers to trim it. Nothing is cut until you say so." />
+                        <Grid ColumnDefinitions="Auto,*" Margin="0,4,0,0">
+                          <PathIcon Data="{StaticResource IcSpeed}" Width="11" Height="11" Margin="0,2,6,0" VerticalAlignment="Top" Foreground="{DynamicResource TextDim}" />
+                          <TextBlock Grid.Column="1" Classes="dim cost" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Costs nothing extra: it uses what Best moments already found." />
+                        </Grid>
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureTrimSuggestions}" />
+                    </Grid>
+                    <Border Classes="sep" />
                     <Grid Classes="row" ColumnDefinitions="*,Auto">
                       <StackPanel Spacing="2">
                         <TextBlock svc:Tr.Text="Smart titles" />
@@ -3100,6 +3124,20 @@
 
               <!-- trim -->
               <StackPanel Spacing="12" IsVisible="{Binding IsTrimPage}">
+                <!-- auto-trim suggestion: blank picture and no sound at the start or end -->
+                <Border Classes="fxcard" IsVisible="{Binding ShowTrimSuggestion}" Background="{DynamicResource AccentSoft}">
+                  <StackPanel Spacing="8">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                      <PathIcon Data="{StaticResource IcSparkle}" Width="12" Height="12" Foreground="{DynamicResource Highlight}" />
+                      <TextBlock Classes="label" svc:Tr.Text="DEAD AIR" Foreground="{DynamicResource Highlight}" />
+                    </StackPanel>
+                    <TextBlock Text="{Binding TrimSuggestionText}" FontSize="12" TextWrapping="Wrap" />
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                      <Button Classes="accent" Command="{Binding ApplyTrimSuggestionCommand}" svc:Tr.Content="Trim it" />
+                      <Button Classes="soft" Command="{Binding DismissTrimSuggestionCommand}" svc:Tr.Content="Keep it" />
+                    </StackPanel>
+                  </StackPanel>
+                </Border>
                 <Border Classes="fxcard">
                   <StackPanel Spacing="8">
                     <TextBlock Classes="label" svc:Tr.Text="SELECTION" />

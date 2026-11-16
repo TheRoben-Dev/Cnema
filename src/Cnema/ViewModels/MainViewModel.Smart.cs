@@ -116,6 +116,9 @@ public sealed partial class MainViewModel
                     {
                         item.Entry.Smart = info ?? new SmartInfo { Version = SmartAnalyzer.Version };
                         AutoTitle(item);
+                        if (ReferenceEquals(Player.Current, item)) Player.RefreshTrimSuggestion();
+                        if (Features.SmartThumbs && item.Entry.Smart.ThumbMs > 0 && item.Entry.ThumbAtMs == 0)
+                            await RefreshSmartThumbsAsync(new[] { item }, ct);
                     }
                     if (++done % 25 == 0) { _library.SaveCache(); UpdateHighlightMarks(); OnCostsChanged(); }
                     if (DateTime.UtcNow - since > TimeSpan.FromSeconds(30) && SortIndex == 5) { since = DateTime.UtcNow; RefreshView(); }
@@ -135,6 +138,32 @@ public sealed partial class MainViewModel
             if (done > 0) RefreshMemories();
             if (SortIndex == 5) RefreshView();
         }
+    }
+
+    /// <summary>
+    /// Makes the thumbnails of these videos follow the smart pick (or Savefile's usual frame when Smart
+    /// thumbnails is off). A frame the person picked is never touched. One small ffmpeg grab each, at idle.
+    /// </summary>
+    private async Task RefreshSmartThumbsAsync(IReadOnlyCollection<VideoItemViewModel> items, CancellationToken ct = default)
+    {
+        foreach (var item in items)
+        {
+            if (ct.IsCancellationRequested) return;
+            var e = item.Entry;
+            if (e.ThumbAtMs > 0 || e.Smart is not { ThumbMs: > 0 }) continue;
+            var want = ThumbnailService.PathFor(e);
+            if (string.Equals(e.ThumbPath, want, StringComparison.Ordinal) && File.Exists(want)) continue;
+            try
+            {
+                var path = await ThumbnailService.EnsureAsync(e, ct);
+                if (path is null) continue;
+                e.ThumbPath = path;
+                item.ReloadThumbnail();
+            }
+            catch (OperationCanceledException) { return; }
+            catch (Exception ex) { Log.Warn($"Thumbnail for {e.FileName}: {ex.Message}"); }
+        }
+        if (items.Count > 1) _library.SaveCache();
     }
 
     /// <summary>The top tenth of the library (and clearly eventful) get a Highlight mark on their card.</summary>

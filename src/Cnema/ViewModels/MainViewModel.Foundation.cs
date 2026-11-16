@@ -23,6 +23,13 @@ public sealed partial class MainViewModel
         VideoItemViewModel.UnwatchedBadges = Features.Unwatched;
         VideoItemViewModel.NotesEnabled = Features.Notes;
         VideoItemViewModel.PeopleEnabled = Features.People;
+        PlayerViewModel.TrimSuggestions = Features.TrimSuggestions;
+        Player.RefreshTrimSuggestion();
+        if (ThumbnailService.SmartThumbs != Features.SmartThumbs)
+        {
+            ThumbnailService.SmartThumbs = Features.SmartThumbs;
+            _ = RefreshSmartThumbsAsync(_items.Values.ToList());
+        }
         Chapters.Enabled = Features.Chapters;
         Player.RefreshChapters();
         Player.Queue = Features.ExportQueue ? Exports : null;

@@ -200,6 +200,10 @@ public sealed class FeatureSettings
     public bool Speech { get; set; }
     /// <summary>Visual search, similar videos and look-alike copies: a visual model (a one-time download) looks at a few frames of each video.</summary>
     public bool Visual { get; set; }
+    /// <summary>Thumbnails from a frame the best moments pass picked (not black, not a loading screen).</summary>
+    public bool SmartThumbs { get; set; } = true;
+    /// <summary>The editor offers to cut a blank, silent start or end.</summary>
+    public bool TrimSuggestions { get; set; } = true;
     /// <summary>The blob: Savefile's mascot presents Worth a rewatch with a line about your clips.</summary>
     public bool Mascot { get; set; } = true;
     /// <summary>The loading screen at start: logo, name, the blob and what's being got ready.</summary>

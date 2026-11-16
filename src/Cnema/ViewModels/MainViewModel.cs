@@ -541,6 +541,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         VideoItemViewModel.UnwatchedBadges = Features.Unwatched;
         VideoItemViewModel.NotesEnabled = Features.Notes;
         VideoItemViewModel.PeopleEnabled = Features.People;
+        PlayerViewModel.TrimSuggestions = Features.TrimSuggestions;
+        ThumbnailService.SmartThumbs = Features.SmartThumbs;
         Chapters.Enabled = Features.Chapters;
         Player.Queue = Features.ExportQueue ? Exports : null;
         RebuildCollections();
