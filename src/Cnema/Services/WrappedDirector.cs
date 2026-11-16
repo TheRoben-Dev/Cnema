@@ -8,6 +8,12 @@ public sealed record WrappedMoment(string Path, long DurationMs, long FocusMs, d
     public DateTime Local { get; init; }
     /// <summary>Seconds of laughter heard in it.</summary>
     public double Laugh { get; init; }
+    /// <summary>The biggest laugh (ms), from its first chuckle to its last; -1 when nobody laughs.</summary>
+    public long LaughFromMs { get; init; } = -1;
+    public long LaughToMs { get; init; } = -1;
+    /// <summary>Where the moment that gets the laugh starts (ms): the line or the play before it.</summary>
+    public long SetupMs { get; init; } = -1;
+    public bool HasLaugh => LaughToMs > LaughFromMs && LaughFromMs >= 0;
 }
 
 public enum WrappedShotKind { Card, Clip }
@@ -331,7 +337,7 @@ public static class WrappedDirector
         // The fixed parts first (cards, month flashes, story moments), then the quick-cut parts share what's left.
         double cardTime = acts.Where(a => a.Card >= 0).Sum(a => Bars(cardSeconds[a.Card]));
         double flashTime = acts.Where(a => a.Style == WrappedActStyle.Flash).Sum(a => a.Pool.Count * quick);
-        double storyTime = acts.Where(a => a.Style == WrappedActStyle.Story).Sum(a => a.Pool.Count * Bars(a.StorySeconds));
+        double storyTime = acts.Where(a => a.Style == WrappedActStyle.Story).Sum(a => a.Pool.Sum(m => Bars(StoryWant(a, m))));
         var flex = total - cardTime - flashTime - storyTime;
         var squeeze = flex >= 0 ? 1 : Math.Clamp((total - cardTime) / Math.Max(1, flashTime + storyTime), 0.25, 1);
         flex = Math.Max(0, flex);
@@ -393,7 +399,7 @@ public static class WrappedDirector
                     for (var i = 0; i < act.Pool.Count; i++)
                     {
                         var m = act.Pool[i];
-                        var want = Math.Min(Bars(act.StorySeconds * squeeze), Math.Max(quick, m.DurationMs / 1000.0 - 0.2));
+                        var want = Math.Min(Bars(StoryWant(act, m) * squeeze), Math.Max(quick, m.DurationMs / 1000.0 - 0.2));
                         var end = Math.Min(Snap(cursor + want, cursor + 1.5), limit);
                         if (end - cursor < 1) break;
                         var shot = Clip(cursor, end, m, story: true);
@@ -434,8 +440,14 @@ public static class WrappedDirector
             if (story)
             {
                 // A longer moment is best when people talk or laugh in it.
-                var talk = fresh.Where(m => m.DurationMs >= needMs - 500).OrderByDescending(m => (m.Voice.Count > 0 ? 2 : 0) + m.Score).FirstOrDefault();
+                var talk = fresh.Where(m => m.DurationMs >= needMs - 500).OrderByDescending(m => (m.HasLaugh ? 3 : m.Voice.Count > 0 ? 2 : 0) + m.Score).FirstOrDefault();
                 if (talk is not null) return talk;
+            }
+            else
+            {
+                // A laugh needs its setup, which a quick cut doesn't have time for: those wait for a longer slot.
+                var plain = fresh.FirstOrDefault(m => !m.HasLaugh && m.DurationMs >= needMs - 100);
+                if (plain is not null) return plain;
             }
             return fresh.FirstOrDefault(m => m.DurationMs >= needMs - 100)
                    ?? fresh.OrderByDescending(m => m.DurationMs).FirstOrDefault()
@@ -450,7 +462,12 @@ public static class WrappedDirector
             used[m] = round + 1;
             picked++;
             long start;
-            if (story)
+            if (story && m.HasLaugh)
+            {
+                // The joke and the laugh: from what set it up, and the laugh plays out before the cut.
+                start = Math.Max(m.SetupMs, m.LaughToMs + 1200 - needMs);
+            }
+            else if (story)
             {
                 // Lead in a little before the peak so the moment has room to land.
                 start = m.FocusMs - (long)(needMs * 0.35);
@@ -463,6 +480,12 @@ public static class WrappedDirector
             }
             if (round > 0) start += round * (long)(needMs * 1.2) * (round % 2 == 1 ? -1 : 1); // a reused clip shows another part
             start = Math.Clamp(start, 0, Math.Max(0, m.DurationMs - needMs));
+            if (!story && m.HasLaugh && start < m.LaughToMs && start + needMs > m.LaughFromMs)
+            {
+                // A quick cut never chops a laugh in half: show what came before it, or what came after.
+                var before = m.LaughFromMs - needMs;
+                start = before >= 0 ? before : Math.Min(m.LaughToMs, Math.Max(0, m.DurationMs - needMs));
+            }
             shot.Path = m.Path;
             shot.StartMs = start;
             var talk = m.Voice.Sum(v => Math.Max(0, Math.Min(v.To, start + needMs) - Math.Max(v.From, start)));
@@ -471,6 +494,10 @@ public static class WrappedDirector
             return shot;
         }
     }
+
+    /// <summary>How long a longer moment wants to be: a laugh with its setup gets what it needs (6 to 18 s).</summary>
+    private static double StoryWant(WrappedAct act, WrappedMoment m) =>
+        m.HasLaugh ? Math.Clamp((m.LaughToMs + 1200 - m.SetupMs) / 1000.0, 6, Math.Max(18, act.StorySeconds)) : act.StorySeconds;
 
     /// <summary>
     /// How each shot comes in: cards slide and zoom, longer moments dissolve, the quick cuts stay straight cuts

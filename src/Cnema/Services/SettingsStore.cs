@@ -16,6 +16,8 @@ public sealed class AppSettings
     /// <summary>Favourites Mochi reminded you of, by path, so none comes back too soon.</summary>
     public Dictionary<string, DateTime> Reminded { get; set; } = new();
     public DateTime? LastReminderUtc { get; set; }
+    /// <summary>Mochi's small talk already said this round, so nothing repeats until the rest have been said.</summary>
+    public List<string> MochiSaid { get; set; } = new();
     /// <summary>"Merge your folders into one?" was closed for good.</summary>
     public bool MergeSuggestionClosed { get; set; }
     public int SortIndex { get; set; }

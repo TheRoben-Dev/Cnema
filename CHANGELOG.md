@@ -2,6 +2,14 @@
 
 What changed in each Savefile (formerly Cnema) release. The app shows the entries you have not seen yet after it updates.
 
+## 0.40.0
+- Wrapped: the funny bits now come with their setup. Each laugh starts at what led to it (the line someone said, never mid-sentence) and the laugh plays out before the cut. Quick cuts never chop a laugh in half any more, and Best laughs is a run of full moments instead of two-second flashes.
+- Wrapped plays smoothly: clips recorded at 60 fps played at half speed during the slow zooms, and the music could drop out for most of a second after a loud clip. Both are fixed.
+- The finished Wrapped is a clean, seekable video: a keyframe every 2 seconds and a steady 30 fps, so skipping around works in every player. It's also about a quarter smaller (around 6 Mbit/s at 1080p).
+- Best moments is much faster on a Mac. Some recordings made Savefile decode every single frame on one core, which took minutes per clip; it now uses the Mac's own video decoder, and a clip that still takes too long falls back to its sound. The other smart features no longer wait behind it.
+- Mochi has a lot more to say: over 130 lines, with nods to the games in your library (Fortnite, Warframe, Honkai: Star Rail, Destiny 2, No Man's Sky, ARK, Valorant, Minecraft and more), your friends and stats, the time of day and the season. Nothing repeats until the rest have been said.
+- If you made a Wrapped with an earlier version, make it again to get all of this.
+
 ## 0.39.0
 - Make room (under Tools): Savefile finds big videos you haven't watched in three months or more, skipping favourites and anything newer than a month, and can encode them again as HEVC. They look the same in about half the space. You see the list first, tick what you want, and can try one first. Every new copy is checked to be the same length, keep every sound track and be clearly smaller before it replaces the original. Name, date, favourite, tags, friends and notes all stay, and the original waits in the bin for 24 hours.
 - When there's 2 GB or more to win, Mochi mentions it.

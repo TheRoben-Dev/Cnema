@@ -36,23 +36,23 @@ public sealed partial class MainViewModel
             return;
         }
         var lines = MascotLines(DateTime.Now);
+        _chatter = ChatterLines(DateTime.Now);
         if (lines.SequenceEqual(_mascotLines) && MascotLine.Length > 0) return;
         _mascotLines = lines;
         _mascotIndex = 0;
-        MascotLine = lines.Count > 0 ? lines[0] : "";
+        MascotLine = lines.Count > 0 ? lines[0] : DrawChatter() ?? "";
         if (_mascotTimer is null)
         {
             _mascotTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(MascotSeconds) };
             _mascotTimer.Tick += (_, _) => NextMascotLine();
         }
-        if (lines.Count > 1) _mascotTimer.Start(); else _mascotTimer.Stop();
+        _mascotTimer.Start(); // the small talk keeps it going even with one line about the clips
     }
 
     /// <summary>A click on the blob: it hops and says the next thing.</summary>
     public void PokeMascot()
     {
         if (PlayWrappedFromBlob()) return;
-        if (_mascotLines.Count < 2) { MascotCheer++; return; }
         _mascotTimer?.Stop();
         _mascotTimer?.Start(); // a full turn for the line it's about to say
         NextMascotLine(force: true);
@@ -61,12 +61,20 @@ public sealed partial class MainViewModel
     private async void NextMascotLine(bool force = false)
     {
         // Only while it can be seen: the shelf shows on the plain library view.
-        if (!force && (!ShowFeatured || _mascotLines.Count < 2 || IsSettingsOpen || Player.Current is not null)) return;
-        if (_mascotLines.Count < 2) return;
+        if (!force && (!ShowFeatured || IsSettingsOpen || Player.Current is not null)) return;
+        // Turns about your clips and small talk take turns; with one clip line or none, it's mostly small talk.
+        _mascotTurn++;
+        string? next = null;
+        if (_mascotLines.Count >= 2 && _mascotTurn % 2 == 1)
+        {
+            _mascotIndex = (_mascotIndex + 1) % _mascotLines.Count;
+            next = _mascotLines[_mascotIndex];
+        }
+        next ??= DrawChatter() ?? (_mascotLines.Count > 0 ? _mascotLines[_mascotIndex = (_mascotIndex + 1) % _mascotLines.Count] : null);
+        if (next is null || next == MascotLine) { MascotCheer++; return; }
         MascotLineShown = false;
         await Task.Delay(ReducedMotion ? 0 : 250);
-        _mascotIndex = (_mascotIndex + 1) % _mascotLines.Count;
-        MascotLine = _mascotLines[_mascotIndex];
+        MascotLine = next;
         MascotLineShown = true;
         MascotCheer++;
     }
@@ -205,8 +213,7 @@ public sealed partial class MainViewModel
             }
         }
 
-        if (lines.Count < 2) lines.Add(T("Picked a few worth another look."));
-        if (lines.Count < 2) lines.Add(T("Old favourites and nights with friends, fresh every day."));
+        if (lines.Count == 0) lines.Add(T("Picked a few worth another look."));
         return lines.Distinct().ToList();
     }
 

@@ -56,12 +56,53 @@ public static class WrappedService
     public static List<WrappedMoment> Moments(IEnumerable<VideoEntry> clips, Func<VideoEntry, string?> gameOf, int max = 400) => clips
         .Select(e => (e, Score: Score(e)))
         .OrderByDescending(x => x.Score).Take(max)
+        .Select(x => (x.e, x.Score, W: LaughWindow(x.e)))
         .Select(x => new WrappedMoment(x.e.Path, x.e.DurationMs, Focus(x.e), x.Score, Voice(x.e))
         {
             Game = gameOf(x.e), People = x.e.People.ToList(), Local = x.e.ModifiedUtc.ToLocalTime(),
             Laugh = x.e.Sound is { Laugh.Count: > 1 } so ? so.LaughSeconds : 0,
+            LaughFromMs = x.W?.From ?? -1, LaughToMs = x.W?.To ?? -1, SetupMs = x.W?.Setup ?? -1,
         })
         .ToList();
+
+    /// <summary>
+    /// The biggest laugh in a clip and what led up to it: a joke lands only with its setup. The laugh is the run
+    /// of laughter around the densest moment; the setup starts 4 to 10 seconds before it, at the start of the
+    /// lines spoken just before (never mid-sentence), or 6 seconds before when nothing was transcribed.
+    /// </summary>
+    internal static (long From, long To, long Setup)? LaughWindow(VideoEntry e)
+    {
+        if (e.Sound is not { Laugh.Count: >= 2 } s) return null;
+        var laughs = s.Laugh.Select(m => m.At).OrderBy(t => t).ToList();
+        var focus = laughs.MaxBy(t => laughs.Count(o => Math.Abs(o - t) <= 3000));
+        var i = laughs.IndexOf(focus);
+        var a = i;
+        var b = i;
+        while (a > 0 && laughs[a] - laughs[a - 1] <= 1500) a--;
+        while (b < laughs.Count - 1 && laughs[b + 1] - laughs[b] <= 1500) b++;
+        var from = Math.Max(0, laughs[a] - 300);
+        var to = laughs[b] + 600;
+        if (e.DurationMs > 0) to = Math.Min(to, e.DurationMs);
+        var setup = from - 6000;
+        if (e.Speech is { Lines.Count: > 0 } sp)
+        {
+            // Walk back through the lines said just before the laugh while they run on from each other.
+            var lines = sp.Lines.Where(l => l.Start < from + 500 && l.End > from - 10000).OrderByDescending(l => l.Start).ToList();
+            long? start = null;
+            long next = from;
+            foreach (var l in lines)
+            {
+                if (next - l.End > 2000 || from - l.Start > 10000) break;
+                start = l.Start;
+                next = l.Start;
+            }
+            if (start is { } st) setup = Math.Min(st - 300, from - 4000);
+            // Never start in the middle of something someone is saying.
+            if (sp.Lines.FirstOrDefault(l => l.Start < setup && l.End > setup && from - l.Start <= 12000) is { } mid) setup = mid.Start - 300;
+        }
+        setup = Math.Clamp(setup, Math.Max(0, from - 12000), from);
+        return (from, to, setup);
+    }
 
     /// <summary>The peak of a clip: the densest laughter when there is some, else the best moment, else a third in.</summary>
     private static long Focus(VideoEntry e)
@@ -211,7 +252,7 @@ public static class WrappedService
             Chapter(T("Best laughs"));
             acts.Add(new WrappedAct(Card(new("laughs", T("Laughter caught on your clips"), Span((long)(s.LaughSeconds * 1000)),
                     s.LaughFriend is { } f ? F("Most of it in clips with {0}.", f) : T("Only what your clips caught, so probably a lot more."), WrappedDirector.CardSeconds)),
-                WrappedActStyle.Mix, laughs.Skip(1).ToList(), 1.2));
+                WrappedActStyle.Story, laughs.Skip(1).Take(5).ToList(), 0, null, 12));
         }
 
         // Your clip personality, then everything else that was good.
@@ -366,7 +407,7 @@ public static class WrappedService
             var d = S(len);
             var part = Path.Combine(work, $"{i:000}.mkv");
             parts.Add(part);
-            if (File.Exists(part + ".done") && File.Exists(part)) { progress?.Report(0.88 * (i + 1) / plan.Shots.Count); continue; }
+            if (File.Exists(part + ".v2") && File.Exists(part)) { progress?.Report(0.7 * (i + 1) / plan.Shots.Count); continue; }
 
             if (shot.Kind == WrappedShotKind.Card && !File.Exists(CardPath(i) + ".done"))
             {
@@ -396,7 +437,7 @@ public static class WrappedService
                 var move = z0 == z1 ? ""
                     : $",scale={width * 2}:{height * 2}:flags=bicubic,zoompan=z='{S(z0)}+({S(z1 - z0)})*min(1,on/{(shot.Move == WrappedMove.PullOut ? Math.Min(frames, 18) : frames)})':" +
                       $"x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s={width}x{height}:fps={Fps}";
-                g.Add($"[{n}:v:0]{Fit(info)}{move},{Norm},tpad=stop_mode=clone:stop_duration={d},trim=duration={d}[cur]");
+                g.Add($"[{n}:v:0]fps={Fps},{Fit(info)}{move},{Norm},tpad=stop_mode=clone:stop_duration={d},trim=duration={d}[cur]");
                 if (info is { AudioStreams: > 0 }) audioIn = $"[{n}:a:0]";
                 n++;
             }
@@ -416,7 +457,7 @@ public static class WrappedService
                 {
                     var info = await Info(prev.Path!);
                     args.AddRange(new[] { "-ss", S(prev.StartMs / 1000.0 + prev.Length), "-t", td, "-i", prev.Path! });
-                    g.Add($"[{n}:v:0]{Fit(info)}{Zoom(ZoomOf(prev).To)},{Norm},tpad=stop_mode=clone:stop_duration={td},trim=duration={td}[prev]");
+                    g.Add($"[{n}:v:0]fps={Fps},{Fit(info)}{Zoom(ZoomOf(prev).To)},{Norm},tpad=stop_mode=clone:stop_duration={td},trim=duration={td}[prev]");
                 }
                 n++;
                 g.Add($"[prev]{video}xfade=transition={tr}:duration={td}:offset=0[x]");
@@ -446,9 +487,12 @@ public static class WrappedService
                 n++;
             }
             var mix = !music || shot.Voice ? "0dB" : shot.Story ? "-7dB" : "-16dB";
-            var key = shot.Voice ? "1" : "0";
+            var key = shot.Voice ? "0.6" : "0";
             g.Add($"{audioIn}aformat=sample_rates=48000:channel_layouts=stereo,atrim=duration={d},asetpts=PTS-STARTPTS,apad=whole_dur={d},atrim=duration={d}," +
-                  $"afade=t=in:d={(shot.Transition is not null ? "0.12" : "0.02")},afade=t=out:st={S(Math.Max(0, len - 0.03))}:d=0.03,asplit=2[a0][k0];[a0]volume={mix}[a];[k0]volume={key}[k]");
+                  $"afade=t=in:d={(shot.Transition is not null ? "0.12" : "0.02")},afade=t=out:st={S(Math.Max(0, len - 0.03))}:d=0.03,volume={mix}[a]");
+            // The key that pushes the music down: a steady level while someone talks or laughs, nothing otherwise.
+            // (Keying on the game sound itself pumped the music, and left a hole after a loud shot.)
+            g.Add($"aevalsrc=exprs={key}|{key}:s=48000:d={d},afade=t=in:d=0.15,afade=t=out:st={S(Math.Max(0, len - 0.15))}:d=0.15[k]");
             args.AddRange(new[]
             {
                 "-filter_complex", string.Join(";", g), "-map", "[v]", "-map", "[a]", "-map", "[k]",
@@ -458,8 +502,8 @@ public static class WrappedService
             var r = await ProcessRunner.RunAsync(ffmpeg, args, ct: ct, background: true);
             if (r.ExitCode != 0 || !File.Exists(part))
                 throw new InvalidOperationException(Loc.F("Couldn't prepare part {0} of the video: {1}", i + 1, r.StdErr.Trim()));
-            await File.WriteAllTextAsync(part + ".done", "", ct);
-            progress?.Report(0.88 * (i + 1) / plan.Shots.Count);
+            await File.WriteAllTextAsync(part + ".v2", "", ct);
+            progress?.Report(0.7 * (i + 1) / plan.Shots.Count);
         }
 
         // Join the parts as they are and lay the soundtrack under them.
@@ -487,7 +531,7 @@ public static class WrappedService
             var fade = plan.Songs[^1].FadeOut;
             fg.Add($"{m}afade=t=out:st={S(Math.Max(0, total - fade))}:d={S(fade)},apad,atrim=duration={S(total)}[mus]");
             // Voices and laughs push the music down; the rest of the game sound sits under it.
-            fg.Add("[mus][0:a:1]sidechaincompress=threshold=0.015:ratio=6:attack=15:release=400[duck]");
+            fg.Add("[mus][0:a:1]sidechaincompress=threshold=0.1:ratio=4:attack=80:release=350[duck]");
             fg.Add("[duck][0:a:0]amix=inputs=2:normalize=0:duration=first,alimiter=limit=0.9[aout]");
         }
         else
@@ -498,13 +542,18 @@ public static class WrappedService
         final.AddRange(new[]
         {
             "-filter_complex", string.Join(";", fg), "-map", "0:v:0", "-map", "[aout]",
-            "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-t", S(total), "-movflags", "+faststart", temp,
+            // One clean encode at the end: a keyframe every 2 seconds, a steady 30 fps and a sensible size, so
+            // every player can seek in it (the parts joined as they were froze the picture after a seek).
+            "-c:v", "libx264", "-preset", "fast", "-crf", "21", "-maxrate", Rate(width, height), "-bufsize", Rate(width, height, 2),
+            "-g", (Fps * 2).ToString(Inv), "-keyint_min", (Fps * 2).ToString(Inv), "-sc_threshold", "0", "-r", Fps.ToString(Inv), "-fps_mode", "cfr",
+            "-pix_fmt", "yuv420p", "-profile:v", "high", "-threads", threads,
+            "-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-t", S(total), "-movflags", "+faststart", temp,
         });
         Directory.CreateDirectory(Path.GetDirectoryName(output)!);
         var done = await ProcessRunner.RunAsync(ffmpeg, final, line =>
         {
             if (line.StartsWith("out_time_us=", StringComparison.Ordinal) && long.TryParse(line.AsSpan(12), out var us) && total > 0)
-                progress?.Report(0.88 + 0.12 * Math.Clamp(us / 1e6 / total, 0, 1));
+                progress?.Report(0.7 + 0.3 * Math.Clamp(us / 1e6 / total, 0, 1));
         }, ct, background: true);
         if (done.ExitCode != 0 || !File.Exists(temp))
         {
@@ -516,4 +565,8 @@ public static class WrappedService
     }
 
     private static string S(double v) => v.ToString("0.###", Inv);
+
+    /// <summary>The most the picture may use: about 6 Mbit/s at 1080p (a 7-minute video stays near 300 MB).</summary>
+    private static string Rate(int width, int height, double times = 1) =>
+        $"{Math.Max(1500, 6000 * (width * (double)height) / (1920 * 1080) * times):0}k";
 }
