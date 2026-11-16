@@ -25,6 +25,8 @@ public sealed class ClipService : IDisposable
     private Timer? _janitor;
     private int _generation;
     private int _restarts;
+    /// <summary>Cancelled at quit when joining a session takes too long; the session is recovered next time.</summary>
+    private readonly CancellationTokenSource _quitting = new();
     /// <summary>The camera made capture fail at the start, so it runs without it until settings change.</summary>
     private bool _withoutCamera;
     private bool _cameraUsed;
@@ -155,7 +157,15 @@ public sealed class ClipService : IDisposable
             if (session.Codec == "hevc") args.AddRange(new[] { "-tag:v", "hvc1" });
             args.AddRange(new[] { "-f", "mp4", partial });
             ProcessResult r;
-            try { r = await ProcessRunner.RunAsync(ffmpeg, args); }
+            try { r = await ProcessRunner.RunAsync(ffmpeg, args, ct: _quitting.Token); }
+            catch (OperationCanceledException)
+            {
+                // Quit before the join finished: drop the half-written file. The session marker stays,
+                // so the whole session is saved at the next start instead.
+                try { File.Delete(partial); } catch { /* best effort */ }
+                Log.Info("Saving the session was stopped at quit; it will be recovered at the next start.");
+                return null;
+            }
             finally { if (meta is not null) try { File.Delete(meta); } catch { /* temp file */ } }
             if (!File.Exists(partial) || new FileInfo(partial).Length == 0 || (r.ExitCode != 0 && !recovered))
             {
@@ -475,6 +485,8 @@ public sealed class ClipService : IDisposable
         }
 
         // A capture that had been healthy for a while (display sleep, device unplugged) gets retried.
+        // Three tries in a row at most; a capture that then ran fine for ten minutes earns them back.
+        if (ranFor > TimeSpan.FromMinutes(10)) _restarts = 0;
         if (ranFor > TimeSpan.FromSeconds(30) && _restarts < 3 && Cfg.Enabled)
         {
             _restarts++;
@@ -875,7 +887,11 @@ public sealed class ClipService : IDisposable
         if (IsSession)
         {
             // Quitting mid-session: save it rather than throw the recording away.
-            try { Task.Run(StopSessionAsync).Wait(TimeSpan.FromSeconds(30)); } catch { /* shutting down */ }
+            try
+            {
+                if (!Task.Run(StopSessionAsync).Wait(TimeSpan.FromSeconds(60))) _quitting.Cancel();
+            }
+            catch { /* shutting down */ }
         }
         StopCore();
         // A session that couldn't be saved in time stays on disk and is recovered at the next start.

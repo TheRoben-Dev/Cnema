@@ -76,9 +76,12 @@ public sealed partial class RecapViewModel : ObservableObject
         .OrderBy(v => v.Entry.ModifiedUtc).ToList();
 
     /// <summary>What a montage of the year uses: favourites first, topped up with clips with friends or notes.</summary>
-    public List<VideoItemViewModel> HighlightVideos()
+    public List<VideoItemViewModel> HighlightVideos() => Highlights(YearVideos());
+
+    /// <summary>The best of a set of clips for a montage, oldest first.</summary>
+    public static List<VideoItemViewModel> Highlights(IEnumerable<VideoItemViewModel> clips)
     {
-        var year = YearVideos().Where(v => v.Entry.DurationMs >= 1000).ToList();
+        var year = clips.Where(v => v.Entry.DurationMs >= 1000).ToList();
         var picks = year.Where(v => v.Entry.Favorite).ToList();
         if (picks.Count < 12)
             picks.AddRange(year.Where(v => !v.Entry.Favorite)

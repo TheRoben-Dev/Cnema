@@ -3,7 +3,7 @@ namespace Cnema.Services;
 /// <summary>
 /// Keeps the clips folder inside the limits from Settings: clips older than a number of days, and the
 /// oldest clips once the folder passes a size cap, go to the trash or to an archive folder.
-/// Favourites are never touched. Only the clips folder is ever cleaned, never other library folders.
+/// Favourites, montages and exports are never touched. Only the clips folder is ever cleaned, never other library folders.
 /// </summary>
 public static class StorageService
 {
@@ -18,13 +18,22 @@ public static class StorageService
         IEnumerable<string> files;
         try { files = Directory.EnumerateFiles(folder, "*", SearchOption.AllDirectories).ToList(); }
         catch { yield break; }
+        var montages = Path.Combine(folder, "Montages") + Path.DirectorySeparatorChar;
         foreach (var f in files)
         {
             if (!Extensions.Contains(Path.GetExtension(f), StringComparer.OrdinalIgnoreCase)) continue;
+            // Things you made from your clips are kept: montages, and exports ("Clip [Discord].mp4").
+            if (f.StartsWith(montages, StringComparison.OrdinalIgnoreCase) || IsExport(f)) continue;
             FileInfo? info = null;
             try { info = new FileInfo(f); } catch { /* vanished */ }
             if (info is { Exists: true }) yield return info;
         }
+    }
+
+    private static bool IsExport(string path)
+    {
+        var name = Path.GetFileNameWithoutExtension(path);
+        return name.EndsWith(']') && name.LastIndexOf(" [", StringComparison.Ordinal) > 0;
     }
 
     public static Usage Measure(string folder)

@@ -121,6 +121,9 @@ public sealed class LibraryService : IDisposable
 
         int done = 0;
         progress?.Report((0, work.Count));
+        // A first scan of a big library takes minutes: save what's done now and then, so quitting
+        // halfway doesn't throw away every video already read.
+        var sinceSave = System.Diagnostics.Stopwatch.StartNew();
         await Parallel.ForEachAsync(work, new ParallelOptions
         {
             MaxDegreeOfParallelism = Math.Clamp(Environment.ProcessorCount / 2, 2, 6),
@@ -129,7 +132,13 @@ public sealed class LibraryService : IDisposable
         {
             await MediaProbe.ProbeAsync(e, token);
             e.ThumbPath = await ThumbnailService.EnsureAsync(e, token);
-            lock (_cacheLock) _cache.Entries[e.Path] = e;
+            var save = false;
+            lock (_cacheLock)
+            {
+                _cache.Entries[e.Path] = e;
+                if (sinceSave.Elapsed > TimeSpan.FromSeconds(15)) { sinceSave.Restart(); save = true; }
+            }
+            if (save) SaveCache();
             onEntryReady(e);
             progress?.Report((Interlocked.Increment(ref done), work.Count));
         });

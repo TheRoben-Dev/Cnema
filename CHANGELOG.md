@@ -2,6 +2,17 @@
 
 What changed in each Savefile (formerly Cnema) release. The app shows the entries you have not seen yet after it updates.
 
+## 0.27.0
+- Save Year in clips as a picture: one click makes a tidy image of your year (moments, friends, games, best day) to post in the group chat. It goes to your Pictures folder.
+- Make a montage with a friend: on a friend's page, Make a montage puts your best moments together in one video.
+- The first look through a big library (thousands of videos) now keeps its progress as it goes, so quitting halfway doesn't start it over.
+- Fixed: on Windows, updating could fail (and Savefile not come back) when your user name has letters like é or ö. Updates are now copied next to the app first and only swapped in when the copy worked, so a busy file can't leave a half-updated app.
+- Fixed: quitting during an export left ffmpeg running in the background until it finished.
+- Fixed: after the fourth display sleep or unplugged device in one run, clipping stopped instead of restarting.
+- Fixed: Storage limits could move montages and exports you made to the trash. They only tidy clips now.
+- Fixed: quitting right after a very long session could leave a large unfinished file in the clips folder. The session is now saved properly at the next start instead.
+- Fixed: a cancelled Steam clip import left a temporary file behind.
+
 ## 0.26.0
 - Play all: watch a whole view one clip after another in the Quick player, like a slideshow. Use Play all in the header (a friend, a collection, a tag, a year of search results, anything), or switch it on for the video you're watching with the button next to the arrows. Switch it off under Settings, Features, Memories.
 - A friend's page says how long you've been saving moments together, and what you mostly play ("24 moments together since March 2025 · mostly Valorant").

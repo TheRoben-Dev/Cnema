@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Cnema.Services;
 
 namespace Cnema.ViewModels;
 
@@ -221,6 +222,31 @@ public sealed partial class MainViewModel
 
     [RelayCommand] private void CloseRecap() => Recap = null;
 
+    /// <summary>Set by the window: draws the open Year in clips card into a PNG at the given path.</summary>
+    public Func<string, bool>? CaptureRecap { get; set; }
+
+    /// <summary>Year in clips as a picture, to post in the group chat.</summary>
+    [RelayCommand]
+    private void SaveRecapImage()
+    {
+        if (Recap is not { } r || CaptureRecap is null) return;
+        var name = F("Savefile {0} in clips", r.SelectedYear);
+        foreach (var dir in new[] { Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), _settings.Current.Clip.ResolvedFolder })
+        {
+            if (string.IsNullOrEmpty(dir) || !Directory.Exists(dir)) continue;
+            var target = Path.Combine(dir, name + ".png");
+            for (var n = 2; File.Exists(target); n++) target = Path.Combine(dir, $"{name} {n}.png");
+            bool ok;
+            try { ok = CaptureRecap(target); }
+            catch (Exception ex) { Log.Warn($"Recap image failed: {ex.Message}"); ok = false; }
+            if (!ok || !File.Exists(target)) continue;
+            ShowToast(F("Saved {0} in {1}", Path.GetFileName(target), Path.GetFileName(dir)));
+            PlatformShell.Reveal(target);
+            return;
+        }
+        ShowToast(T("Couldn't save the picture."));
+    }
+
     [RelayCommand]
     private async Task WatchRecapClipAsync(VideoItemViewModel? item)
     {
@@ -237,6 +263,19 @@ public sealed partial class MainViewModel
         var label = F("{0} highlights", r.SelectedYear);
         Recap = null;
         OpenMontageWith(videos, label);
+    }
+
+    /// <summary>On a friend's page: a montage of the best moments together.</summary>
+    public bool ShowFriendMontage => Features.Montage && ActiveNav is { Kind: NavKind.Person } && !IsSelecting &&
+                                     Videos.Count(v => v.Entry.DurationMs >= 1000) >= 2;
+
+    [RelayCommand]
+    private void MakeFriendMontage()
+    {
+        if (ActiveNav is not { Kind: NavKind.Person } friend) return;
+        var videos = RecapViewModel.Highlights(Videos);
+        if (videos.Count == 0) return;
+        OpenMontageWith(videos, F("Moments with {0}", friend.Name));
     }
 
     // ---------- playing with ----------
