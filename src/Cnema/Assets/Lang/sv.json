@@ -1067,7 +1067,6 @@
   "NAME": "NAMN",
   "NEW COMPUTER": "NY DATOR",
   "Name new clips by themselves": "Namnge nya klipp av sig själv",
-  "Names from the game, who was there and when, like \"Late-night Valorant with Alex · 16 Nov\". Suggested when you edit a video, and for the whole library under Tools, Smart rename.": "Namn från spelet, vilka som var med och när, som ”Sen kväll Valorant med Alex · 16 nov”. Föreslås när du redigerar en video, och för hela biblioteket under Verktyg, Smart namnbyte.",
   "Names, separated by commas": "Namn, separerade med kommatecken",
   "Needs a one-time download of a small sound model ({0}). After that, nothing leaves this computer.": "Kräver en engångsnedladdning av en liten ljudmodell ({0}). Efter det lämnar inget den här datorn.",
   "Needs a one-time download of a speech model ({0}). After that, nothing leaves this computer.": "Kräver en engångsnedladdning av en talmodell ({0}). Efter det lämnar inget den här datorn.",
@@ -1798,5 +1797,11 @@
   "Your first clip with {0} is from {1}. Look how far you've come.": "Ditt första klipp med {0} är från {1}. Se hur långt ni har kommit.",
   "Mochi heard {1} in {0} clip you hadn't tagged. It's in here too.": "Mochi hörde {1} i {0} klipp som du inte hade taggat. Det finns med här också.",
   "Mochi heard {1} in {0} clips you hadn't tagged. They're in here too.": "Mochi hörde {1} i {0} klipp som du inte hade taggat. De finns med här också.",
-  "Pick {0} above the shelf for the best of your clips together.": "Välj {0} ovanför hyllan för det bästa av era klipp tillsammans."
+  "Pick {0} above the shelf for the best of your clips together.": "Välj {0} ovanför hyllan för det bästa av era klipp tillsammans.",
+  "Laughing at “{0}”": "Skrattar åt ”{0}”",
+  "{0}: “{1}”": "{0}: ”{1}”",
+  "“{0}”": "”{0}”",
+  "Cracking up": "Skrattfest",
+  "Everyone yelling": "Alla skriker",
+  "Names that say what happened: a line someone shouted at the big moment, what set off a laugh, or the game, who was there and when. Like \"Alex: “Behind you!” · Valorant\". With Voice search and Laughter and hype on, they get better. Suggested when you edit a video, and for the whole library under Tools, Smart rename.": "Namn som säger vad som hände: en replik någon ropade i det stora ögonblicket, vad som fick alla att skratta, eller spelet, vilka som var med och när. Som ”Alex: ”Bakom dig!” · Valorant”. Med Röstsökning och Skratt och hype påslagna blir de bättre. Föreslås när du redigerar en video, och för hela biblioteket under Verktyg, Smart namnbyte."
 }

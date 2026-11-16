@@ -153,6 +153,7 @@ public sealed partial class MainViewModel
                         if (item.Entry.Voices is { } old) info.Added = old.Added;
                         item.Entry.Voices = info;
                         if (FillInVoices(item)) item.RefreshAll();
+                        Retitle(item);
                     }
                     if (++done % 10 == 0) { _library.SaveCache(); OnPropertyChanged(nameof(VoiceModelText)); OnPropertyChanged(nameof(CanPlayVoiceGame)); }
                     await Task.Delay(100, ct);
@@ -410,4 +411,11 @@ public sealed partial class MainViewModel
 
     /// <summary>A friend renamed or merged: their voice goes with them.</summary>
     internal void RenameVoice(string from, string to) => _voices.Rename(from, to);
+
+    /// <summary>The friend a voice belongs to, for titles: only when Mochi is sure, and never you.</summary>
+    private string? VoiceName(float[] print)
+    {
+        var best = _voices.Match(print).FirstOrDefault();
+        return best.Name is null || best.Score < KnowAt || best.Name == VoiceStore.MeKey ? null : best.Name;
+    }
 }

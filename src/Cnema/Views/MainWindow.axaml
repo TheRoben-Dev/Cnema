@@ -3165,7 +3165,7 @@
                     <Grid Classes="row" ColumnDefinitions="*,Auto">
                       <StackPanel Spacing="2">
                         <TextBlock svc:Tr.Text="Smart titles" />
-                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Names from the game, who was there and when, like &quot;Late-night Valorant with Alex · 16 Nov&quot;. Suggested when you edit a video, and for the whole library under Tools, Smart rename." />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Names that say what happened: a line someone shouted at the big moment, what set off a laugh, or the game, who was there and when. Like &quot;Alex: “Behind you!” · Valorant&quot;. With Voice search and Laughter and hype on, they get better. Suggested when you edit a video, and for the whole library under Tools, Smart rename." />
                         <Grid ColumnDefinitions="Auto,*" Margin="0,4,0,0">
                           <PathIcon Data="{StaticResource IcSpeed}" Width="11" Height="11" Margin="0,2,6,0" VerticalAlignment="Top" Foreground="{DynamicResource TextDim}" />
                           <TextBlock Grid.Column="1" Classes="dim cost" FontSize="11" TextWrapping="Wrap" Text="{Binding #Root.((vm:MainViewModel)DataContext).TitlesCostText}" />

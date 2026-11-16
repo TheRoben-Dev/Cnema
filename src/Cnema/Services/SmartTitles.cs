@@ -5,20 +5,39 @@ using Cnema.Models;
 namespace Cnema.Services;
 
 /// <summary>
-/// Names for clips from what Savefile knows about them: the game, who was there, when, and how long.
-/// "Late-night Valorant with Alex and Sam · 16 Nov 2026". Nothing is made up: no "epic clutch" for a
-/// clip nobody looked at.
+/// Names for clips from what Savefile knows about them: what was said and heard at the big moment, the game,
+/// who was there, when. "Alex: “Behind you!” · Valorant", "Laughing at “did he just jump” · Minecraft with Sam",
+/// or "Late-night Valorant with Alex and Sam · 16 Nov". Nothing is made up: no "epic clutch" for a clip
+/// nobody looked at.
 /// </summary>
 public static partial class SmartTitles
 {
-    /// <summary>The suggestion, or null when there's nothing better to say than the file name.</summary>
-    public static string? Suggest(VideoEntry e, Func<string, bool> isGame, bool withTime = false)
+    /// <summary>
+    /// The suggestion, or null when there's nothing better to say than the file name. When the smart features have
+    /// listened to the clip, the title says what happened: a line someone said at the big moment ("Alex: “Behind
+    /// you!”"), what set off a laugh ("Laughing at “did he just jump”"), or a big laugh or a loud moment. Only what
+    /// was heard: a line is quoted as it was written down, and a name is only put to it when the voice is known.
+    /// </summary>
+    public static string? Suggest(VideoEntry e, Func<string, bool> isGame, bool withTime = false, Func<float[], string?>? voiceName = null)
     {
         var game = e.Tags.FirstOrDefault(isGame) is { } g ? Pretty(g) : null;
         var people = e.People.Where(p => p.Trim().Length > 0).Select(p => p.Trim()).ToList();
-        if (game is null && people.Count == 0) return null;
-
         var local = e.ModifiedUtc.ToLocalTime();
+        var culture = CultureInfo.CurrentCulture;
+        string Stamp() => local.ToString(local.Year == DateTime.Now.Year ? "d MMM" : "d MMM yyyy", culture) + (withTime ? " " + local.ToString("t", culture) : "");
+
+        if (Moment(e, voiceName) is { } headline)
+        {
+            // What happened, then where and with whom, when it still reads as a title.
+            var context = game ?? "";
+            var named = people.Where(p => !headline.Contains(p, StringComparison.OrdinalIgnoreCase)).ToList();
+            if (named.Count > 0 && headline.Length + context.Length < 56)
+                context = context.Length > 0 ? F("{0} with {1}", context, Names(named)) : F("with {0}", Names(named));
+            var title = context.Length > 0 ? $"{headline} · {context}" : headline;
+            return withTime ? $"{title} · {Stamp()}" : title;
+        }
+
+        if (game is null && people.Count == 0) return null;
         var session = e.DurationMs >= 10 * 60_000;
         var lateNight = local.Hour < 5;
         string what;
@@ -29,11 +48,79 @@ public static partial class SmartTitles
         }
         else what = session ? (lateNight ? T("Late-night session") : T("Session")) : (lateNight ? T("Late-night moment") : T("Moment"));
         if (people.Count > 0) what = F("{0} with {1}", what, Names(people));
+        return $"{what} · {Stamp()}";
+    }
 
-        var culture = CultureInfo.CurrentCulture;
-        var date = local.ToString(local.Year == DateTime.Now.Year ? "d MMM" : "d MMM yyyy", culture);
-        if (withTime) date += " " + local.ToString("t", culture);
-        return $"{what} · {date}";
+    /// <summary>Seconds of laughter that count as a big laugh, and of cheering or shouting as a loud moment.</summary>
+    private const double BigLaugh = 3, LoudMoment = 2.5;
+
+    /// <summary>What happened in the clip, from what was heard, or null when nothing stands out.</summary>
+    internal static string? Moment(VideoEntry e, Func<float[], string?>? voiceName)
+    {
+        var laughs = e.Sound?.Laugh ?? new();
+        var hype = e.Sound?.Hype ?? new();
+        var laughAt = FirstCluster(laughs);
+        var best = e.Smart is { BestMs: >= 0 } sm ? sm.BestMs : -1;
+
+        // The line worth quoting: short, said near the big moment or just before a laugh, and not just "yeah".
+        (SpeechLine Line, string Text, double Score, bool Setup)? pick = null;
+        foreach (var l in e.Speech?.Lines ?? new())
+        {
+            var text = Clean(l.Text);
+            var words = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (words.Length is < 2 or > 8 || text.Length > 48) continue;
+            if (words.All(w => Filler.Contains(w.Trim(Punct).ToLowerInvariant()))) continue;
+            double score = 0;
+            if (text.EndsWith('!') || text.EndsWith('?')) score += 1.5;
+            if (words.Length is >= 3 and <= 6) score += 0.5;
+            var setup = laughAt >= 0 && l.End <= laughAt + 800 && laughAt - l.End < 4000;
+            if (setup) score += 2;
+            if (best >= 0 && Math.Abs((l.Start + l.End) / 2 - best) < 3000) score += 1.5;
+            if (hype.Any(h => h.At >= l.Start - 500 && h.At <= l.End + 1500)) score += 1;
+            if (pick is null || score > pick.Value.Score) pick = (l, text, score, setup);
+        }
+        if (pick is { Score: >= 1.5 } q)
+        {
+            if (q.Setup && laughs.Count * 0.48 >= BigLaugh) return F("Laughing at “{0}”", q.Text);
+            if (Speaker(e, q.Line, voiceName) is { } who) return F("{0}: “{1}”", who, q.Text);
+            return F("“{0}”", q.Text);
+        }
+        if (laughs.Count * 0.48 >= BigLaugh) return T("Cracking up");
+        if (hype.Count * 0.48 >= LoudMoment && e.Smart is not { Excitement: < 0.3 }) return T("Everyone yelling");
+        return null;
+    }
+
+    /// <summary>The friend whose voice says this line, when Mochi knows it.</summary>
+    private static string? Speaker(VideoEntry e, SpeechLine line, Func<float[], string?>? voiceName)
+    {
+        if (voiceName is null || e.Voices is not { } v) return null;
+        var s = v.Speakers.FirstOrDefault(sp => sp.Lines.Any(r => r.Length == 2 && r[0] <= line.Start + 200 && r[1] >= line.End - 200));
+        return s is null || s.Vec.Length == 0 ? null : voiceName(s.Vec);
+    }
+
+    /// <summary>Where the first real laugh starts (ms): two or more laughing moments close together; -1 when none.</summary>
+    private static long FirstCluster(List<SoundMoment> laughs)
+    {
+        var at = laughs.Select(m => m.At).OrderBy(x => x).ToList();
+        for (var i = 0; i + 1 < at.Count; i++)
+            if (at[i + 1] - at[i] <= 1500) return at[i];
+        return -1;
+    }
+
+    private static readonly char[] Punct = { '.', ',', '!', '?', '…', '"', '\'', '“', '”', '-' };
+    private static readonly HashSet<string> Filler = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "yeah", "yes", "no", "okay", "ok", "oh", "uh", "um", "hmm", "what", "so", "and", "the", "a", "i", "it", "is", "that", "like",
+        "right", "yep", "nope", "wait", "hey", "go", "ja", "nej", "okej", "åh", "va", "så", "och", "det", "är", "jag", "vad", "hm",
+    };
+
+    /// <summary>A spoken line tidied for a title: no stray quotes, dashes or "...", one space, a capital first letter.</summary>
+    private static string Clean(string text)
+    {
+        var t = string.Join(' ', text.Replace('"', ' ').Replace('“', ' ').Replace('”', ' ').Replace("...", "…")
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries)).Trim().TrimStart('-', '–', ' ').TrimEnd(',', ';', ':', '…', ' ');
+        if (t.EndsWith('.') && !t.EndsWith("..")) t = t[..^1];
+        return t.Length == 0 ? t : char.ToUpper(t[0], CultureInfo.CurrentCulture) + t[1..];
     }
 
     private static string Names(List<string> people) => people.Count switch

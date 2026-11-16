@@ -2,6 +2,10 @@
 
 What changed in each Savefile (formerly Cnema) release. The app shows the entries you have not seen yet after it updates.
 
+## 0.43.0
+- Smart titles say what happened instead of just the game and the date. A title can quote the line someone shouted at the big moment ("“Behind you!” · Valorant with Alex"), the line that set off a laugh ("Laughing at “did he just jump off the roof” · Minecraft"), name a friend Mochi recognises by voice ("Alex: “Go go go!”"), or call out a big laugh or a loud moment. When nothing stands out, you get the old style. It works best with Voice search and Laughter and hype on, and Smart rename uses it for the whole library.
+- Clips that named themselves (Name new clips by themselves) get a better name once they've been listened to. A name you typed or picked is never changed.
+
 ## 0.42.0
 - Friend picks: the names of the friends you have the most clips with sit above Worth a rewatch. Pick one and the shelf fills with the best of your clips together, and Mochi says something about the two of you: how many clips you share, your game together, the biggest laugh, your first clip, or the clips it recognised them in by voice. For you takes it back to the usual mix. You can turn it off in Settings › Memories.
 
