@@ -228,10 +228,12 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(PositionText));
         UpdateCurrentChapter();
         UpdateEffectsPreview();
+        UpdateSpoken();
     }
     partial void OnDurationChanged(double value) { OnPropertyChanged(nameof(DurationText)); OnPropertyChanged(nameof(RangeText)); BuildChapters(); }
     partial void OnCurrentChanged(VideoItemViewModel? value)
     {
+        RefreshSpeech();
         OnPropertyChanged(nameof(Title));
         OnPropertyChanged(nameof(Subtitle));
         OnPropertyChanged(nameof(VideoWidth));
@@ -268,6 +270,10 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
             return;
         }
         HideToast();
+        var startAt = StartAt;
+        var startNote = StartAtNote;
+        StartAt = null;
+        StartAtNote = null;
         // Switching videos in the quick player or with ← / →: remember where the last one was left.
         if (_active && !_openInFlight && Current is { } previous && !ReferenceEquals(previous, item))
         {
@@ -309,7 +315,13 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
 
         using var media = new Media(lib, item.Entry.Path, FromType.FromPath);
         var resume = item.Entry.LastPositionMs;
-        if (item.HasProgress && resume > 5000)
+        if (startAt is { } at && at >= 0)
+        {
+            // Opened from a voice search: start a moment before the words.
+            media.AddOption($":start-time={Math.Max(0, at - 1000) / 1000.0:0.###}".Replace(',', '.'));
+            if (startNote is { Length: > 0 } note) ShowToast(note);
+        }
+        else if (item.HasProgress && resume > 5000)
         {
             media.AddOption($":start-time={resume / 1000.0:0.###}".Replace(',', '.'));
             ShowToast(F("Resumed at {0}", TrimTimeline.FormatTime(resume)));
@@ -317,6 +329,10 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
         if (restored) ShowToast(T("Your edits from last time are back. Start over clears them."));
         _player.Play(media);
     }
+
+    /// <summary>For the next open only: where to start (ms) and what to say about it.</summary>
+    public long? StartAt { get; set; }
+    public string? StartAtNote { get; set; }
 
     private bool _active;
     private int _openGen;

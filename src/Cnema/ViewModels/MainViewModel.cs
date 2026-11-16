@@ -636,6 +636,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 ScanStatus = "";
                 OnPropertyChanged(nameof(HasNoResults));
                 StartSmartPass();
+                StartSpeechPass();
             }
         }
     }
@@ -733,6 +734,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             // A term matches the path, a tag, the note or a friend; "#clutch" matches tags only, "@sam" friends only.
             var notes = Features.Notes;
             var people = Features.People;
+            var said = Features.Speech;
             q = q.Where(v => terms.All(t => t.StartsWith('#')
                 ? t.Length > 1 && v.Entry.Tags.Any(tag => tag.Contains(t[1..], StringComparison.OrdinalIgnoreCase))
                 : t.StartsWith('@')
@@ -742,7 +744,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                   v.Entry.Tags.Any(tag => tag.Contains(t, StringComparison.OrdinalIgnoreCase)) ||
                   (notes && v.Entry.Note is { } n && n.Contains(t, StringComparison.OrdinalIgnoreCase)) ||
                   (people && v.Entry.People.Any(p => p.Contains(t, StringComparison.OrdinalIgnoreCase))) ||
-                  MatchesWhen(v.Entry, t)));
+                  MatchesWhen(v.Entry, t) ||
+                  (said && SaidMatches(v.Entry, t))));
         }
         q = ApplyFilters(q);
         q = SortIndex switch
@@ -755,6 +758,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             _ => q.OrderBy(v => v.Title, StringComparer.CurrentCultureIgnoreCase),
         };
         Videos = new ObservableCollection<VideoItemViewModel>(q);
+        MarkSaid(search.Length > 0 ? Videos : Array.Empty<VideoItemViewModel>(), search);
         SelectionChanged();
         RefreshMemories();
         OnPropertyChanged(nameof(HeaderCount));
@@ -930,12 +934,23 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     {
         if (item is null) return;
         if (IsSelecting) { ToggleSelected(item); return; }
+        if (item.Said is { } said && item.SaidAtMs >= 0)
+        {
+            Player.StartAt = item.SaidAtMs;
+            Player.StartAtNote = F("Said here: “{0}”", said);
+        }
         if (UseMiniPlayer && !IsPlayerOpen)
         {
             // The mini player plays over the library; clicking the video it already plays leaves it be.
             var same = IsMiniPlayerOpen && ReferenceEquals(Player.Current, item);
             IsMiniPlayerOpen = true;
             if (!same) await Player.OpenAsync(item);
+            else if (Player.StartAt is { } at)
+            {
+                Player.StartAt = null;
+                Player.StartAtNote = null;
+                Player.SeekCommand.Execute(Math.Max(0, at - 1000.0));
+            }
             return;
         }
         IsMiniPlayerOpen = false;

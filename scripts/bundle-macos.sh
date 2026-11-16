@@ -14,6 +14,7 @@ dotnet publish src/Cnema/Cnema.csproj -c Release -r "$RID" --self-contained true
   -p:Version="$VERSION" -p:DebugType=none -o "dist/publish-$RID"
 
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
+scripts/trim-runtimes.sh "$RID" "dist/publish-$RID"
 cp -R "dist/publish-$RID/." "$APP/Contents/MacOS/"
 cp packaging/cnema.icns "$APP/Contents/Resources/cnema.icns"
 sed "s/__VERSION__/$VERSION/g" packaging/Info.plist > "$APP/Contents/Info.plist"
