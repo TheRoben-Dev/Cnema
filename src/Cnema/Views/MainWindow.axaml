@@ -552,10 +552,26 @@
 
             <!-- Worth a rewatch: older favourites and clips with friends (Settings, Features, Worth a rewatch) -->
             <StackPanel IsVisible="{Binding ShowFeatured}" Margin="0,0,0,10" Spacing="8">
-              <StackPanel Orientation="Horizontal" Spacing="10" Margin="28,0,28,0">
+              <StackPanel Orientation="Horizontal" Spacing="10" Margin="28,0,28,0" IsVisible="{Binding !ShowMascot}">
                 <TextBlock svc:Tr.Text="Worth a rewatch" FontSize="15" FontWeight="Bold" VerticalAlignment="Center" />
                 <TextBlock Classes="dim" svc:Tr.Text="Old favourites and nights with friends. A new pick every day." FontSize="12" VerticalAlignment="Center" />
               </StackPanel>
+              <!-- The blob presents the shelf, with a line about your clips (Settings, Features, The blob) -->
+              <Grid ColumnDefinitions="Auto,Auto,*" Margin="22,0,28,0" IsVisible="{Binding ShowMascot}">
+                <c:BlobMascot x:Name="Mascot" Width="64" Height="58" VerticalAlignment="Bottom" CheerTick="{Binding MascotCheer}" Still="{Binding ReducedMotion}"
+                              Cursor="Hand" PointerPressed="OnMascotPressed" svc:Tr.Tip="Say something else" />
+                <!-- speech bubble, its tail pointing at the blob -->
+                <Panel Grid.Column="1" Margin="4,0,0,8" VerticalAlignment="Center">
+                  <Path Data="M 0,14 L 9,8 L 9,20 Z" Fill="{DynamicResource AccentSoft}" HorizontalAlignment="Left" VerticalAlignment="Top" />
+                  <Border Classes="bubble" Margin="8,0,0,0" Padding="12,7" CornerRadius="12" Background="{DynamicResource AccentSoft}" MaxWidth="560">
+                    <StackPanel Spacing="1">
+                      <TextBlock svc:Tr.Text="Worth a rewatch" FontSize="11" FontWeight="Bold" LetterSpacing="0.6" Foreground="{DynamicResource Highlight}" />
+                      <TextBlock Classes="mascotline" Text="{Binding MascotLine}" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap"
+                                 Opacity="{Binding MascotLineShown, Converter={x:Static c:Converters.BoolToOpacity}}" />
+                    </StackPanel>
+                  </Border>
+                </Panel>
+              </Grid>
               <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
                 <ItemsControl ItemsSource="{Binding Featured}" Margin="20,0,20,10">
                   <ItemsControl.ItemsPanel>
@@ -2266,6 +2282,14 @@
                         <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="A row at the top of the library with old favourites and clips with friends. A new pick every day." />
                       </StackPanel>
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureRewatch}" />
+                    </Grid>
+                    <Border Classes="sep" />
+                    <Grid Classes="row" ColumnDefinitions="*,Auto" IsEnabled="{Binding FeatureRewatch}">
+                      <StackPanel Spacing="2">
+                        <TextBlock svc:Tr.Text="The blob" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="A little purple blob presents Worth a rewatch with something about your clips: a keeper from last night, a run with a friend, what you played a year ago. Click it for the next line." />
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureMascot}" />
                     </Grid>
                     <Border Classes="sep" />
                     <Grid Classes="row" ColumnDefinitions="*,Auto">

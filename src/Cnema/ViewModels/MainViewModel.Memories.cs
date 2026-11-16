@@ -124,6 +124,7 @@ public sealed partial class MainViewModel
         OnPropertyChanged(nameof(ShowMergeSuggestion));
         OnPropertyChanged(nameof(RecapBannerTitle));
         OnPropertyChanged(nameof(RecapBannerText));
+        RefreshMascot();
     }
 
     // ---------- who was there ----------

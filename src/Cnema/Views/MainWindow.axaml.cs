@@ -304,6 +304,12 @@ public partial class MainWindow : Window
     private void OnPlayItemClick(object? sender, RoutedEventArgs e) =>
         Vm?.OpenCommand.Execute((sender as Control)?.DataContext as VideoItemViewModel);
 
+    private void OnMascotPressed(object? sender, Avalonia.Input.PointerPressedEventArgs e)
+    {
+        Vm?.PokeMascot();
+        e.Handled = true;
+    }
+
     private void OnSimilarItemClick(object? sender, RoutedEventArgs e) =>
         Vm?.FindSimilarCommand.Execute((sender as Control)?.DataContext as VideoItemViewModel);
 

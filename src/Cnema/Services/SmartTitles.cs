@@ -49,6 +49,7 @@ public static partial class SmartTitles
     {
         var t = tag.Trim();
         if (t.Any(char.IsUpper)) return t;
+        if (t.Length <= 3 && !t.Contains(' ')) return t.ToUpperInvariant(); // ark → ARK, cs2 → CS2
         return CultureInfo.CurrentCulture.TextInfo.ToTitleCase(t);
     }
 

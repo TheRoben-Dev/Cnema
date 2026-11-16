@@ -36,6 +36,8 @@ public sealed partial class SettingsViewModel
     [ObservableProperty] private bool _featureHighlights;
     [ObservableProperty] private bool _featureSpeech;
     [ObservableProperty] private bool _featureVisual;
+    [ObservableProperty] private bool _featureMascot;
+    [ObservableProperty] private bool _featureSplash;
     [ObservableProperty] private bool _featureSmartTitles;
     [ObservableProperty] private bool _featureAutoTitles;
     public bool ShowBrandingOffNotice => !FeatureBranding;
@@ -93,6 +95,8 @@ public sealed partial class SettingsViewModel
         FeatureAutoTitles = f.AutoTitles;
         FeatureSpeech = f.Speech;
         FeatureVisual = f.Visual;
+        FeatureMascot = f.Mascot;
+        FeatureSplash = f.Splash;
         var e = settings.Effects;
         WatermarkPath = e.WatermarkPath;
         WatermarkCorner = new ChipGroup(e.WatermarkCorner,
