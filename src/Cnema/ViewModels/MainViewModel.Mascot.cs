@@ -50,6 +50,7 @@ public sealed partial class MainViewModel
     /// <summary>A click on the blob: it hops and says the next thing.</summary>
     public void PokeMascot()
     {
+        if (PlayWrappedFromBlob()) return;
         if (_mascotLines.Count < 2) { MascotCheer++; return; }
         _mascotTimer?.Stop();
         _mascotTimer?.Start(); // a full turn for the line it's about to say
@@ -99,6 +100,7 @@ public sealed partial class MainViewModel
         var lines = new List<string>();
         var all = _items.Values.Select(v => v.Entry).Where(e => e.DurationMs > 0).ToList();
         if (all.Count == 0) return lines;
+        if (WrappedNews(now) is { } news) lines.Add(news);
         DateTime Local(VideoEntry e) => e.ModifiedUtc.ToLocalTime();
         var week = all.Where(e => (now - Local(e)).TotalDays < 7).ToList();
         var month = all.Where(e => Local(e).Year == now.Year && Local(e).Month == now.Month).ToList();
@@ -110,7 +112,28 @@ public sealed partial class MainViewModel
         if (recent is not null)
         {
             var when = WhenWords(Local(recent), now);
+            var day = CultureInfo.CurrentCulture.DateTimeFormat.GetDayName(Local(recent).DayOfWeek);
+            if (when == F("on {0}", day)) when = day; // "from Tuesday", not "from on Tuesday"
             lines.Add(GameOf(recent) is { } game ? F("Your {0} clip from {1} is a keeper.", game, when) : F("That clip from {0} is a keeper.", when));
+        }
+
+        // The laughs: the recent video with the most laughter, and who was there.
+        if (Features.Laughs)
+        {
+            var funny = all.Where(e => (now - Local(e)).TotalDays < 14 && LaughSeconds(e) >= 2)
+                .OrderByDescending(LaughSeconds).FirstOrDefault();
+            if (funny is not null)
+            {
+                var when = WhenWords(Local(funny), now);
+                var with = funny.People.Select(p => p.Trim()).FirstOrDefault(p => p.Length > 0);
+                lines.Insert(0, with is not null ? F("You and {0} couldn't stop laughing {1}.", with, when)
+                    : GameOf(funny) is { } g ? F("Someone lost it laughing in your {0} clip from {1}.", g, when)
+                    : F("Somebody couldn't stop laughing {0}.", when));
+            }
+            var loud = all.Where(e => (now - Local(e)).TotalDays < 14 && HypeSeconds(e) >= 2 && !ReferenceEquals(e, funny))
+                .OrderByDescending(HypeSeconds).FirstOrDefault();
+            if (loud is not null)
+                lines.Add(GameOf(loud) is { } g ? F("Big cheers in your {0} clip from {1}.", g, WhenWords(Local(loud), now)) : F("It got loud {0}. In a good way.", WhenWords(Local(loud), now)));
         }
 
         // New moments with a friend this week.

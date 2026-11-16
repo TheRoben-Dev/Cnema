@@ -56,11 +56,11 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
     [ObservableProperty] private bool _loopRange;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasIn), nameof(InText), nameof(HasRange), nameof(RangeText), nameof(ExportLabel))]
+    [NotifyPropertyChangedFor(nameof(HasIn), nameof(InText), nameof(HasRange), nameof(RangeText), nameof(ExportLabel), nameof(ShowTrimSuggestion))]
     private double _inPoint = -1;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasOut), nameof(OutText), nameof(HasRange), nameof(RangeText), nameof(ExportLabel))]
+    [NotifyPropertyChangedFor(nameof(HasOut), nameof(OutText), nameof(HasRange), nameof(RangeText), nameof(ExportLabel), nameof(ShowTrimSuggestion))]
     private double _outPoint = -1;
 
     [ObservableProperty] private bool _preciseExport;
@@ -234,6 +234,7 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
     partial void OnCurrentChanged(VideoItemViewModel? value)
     {
         RefreshSpeech();
+        RefreshTrimSuggestion();
         OnPropertyChanged(nameof(Title));
         OnPropertyChanged(nameof(Subtitle));
         OnPropertyChanged(nameof(VideoWidth));

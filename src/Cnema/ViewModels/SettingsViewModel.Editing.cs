@@ -19,6 +19,8 @@ public sealed partial class SettingsViewModel
     [ObservableProperty] private bool _featureKeepEdits;
     [ObservableProperty] private bool _featureNotes;
     [ObservableProperty] private bool _featureDragOut;
+    [ObservableProperty] private bool _featureDragDiscord;
+    [ObservableProperty] private bool _featureDiscordNitro;
     [ObservableProperty] private bool _featureRecorders;
     [ObservableProperty] private bool _featureZoomPan;
     [ObservableProperty] private bool _featureBlur;
@@ -37,6 +39,10 @@ public sealed partial class SettingsViewModel
     [ObservableProperty] private bool _featureSpeech;
     [ObservableProperty] private bool _featureVisual;
     [ObservableProperty] private bool _featureMascot;
+    [ObservableProperty] private bool _featureLaughs;
+    [ObservableProperty] private bool _featureWrapped;
+    [ObservableProperty] private bool _featureSmartThumbs;
+    [ObservableProperty] private bool _featureTrimSuggestions;
     [ObservableProperty] private bool _featureSplash;
     [ObservableProperty] private bool _featureSmartTitles;
     [ObservableProperty] private bool _featureAutoTitles;
@@ -76,6 +82,8 @@ public sealed partial class SettingsViewModel
         FeatureKeepEdits = f.KeepEdits;
         FeatureNotes = f.Notes;
         FeatureDragOut = f.DragOut;
+        FeatureDragDiscord = f.DragDiscord;
+        FeatureDiscordNitro = f.DiscordNitro;
         FeatureRecorders = f.Recorders;
         FeatureZoomPan = f.ZoomPan;
         FeatureBlur = f.Blur;
@@ -96,6 +104,10 @@ public sealed partial class SettingsViewModel
         FeatureSpeech = f.Speech;
         FeatureVisual = f.Visual;
         FeatureMascot = f.Mascot;
+        FeatureLaughs = f.Laughs;
+        FeatureWrapped = f.Wrapped;
+        FeatureSmartThumbs = f.SmartThumbs;
+        FeatureTrimSuggestions = f.TrimSuggestions;
         FeatureSplash = f.Splash;
         var e = settings.Effects;
         WatermarkPath = e.WatermarkPath;

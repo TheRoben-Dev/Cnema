@@ -29,8 +29,8 @@ public sealed partial class MainViewModel
     public string VisualModelText =>
         IsDownloadingVisual ? F("Downloading the visual model: {0:0}%", VisualDownloadProgress * 100)
         : VisualModelError is { } err ? err
-        : VisualModelReady ? F("Visual model installed ({0}). {1} looked at so far.", BackupViewModel.SizeText(ModelStore.BytesOf(ModelStore.Visual)),
-            P(_items.Values.Count(v => v.Entry.Visual is { Version: VisualService.Version }), "{0} video", "{0:N0} videos"))
+        : VisualModelReady ? F("Visual model installed ({0}). Looked at {1} of {2} videos.", BackupViewModel.SizeText(ModelStore.BytesOf(ModelStore.Visual)),
+            _items.Values.Count(v => v.Entry.Visual is { Version: VisualService.Version }).ToString("N0"), _items.Count.ToString("N0")) + FailedText("Visual")
         : F("Needs a one-time download of a visual model ({0}). After that, nothing leaves this computer.", BackupViewModel.SizeText(ModelStore.BytesOf(ModelStore.Visual)));
 
     [RelayCommand]
@@ -107,8 +107,6 @@ public sealed partial class MainViewModel
         VisualActivity = "";
     }
 
-    /// <summary>One background job at a time: after best moments and listening.</summary>
-    private bool VisualShouldWait => SmartShouldWait || _smartRun is { IsCompleted: false } || _speechRun is { IsCompleted: false };
 
     private async Task RunVisualPassAsync(CancellationToken ct)
     {
@@ -116,6 +114,7 @@ public sealed partial class MainViewModel
         try
         {
             var tried = new HashSet<VideoItemViewModel>();
+            Log.Info($"Visual pass: {_items.Values.Count(v => v.Entry.Visual is not { Version: VisualService.Version })} to do");
             while (!ct.IsCancellationRequested && Features.Visual)
             {
                 var todo = _items.Values.Where(v => v.Entry.Visual is not { Version: VisualService.Version } && !tried.Contains(v))
@@ -126,10 +125,11 @@ public sealed partial class MainViewModel
                     var item = todo[i];
                     tried.Add(item);
                     if (item.Entry.Visual is { Version: VisualService.Version } || !File.Exists(item.Entry.Path)) continue;
-                    while (VisualShouldWait && !ct.IsCancellationRequested) await Task.Delay(5000, ct);
-                    VisualActivity = F("Looking at your videos: {0} to go, {1}", (todo.Count - i).ToString("N0"), CostMeter.Span(LeftSeconds(CostMeter.Visual, todo.Skip(i))));
-                    var model = _visual ?? await Task.Run(VisualModel, ct);
+                    var working = F("Looking at your videos: {0} to go, {1}.", (todo.Count - i).ToString("N0"), CostMeter.Span(LeftSeconds(CostMeter.Visual, todo.Skip(i))));
+                    if (_visual is null) VisualActivity = T("Starting the visual model…");
+                    var model = _visual ?? await LoadModelAsync("Visual", VisualModel, ct);
                     if (model is null) return;
+                    await TakeTurnAsync(s => VisualActivity = s, working, "Visual", ct);
                     VisualInfo? info;
                     try
                     {
@@ -143,8 +143,10 @@ public sealed partial class MainViewModel
                     catch (Exception ex)
                     {
                         Log.Warn($"Visual for {item.Entry.FileName}: {ex.Message}");
+                        CountFailure("Visual");
                         info = null;
                     }
+                    finally { _workGate.Release(); }
                     if (_items.TryGetValue(item.Entry.Path, out var still) && ReferenceEquals(still, item))
                         item.Entry.Visual = info ?? new VisualInfo { Version = VisualService.Version };
                     if (++done % 25 == 0) { _library.SaveCache(); OnPropertyChanged(nameof(VisualModelText)); OnCostsChanged(); }
@@ -160,6 +162,7 @@ public sealed partial class MainViewModel
         }
         finally
         {
+            Log.Info($"Visual pass ended: {done} done");
             VisualActivity = "";
             OnCostsChanged();
             if (done > 0)

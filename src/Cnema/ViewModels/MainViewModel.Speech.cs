@@ -22,12 +22,42 @@ public sealed partial class MainViewModel
     /// <summary>"Listening: 12 to go" while the background pass runs.</summary>
     [ObservableProperty] private string _speechActivity = "";
 
+    private static string SpeechCostKey => ModelStore.SpeechChoice == "swedish" ? CostMeter.SpeechSwedish : CostMeter.Speech;
+
     public bool CanDownloadSpeech => !SpeechModelReady && !IsDownloadingSpeech;
+
+    /// <summary>The speech models to pick from, in the order of <see cref="SpeechModelIndex"/>.</summary>
+    public IReadOnlyList<string> SpeechModelOptions { get; } = new[]
+    {
+        F("Standard ({0}): quick, many languages", BackupViewModel.SizeText(ModelStore.SpeechStandard.Bytes)),
+        F("Better Swedish ({0}): KB-Whisper, about 3 times slower", BackupViewModel.SizeText(ModelStore.SpeechSwedish.Bytes)),
+    };
+
+    public int SpeechModelIndex
+    {
+        get => ModelStore.SpeechChoice == "swedish" ? 1 : 0;
+        set
+        {
+            var choice = value == 1 ? "swedish" : "standard";
+            if (choice == ModelStore.SpeechChoice || IsDownloadingSpeech) return;
+            StopSpeechPass();
+            ModelStore.SpeechChoice = choice;
+            _settings.Current.SpeechModel = choice;
+            _settings.Save();
+            SpeechModelReady = ModelStore.IsInstalled(ModelStore.Speech);
+            SpeechModelError = null;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(SpeechModelText));
+            OnPropertyChanged(nameof(SpeechCostText));
+            if (Features.Speech && SpeechModelReady) StartSpeechPass();
+        }
+    }
 
     public string SpeechModelText =>
         IsDownloadingSpeech ? F("Downloading the speech model: {0:0}%", SpeechDownloadProgress * 100)
         : SpeechModelError is { } err ? err
-        : SpeechModelReady ? F("Speech model installed ({0}). Speech found in {1} so far.", BackupViewModel.SizeText(ModelStore.Speech.Bytes), SpeechCountText)
+        : SpeechModelReady ? F("Speech model installed ({0}). Listened to {1} of {2}; speech found in {3}.", BackupViewModel.SizeText(ModelStore.Speech.Bytes),
+            _items.Values.Count(v => v.Entry.Speech is { Version: SpeechService.Version }).ToString("N0"), _items.Count.ToString("N0"), SpeechCountText) + FailedText("Speech")
         : F("Needs a one-time download of a speech model ({0}). After that, nothing leaves this computer.", BackupViewModel.SizeText(ModelStore.Speech.Bytes));
 
     private string SpeechCountText
@@ -93,8 +123,6 @@ public sealed partial class MainViewModel
         SpeechActivity = "";
     }
 
-    /// <summary>Waits for games, exports and the best-moments pass: one background job at a time.</summary>
-    private bool SpeechShouldWait => SmartShouldWait || _smartRun is { IsCompleted: false };
 
     private async Task RunSpeechPassAsync(CancellationToken ct)
     {
@@ -103,6 +131,7 @@ public sealed partial class MainViewModel
         try
         {
             var tried = new HashSet<VideoItemViewModel>();
+            Log.Info($"Speech pass: {_items.Values.Count(v => v.Entry.Speech is not { Version: SpeechService.Version })} to do");
             while (!ct.IsCancellationRequested && Features.Speech)
             {
                 var todo = _items.Values.Where(v => v.Entry.Speech is not { Version: SpeechService.Version } && !tried.Contains(v))
@@ -113,10 +142,14 @@ public sealed partial class MainViewModel
                     var item = todo[i];
                     tried.Add(item);
                     if (item.Entry.Speech is { Version: SpeechService.Version } || !File.Exists(item.Entry.Path)) continue;
-                    while (SpeechShouldWait && !ct.IsCancellationRequested) await Task.Delay(5000, ct);
-                    SpeechActivity = F("Listening for what's said: {0} to go, {1}", (todo.Count - i).ToString("N0"), CostMeter.Span(LeftSeconds(CostMeter.Speech, todo.Skip(i))));
-                    // Loaded only once there's something to do, and let go of when the pass ends (it holds memory).
-                    speech ??= await Task.Run(() => SpeechService.Load(ModelStore.PathOf(ModelStore.Speech)), ct);
+                    var working = F("Listening for what's said: {0} to go, {1}.", (todo.Count - i).ToString("N0"), CostMeter.Span(LeftSeconds(SpeechCostKey, todo.Skip(i))));
+                    if (speech is null)
+                    {
+                        // Loaded only once there's something to do, and let go of when the pass ends (it holds memory).
+                        SpeechActivity = T("Starting the speech model…");
+                        speech = await LoadModelAsync("Speech", () => SpeechService.Load(ModelStore.PathOf(ModelStore.Speech)), ct);
+                    }
+                    await TakeTurnAsync(s => SpeechActivity = s, working, "Speech", ct);
                     SpeechInfo? info;
                     try
                     {
@@ -125,14 +158,16 @@ public sealed partial class MainViewModel
                         var watch = System.Diagnostics.Stopwatch.StartNew();
                         info = await Task.Run(() => speech.TranscribeAsync(path, length, ct), ct);
                         // A video with no sound is skipped in a blink; that says nothing about this computer's pace.
-                        if (info.Language is not null || watch.Elapsed.TotalSeconds >= 1) CostMeter.Record(CostMeter.Speech, watch.Elapsed.TotalSeconds, length);
+                        if (info.Language is not null || watch.Elapsed.TotalSeconds >= 1) CostMeter.Record(SpeechCostKey, watch.Elapsed.TotalSeconds, length);
                     }
                     catch (OperationCanceledException) { throw; }
                     catch (Exception ex)
                     {
                         Log.Warn($"Speech for {item.Entry.FileName}: {ex.Message}");
+                        CountFailure("Speech");
                         info = null;
                     }
+                    finally { _workGate.Release(); }
                     if (_items.TryGetValue(item.Entry.Path, out var still) && ReferenceEquals(still, item))
                     {
                         item.Entry.Speech = info ?? new SpeechInfo { Version = SpeechService.Version };
@@ -151,6 +186,7 @@ public sealed partial class MainViewModel
         }
         finally
         {
+            Log.Info($"Speech pass ended: {done} done");
             speech?.Dispose();
             SpeechActivity = "";
             OnCostsChanged();
@@ -166,7 +202,7 @@ public sealed partial class MainViewModel
     // ---------- search ----------
 
     private static bool SaidMatches(VideoEntry e, string term) =>
-        e.Speech is { Lines.Count: > 0 } s && s.Lines.Any(l => l.Text.Contains(term, StringComparison.OrdinalIgnoreCase));
+        e.Speech is { Lines.Count: > 0 } s && s.Lines.Any(l => TextMatch.Has(l.Text, term));
 
     /// <summary>On each card in the results: the line where the searched words are said, if any.</summary>
     private void MarkSaid(IEnumerable<VideoItemViewModel> shown, string search)
@@ -179,9 +215,9 @@ public sealed partial class MainViewModel
             {
                 visible.Add(v);
                 if (v.Entry.Speech is not { Lines.Count: > 0 } s) { v.Said = null; continue; }
-                var line = s.Lines.FirstOrDefault(l => l.Text.Contains(phrase, StringComparison.OrdinalIgnoreCase))
-                           ?? s.Lines.FirstOrDefault(l => words.Any(w => l.Text.Contains(w, StringComparison.OrdinalIgnoreCase)));
-                v.Said = line is null ? null : Snippet(line.Text, phrase.Length > 0 && line.Text.Contains(phrase, StringComparison.OrdinalIgnoreCase) ? phrase : words.First(w => line.Text.Contains(w, StringComparison.OrdinalIgnoreCase)));
+                var line = s.Lines.FirstOrDefault(l => TextMatch.Has(l.Text, phrase))
+                           ?? s.Lines.FirstOrDefault(l => words.Any(w => TextMatch.Has(l.Text, w)));
+                v.Said = line is null ? null : Snippet(line.Text, phrase.Length > 0 && TextMatch.Has(line.Text, phrase) ? phrase : words.First(w => TextMatch.Has(line.Text, w)));
                 v.SaidAtMs = line?.Start ?? -1;
             }
         foreach (var v in _items.Values)
@@ -193,7 +229,7 @@ public sealed partial class MainViewModel
     {
         const int Room = 50;
         if (text.Length <= Room) return text;
-        var at = Math.Max(0, text.IndexOf(match, StringComparison.OrdinalIgnoreCase));
+        var at = Math.Max(0, TextMatch.IndexOf(text, match));
         var start = Math.Clamp(at - (Room - match.Length) / 2, 0, text.Length - Room);
         var s = text.Substring(start, Room).Trim();
         return (start > 0 ? "…" : "") + s + (start + Room < text.Length ? "…" : "");

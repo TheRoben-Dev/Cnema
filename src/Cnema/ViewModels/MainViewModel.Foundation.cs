@@ -23,6 +23,13 @@ public sealed partial class MainViewModel
         VideoItemViewModel.UnwatchedBadges = Features.Unwatched;
         VideoItemViewModel.NotesEnabled = Features.Notes;
         VideoItemViewModel.PeopleEnabled = Features.People;
+        PlayerViewModel.TrimSuggestions = Features.TrimSuggestions;
+        Player.RefreshTrimSuggestion();
+        if (ThumbnailService.SmartThumbs != Features.SmartThumbs)
+        {
+            ThumbnailService.SmartThumbs = Features.SmartThumbs;
+            _ = RefreshSmartThumbsAsync(_items.Values.ToList());
+        }
         Chapters.Enabled = Features.Chapters;
         Player.RefreshChapters();
         Player.Queue = Features.ExportQueue ? Exports : null;
@@ -41,11 +48,13 @@ public sealed partial class MainViewModel
         if (Features.Highlights) StartSmartPass(); else StopSmartPass();
         if (Features.Speech) StartSpeechPass(); else StopSpeechPass();
         if (Features.Visual) StartVisualPass(); else StopVisualPass();
+        if (Features.Laughs) StartSoundPass(); else StopSoundPass();
         if (!Features.Visual && SimilarTo is not null) ClearSimilar();
         Player.RefreshSpeech();
         UpdateHighlightMarks();
         RefreshMemories();
         RefreshMascot();
+        RaiseWrapped();
         OnPropertyChanged(nameof(HeaderCount));
         foreach (var name in new[]
                  {

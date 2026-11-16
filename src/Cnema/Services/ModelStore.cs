@@ -14,8 +14,22 @@ public static class ModelStore
 {
     public const string Mirror = "https://github.com/TheRoben-Dev/Cnema-releases/releases/download/models/";
 
+    /// <summary>Which speech model the person picked: "standard" (Whisper base) or "swedish" (KB-Whisper small).</summary>
+    public static string SpeechChoice { get; set; } = "standard";
+
+    /// <summary>The speech model in use (see <see cref="SpeechChoice"/>).</summary>
+    public static ModelInfo Speech => SpeechChoice == "swedish" ? SpeechSwedish : SpeechStandard;
+
+    /// <summary>
+    /// KB-Whisper small from the National Library of Sweden (Apache-2.0), 5-bit: much better at Swedish,
+    /// still fine with English mixed in.
+    /// </summary>
+    public static readonly ModelInfo SpeechSwedish = new("speech-sv", "kb-whisper-small-q5_0.bin", 175_209_680,
+        "6768836a51abc902e420c613153e6d418c90ea2774e913274d02ab23170225b7",
+        "https://huggingface.co/KBLab/kb-whisper-small/resolve/main/ggml-model-q5_0.bin");
+
     /// <summary>Whisper base, multilingual, 5-bit (whisper.cpp format): voice search and captions.</summary>
-    public static readonly ModelInfo Speech = new("speech", "ggml-base-q5_1.bin", 59_707_625,
+    public static readonly ModelInfo SpeechStandard = new("speech", "ggml-base-q5_1.bin", 59_707_625,
         "422f1ae452ade6f30a004d7e5c6a43195e4433bc370bf23fac9cc591f01a8898",
         "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base-q5_1.bin");
 
@@ -45,9 +59,27 @@ public static class ModelStore
         OnnxRuntime,
     };
 
+    /// <summary>
+    /// YAMNet (AudioSet sound classes; the PyTorch port by w-hc, MIT, as ONNX by Qualcomm AI Hub): laughter and
+    /// hype. The .onnx file reads its weights from yamnet.data beside it, so both keep these names. Shares the
+    /// ONNX Runtime library with visual search.
+    /// </summary>
+    public static IReadOnlyList<ModelInfo> Sound { get; } = new[]
+    {
+        new ModelInfo("sound", "yamnet.onnx", 166_464, "9261fbe1f196c8bb695933845af28df0a155845c9ec5e37ec96295e82c96f096", null),
+        new ModelInfo("sound", "yamnet.data", 14_915_108, "0b4de0b14bf2b528d51e3cd84e2d3e2ae826b942fbec6001c654605f1f2ceb60", null),
+        OnnxRuntime,
+    };
+
     public static long BytesOf(IEnumerable<ModelInfo> pack) => pack.Sum(m => m.Bytes);
     public static bool IsInstalled(IEnumerable<ModelInfo> pack) => pack.All(IsInstalled);
-    public static void Remove(IEnumerable<ModelInfo> pack) { foreach (var m in pack) Remove(m); }
+    /// <summary>Removes a pack, keeping files another installed pack still uses (ONNX Runtime).</summary>
+    public static void Remove(IEnumerable<ModelInfo> pack)
+    {
+        var list = pack.ToList();
+        var shared = new[] { Visual, Sound }.Where(p => !ReferenceEquals(p, pack) && IsInstalled(p)).SelectMany(p => p).ToHashSet();
+        foreach (var m in list.Where(m => !shared.Contains(m))) Remove(m);
+    }
 
     /// <summary>Downloads what's missing of a set of files, one after the other (progress 0..1 over all of them).</summary>
     public static async Task DownloadAsync(IReadOnlyList<ModelInfo> pack, IProgress<double>? progress, CancellationToken ct)

@@ -557,11 +557,17 @@
                 <TextBlock Classes="dim" svc:Tr.Text="Old favourites and nights with friends. A new pick every day." FontSize="12" VerticalAlignment="Center" />
               </StackPanel>
               <!-- The blob presents the shelf, with a line about your clips (Settings, Features, The blob) -->
-              <Grid ColumnDefinitions="Auto,Auto,*" Margin="22,0,28,0" IsVisible="{Binding ShowMascot}">
+              <Grid ColumnDefinitions="Auto,Auto,Auto,*" Margin="22,0,28,0" IsVisible="{Binding ShowMascot}">
                 <c:BlobMascot x:Name="Mascot" Width="64" Height="58" VerticalAlignment="Bottom" CheerTick="{Binding MascotCheer}" Still="{Binding ReducedMotion}"
                               Cursor="Hand" PointerPressed="OnMascotPressed" svc:Tr.Tip="Say something else" />
+                <!-- From 1 November the blob holds out a present: your Wrapped (offered once; then it stays, opened) -->
+                <Button Grid.Column="1" Classes="ghost" Padding="2" Margin="0,0,2,0" VerticalAlignment="Bottom" Cursor="Hand"
+                        IsVisible="{Binding ShowWrappedGift}" Command="{Binding OpenGiftCommand}" ToolTip.Tip="{Binding GiftTip}">
+                  <c:GiftBox Width="70" Height="60" Opened="{Binding GiftOpened}" Still="{Binding ReducedMotion}"
+                             Picture="{Binding WrappedPicture}" Progress="{Binding WrappedProgress}" />
+                </Button>
                 <!-- speech bubble, its tail pointing at the blob -->
-                <Panel Grid.Column="1" Margin="4,0,0,8" VerticalAlignment="Center">
+                <Panel Grid.Column="2" Margin="4,0,0,8" VerticalAlignment="Center">
                   <Path Data="M 0,14 L 9,8 L 9,20 Z" Fill="{DynamicResource AccentSoft}" HorizontalAlignment="Left" VerticalAlignment="Top" />
                   <Border Classes="bubble" Margin="8,0,0,0" Padding="12,7" CornerRadius="12" Background="{DynamicResource AccentSoft}" MaxWidth="560">
                     <StackPanel Spacing="1">
@@ -933,6 +939,61 @@
           </Panel>
         </DockPanel>
       </Border>
+    </Panel>
+
+    <!-- ======================= WRAPPED THEATRE ======================= -->
+    <!-- Watching your Wrapped: the video and nothing else, with pause and scrubbing. The first viewing fills the
+         screen; later ones play in the window, with Save a copy. No editing here. -->
+    <Panel x:Name="Theatre" Background="Black" IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).IsTheatreOpen}"
+           DataContext="{Binding Player}" x:DataType="vm:PlayerViewModel">
+      <c:VideoSurface x:Name="TheatreSurface" Frames="{Binding Frames}"
+                      SourceWidth="{Binding VideoWidth}" SourceHeight="{Binding VideoHeight}" />
+      <Border x:Name="TheatreHit" Background="Transparent" />
+      <Border IsVisible="{Binding Toast, Converter={x:Static ObjectConverters.IsNotNull}}" IsHitTestVisible="False"
+              HorizontalAlignment="Center" VerticalAlignment="Top" Margin="48,22,48,0"
+              Background="{DynamicResource ToastBg}" CornerRadius="10" Padding="14,8" BorderBrush="{DynamicResource Line}" BorderThickness="1">
+        <TextBlock Text="{Binding Toast}" FontSize="13" TextWrapping="Wrap" />
+      </Border>
+      <Panel x:Name="TheatreChrome">
+        <Panel.Transitions>
+          <Transitions><DoubleTransition Property="Opacity" Duration="0:0:0.3" /></Transitions>
+        </Panel.Transitions>
+        <Button Classes="mini" Focusable="False" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="16" svc:Tr.Tip="Close (Esc)"
+                Command="{Binding #Root.((vm:MainViewModel)DataContext).CloseTheatreCommand}">
+          <PathIcon Data="{StaticResource IcClose}" Width="12" Height="12" />
+        </Button>
+        <Border VerticalAlignment="Bottom" Margin="24,0,24,22" Padding="14,8,14,10" CornerRadius="14" Background="#C8141414" MaxWidth="1100">
+          <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto">
+            <Button Classes="ghost" Focusable="False" Padding="6" Command="{Binding TogglePlayCommand}" svc:Tr.Tip="Play / pause (Space)" VerticalAlignment="Center">
+              <Panel>
+                <PathIcon Data="{StaticResource IcPlay}" Width="20" Height="20" Foreground="White" IsVisible="{Binding !IsPlaying}" />
+                <PathIcon Data="{StaticResource IcPause}" Width="20" Height="20" Foreground="White" IsVisible="{Binding IsPlaying}" />
+              </Panel>
+            </Button>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" Margin="6,0,12,0">
+              <TextBlock Classes="mono" Text="{Binding PositionText}" FontSize="12" Foreground="White" />
+              <TextBlock Classes="mono" Text="/" FontSize="12" Foreground="#99FFFFFF" />
+              <TextBlock Classes="mono" Text="{Binding DurationText}" FontSize="12" Foreground="#99FFFFFF" />
+            </StackPanel>
+            <c:TrimTimeline Grid.Column="2" VerticalAlignment="Center" Duration="{Binding Duration}" Position="{Binding Position}"
+                            SeekCommand="{Binding SeekCommand}" Accent="{DynamicResource Accent}" RangeBrush="Transparent" />
+            <Button Grid.Column="3" Classes="ghost" Focusable="False" Padding="6" Margin="10,0,0,0" svc:Tr.Tip="Mute (M)" Command="{Binding ToggleMuteCommand}" VerticalAlignment="Center">
+              <Panel>
+                <PathIcon Data="{StaticResource IcVolume}" Width="16" Height="16" Foreground="White" IsVisible="{Binding !IsMuted}" />
+                <PathIcon Data="{StaticResource IcMute}" Width="16" Height="16" Foreground="White" IsVisible="{Binding IsMuted}" />
+              </Panel>
+            </Button>
+            <Button Grid.Column="4" Classes="soft" Focusable="False" Margin="8,0,0,0" VerticalAlignment="Center"
+                    IsVisible="{Binding !#Root.((vm:MainViewModel)DataContext).TheatreFirst}"
+                    Command="{Binding #Root.((vm:MainViewModel)DataContext).SaveTheatreCopyCommand}" svc:Tr.Tip="Save a copy of the video somewhere else">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <PathIcon Data="{StaticResource IcExport}" Width="13" Height="13" />
+                <TextBlock svc:Tr.Text="Export" />
+              </StackPanel>
+            </Button>
+          </Grid>
+        </Border>
+      </Panel>
     </Panel>
 
     <!-- ======================= EDIT DETAILS ======================= -->
@@ -1725,6 +1786,7 @@
             </Button>
           </StackPanel>
           <ScrollViewer VerticalScrollBarVisibility="Auto">
+           <StackPanel>
             <StackPanel x:Name="RecapContent" Spacing="18" Margin="24,8,24,4">
               <!-- only drawn into the shared picture -->
               <StackPanel x:Name="RecapImageHeader" Spacing="3" IsVisible="False" Margin="0,8,0,0">
@@ -1858,8 +1920,120 @@
                 </StackPanel>
               </Grid>
             </StackPanel>
+            <!-- Wrapped: outside RecapContent so it stays out of "Save as picture" -->
+            <Border x:Name="RecapWrapped" Margin="24,18,24,4" Padding="16,14" CornerRadius="12" Background="{DynamicResource Bg2}"
+                    DataContext="{Binding #Root.DataContext}" x:DataType="vm:MainViewModel" IsVisible="{Binding ShowWrapped}">
+              <StackPanel Spacing="10">
+                <Grid ColumnDefinitions="Auto,*">
+                  <PathIcon Data="{StaticResource IcFilm}" Width="16" Height="16" Margin="0,2,10,0" VerticalAlignment="Top" Foreground="{DynamicResource Accent}" />
+                  <StackPanel Grid.Column="1" Spacing="3">
+                    <TextBlock Text="{Binding WrappedTitle}" FontSize="16" FontWeight="Bold" />
+                    <TextBlock Classes="dim" FontSize="12" TextWrapping="Wrap" svc:Tr.Text="A video of your year: your stats, then your best moments cut to the beat of your own songs. Made on this computer." />
+                    <TextBlock Classes="dim" FontSize="12" TextWrapping="Wrap" Text="{Binding WrappedPlanText}" />
+                  </StackPanel>
+                </Grid>
+                <ItemsControl ItemsSource="{Binding WrappedSongs}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:WrappedSongRow">
+                      <Grid ColumnDefinitions="*,Auto" Margin="0,2">
+                        <StackPanel Spacing="1" VerticalAlignment="Center">
+                          <TextBlock Text="{Binding Name}" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                          <TextBlock Classes="dim" Text="{Binding Detail}" FontSize="11" TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                        <Button Grid.Column="1" Classes="ghost" Padding="6" svc:Tr.Tip="Remove this song"
+                                Command="{Binding #Root.((vm:MainViewModel)DataContext).RemoveWrappedSongCommand}" CommandParameter="{Binding}">
+                          <PathIcon Data="{StaticResource IcClose}" Width="10" Height="10" />
+                        </Button>
+                      </Grid>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock Classes="dim" FontSize="11" Foreground="{DynamicResource Highlight}" Text="{Binding WrappedStatus}" TextWrapping="Wrap" IsVisible="{Binding IsMakingWrapped}" />
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <Button x:Name="WrappedAddSongs" Classes="soft" Command="{Binding AddWrappedSongsCommand}" svc:Tr.Tip="Pick MP3s (or other music) for the video">
+                    <StackPanel Orientation="Horizontal" Spacing="7">
+                      <PathIcon Data="{StaticResource IcAdd}" Width="12" Height="12" />
+                      <TextBlock svc:Tr.Text="Add songs" />
+                    </StackPanel>
+                  </Button>
+                  <Button x:Name="WrappedWatch" Classes="soft" Command="{Binding WatchWrappedCommand}" IsVisible="{Binding HasWrappedVideo}">
+                    <StackPanel Orientation="Horizontal" Spacing="7">
+                      <PathIcon Data="{StaticResource IcPlay}" Width="12" Height="12" />
+                      <TextBlock svc:Tr.Text="Watch" />
+                    </StackPanel>
+                  </Button>
+                  <Button x:Name="WrappedMake" Classes="accent" Command="{Binding MakeWrappedCommand}" IsEnabled="{Binding !IsMakingWrapped}">
+                    <TextBlock Text="{Binding MakeWrappedLabel}" FontWeight="SemiBold" />
+                  </Button>
+                </StackPanel>
+              </StackPanel>
+            </Border>
+           </StackPanel>
           </ScrollViewer>
         </DockPanel>
+      </Border>
+    </Border>
+
+    <!-- ======================= THE PRESENT: YOUR WRAPPED ======================= -->
+    <Border x:Name="GiftScrim" Background="{DynamicResource Scrim}" IsVisible="{Binding IsWrappedGiftOpen}">
+      <Border Width="540" MaxHeight="720" Margin="0,40" VerticalAlignment="Center" HorizontalAlignment="Center" Background="{DynamicResource Bg1}"
+              BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="16" BoxShadow="{DynamicResource DialogShadow}">
+        <ScrollViewer>
+          <StackPanel Margin="28,24,28,22" Spacing="14">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+              <c:BlobMascot Width="58" Height="52" VerticalAlignment="Bottom" CheerTick="{Binding MascotCheer}" Still="{Binding ReducedMotion}" />
+              <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center" Spacing="2">
+                <TextBlock Text="{Binding GiftTitle}" FontSize="21" FontWeight="Bold" />
+                <TextBlock Classes="dim" FontSize="12" svc:Tr.Text="Your year in clips, as a film." />
+              </StackPanel>
+              <Button Grid.Column="2" Classes="ghost" Padding="6" VerticalAlignment="Top" svc:Tr.Tip="Close (Esc)" Command="{Binding CloseWrappedGiftCommand}">
+                <PathIcon Data="{StaticResource IcClose}" Width="13" Height="13" />
+              </Button>
+            </Grid>
+            <TextBlock FontSize="13" TextWrapping="Wrap" LineHeight="20"
+                       svc:Tr.Text="A 5 to 10 minute video of your year, made only from your clips: your games, your people, your biggest night and the best laughs, with a card for each friend and your best moments cut to the beat of your own music." />
+            <StackPanel Spacing="6">
+              <TextBlock FontSize="12" FontWeight="Bold" svc:Tr.Text="How it works" />
+              <TextBlock Classes="dim" FontSize="12" TextWrapping="Wrap" svc:Tr.Text="1. Add two or three songs you love (MP3 or similar). Without songs, the clips keep their own sound." />
+              <TextBlock Classes="dim" FontSize="12" TextWrapping="Wrap" svc:Tr.Text="2. Savefile makes it on this computer, in the background. Nothing leaves it. If you quit, it carries on next time." />
+              <TextBlock Classes="dim" FontSize="12" TextWrapping="Wrap" svc:Tr.Text="3. When it's ready, the present next to the blob holds it. The first time, it plays full screen." />
+            </StackPanel>
+            <Border Padding="14,12" CornerRadius="12" Background="{DynamicResource Bg2}">
+              <StackPanel Spacing="8">
+                <TextBlock Classes="dim" FontSize="12" TextWrapping="Wrap" Text="{Binding WrappedPlanText}" />
+                <ItemsControl ItemsSource="{Binding WrappedSongs}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:WrappedSongRow">
+                      <Grid ColumnDefinitions="*,Auto" Margin="0,2">
+                        <StackPanel Spacing="1" VerticalAlignment="Center">
+                          <TextBlock Text="{Binding Name}" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                          <TextBlock Classes="dim" Text="{Binding Detail}" FontSize="11" TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                        <Button Grid.Column="1" Classes="ghost" Padding="6" svc:Tr.Tip="Remove this song"
+                                Command="{Binding #Root.((vm:MainViewModel)DataContext).RemoveWrappedSongCommand}" CommandParameter="{Binding}">
+                          <PathIcon Data="{StaticResource IcClose}" Width="10" Height="10" />
+                        </Button>
+                      </Grid>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <Button x:Name="GiftAddSongs" Classes="soft" HorizontalAlignment="Left" Command="{Binding AddWrappedSongsCommand}" svc:Tr.Tip="Pick MP3s (or other music) for the video">
+                  <StackPanel Orientation="Horizontal" Spacing="7">
+                    <PathIcon Data="{StaticResource IcAdd}" Width="12" Height="12" />
+                    <TextBlock svc:Tr.Text="Add songs" />
+                  </StackPanel>
+                </Button>
+              </StackPanel>
+            </Border>
+            <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="{Binding WrappedCostText}" />
+            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+              <Button Classes="ghost" svc:Tr.Content="Not now" Command="{Binding CloseWrappedGiftCommand}" />
+              <Button x:Name="GiftMake" Classes="accent" Command="{Binding MakeWrappedFromGiftCommand}" IsEnabled="{Binding !IsMakingWrapped}">
+                <TextBlock svc:Tr.Text="Make my Wrapped" FontWeight="SemiBold" />
+              </Button>
+            </StackPanel>
+          </StackPanel>
+        </ScrollViewer>
       </Border>
     </Border>
 
@@ -2271,6 +2445,20 @@
                       </StackPanel>
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureDragOut}" />
                     </Grid>
+                    <Grid Classes="row" ColumnDefinitions="*,Auto" Margin="18,0,0,0" IsVisible="{Binding FeatureDragOut}">
+                      <StackPanel Spacing="2">
+                        <TextBlock svc:Tr.Text="Make it Discord-sized" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="A video too big for Discord becomes a copy that fits (10 MB) while you hold it. Smaller videos go as they are. Off: always drag the original file." />
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureDragDiscord}" />
+                    </Grid>
+                    <Grid Classes="row" ColumnDefinitions="*,Auto" Margin="18,0,0,0" IsVisible="{Binding FeatureDragOut}" IsEnabled="{Binding FeatureDragDiscord}">
+                      <StackPanel Spacing="2">
+                        <TextBlock svc:Tr.Text="I have Discord Nitro" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Copies can be up to 50 MB, so they keep more quality." />
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureDiscordNitro}" />
+                    </Grid>
                     <Border Classes="sep" />
                     <Grid Classes="row" ColumnDefinitions="*,Auto">
                       <StackPanel Spacing="2">
@@ -2331,6 +2519,18 @@
                       </StackPanel>
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureRecap}" />
                     </Grid>
+                    <Border Classes="sep" IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).WrappedReadyUi}" />
+                    <Grid Classes="row" ColumnDefinitions="*,Auto" IsEnabled="{Binding FeatureRecap}" IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).WrappedReadyUi}">
+                      <StackPanel Spacing="2">
+                        <TextBlock svc:Tr.Text="Wrapped" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="In December, Savefile makes a video of your year: your stats, then your best moments cut to the beat of songs you pick in Year in clips. The blob tells you when it's ready." />
+                        <Grid ColumnDefinitions="Auto,*" Margin="0,4,0,0">
+                          <PathIcon Data="{StaticResource IcSpeed}" Width="11" Height="11" Margin="0,2,6,0" VerticalAlignment="Top" Foreground="{DynamicResource TextDim}" />
+                          <TextBlock Grid.Column="1" Classes="dim cost" FontSize="11" TextWrapping="Wrap" Text="{Binding #Root.((vm:MainViewModel)DataContext).WrappedCostText}" />
+                        </Grid>
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureWrapped}" />
+                    </Grid>
                     <Border Classes="sep" />
                     <Grid Classes="row" ColumnDefinitions="*,Auto">
                       <StackPanel Spacing="2">
@@ -2375,6 +2575,30 @@
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureHighlights}" />
                     </Grid>
                     <Border Classes="sep" />
+                    <Grid Classes="row" ColumnDefinitions="*,Auto" IsEnabled="{Binding FeatureHighlights}">
+                      <StackPanel Spacing="2">
+                        <TextBlock svc:Tr.Text="Smart thumbnails" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Thumbnails from a lively frame near the best moment, never a black screen or a loading screen. A frame you picked yourself stays." />
+                        <Grid ColumnDefinitions="Auto,*" Margin="0,4,0,0">
+                          <PathIcon Data="{StaticResource IcSpeed}" Width="11" Height="11" Margin="0,2,6,0" VerticalAlignment="Top" Foreground="{DynamicResource TextDim}" />
+                          <TextBlock Grid.Column="1" Classes="dim cost" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Costs next to nothing: Best moments already looked; this grabs one small frame per video." />
+                        </Grid>
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureSmartThumbs}" />
+                    </Grid>
+                    <Border Classes="sep" />
+                    <Grid Classes="row" ColumnDefinitions="*,Auto" IsEnabled="{Binding FeatureHighlights}">
+                      <StackPanel Spacing="2">
+                        <TextBlock svc:Tr.Text="Trim suggestions" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="When a video starts or ends with a blank screen and no sound (a loading screen, a fade, the menu before the round), the editor offers to trim it. Nothing is cut until you say so." />
+                        <Grid ColumnDefinitions="Auto,*" Margin="0,4,0,0">
+                          <PathIcon Data="{StaticResource IcSpeed}" Width="11" Height="11" Margin="0,2,6,0" VerticalAlignment="Top" Foreground="{DynamicResource TextDim}" />
+                          <TextBlock Grid.Column="1" Classes="dim cost" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Costs nothing extra: it uses what Best moments already found." />
+                        </Grid>
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureTrimSuggestions}" />
+                    </Grid>
+                    <Border Classes="sep" />
                     <Grid Classes="row" ColumnDefinitions="*,Auto">
                       <StackPanel Spacing="2">
                         <TextBlock svc:Tr.Text="Smart titles" />
@@ -2407,6 +2631,12 @@
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureSpeech}" />
                     </Grid>
                     <StackPanel Spacing="8" Margin="14,0,14,14" IsVisible="{Binding FeatureSpeech}">
+                      <Grid ColumnDefinitions="Auto,*">
+                        <TextBlock svc:Tr.Text="Model" FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0" />
+                        <ComboBox Grid.Column="1" HorizontalAlignment="Stretch" ItemsSource="{Binding #Root.((vm:MainViewModel)DataContext).SpeechModelOptions}"
+                                  SelectedIndex="{Binding #Root.((vm:MainViewModel)DataContext).SpeechModelIndex}"
+                                  svc:Tr.Tip="Both understand Swedish and English mixed together; the Swedish one is much more accurate in Swedish." />
+                      </Grid>
                       <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="{Binding #Root.((vm:MainViewModel)DataContext).SpeechModelText}"
                                  Classes.err="{Binding #Root.((vm:MainViewModel)DataContext).SpeechModelError, Converter={x:Static ObjectConverters.IsNotNull}}" />
                       <ProgressBar Minimum="0" Maximum="1" Value="{Binding #Root.((vm:MainViewModel)DataContext).SpeechDownloadProgress}" Height="4" MinHeight="4" CornerRadius="2"
@@ -2454,6 +2684,37 @@
                         <Button Classes="soft" svc:Tr.Content="Cancel" Command="{Binding #Root.((vm:MainViewModel)DataContext).CancelVisualDownloadCommand}" IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).IsDownloadingVisual}" />
                         <Button Classes="soft" svc:Tr.Content="Remove the model" Command="{Binding #Root.((vm:MainViewModel)DataContext).RemoveVisualModelCommand}" IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).VisualModelReady}"
                                 svc:Tr.Tip="Frees the space. Videos already looked at stay searchable once it's back." />
+                      </StackPanel>
+                    </StackPanel>
+                    <Border Classes="sep" />
+                    <Grid Classes="row" ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="2">
+                        <TextBlock svc:Tr.Text="Laughter and hype" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Savefile listens for laughing, cheering and shouting, on this computer and only when it's not busy. The videos where everyone lost it come first in Worth a rewatch, the blob tells you about them, and search finds them with &quot;laughing&quot; or &quot;hype&quot;." />
+                        <Grid ColumnDefinitions="Auto,*" Margin="0,4,0,0">
+                          <PathIcon Data="{StaticResource IcSpeed}" Width="11" Height="11" Margin="0,2,6,0" VerticalAlignment="Top" Foreground="{DynamicResource TextDim}" />
+                          <TextBlock Grid.Column="1" Classes="dim cost" FontSize="11" TextWrapping="Wrap" Text="{Binding #Root.((vm:MainViewModel)DataContext).SoundCostText}" />
+                        </Grid>
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureLaughs}" />
+                    </Grid>
+                    <StackPanel Spacing="8" Margin="14,0,14,14" IsVisible="{Binding FeatureLaughs}">
+                      <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="{Binding #Root.((vm:MainViewModel)DataContext).SoundModelText}"
+                                 Classes.err="{Binding #Root.((vm:MainViewModel)DataContext).SoundModelError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                      <ProgressBar Minimum="0" Maximum="1" Value="{Binding #Root.((vm:MainViewModel)DataContext).SoundDownloadProgress}" Height="4" MinHeight="4" CornerRadius="2"
+                                   IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).IsDownloadingSound}" />
+                      <TextBlock Classes="dim" FontSize="11" Foreground="{DynamicResource Highlight}" Text="{Binding #Root.((vm:MainViewModel)DataContext).SoundActivity}"
+                                 IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).SoundActivity, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                      <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Classes="accent" Command="{Binding #Root.((vm:MainViewModel)DataContext).DownloadSoundModelCommand}" IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).CanDownloadSound}">
+                          <StackPanel Orientation="Horizontal" Spacing="6">
+                            <PathIcon Data="{StaticResource IcImport}" Width="12" Height="12" Foreground="{DynamicResource OnAccent}" />
+                            <TextBlock svc:Tr.Text="Download the sound model" />
+                          </StackPanel>
+                        </Button>
+                        <Button Classes="soft" svc:Tr.Content="Cancel" Command="{Binding #Root.((vm:MainViewModel)DataContext).CancelSoundDownloadCommand}" IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).IsDownloadingSound}" />
+                        <Button Classes="soft" svc:Tr.Content="Remove the model" Command="{Binding #Root.((vm:MainViewModel)DataContext).RemoveSoundModelCommand}" IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).SoundModelReady}"
+                                svc:Tr.Tip="Frees the space. What was already heard stays." />
                       </StackPanel>
                     </StackPanel>
                   </StackPanel>
@@ -3100,6 +3361,20 @@
 
               <!-- trim -->
               <StackPanel Spacing="12" IsVisible="{Binding IsTrimPage}">
+                <!-- auto-trim suggestion: blank picture and no sound at the start or end -->
+                <Border Classes="fxcard" IsVisible="{Binding ShowTrimSuggestion}" Background="{DynamicResource AccentSoft}">
+                  <StackPanel Spacing="8">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                      <PathIcon Data="{StaticResource IcSparkle}" Width="12" Height="12" Foreground="{DynamicResource Highlight}" />
+                      <TextBlock Classes="label" svc:Tr.Text="DEAD AIR" Foreground="{DynamicResource Highlight}" />
+                    </StackPanel>
+                    <TextBlock Text="{Binding TrimSuggestionText}" FontSize="12" TextWrapping="Wrap" />
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                      <Button Classes="accent" Command="{Binding ApplyTrimSuggestionCommand}" svc:Tr.Content="Trim it" />
+                      <Button Classes="soft" Command="{Binding DismissTrimSuggestionCommand}" svc:Tr.Content="Keep it" />
+                    </StackPanel>
+                  </StackPanel>
+                </Border>
                 <Border Classes="fxcard">
                   <StackPanel Spacing="8">
                     <TextBlock Classes="label" svc:Tr.Text="SELECTION" />
@@ -3495,9 +3770,16 @@
                         </StackPanel>
                         <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding Duck}" />
                       </Grid>
+                      <Grid ColumnDefinitions="*,Auto">
+                        <StackPanel Spacing="2">
+                          <TextBlock svc:Tr.Text="Clean up my voice" FontSize="12" />
+                          <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Takes out fan, keyboard and room noise, cuts low rumble and evens out how loud you are. Laughs and shouts stay. Done on this computer while exporting." />
+                        </StackPanel>
+                        <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding CleanVoice}" />
+                      </Grid>
                     </StackPanel>
                     <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" IsVisible="{Binding !HasVoiceTrackChoice}"
-                               svc:Tr.Text="Voice boost and lowering the game need the microphone on its own track: Settings, Clipping, two audio devices with Separate tracks." />
+                               svc:Tr.Text="Voice boost, cleaning up your voice and lowering the game need the microphone on its own track: Settings, Clipping, two audio devices with Separate tracks." />
                   </StackPanel>
                 </Border>
               </StackPanel>

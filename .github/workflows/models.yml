@@ -27,6 +27,7 @@ jobs:
             echo "$sha  $file" | sha256sum -c -
           done <<'LIST'
           ggml-base-q5_1.bin 422f1ae452ade6f30a004d7e5c6a43195e4433bc370bf23fac9cc591f01a8898 https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base-q5_1.bin
+          kb-whisper-small-q5_0.bin 6768836a51abc902e420c613153e6d418c90ea2774e913274d02ab23170225b7 https://huggingface.co/KBLab/kb-whisper-small/resolve/main/ggml-model-q5_0.bin
           clip-vit-b32-vision-q8.onnx 583fd1110a514667812fee7d684952aaf82a99b959760c8d7dca7e0ab9839299 https://huggingface.co/Xenova/clip-vit-base-patch32/resolve/main/onnx/vision_model_quantized.onnx
           clip-vit-b32-text-q8.onnx 73baab855d406190da9faa498cfedf65f15cf309f4cc7385b7b032e6d08e5c3a https://huggingface.co/Xenova/clip-vit-base-patch32/resolve/main/onnx/text_model_quantized.onnx
           clip-vocab.json 5047b556ce86ccaf6aa22b3ffccfc52d391ea4accdab9c2f2407da5b742d4363 https://huggingface.co/Xenova/clip-vit-base-patch32/resolve/main/vocab.json
@@ -45,6 +46,12 @@ jobs:
           win-x64/native/onnxruntime.dll onnxruntime-1.23.2-win-x64.dll dec964ab1ee36cc9b0ae247d13b376627992fc57dec0454354017ab8fd84f1ea
           LIST
           rm -rf ort ort.nupkg
+          # YAMNet for laughter and hype (the MIT PyTorch port, exported to ONNX by Qualcomm AI Hub).
+          curl -fsSL --retry 3 -o yamnet.zip https://qaihub-public-assets.s3.us-west-2.amazonaws.com/qai-hub-models/models/yamnet/releases/v0.66.0/yamnet-onnx-float.zip
+          unzip -q -j yamnet.zip 'yamnet-onnx-float/yamnet.onnx' 'yamnet-onnx-float/yamnet.data'
+          rm yamnet.zip
+          echo "9261fbe1f196c8bb695933845af28df0a155845c9ec5e37ec96295e82c96f096  yamnet.onnx" | sha256sum -c -
+          echo "0b4de0b14bf2b528d51e3cd84e2d3e2ae826b942fbec6001c654605f1f2ceb60  yamnet.data" | sha256sum -c -
           ls -la
       - name: Publish
         run: |
@@ -55,7 +62,7 @@ jobs:
           if ! gh release view models --repo "$PUBLIC_REPO" >/dev/null 2>&1; then
             gh release create models --repo "$PUBLIC_REPO" --prerelease --latest=false \
               --title "Optional models" \
-              --notes "Models for Savefile's optional smart features (voice search and captions, visual search). Savefile downloads them itself when you switch a feature on in Settings and checks each one's SHA-256. Whisper (MIT, ggerganov/whisper.cpp), CLIP ViT-B/32 (MIT, OpenAI; ONNX by Xenova), ONNX Runtime 1.23.2 (MIT, Microsoft)."
+              --notes "Models for Savefile's optional smart features (voice search and captions, visual search). Savefile downloads them itself when you switch a feature on in Settings and checks each one's SHA-256. Whisper (MIT, ggerganov/whisper.cpp), CLIP ViT-B/32 (MIT, OpenAI; ONNX by Xenova), YAMNet (MIT port by w-hc; ONNX by Qualcomm AI Hub), ONNX Runtime 1.23.2 (MIT, Microsoft)."
           fi
           # Upload only what isn't there yet (the files never change: a new version gets a new name).
           have=$(gh release view models --repo "$PUBLIC_REPO" --json assets -q '.assets[].name')

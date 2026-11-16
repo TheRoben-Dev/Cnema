@@ -184,7 +184,7 @@ public static class RenderService
                             g.Add($"{(n > 1 ? $"[as{t}_{i}]" : $"[0:a:{t}]")}atrim=start={S(p.Start)}:end={S(p.End)},asetpts=PTS-STARTPTS{Tempo(p.Rate)}[ap{t}_{i}]");
                         }
                         var cat = n > 1 ? string.Concat(Enumerable.Range(0, n).Select(i => $"[ap{t}_{i}]")) + $"concat=n={n}:v=0:a=1," : $"[ap{t}_0]";
-                        var boost = voiceTools && t == voice && fx.Audio.VoiceBoostDb != 0 ? $",volume={F(fx.Audio.VoiceBoostDb)}dB" : "";
+                        var boost = voiceTools && t == voice ? fx.Audio.VoiceChain() : "";
                         g.Add($"{cat}aformat=sample_rates=48000:channel_layouts=stereo{boost}[at{t}]");
                         processed[t] = $"[at{t}]";
                     }
@@ -465,7 +465,7 @@ public static class RenderService
         var g = new List<string>();
         foreach (var t in tracks)
         {
-            var boost = audio.HasVoiceTools && t == audio.VoiceTrack && audio.VoiceBoostDb != 0 ? $",volume={F(audio.VoiceBoostDb)}dB" : "";
+            var boost = audio.HasVoiceTools && t == audio.VoiceTrack ? audio.VoiceChain() : "";
             g.Add($"[0:a:{t}]aformat=sample_rates=48000:channel_layouts=stereo{boost}[m{t}]");
         }
         var mix = tracks.Count > 1

@@ -2,6 +2,18 @@
 
 What changed in each Savefile (formerly Cnema) release. The app shows the entries you have not seen yet after it updates.
 
+## 0.34.0
+- Swedish speech: pick Better Swedish under Settings, Features, Voice search and captions to use KB-Whisper from the National Library of Sweden (175 MB download). It's far more accurate in Swedish and still handles English mixed in. Search also ignores accents now, so "rakna" finds "räkna".
+- Drag a video into Discord and it fits: a video too big for Discord's 10 MB limit becomes a copy that fits while you hold it (50 MB if you switch on I have Discord Nitro). Smaller videos go as they are, and you can switch it off to always drag the original.
+- Savefile på svenska is complete again: every screen, setting and message added since the first translation now has Swedish too, around 520 new lines.
+- A calmer look: Dark is now neutral dark grey and Light is white and light grey. Savefile purple is saved for what matters (buttons, switches, selection, progress, the blob), so it pops.
+- Smart features now actually get to your library: the passes take turns per video instead of waiting for each other to finish everything, so none of them sits at "0 videos" any more. Settings says why one is waiting ("Paused while you play"), a model that won't start says so instead of hanging, and Help, Diagnostics lists what each pass has done.
+- The blob is softer: it moves like a drop of liquid now (it wobbles, squashes when it lands and splashes a little), and its smiling eyes have round tips.
+- Laughter and hype: Savefile can listen for laughing, cheering and shouting, on this computer and only when it isn't busy. The videos where everyone lost it come first in Worth a rewatch, the blob tells you about them ("You and Sam couldn't stop laughing on Friday"), and searching "laughing" or "hype" finds them. It needs a small sound model, a one-time download of 15 MB, and costs about a second per minute of video. Settings, Features, Smart, Laughter and hype.
+- Smart thumbnails: thumbnails now come from a lively frame near the best moment, never a black screen or a loading screen. A frame you picked yourself stays. Settings, Features, Smart thumbnails.
+- Trim suggestions: when a video starts or ends with a blank screen and no sound (a loading screen, a fade, the menu before the round), the editor's Trim page offers to cut it. Nothing is cut until you say so.
+- Clean up my voice: a new switch under the editor's Sound removes background hum, fans and keyboard noise from the voice track of an export and evens out its level. It runs inside the export, nothing to download.
+
 ## 0.33.0
 - Meet the blob: a little purple blob now presents Worth a rewatch, with something to say about your clips. "Your Valorant clip from last night is a keeper", "3 new moments with Alex this week", "A year ago today you were playing ARK with Jo": every line comes from your own library (friends, games, dates, best moments, On this day), never made up. It changes every few seconds; click the blob for the next one. Turn it off under Settings, Features, The blob. With Reduced motion it holds still.
 - A loading screen: the logo, the name and the blob while Savefile starts, saying what it's getting ready, including waking up the smart models you switched on so the first search answers at once. It stays at most 8 seconds (whatever is still loading carries on in the background), a click skips it, and it never shows when Savefile starts at login. Settings, Features, Loading screen.

@@ -13,38 +13,109 @@ namespace Cnema.Services;
 /// </summary>
 public static partial class SmartAnalyzer
 {
-    public const int Version = 1;
+    /// <summary>2: also a thumbnail frame and the dead air at the start and end (v0.34).</summary>
+    public const int Version = 2;
 
     public static async Task<SmartInfo?> AnalyzeAsync(string path, long durationMs, CancellationToken ct)
     {
         if (ToolLocator.Ffmpeg is not { } ffmpeg || !File.Exists(path)) return null;
         var levels = await Task.Run(() => HighlightService.ReadLevels(ffmpeg, path, ct, background: true), ct);
-        var scenes = await SceneScoresAsync(ffmpeg, path, ct);
-        return Score(levels, scenes, durationMs);
+        var frames = await FramesAsync(ffmpeg, path, ct);
+        var info = Score(levels, frames.Select(f => f.Scene).ToList(), durationMs);
+        Look(info, levels, frames, durationMs);
+        return info;
     }
 
-    /// <summary>How different each frame (two a second) is from the one before, 0 to 1.</summary>
-    private static async Task<List<double>> SceneScoresAsync(string ffmpeg, string path, CancellationToken ct)
+    /// <summary>One picture sample, two a second: how much it changed, how bright it is, how much contrast it has.</summary>
+    internal readonly record struct Frame(double Scene, double Brightness, double Spread);
+
+    /// <summary>
+    /// Two samples a second (taken from keyframes), 64 pixels wide: how different each is from the one before
+    /// (0 to 1), its average brightness and the spread between its dark and light parts (0 to 255).
+    /// </summary>
+    private static async Task<List<Frame>> FramesAsync(string ffmpeg, string path, CancellationToken ct)
     {
-        var scores = new List<double>();
+        var frames = new List<Frame>();
         try
         {
             var r = await ProcessRunner.RunAsync(ffmpeg, new[]
             {
                 "-hide_banner", "-nostats", "-v", "info", "-threads", "1", "-skip_frame", "nokey", "-an", "-sn", "-dn", "-i", path,
-                "-vf", "fps=2,scale=64:-2,select='gte(scene\\,0)',metadata=print:key=lavfi.scene_score",
+                "-vf", "fps=2,scale=64:-2,signalstats,select='gte(scene\\,0)',metadata=print",
                 "-f", "null", "-",
             }, ct: ct, background: true);
-            foreach (Match m in SceneLine().Matches(r.StdErr))
-                if (double.TryParse(m.Groups[1].Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var v)) scores.Add(v);
+            double low = 0, avg = 0, high = 0;
+            foreach (Match m in StatLine().Matches(r.StdErr))
+            {
+                if (!double.TryParse(m.Groups[2].Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var v)) continue;
+                switch (m.Groups[1].Value)
+                {
+                    case "signalstats.YLOW": low = v; break;
+                    case "signalstats.YAVG": avg = v; break;
+                    case "signalstats.YHIGH": high = v; break;
+                    case "scene_score": frames.Add(new Frame(v, avg, high - low)); break; // the last key printed for a frame
+                }
+            }
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex) { Log.Warn($"Scene scores for {Path.GetFileName(path)}: {ex.Message}"); }
-        return scores;
+        catch (Exception ex) { Log.Warn($"Picture pass for {Path.GetFileName(path)}: {ex.Message}"); }
+        return frames;
     }
 
-    [GeneratedRegex(@"lavfi\.scene_score=([0-9.eE+-]+)")]
-    private static partial Regex SceneLine();
+    [GeneratedRegex(@"lavfi\.(scene_score|signalstats\.Y(?:LOW|AVG|HIGH))=([0-9.eE+-]+)")]
+    private static partial Regex StatLine();
+
+    /// <summary>A sample shows nothing: black (a fade, a loading screen) or one flat colour.</summary>
+    internal static bool Blank(Frame f) => f.Brightness < 30 || f.Spread < 10;
+
+    /// <summary>
+    /// Picks a thumbnail frame (lively, not black, not a flat loading screen, near the best moment) and the
+    /// dead air at the ends: blank or frozen picture with no sound worth hearing, at least 2 seconds of it.
+    /// </summary>
+    internal static void Look(SmartInfo info, List<double> levels, List<Frame> frames, long durationMs)
+    {
+        if (frames.Count < 4) return;
+        const double step = 500; // ms between samples
+        var lengthMs = durationMs > 0 ? durationMs : frames.Count * (long)step;
+
+        // Thumbnail: the best-looking sample, preferring the best moment and the middle over the ends.
+        var best = -1;
+        double bestScore = double.MinValue;
+        for (var i = 0; i < frames.Count; i++)
+        {
+            var f = frames[i];
+            if (Blank(f)) continue;
+            var t = i * step;
+            var score = Math.Min(f.Spread, 120) / 120.0                               // contrast: something to see
+                        - Math.Abs(f.Brightness - 110) / 255.0                           // neither murky nor washed out
+                        - (t < lengthMs * 0.05 || t > lengthMs * 0.95 ? 0.4 : 0)        // not the very start or end
+                        - (info.BestMs >= 0 ? Math.Min(1, Math.Abs(t - info.BestMs) / 15000.0) * 0.5 : 0);
+            if (score > bestScore) { bestScore = score; best = i; }
+        }
+        if (best >= 0) info.ThumbMs = Math.Max(1, (long)(best * step));
+
+        // Dead air. Sound counts when it's within 18 dB of the clip's loud parts.
+        var loud = levels.Count > 0 ? levels.OrderBy(x => x).ElementAt((int)(levels.Count * 0.9)) : -100;
+        bool Heard(double ms)
+        {
+            if (levels.Count == 0) return false;
+            var k = (int)(ms / 1000 / HighlightService.WindowSeconds);
+            return k >= 0 && k < levels.Count && levels[k] > Math.Max(-50, loud - 18);
+        }
+        // Only a blank picture counts: samples come from keyframes, so "nothing moved" can't be told reliably.
+        bool Dead(int i) => Blank(frames[i]) && !Heard(i * step);
+
+        var start = 0;
+        while (start < frames.Count && Dead(start)) start++;
+        var end = frames.Count;
+        while (end > start && Dead(end - 1)) end--;
+        var startMs = (long)(start * step);
+        var endMs = (long)(end * step);
+        // Worth suggesting only if it saves 2 seconds or more and leaves at least 3 seconds.
+        if (startMs >= 2000 && endMs - startMs >= 3000) info.TrimStartMs = Math.Max(0, startMs - 250);
+        // Samples stop at the last keyframe, which can be a second or two before the end: only blank samples count.
+        if ((frames.Count - end) * step >= 2000 && endMs - startMs >= 3000) info.TrimEndMs = Math.Min(lengthMs, endMs + 250);
+    }
 
     /// <summary>
     /// Excitement mixes how far the loudest moments rise above the usual level, how many sudden spikes

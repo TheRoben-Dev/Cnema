@@ -32,23 +32,13 @@ public sealed class VisualService : IDisposable
         _tokenizer = tokenizer;
     }
 
-    private static bool _resolverSet;
-
     /// <summary>Loads the models, or says why it can't.</summary>
     public static VisualService Load()
     {
         try
         {
-            if (!_resolverSet)
-            {
-                // ONNX Runtime's library comes with the download, not with the app.
-                var lib = ModelStore.PathOf(ModelStore.OnnxRuntime);
-                NativeLibrary.SetDllImportResolver(typeof(InferenceSession).Assembly,
-                    (name, _, _) => name.Contains("onnxruntime", StringComparison.OrdinalIgnoreCase) ? NativeLibrary.Load(lib) : IntPtr.Zero);
-                _resolverSet = true;
-            }
-            var threads = Math.Clamp(Environment.ProcessorCount / 2, 1, 4);
-            var opts = new SessionOptions { IntraOpNumThreads = threads, InterOpNumThreads = 1, ExecutionMode = ExecutionMode.ORT_SEQUENTIAL };
+            OrtNative.Ensure();
+            var opts = OrtNative.Options();
             var vision = new InferenceSession(ModelStore.PathOf(ModelStore.Visual[0]), opts);
             var text = new InferenceSession(ModelStore.PathOf(ModelStore.Visual[1]), opts);
             var tok = new ClipTokenizer(ModelStore.PathOf(ModelStore.Visual[2]), ModelStore.PathOf(ModelStore.Visual[3]));

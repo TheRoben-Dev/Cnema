@@ -35,10 +35,13 @@ public static class ThemeService
 {
     public const string DefaultId = "violet";
 
-    /// <summary>Savefile purple only (Roben, 2026-11-15); a saved id from an older scheme falls back to it.</summary>
+    /// <summary>
+    /// Neutral greys with Savefile purple as the accent only, for pop (Roben, 2026-11-16); a saved id from an
+    /// older scheme falls back to it.
+    /// </summary>
     public static IReadOnlyList<ColorScheme> Schemes { get; } = new[]
     {
-        new ColorScheme("violet", "Memory Card", 252, 0.30, "#8E6BFF", "#A78BFF", "#C2AEFF"),
+        new ColorScheme("violet", "Memory Card", 252, 0.0, "#8E6BFF", "#A78BFF", "#C2AEFF"),
     };
 
     /// <summary>"" follows the system, otherwise "dark" or "light".</summary>
@@ -67,11 +70,11 @@ public static class ThemeService
     {
         string N(double l, double satScale = 1) => Hsl(s.Hue, s.Tint * satScale, l);
         if (!light)
-            return new Palette(N(0.105), N(0.135), N(0.170), N(0.220), N(0.265, 0.9), N(0.965, 0.6), N(0.690, 0.55),
+            return new Palette(N(0.125), N(0.155), N(0.190), N(0.240), N(0.285, 0.9), N(0.955, 0.6), N(0.680, 0.55),
                 s.Accent, s.AccentHover, s.Highlight, s.OnAccent, false);
         var accent = Color.Parse(s.Accent);
         var deep = Mix(accent, Colors.Black, 0.10);
-        return new Palette(N(0.955, 1.4), N(0.985, 1.6), "#FFFFFF", N(0.915, 1.3), N(0.865, 1.0), N(0.135, 1.2), N(0.430, 0.7),
+        return new Palette(N(0.955, 1.4), "#FFFFFF", "#FFFFFF", N(0.915, 1.3), N(0.865, 1.0), N(0.135, 1.2), N(0.430, 0.7),
             Hex(deep), Hex(Mix(accent, Colors.Black, 0.22)), Hex(Mix(accent, Colors.Black, 0.30)),
             s.OnAccent, true);
     }
@@ -146,19 +149,19 @@ public static class ThemeService
         r["DangerHover"] = B("#FF5C87");
         // Behind dialogs: a deep violet shade over the app. Light keeps it lighter, so the page
         // still reads as "behind" without turning the whole window grey.
-        r["Scrim"] = new SolidColorBrush(C(s.Light ? "#2A2140" : "#050609"), s.Light ? 0.45 : 0.70);
-        r["ScrimStrong"] = new SolidColorBrush(C(s.Light ? "#2A2140" : "#050609"), s.Light ? 0.60 : 0.90);
-        r["ScrimLight"] = new SolidColorBrush(C(s.Light ? "#2A2140" : "#050609"), s.Light ? 0.35 : 0.60);
+        r["Scrim"] = new SolidColorBrush(C(s.Light ? "#202020" : "#000000"), s.Light ? 0.45 : 0.70);
+        r["ScrimStrong"] = new SolidColorBrush(C(s.Light ? "#202020" : "#000000"), s.Light ? 0.60 : 0.90);
+        r["ScrimLight"] = new SolidColorBrush(C(s.Light ? "#202020" : "#000000"), s.Light ? 0.35 : 0.60);
         r["CardGlow"] = new BoxShadows(new BoxShadow { Blur = 22, Color = Color.FromArgb((byte)(s.Light ? 0x40 : 0x4D), accent.R, accent.G, accent.B) });
-        r["DialogShadow"] = new BoxShadows(new BoxShadow { OffsetY = 18, Blur = 60, Color = s.Light ? Color.FromArgb(0x38, 0x2A, 0x21, 0x40) : Color.FromArgb(0x80, 0, 0, 0) });
+        r["DialogShadow"] = new BoxShadows(new BoxShadow { OffsetY = 18, Blur = 60, Color = s.Light ? Color.FromArgb(0x30, 0x20, 0x20, 0x20) : Color.FromArgb(0x80, 0, 0, 0) });
         // Keyboard focus: the same accent glow as a hovered card, a little tighter and stronger.
         r["FocusGlow"] = new BoxShadows(new BoxShadow { Blur = 14, Spread = 1, Color = Color.FromArgb(0x73, accent.R, accent.G, accent.B) });
         r["FocusRing"] = new SolidColorBrush(Mix(accent, s.Light ? Colors.Black : Colors.White, 0.12));
         // Badges and small buttons sit on thumbnails and video, so they stay dark in light mode too.
-        r["Overlay"] = s.Light ? new SolidColorBrush(C("#17141F"), 0.78) : new SolidColorBrush(C(s.Bg0), 0.88);
+        r["Overlay"] = s.Light ? new SolidColorBrush(C("#161616"), 0.78) : new SolidColorBrush(C(s.Bg0), 0.88);
         r["OnOverlay"] = B(s.Light ? "#FFFFFF" : s.Text);
         // Toasts and the speed badge float over the video, so they stay solid enough to read.
-        r["ToastBg"] = new SolidColorBrush(C(s.Light ? s.Bg1 : "#14151B"), s.Light ? 0.96 : 0.9);
+        r["ToastBg"] = new SolidColorBrush(C(s.Light ? s.Bg1 : "#181818"), s.Light ? 0.96 : 0.9);
 
         // One flat purple: no gradients anywhere (Roben, 2026-11-15).
         r["Brand"] = B(s.Accent);

@@ -52,6 +52,11 @@ public sealed partial class MainViewModel
                 double score = rng.NextDouble() * 2.5;            // a little luck, so it isn't always the same ten
                 if (v.Entry.Favorite) score += 3;
                 if (Features.Highlights && v.Entry.Smart is { } sm) score += sm.Excitement * 3; // a moment that stands out
+                if (Features.Laughs)
+                {
+                    score += Math.Min(2.5, LaughSeconds(v.Entry) / 2); // people laughing: the best kind of memory
+                    score += Math.Min(1, HypeSeconds(v.Entry) / 3);
+                }
                 if (v.Entry.People.Count > 0) score += 1.5;       // clips with friends in them
                 if (!string.IsNullOrWhiteSpace(v.Entry.Note)) score += 1;
                 if (age > 14) score += 1;                         // rediscovery, not what you saved an hour ago
@@ -188,7 +193,13 @@ public sealed partial class MainViewModel
 
     // ---------- year in clips ----------
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(IsShowingRecap))] private RecapViewModel? _recap;
-    partial void OnRecapChanged(RecapViewModel? oldValue, RecapViewModel? newValue) => oldValue?.Release();
+    partial void OnRecapChanged(RecapViewModel? oldValue, RecapViewModel? newValue)
+    {
+        oldValue?.Release();
+        if (newValue is not null)
+            newValue.Year.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(ChipGroup.Value)) RaiseWrapped(); };
+        RaiseWrapped();
+    }
     public bool IsShowingRecap => Recap is not null;
     public bool ShowRecap => Features.Recap;
     public bool ShowRecapMontage => Features.Montage;

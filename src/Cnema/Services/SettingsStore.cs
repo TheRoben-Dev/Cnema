@@ -16,6 +16,8 @@ public sealed class AppSettings
     public bool ShowFrames { get; set; }
     /// <summary>The player shows what's said as captions (voice search must be on).</summary>
     public bool SpokenCaptions { get; set; }
+    /// <summary>The speech model: "standard" or "swedish" (see ModelStore.SpeechChoice).</summary>
+    public string SpeechModel { get; set; } = "standard";
 
     /// <summary>Stay alive in the tray / menu bar when the window is closed.</summary>
     public bool KeepInBackground { get; set; }
@@ -56,6 +58,34 @@ public sealed class AppSettings
     public int RecapBannerClosed { get; set; }
     /// <summary>Backup to your own server (S3-compatible: Garage, SeaweedFS, MinIO…). The secret key is kept in the system keychain.</summary>
     public BackupSettings Backup { get; set; } = new();
+    /// <summary>The year's video: the person's songs and what has been made.</summary>
+    public WrappedSettings Wrapped { get; set; } = new();
+}
+
+public sealed class WrappedSettings
+{
+    /// <summary>Songs (MP3 and the like) the year's video is cut to, in the order they were added.</summary>
+    public List<string> Songs { get; set; } = new();
+    /// <summary>The video made for each year.</summary>
+    public Dictionary<int, string> Made { get; set; } = new();
+    /// <summary>The last year whose video was opened (the blob stops announcing it).</summary>
+    public int Watched { get; set; }
+    /// <summary>A video being made: kept so it carries on after Savefile quits mid-way.</summary>
+    public WrappedJob? Job { get; set; }
+    /// <summary>The year whose gift the blob has already offered on the home page.</summary>
+    public int GiftOffered { get; set; }
+}
+
+public sealed class WrappedJob
+{
+    public int Year { get; set; }
+    public string Output { get; set; } = "";
+    /// <summary>Where the plan and the finished parts are kept.</summary>
+    public string Work { get; set; } = "";
+    public int Width { get; set; }
+    public int Height { get; set; }
+    /// <summary>Set for a friend's cut (their clips only), null for the whole year.</summary>
+    public string? Friend { get; set; }
 }
 
 public sealed class BackupSettings
@@ -106,6 +136,8 @@ public sealed class EffectSettings
     public double VoiceBoostDb { get; set; }
     /// <summary>Lower the other tracks while the voice track is talking.</summary>
     public bool Duck { get; set; }
+    /// <summary>Clean up my voice: RNNoise and leveling on the voice track of an export.</summary>
+    public bool CleanVoice { get; set; }
 
     /// <summary>The editor's tool panel: open or folded away, and the page it shows.</summary>
     public bool ToolsOpen { get; set; } = true;
@@ -164,6 +196,10 @@ public sealed class FeatureSettings
     public bool Notes { get; set; } = true;
     /// <summary>Drag videos out of the library into other apps (Discord, a browser, Finder).</summary>
     public bool DragOut { get; set; } = true;
+    /// <summary>A dragged-out video bigger than Discord allows becomes a copy that fits (10 MB, or 50 MB with Nitro).</summary>
+    public bool DragDiscord { get; set; } = true;
+    /// <summary>The person has Discord Nitro: dragged-out copies may be up to 50 MB.</summary>
+    public bool DiscordNitro { get; set; }
     /// <summary>Bring in videos from OBS, NVIDIA, Xbox Game Bar and Steam.</summary>
     public bool Recorders { get; set; } = true;
     /// <summary>Zoom and pan with keyframes in the editor.</summary>
@@ -200,6 +236,14 @@ public sealed class FeatureSettings
     public bool Speech { get; set; }
     /// <summary>Visual search, similar videos and look-alike copies: a visual model (a one-time download) looks at a few frames of each video.</summary>
     public bool Visual { get; set; }
+    /// <summary>Thumbnails from a frame the best moments pass picked (not black, not a loading screen).</summary>
+    public bool SmartThumbs { get; set; } = true;
+    /// <summary>The editor offers to cut a blank, silent start or end.</summary>
+    public bool TrimSuggestions { get; set; } = true;
+    /// <summary>Laughter and hype: a small sound model (a one-time download) listens for laughing and cheering.</summary>
+    public bool Laughs { get; set; }
+    /// <summary>Wrapped: in December, a video of the year cut to the person's songs.</summary>
+    public bool Wrapped { get; set; } = true;
     /// <summary>The blob: Savefile's mascot presents Worth a rewatch with a line about your clips.</summary>
     public bool Mascot { get; set; } = true;
     /// <summary>The loading screen at start: logo, name, the blob and what's being got ready.</summary>

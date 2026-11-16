@@ -516,12 +516,13 @@ public sealed partial class SettingsViewModel : ObservableObject
             MiniPlayer = FeatureMiniPlayer, Chapters = FeatureChapters,
             Captions = FeatureCaptions, SpeedEffects = FeatureSpeedEffects, AudioTools = FeatureAudioTools,
             Branding = FeatureBranding, ExportQueue = FeatureExportQueue, KeepEdits = FeatureKeepEdits,
-            Notes = FeatureNotes, DragOut = FeatureDragOut, Recorders = FeatureRecorders,
+            Notes = FeatureNotes, DragOut = FeatureDragOut, DragDiscord = FeatureDragDiscord, DiscordNitro = FeatureDiscordNitro, Recorders = FeatureRecorders,
             ZoomPan = FeatureZoomPan, Blur = FeatureBlur, Music = FeatureMusic, Montage = FeatureMontage,
             RecoverSessions = FeatureRecoverSessions,
             Rewatch = FeatureRewatch, OnThisDay = FeatureOnThisDay, People = FeaturePeople, Milestones = FeatureMilestones, Recap = FeatureRecap, PlayAll = FeaturePlayAll, Backup = FeatureBackup, SeveralFolders = FeatureSeveralFolders,
             Highlights = FeatureHighlights, SmartTitles = FeatureSmartTitles, AutoTitles = FeatureAutoTitles && FeatureSmartTitles,
-            Speech = FeatureSpeech, Visual = FeatureVisual, Mascot = FeatureMascot, Splash = FeatureSplash,
+            Speech = FeatureSpeech, Visual = FeatureVisual, Mascot = FeatureMascot, Splash = FeatureSplash, Laughs = FeatureLaughs, Wrapped = FeatureWrapped,
+            SmartThumbs = FeatureSmartThumbs, TrimSuggestions = FeatureTrimSuggestions,
         };
         WriteEditing(settings);
         // Switching a module off switches off what it was doing, not only its buttons.

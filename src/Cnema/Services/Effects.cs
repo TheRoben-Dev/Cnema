@@ -77,10 +77,45 @@ public sealed record WatermarkSpec(string Path, Corner Corner, double Width, dou
 /// Loudness and voice tools. VoiceTrack is the index of the voice among the source's audio streams,
 /// or -1 when the file has no separate voice track.
 /// </summary>
-public sealed record AudioSpec(bool Normalize, int VoiceTrack, double VoiceBoostDb, bool Duck)
+public sealed record AudioSpec(bool Normalize, int VoiceTrack, double VoiceBoostDb, bool Duck, bool CleanVoice = false)
 {
     public static readonly AudioSpec None = new(false, -1, 0, false);
-    public bool HasVoiceTools => VoiceTrack >= 0 && (VoiceBoostDb != 0 || Duck);
+    public bool HasVoiceTools => VoiceTrack >= 0 && (VoiceBoostDb != 0 || Duck || CleanVoice);
+
+    /// <summary>
+    /// The voice track's own filters: noise removal (RNNoise, the model ships with Savefile; ffmpeg's FFT
+    /// denoiser if it's missing), rumble cut, gentle leveling, then the boost. Empty when there's nothing to do.
+    /// </summary>
+    public string VoiceChain()
+    {
+        var parts = new List<string>();
+        if (CleanVoice)
+        {
+            parts.Add("highpass=f=80");
+            parts.Add(VoiceModel is { } m ? $"arnndn=m='{FilterPath(m)}'" : "afftdn=nr=12:nf=-45:tn=1");
+            // A soft gate keeps what's left of the noise down in the pauses, so the leveling after it
+            // doesn't lift it back up. Measured on a voice over brown noise: speech +4 dB, noise −36 → −53 dB.
+            parts.Add("agate=threshold=0.01:ratio=2:release=250");
+            // Levels the voice: quiet words come up, shouts don't blow out. Slow, so it doesn't pump.
+            parts.Add("speechnorm=e=3:r=0.0005:l=1");
+        }
+        if (VoiceBoostDb != 0) parts.Add(FormattableString.Invariant($"volume={VoiceBoostDb:0.##}dB"));
+        return parts.Count == 0 ? "" : "," + string.Join(",", parts);
+    }
+
+    /// <summary>The RNNoise model beside the app (voice, keeps laughter and shouts), or null.</summary>
+    public static string? VoiceModel
+    {
+        get
+        {
+            var p = Path.Combine(AppContext.BaseDirectory, "rnnoise", "voice.rnnn");
+            return File.Exists(p) ? p : null;
+        }
+    }
+
+    /// <summary>A path inside a filter argument: forward slashes, colons and quotes escaped (Windows drive letters).</summary>
+    internal static string FilterPath(string path) =>
+        path.Replace('\\', '/').Replace("'", "'\\''").Replace(":", "\\:");
     public bool IsEmpty => !Normalize && !HasVoiceTools;
 }
 

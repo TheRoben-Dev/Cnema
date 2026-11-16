@@ -10,9 +10,17 @@ public static class ThumbnailService
 {
     public const int ThumbWidth = 400;
 
+    /// <summary>Settings, Features, Smart thumbnails: use the frame the best moments pass picked.</summary>
+    public static bool SmartThumbs { get; set; } = true;
+
+    /// <summary>The frame to show: the one the person picked, else the smart pick, else 0 (Savefile chooses).</summary>
+    public static long FrameFor(VideoEntry e) =>
+        e.ThumbAtMs > 0 ? e.ThumbAtMs : SmartThumbs && e.Smart is { ThumbMs: > 0 } s ? s.ThumbMs : 0;
+
     public static string PathFor(VideoEntry e)
     {
-        var key = $"{e.Path}|{e.Size}|{e.ModifiedUtc.Ticks}" + (e.ThumbAtMs > 0 ? $"|at{e.ThumbAtMs}" : "");
+        var at = FrameFor(e);
+        var key = $"{e.Path}|{e.Size}|{e.ModifiedUtc.Ticks}" + (at > 0 ? $"|at{at}" : "");
         var hash = Convert.ToHexString(SHA1.HashData(Encoding.UTF8.GetBytes(key)))[..20].ToLowerInvariant();
         return Path.Combine(AppPaths.ThumbDir, hash + ".jpg");
     }
@@ -28,8 +36,9 @@ public static class ThumbnailService
 
         // ~12% in avoids black intros/fade-ins; clamp for very short clips. A frame the user picked
         // is taken as it is, without the "most representative of the next 12 frames" filter.
-        var picked = e.ThumbAtMs > 0;
-        var seekSec = picked ? e.ThumbAtMs / 1000.0 : e.DurationMs > 0 ? Math.Min(e.DurationMs * 0.12 / 1000.0, 300) : 1.0;
+        var at = FrameFor(e);
+        var picked = at > 0;
+        var seekSec = picked ? at / 1000.0 : e.DurationMs > 0 ? Math.Min(e.DurationMs * 0.12 / 1000.0, 300) : 1.0;
         var ss = seekSec.ToString("0.###", CultureInfo.InvariantCulture);
         var filter = picked ? $"scale={ThumbWidth}:-2" : $"thumbnail=12,scale={ThumbWidth}:-2";
 

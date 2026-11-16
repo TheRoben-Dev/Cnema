@@ -45,6 +45,7 @@ public partial class App : Application
             };
             // Language first, so even start-up errors (libVLC missing) are translated.
             var settings = new SettingsStore();
+            ModelStore.SpeechChoice = settings.Current.SpeechModel;
             Loc.Apply(settings.Current.Language);
             ThemeService.Mode = settings.Current.ThemeMode;
             ThemeService.Apply(settings.Current.ColorScheme, settings.Current.Accessibility.HighContrast);

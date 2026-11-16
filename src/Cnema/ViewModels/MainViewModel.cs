@@ -241,11 +241,27 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             $"Library: {_items.Count} videos in {_settings.Current.Folders.Count} folders",
             $"Clipping: enabled={clip.Enabled} state={Clips.State} encoder={Clips.Encoder ?? "-"} error={Clips.Error ?? "-"}",
             $"Clip settings: {clip.Seconds}s {clip.Fps}fps height={clip.Height} {clip.BitrateMbps}Mbps codec={clip.Codec} hw={clip.HardwareEncoder} audio1={(clip.Audio1 is null ? "-" : "set")} audio2={(clip.Audio2 is null ? "-" : "set")} hotkey={clip.HotkeyText} hotkeyRefused={_hotkeyRefused} extraHotkeys={clip.ExtraHotkeys.Count} extraRefused={_refusedExtras.Count}",
+            SmartDiagnostics(),
             "",
             "--- log ---",
             Log.Tail(80),
         };
         return string.Join(Environment.NewLine, lines);
+    }
+
+    /// <summary>The smart features in diagnostics: switched on, model there, how far, what they're doing now, errors.</summary>
+    private string SmartDiagnostics()
+    {
+        var all = _items.Values.Select(v => v.Entry).ToList();
+        string failed;
+        lock (_workFailed) failed = string.Join(" ", _workFailed.Select(kv => $"{kv.Key}={kv.Value}"));
+        return string.Join(Environment.NewLine,
+            $"Smart: moments={Features.Highlights} {all.Count(e => e.Smart is { Version: SmartAnalyzer.Version })}/{all.Count}" +
+            $" | speech={Features.Speech} model={SpeechModelReady} {all.Count(e => e.Speech is { Version: SpeechService.Version })}/{all.Count} with words {all.Count(e => e.Speech is { Lines.Count: > 0 })}" +
+            $" | visual={Features.Visual} model={VisualModelReady} {all.Count(e => e.Visual is { Version: VisualService.Version })}/{all.Count} with frames {all.Count(e => e.Visual is { Vectors.Length: > 0 })}" +
+            $" | sound={Features.Laughs} model={SoundModelReady} {all.Count(e => e.Sound is { Version: SoundService.Version })}/{all.Count}",
+            $"Smart now: moments=[{SmartActivity}] speech=[{SpeechActivity}] visual=[{VisualActivity}] sound=[{SoundActivity}] wait=[{WaitReason}]",
+            $"Smart errors: speech={SpeechModelError ?? "-"} visual={VisualModelError ?? "-"} sound={SoundModelError ?? "-"} failed={(failed.Length == 0 ? "-" : failed)}");
     }
 
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(IsConfirmingDelete), nameof(DeletePrompt))] private VideoItemViewModel? _pendingDelete;
@@ -541,12 +557,18 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         VideoItemViewModel.UnwatchedBadges = Features.Unwatched;
         VideoItemViewModel.NotesEnabled = Features.Notes;
         VideoItemViewModel.PeopleEnabled = Features.People;
+        PlayerViewModel.TrimSuggestions = Features.TrimSuggestions;
+        ThumbnailService.SmartThumbs = Features.SmartThumbs;
         Chapters.Enabled = Features.Chapters;
         Player.Queue = Features.ExportQueue ? Exports : null;
         RebuildCollections();
         IsSetupOpen = _settings.IsFirstRun || Environment.GetEnvironmentVariable("CNEMA_SETUP") == "1";
         _ = RecoverThenApplyClipsAsync();
+        _ = Task.Run(TrimDragCopies);
         _ = CheckForUpdatesAsync();
+        LoadWrappedSongs();
+        StartWrappedSeason();
+        ResumeWrapped();
         await RescanAsync();
         await RunStorageCleanupAsync();
         await ImportRecordersAtLaunchAsync();
@@ -640,6 +662,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 StartSmartPass();
                 StartSpeechPass();
                 StartVisualPass();
+                StartSoundPass();
             }
         }
     }
@@ -758,14 +781,14 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             var people = Features.People;
             var said = Features.Speech;
             q = q.Where(v => terms.All(t => t.StartsWith('#')
-                ? t.Length > 1 && v.Entry.Tags.Any(tag => tag.Contains(t[1..], StringComparison.OrdinalIgnoreCase))
+                ? t.Length > 1 && v.Entry.Tags.Any(tag => TextMatch.Has(tag, t[1..]))
                 : t.StartsWith('@')
-                ? t.Length > 1 && people && v.Entry.People.Any(p => p.Contains(t[1..], StringComparison.OrdinalIgnoreCase))
-                : v.Entry.Path.Contains(t, StringComparison.OrdinalIgnoreCase) ||
-                  (v.Entry.Title is { } title && title.Contains(t, StringComparison.OrdinalIgnoreCase)) ||
-                  v.Entry.Tags.Any(tag => tag.Contains(t, StringComparison.OrdinalIgnoreCase)) ||
-                  (notes && v.Entry.Note is { } n && n.Contains(t, StringComparison.OrdinalIgnoreCase)) ||
-                  (people && v.Entry.People.Any(p => p.Contains(t, StringComparison.OrdinalIgnoreCase))) ||
+                ? t.Length > 1 && people && v.Entry.People.Any(p => TextMatch.Has(p, t[1..]))
+                : TextMatch.Has(v.Entry.Path, t) ||
+                  (v.Entry.Title is { } title && TextMatch.Has(title, t)) ||
+                  v.Entry.Tags.Any(tag => TextMatch.Has(tag, t)) ||
+                  (notes && v.Entry.Note is { } n && TextMatch.Has(n, t)) ||
+                  (people && v.Entry.People.Any(p => TextMatch.Has(p, t))) ||
                   MatchesWhen(v.Entry, t) ||
                   (said && SaidMatches(v.Entry, t))));
         }
@@ -812,6 +835,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         var when = e.ModifiedUtc.ToLocalTime();
         if (t.Length == 4 && int.TryParse(t, out var year) && year is >= 1990 and <= 2100) return when.Year == year;
         if (t is "fav" or "favs" or "favourite" or "favourites" or "favorite" or "favorites") return e.Favorite;
+        // Laughter and hype, once the sound model has listened.
+        if (t is "laugh" or "laughs" or "laughing" or "laughter" or "funny" or "lol") return LaughSeconds(e) > 0;
+        if (t is "hype" or "cheering" or "cheer" or "shouting" or "screaming") return HypeSeconds(e) > 0;
         if (t == T("today").ToLowerInvariant() || t == "today") return when.Date == DateTime.Today;
         if (t == T("yesterday").ToLowerInvariant() || t == "yesterday") return when.Date == DateTime.Today.AddDays(-1);
         if (t.Length >= 3 && MonthFor(t) is { } month) return when.Month == month;
@@ -1159,7 +1185,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         await RunStorageCleanupAsync();
     }
 
-    private void ShowToast(string text)
+    public void ShowToast(string text)
     {
         _toastCts?.Cancel();
         var cts = _toastCts = new CancellationTokenSource();
@@ -1277,8 +1303,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         else ShowToast(job.Status);
     }
 
+    /// <summary>Set while Savefile closes: work cancelled now is meant to carry on next time (a Wrapped video).</summary>
+    private volatile bool _quitting;
+
     public void Dispose()
     {
+        _quitting = true;
         Exports.CancelAll();
         _hotkey.Dispose();
         RegisterExtraHotkeys(null);

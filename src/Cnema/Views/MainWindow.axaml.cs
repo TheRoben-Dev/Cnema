@@ -39,6 +39,8 @@ public partial class MainWindow : Window
             Vm?.Player.TogglePlayCommand.Execute(null);
         };
         SurfaceHit.DoubleTapped += (_, _) => ToggleFullscreen();
+        TheatreHit.Tapped += (_, _) => Vm?.Player.TogglePlayCommand.Execute(null);
+        Theatre.PointerMoved += (_, _) => WakeTheatreChrome();
         MiniHit.Tapped += (_, _) => Vm?.Player.TogglePlayCommand.Execute(null);
         MiniHit.DoubleTapped += (_, _) => Vm?.ExpandMiniPlayerCommand.Execute(null);
         // Clicking the dimmed library around the quick player closes it, like Esc.
@@ -121,6 +123,7 @@ public partial class MainWindow : Window
         vm.PickFile = PickMediaFileAsync;
         vm.PickAnyFile = PickAnyFileAsync;
         vm.PickAudio = PickAudioFileAsync;
+        vm.PickAudios = PickAudioFilesAsync;
         vm.CaptureRecap = CaptureRecap;
         vm.Player.PickAudio = PickAudioFileAsync;
         vm.Player.PickSavePath = PickSavePathAsync;
@@ -137,6 +140,7 @@ public partial class MainWindow : Window
         vm.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(MainViewModel.IsSelecting)) Classes.Set("selecting", vm.IsSelecting);
+            if (e.PropertyName == nameof(MainViewModel.IsTheatreOpen)) OnTheatreChanged(vm);
             // A paused video sends no new frames, so the surface that just appeared draws the last one itself.
             if (e.PropertyName is nameof(MainViewModel.IsMiniPlayerOpen) or nameof(MainViewModel.IsPlayerOpen))
                 Avalonia.Threading.Dispatcher.UIThread.Post(() => { Surface.Refresh(); MiniSurface.Refresh(); },
@@ -228,6 +232,17 @@ public partial class MainWindow : Window
             FileTypeFilter = new[] { AudioFileType },
         });
         return files.FirstOrDefault()?.TryGetLocalPath();
+    }
+
+    private async Task<IReadOnlyList<string>> PickAudioFilesAsync()
+    {
+        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = T("Pick songs for your Wrapped"),
+            AllowMultiple = true,
+            FileTypeFilter = new[] { AudioFileType },
+        });
+        return files.Select(f => f.TryGetLocalPath()).OfType<string>().ToList();
     }
 
     private void OnClearMontageMusicClick(object? sender, RoutedEventArgs e)
@@ -540,6 +555,54 @@ public partial class MainWindow : Window
         }
     }
 
+    // ---------- the Wrapped theatre ----------
+    private bool _theatreFullscreen;
+    private Avalonia.Threading.DispatcherTimer? _theatreIdle;
+
+    /// <summary>The first viewing of a Wrapped fills the screen; closing it puts the window back.</summary>
+    private void OnTheatreChanged(MainViewModel vm)
+    {
+        if (vm.IsTheatreOpen)
+        {
+            if (vm.TheatreFirst && WindowState != WindowState.FullScreen)
+            {
+                _preFullscreenState = WindowState;
+                WindowState = WindowState.FullScreen;
+                _theatreFullscreen = true;
+            }
+            Avalonia.Threading.Dispatcher.UIThread.Post(() => TheatreSurface.Refresh(), Avalonia.Threading.DispatcherPriority.Background);
+            WakeTheatreChrome();
+        }
+        else
+        {
+            _theatreIdle?.Stop();
+            Cursor = null;
+            if (_theatreFullscreen && WindowState == WindowState.FullScreen) WindowState = _preFullscreenState;
+            _theatreFullscreen = false;
+        }
+    }
+
+    /// <summary>The controls and the pointer show on a move and fade after a couple of quiet seconds while it plays.</summary>
+    private void WakeTheatreChrome()
+    {
+        if (Vm is not { IsTheatreOpen: true }) return;
+        TheatreChrome.Opacity = 1;
+        Theatre.Cursor = null;
+        _theatreIdle ??= new Avalonia.Threading.DispatcherTimer(TimeSpan.FromSeconds(2.5), Avalonia.Threading.DispatcherPriority.Background, (_, _) =>
+        {
+            _theatreIdle!.Stop();
+            if (Vm is not { IsTheatreOpen: true } vm || !vm.Player.IsPlaying || TheatreChrome.IsPointerOver && TheatreChromeBarHovered()) return;
+            TheatreChrome.Opacity = 0;
+            Theatre.Cursor = new Avalonia.Input.Cursor(Avalonia.Input.StandardCursorType.None);
+        });
+        _theatreIdle.Stop();
+        _theatreIdle.Start();
+    }
+
+    private bool TheatreChromeBarHovered() =>
+        TheatreChrome.GetVisualDescendants().OfType<Button>().Any(b => b.IsPointerOver) ||
+        TheatreChrome.GetVisualDescendants().OfType<Controls.TrimTimeline>().Any(t => t.IsPointerOver);
+
     // ---------- keyboard ----------
     // Some platforms leave KeySymbol empty for shifted keys, so Shift+/ (US layout) counts too.
     private static bool IsQuestionMark(KeyEventArgs e) =>
@@ -556,6 +619,28 @@ public partial class MainWindow : Window
             return;
         }
         if (vm.IsSetupOpen) return;
+        if (vm.IsTheatreOpen)
+        {
+            // Only pause, scrubbing and the sound: nothing to edit here.
+            var t = vm.Player;
+            switch (e.Key)
+            {
+                case Key.Escape: vm.CloseTheatreCommand.Execute(null); break;
+                case Key.Space or Key.K: t.TogglePlayCommand.Execute(null); break;
+                case Key.Left or Key.J: t.SkipBackCommand.Execute(null); break;
+                case Key.Right or Key.L: t.SkipForwardCommand.Execute(null); break;
+                case Key.M: t.ToggleMuteCommand.Execute(null); break;
+                default: return;
+            }
+            WakeTheatreChrome();
+            e.Handled = true;
+            return;
+        }
+        if (vm.IsWrappedGiftOpen)
+        {
+            if (e.Key == Key.Escape) { vm.CloseWrappedGiftCommand.Execute(null); e.Handled = true; }
+            return;
+        }
         if (vm.IsShowingWhatsNew)
         {
             if (e.Key is Key.Escape or Key.Enter) { vm.CloseWhatsNewCommand.Execute(null); e.Handled = true; }

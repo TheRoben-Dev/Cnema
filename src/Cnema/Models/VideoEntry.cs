@@ -33,6 +33,8 @@ public sealed class VideoEntry
     public SpeechInfo? Speech { get; set; }
     /// <summary>What it looks like (visual search, similar videos); null until it has been looked at.</summary>
     public VisualInfo? Visual { get; set; }
+    /// <summary>Laughter and hype (cheering, shouting); null until it has been listened to.</summary>
+    public SoundInfo? Sound { get; set; }
 
     [System.Text.Json.Serialization.JsonIgnore]
     public string FileName => System.IO.Path.GetFileName(Path);
@@ -61,6 +63,7 @@ public sealed class VideoEntry
         Smart ??= other.Smart;
         Speech ??= other.Speech;
         Visual ??= other.Visual;
+        Sound ??= other.Sound;
     }
 }
 
@@ -77,6 +80,33 @@ public sealed class SmartInfo
     public int Spikes { get; set; }
     /// <summary>How much the picture changes, 0 to 1.</summary>
     public double Motion { get; set; }
+    /// <summary>A good frame for the thumbnail (not black, not a loading screen), in ms; 0 when none was picked.</summary>
+    public long ThumbMs { get; set; }
+    /// <summary>Dead air at the start to trim away, ending here (ms); 0 when there's none.</summary>
+    public long TrimStartMs { get; set; }
+    /// <summary>Dead air at the end to trim away, starting here (ms); 0 when there's none.</summary>
+    public long TrimEndMs { get; set; }
+    [System.Text.Json.Serialization.JsonIgnore] public bool HasTrimSuggestion => TrimStartMs > 0 || TrimEndMs > 0;
+}
+
+/// <summary>Where people laugh and where it gets loud with excitement, heard on this computer by the sound model.</summary>
+public sealed class SoundInfo
+{
+    public int Version { get; set; }
+    /// <summary>Moments (every 0.48 s) that sound like laughter, with how sure the model is.</summary>
+    public List<SoundMoment> Laugh { get; set; } = new();
+    /// <summary>Moments of cheering, shouting, screaming or a whoop.</summary>
+    public List<SoundMoment> Hype { get; set; } = new();
+
+    /// <summary>Roughly how many seconds of laughter (each moment covers about half a second).</summary>
+    [System.Text.Json.Serialization.JsonIgnore] public double LaughSeconds => Laugh.Count * 0.48;
+    [System.Text.Json.Serialization.JsonIgnore] public double HypeSeconds => Hype.Count * 0.48;
+}
+
+public sealed class SoundMoment
+{
+    public long At { get; set; }
+    public float Score { get; set; }
 }
 
 /// <summary>The words spoken in a video, written down on this computer by the speech model.</summary>
