@@ -572,6 +572,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
         _library.FoldersChanged += () => Dispatcher.UIThread.Post(() => _ = RescanAsync());
         _library.GameTagger = GameTagFor;
+        Player.Finished += OnPlayerFinished;
         // A file renamed or moved outside the app keeps its collections and remembered edits.
         _library.EntryMoved += (from, to) => Dispatcher.UIThread.Post(() =>
         {
@@ -815,6 +816,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         RefreshMemories();
         OnPropertyChanged(nameof(HeaderCount));
         OnPropertyChanged(nameof(HasNoResults));
+        OnPropertyChanged(nameof(CanPlayAll));
         UpdateCounts();
     }
 

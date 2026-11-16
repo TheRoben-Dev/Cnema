@@ -820,6 +820,32 @@ public partial class MainWindow : Window
         else if (e.Key == Key.Escape) { Vm?.CancelNamingCommand.Execute(null); e.Handled = true; }
     }
 
+    private void OnRenameNameClick(object? sender, RoutedEventArgs e)
+    {
+        Vm?.BeginRenameName((sender as Control)?.DataContext as FolderViewModel);
+        // Focus the box that just appeared, with the old name selected.
+        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            var box = Vm?.IsRenamingFriend == true ? FriendRenameBox : TagRenameBox;
+            box.Focus();
+            box.SelectAll();
+        }, Avalonia.Threading.DispatcherPriority.Background);
+    }
+
+    private void OnRemoveNameClick(object? sender, RoutedEventArgs e) =>
+        Vm?.RemoveName((sender as Control)?.DataContext as FolderViewModel);
+
+    private void OnRenameNameKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter) { Vm?.ConfirmRenameCommand.Execute(null); e.Handled = true; }
+        else if (e.Key == Key.Escape) { Vm?.CancelRenameCommand.Execute(null); e.Handled = true; }
+    }
+
+    private void OnTogglePlayAll(object? sender, RoutedEventArgs e)
+    {
+        Vm?.TogglePlayAllCommand.Execute(null);
+    }
+
     private void OnSquadKeyDown(object? sender, KeyEventArgs e)
     {
         if (e.Key != Key.Enter) return;

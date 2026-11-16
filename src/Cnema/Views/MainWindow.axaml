@@ -327,10 +327,18 @@
                 </Button>
               </StackPanel>
               <TextBlock Classes="label" svc:Tr.Text="FRIENDS" Margin="10,22,0,8" IsVisible="{Binding HasFriends}" />
+              <TextBox Margin="4,2,4,6" CornerRadius="8" FontSize="12" svc:Tr.Watermark="New name, then Enter"
+                       x:Name="FriendRenameBox" Text="{Binding RenameText}" IsVisible="{Binding IsRenamingFriend}" KeyDown="OnRenameNameKeyDown" />
               <ListBox x:Name="FriendList" Classes="nav" ItemsSource="{Binding Friends}" SelectedItem="{Binding SelectedFriend}" IsVisible="{Binding HasFriends}">
                 <ListBox.ItemTemplate>
                   <DataTemplate x:DataType="vm:FolderViewModel">
                     <Grid ColumnDefinitions="Auto,*,Auto" ToolTip.Tip="{Binding Tooltip}" Background="Transparent">
+                      <Grid.ContextMenu>
+                        <ContextMenu>
+                          <MenuItem svc:Tr.Header="Rename…" Click="OnRenameNameClick" />
+                          <MenuItem svc:Tr.Header="Untag from all videos" Click="OnRemoveNameClick" />
+                        </ContextMenu>
+                      </Grid.ContextMenu>
                       <Border Grid.Column="0" Width="18" Height="18" CornerRadius="9" Margin="-1,0,9,0" VerticalAlignment="Center"
                               Background="{DynamicResource AccentSoft}">
                         <TextBlock Text="{Binding Initial}" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource Accent}"
@@ -343,10 +351,18 @@
                 </ListBox.ItemTemplate>
               </ListBox>
               <TextBlock Classes="label" svc:Tr.Text="TAGS" Margin="10,22,0,8" IsVisible="{Binding HasTags}" />
+              <TextBox Margin="4,2,4,6" CornerRadius="8" FontSize="12" svc:Tr.Watermark="New name, then Enter"
+                       x:Name="TagRenameBox" Text="{Binding RenameText}" IsVisible="{Binding IsRenamingTag}" KeyDown="OnRenameNameKeyDown" />
               <ListBox x:Name="TagList" Classes="nav" ItemsSource="{Binding Tags}" SelectedItem="{Binding SelectedTag}" IsVisible="{Binding HasTags}">
                 <ListBox.ItemTemplate>
                   <DataTemplate x:DataType="vm:FolderViewModel">
                     <Grid ColumnDefinitions="Auto,*,Auto" ToolTip.Tip="{Binding Tooltip}" Background="Transparent">
+                      <Grid.ContextMenu>
+                        <ContextMenu>
+                          <MenuItem svc:Tr.Header="Rename…" Click="OnRenameNameClick" />
+                          <MenuItem svc:Tr.Header="Remove from all videos" Click="OnRemoveNameClick" />
+                        </ContextMenu>
+                      </Grid.ContextMenu>
                       <TextBlock Classes="navicon" Grid.Column="0" Text="#" FontSize="14" FontWeight="Bold" Width="15" Margin="0,0,10,0"
                                  TextAlignment="Center" Foreground="{DynamicResource TextDim}" VerticalAlignment="Center" />
                       <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="13" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
@@ -370,7 +386,16 @@
             <TextBlock Text="{Binding HeaderTitle}" FontSize="22" FontWeight="Bold" />
             <TextBlock Classes="dim" Text="{Binding HeaderCount}" FontSize="12" />
           </StackPanel>
-          <Button Grid.Column="1" Classes="soft" VerticalAlignment="Center" Margin="0,0,10,0" Padding="12,8"
+          <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+          <Button x:Name="PlayAllButton" Classes="soft" VerticalAlignment="Center" Margin="0,0,10,0" Padding="12,8"
+                  IsVisible="{Binding CanPlayAll}" Command="{Binding PlayAllFromStartCommand}"
+                  svc:Tr.Tip="Watch everything in this view, one after another">
+            <StackPanel Orientation="Horizontal" Spacing="7">
+              <PathIcon Data="{StaticResource IcPlay}" Width="14" Height="14" />
+              <TextBlock svc:Tr.Text="Play all" FontSize="13" />
+            </StackPanel>
+          </Button>
+          <Button Classes="soft" VerticalAlignment="Center" Margin="0,0,10,0" Padding="12,8"
                   IsVisible="{Binding Exports.HasJobs}" svc:Tr.Tip="Exports running in the background">
             <StackPanel Orientation="Horizontal" Spacing="7">
               <PathIcon Data="{StaticResource IcExport}" Width="14" Height="14" />
@@ -382,6 +407,7 @@
               </Flyout>
             </Button.Flyout>
           </Button>
+          </StackPanel>
           <Panel Grid.Column="2" Width="260" VerticalAlignment="Center" Margin="0,0,10,0">
             <TextBox Classes="search" svc:Tr.Watermark="Search names, #tags or @friends" Text="{Binding SearchText}" x:Name="SearchBox" />
             <PathIcon Data="{StaticResource IcSearch}" Width="15" Height="15" Foreground="{DynamicResource TextDim}"
@@ -441,6 +467,26 @@
           <ScrollViewer x:Name="GridScroller" HorizontalScrollBarVisibility="Disabled">
             <StackPanel>
             <!-- On this day: a clip from this date in an earlier year (Settings, Features, On this day) -->
+            <!-- December to mid-January: the year's look back is ready (Settings, Features, Year in clips) -->
+            <Border IsVisible="{Binding ShowRecapBanner}" Margin="26,0,26,16" Padding="16,14" CornerRadius="14"
+                    Background="{DynamicResource AccentSoft}">
+              <Grid ColumnDefinitions="Auto,*,Auto">
+                <Border Width="40" Height="40" CornerRadius="20" Background="{DynamicResource Accent}" VerticalAlignment="Center">
+                  <PathIcon Data="{StaticResource IcSparkle}" Width="18" Height="18" Foreground="{DynamicResource OnAccent}" />
+                </Border>
+                <StackPanel Grid.Column="1" Margin="14,0,12,0" VerticalAlignment="Center" Spacing="2">
+                  <TextBlock Text="{Binding RecapBannerTitle}" FontSize="15" FontWeight="SemiBold" />
+                  <TextBlock Classes="dim" Text="{Binding RecapBannerText}" FontSize="12" />
+                </StackPanel>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                  <Button Classes="accent" Command="{Binding OpenRecapFromBannerCommand}" svc:Tr.Content="Look back" />
+                  <Button Classes="ghost" svc:Tr.Tip="Hide until next year" Command="{Binding CloseRecapBannerCommand}">
+                    <PathIcon Data="{StaticResource IcClose}" Width="12" Height="12" />
+                  </Button>
+                </StackPanel>
+              </Grid>
+            </Border>
+
             <Border Classes="memory" IsVisible="{Binding ShowMemory}" Margin="26,0,26,16" Padding="12" CornerRadius="14"
                     Background="{DynamicResource Bg2}" BorderBrush="{DynamicResource Line}" BorderThickness="1">
               <Grid ColumnDefinitions="Auto,*,Auto" DataContext="{Binding MemoryItem}" x:DataType="vm:VideoItemViewModel">
@@ -761,9 +807,17 @@
                   <TextBlock Classes="dim mono" Text="/" FontSize="11" />
                   <TextBlock Classes="dim mono" Text="{Binding DurationText}" FontSize="11" />
                   <TextBlock Classes="dim" Text="{Binding RateText}" FontSize="11" Margin="4,0,0,0" IsVisible="{Binding IsRateChanged}" />
+                  <TextBlock Classes="dim" Text="·" FontSize="11" Margin="4,0,0,0" />
+                  <TextBlock Classes="dim" Text="{Binding Current.PlayerLine}" FontSize="11" TextTrimming="CharacterEllipsis" />
                 </StackPanel>
               </StackPanel>
               <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+                <Button Classes="ghost" Classes.on="{Binding #Root.((vm:MainViewModel)DataContext).PlayAll}" Focusable="False" Padding="6" Margin="0,0,4,0"
+                        IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).ShowPlayAll}"
+                        svc:Tr.Tip="Play all: go on to the next video when this one ends"
+                        Click="OnTogglePlayAll">
+                  <PathIcon Data="{StaticResource IcLoop}" Width="16" Height="16" />
+                </Button>
                 <!-- The same previous / next video buttons as in the editor (← / →) -->
                 <Button Classes="ghost" Focusable="False" Padding="6" svc:Tr.Tip="Previous video (←)"
                         Command="{Binding #Root.((vm:MainViewModel)DataContext).PreviousClipCommand}">
@@ -1861,6 +1915,14 @@
                         <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Look back on a year: your moments, the friends you played with most, your games, and a montage of the best bits." />
                       </StackPanel>
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureRecap}" />
+                    </Grid>
+                    <Border Classes="sep" />
+                    <Grid Classes="row" ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="2">
+                        <TextBlock svc:Tr.Text="Play all" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Watch a whole view one clip after another in the Quick player, like a slideshow of a night, a friend or a year." />
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeaturePlayAll}" />
                     </Grid>
                   </StackPanel>
                 </Border>
