@@ -475,6 +475,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private FolderViewModel? ActiveNav => SelectedTag ?? SelectedFriend ?? SelectedCollection ?? SelectedFolder;
     public string HeaderTitle => ActiveNav switch
     {
+        _ when SimilarTo is { } like => F("Like {0}", like.Title),
         { Kind: NavKind.Tag } t => "#" + t.Name,
         { Kind: NavKind.Person } p => F("With {0}", p.Name),
         { } n => n.Name,
@@ -637,6 +638,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 OnPropertyChanged(nameof(HasNoResults));
                 StartSmartPass();
                 StartSpeechPass();
+                StartVisualPass();
             }
         }
     }
@@ -689,6 +691,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private void NavChanged(FolderViewModel? value)
     {
         if (_rebuildingTags || _navSwitching) return;
+        if (value is not null) SimilarTo = null;
         if (value is null)
         {
             // A list let go of its selection; unless another list holds one, fall back to All videos.
@@ -710,7 +713,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     }
 
     partial void OnEditorChanged(EditViewModel? value) => OnPropertyChanged(nameof(IsEditing));
-    partial void OnSearchTextChanged(string value) => RefreshView();
+    partial void OnSearchTextChanged(string value)
+    {
+        if (value.Length > 0) SimilarTo = null;
+        RefreshView();
+    }
     partial void OnSortIndexChanged(int value)
     {
         _settings.Current.SortIndex = value;
@@ -725,8 +732,22 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     private void RefreshView()
     {
+        if (SimilarTo is { } like)
+        {
+            // Videos like this one: their own order (most alike first), no other filtering.
+            if (!_items.ContainsKey(like.Entry.Path) || !CanFindSimilar(like)) { SimilarTo = null; }
+            else
+            {
+                Videos = new ObservableCollection<VideoItemViewModel>(SimilarVideos(like));
+                MarkSaid(Array.Empty<VideoItemViewModel>(), "");
+                MarkSeen(new());
+                AfterRefresh();
+                return;
+            }
+        }
         IEnumerable<VideoItemViewModel> q = _items.Values;
         if (ActiveNav is { IsAll: false } nav) q = q.Where(nav.Matches);
+        var pool = q;
         var search = SearchText.Trim();
         if (search.Length > 0)
         {
@@ -757,8 +778,20 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             5 => q.OrderByDescending(v => v.Entry.Smart?.Excitement ?? -1).ThenByDescending(v => v.Entry.ModifiedUtc),
             _ => q.OrderBy(v => v.Title, StringComparer.CurrentCultureIgnoreCase),
         };
-        Videos = new ObservableCollection<VideoItemViewModel>(q);
+        var list = q.ToList();
+        // Then the videos that only look like the words (visual search), best first.
+        var seen = search.Length > 0 ? SeenMatches(ApplyFilters(pool), search) : new();
+        var have = new HashSet<VideoItemViewModel>(list);
+        seen = seen.Where(s => !have.Contains(s.Item)).ToList();
+        list.AddRange(seen.Select(s => s.Item));
+        Videos = new ObservableCollection<VideoItemViewModel>(list);
         MarkSaid(search.Length > 0 ? Videos : Array.Empty<VideoItemViewModel>(), search);
+        MarkSeen(seen);
+        AfterRefresh();
+    }
+
+    private void AfterRefresh()
+    {
         SelectionChanged();
         RefreshMemories();
         OnPropertyChanged(nameof(HeaderCount));
@@ -938,6 +971,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         {
             Player.StartAt = item.SaidAtMs;
             Player.StartAtNote = F("Said here: “{0}”", said);
+        }
+        else if (item.HasSeen && item.SeenAtMs >= 0)
+        {
+            // Visual search: start a little before the frame that matched.
+            Player.StartAt = Math.Max(0, item.SeenAtMs - 2000) + 1000;
+            Player.StartAtNote = F("Looks like “{0}” around here", SearchText.Trim());
         }
         if (UseMiniPlayer && !IsPlayerOpen)
         {

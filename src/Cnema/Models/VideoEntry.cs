@@ -31,6 +31,8 @@ public sealed class VideoEntry
     public SmartInfo? Smart { get; set; }
     /// <summary>What's said in the video (voice search and captions); null until it has been listened to.</summary>
     public SpeechInfo? Speech { get; set; }
+    /// <summary>What it looks like (visual search, similar videos); null until it has been looked at.</summary>
+    public VisualInfo? Visual { get; set; }
 
     [System.Text.Json.Serialization.JsonIgnore]
     public string FileName => System.IO.Path.GetFileName(Path);
@@ -58,6 +60,7 @@ public sealed class VideoEntry
         if (other.Size != Size || other.ModifiedUtc != ModifiedUtc) return;
         Smart ??= other.Smart;
         Speech ??= other.Speech;
+        Visual ??= other.Visual;
     }
 }
 
@@ -91,6 +94,74 @@ public sealed class SpeechLine
     public long Start { get; set; }
     public long End { get; set; }
     public string Text { get; set; } = "";
+}
+
+/// <summary>
+/// What a video looks like to the visual model: a vector for each of a few frames, kept as 16-bit
+/// floats in Base64 so the library file stays small (about 1 KB a frame).
+/// </summary>
+public sealed class VisualInfo
+{
+    public int Version { get; set; }
+    public long[] At { get; set; } = Array.Empty<long>();
+    public string Vectors { get; set; } = "";
+
+    [System.Text.Json.Serialization.JsonIgnore] private float[][]? _frames;
+    [System.Text.Json.Serialization.JsonIgnore] private float[]? _mean;
+
+    /// <summary>One unit vector per frame.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public float[][] Frames => _frames ??= Decode();
+
+    /// <summary>The whole video in one unit vector (the frames averaged).</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public float[] Mean => _mean ??= MeanOf(Frames);
+
+    public static VisualInfo From(List<long> at, List<float[]> frames)
+    {
+        var bytes = new byte[frames.Sum(f => f.Length) * 2];
+        var k = 0;
+        foreach (var f in frames)
+            foreach (var x in f)
+            {
+                BitConverter.TryWriteBytes(bytes.AsSpan(k), (Half)x);
+                k += 2;
+            }
+        return new VisualInfo { Version = Cnema.Services.VisualService.Version, At = at.ToArray(), Vectors = Convert.ToBase64String(bytes), _frames = frames.ToArray() };
+    }
+
+    private float[][] Decode()
+    {
+        try
+        {
+            var bytes = Convert.FromBase64String(Vectors);
+            var dim = Cnema.Services.VisualService.Dim;
+            var n = bytes.Length / 2 / dim;
+            var frames = new float[n][];
+            for (var i = 0; i < n; i++)
+            {
+                frames[i] = new float[dim];
+                for (var d = 0; d < dim; d++) frames[i][d] = (float)BitConverter.ToHalf(bytes, (i * dim + d) * 2);
+            }
+            return frames;
+        }
+        catch { return Array.Empty<float[]>(); }
+    }
+
+    private static float[] MeanOf(float[][] frames)
+    {
+        var dim = Cnema.Services.VisualService.Dim;
+        var m = new float[dim];
+        foreach (var f in frames) for (var d = 0; d < dim && d < f.Length; d++) m[d] += f[d];
+        return Cnema.Services.VisualService.Normalize(m);
+    }
+
+    public static float Dot(float[] a, float[] b)
+    {
+        var s = 0f;
+        for (var i = 0; i < a.Length && i < b.Length; i++) s += a[i] * b[i];
+        return s;
+    }
 }
 
 public sealed class LibraryCacheFile

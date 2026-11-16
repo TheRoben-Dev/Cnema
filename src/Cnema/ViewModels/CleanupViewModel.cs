@@ -31,12 +31,13 @@ public sealed partial class CleanupViewModel : ObservableObject
 
     public void Cancel() => _cts.Cancel();
 
-    public async Task ScanAsync(IReadOnlyCollection<VideoEntry> entries, Func<string, VideoItemViewModel?> lookup)
+    public async Task ScanAsync(IReadOnlyCollection<VideoEntry> entries, Func<string, VideoItemViewModel?> lookup,
+        Func<VideoEntry, VideoEntry, bool>? looksSame = null)
     {
         List<CleanupFinding> found;
         try
         {
-            found = await CleanupService.FindAsync(entries, _cts.Token);
+            found = await CleanupService.FindAsync(entries, _cts.Token, looksSame);
         }
         catch (OperationCanceledException)
         {
@@ -49,7 +50,15 @@ public sealed partial class CleanupViewModel : ObservableObject
             foreach (var f in group)
                 Rows.Add(Row(f, lookup, f.Suggested ? F("Copy of “{0}”", Path.GetFileNameWithoutExtension(original.Path)) : T("Original, kept")));
         }
-        foreach (var f in found.Where(f => f.Reason != CleanupReason.Duplicate))
+        foreach (var group in found.Where(f => f.Reason == CleanupReason.LookAlike).GroupBy(f => f.Group))
+        {
+            var first = group.First().Entry;
+            foreach (var f in group)
+                Rows.Add(Row(f, lookup, ReferenceEquals(f.Entry, first)
+                    ? T("Biggest of the look-alikes")
+                    : F("Looks the same as “{0}”", Path.GetFileNameWithoutExtension(first.Path))));
+        }
+        foreach (var f in found.Where(f => f.Reason is not (CleanupReason.Duplicate or CleanupReason.LookAlike)))
             Rows.Add(Row(f, lookup, f.Reason switch
             {
                 CleanupReason.Empty => T("Empty file"),
@@ -58,11 +67,16 @@ public sealed partial class CleanupViewModel : ObservableObject
             }));
         foreach (var r in Rows) r.PropertyChanged += (_, _) => Recount(trash);
         var dupes = found.Count(f => f.Reason == CleanupReason.Duplicate && f.Suggested);
-        var junk = found.Count(f => f.Reason != CleanupReason.Duplicate);
-        Summary = dupes + junk == 0
+        var junk = found.Count(f => f.Reason is not (CleanupReason.Duplicate or CleanupReason.LookAlike));
+        var alike = found.Count(f => f.Reason == CleanupReason.LookAlike) - found.Where(f => f.Reason == CleanupReason.LookAlike).Select(f => f.Group).Distinct().Count();
+        var parts = new List<string>();
+        if (dupes > 0) parts.Add(P(dupes, "{0} duplicate", "{0} duplicates"));
+        if (junk > 0) parts.Add(P(junk, "{0} broken, empty or very short file", "{0} broken, empty or very short files"));
+        if (alike > 0) parts.Add(P(alike, "{0} video that looks like a copy saved again", "{0:N0} videos that look like copies saved again"));
+        Summary = parts.Count == 0
             ? T("Nothing to clean up. No duplicates, and every file plays.")
-            : F("Found {0} and {1}. The ticked ones are suggested; you choose.",
-                P(dupes, "{0} duplicate", "{0} duplicates"), P(junk, "{0} broken, empty or very short file", "{0} broken, empty or very short files"));
+            : F(dupes + junk == 0 ? "Found {0}. Nothing is ticked: have a look and choose." : "Found {0}. The ticked ones are suggested; you choose.",
+                parts.Count == 1 ? parts[0] : F("{0} and {1}", string.Join(", ", parts.Take(parts.Count - 1)), parts[^1]));
         IsScanning = false;
         Recount(trash);
     }
@@ -75,7 +89,7 @@ public sealed partial class CleanupViewModel : ObservableObject
         Reason = reason,
         IsKept = !f.Suggested,
         IsChecked = f.Suggested,
-        Group = f.Reason == CleanupReason.Duplicate ? f.Group : -1,
+        Group = f.Reason is CleanupReason.Duplicate or CleanupReason.LookAlike ? f.Group : -1,
     };
 
     private void Recount(string trash)

@@ -521,7 +521,7 @@ public sealed partial class SettingsViewModel : ObservableObject
             RecoverSessions = FeatureRecoverSessions,
             Rewatch = FeatureRewatch, OnThisDay = FeatureOnThisDay, People = FeaturePeople, Milestones = FeatureMilestones, Recap = FeatureRecap, PlayAll = FeaturePlayAll, Backup = FeatureBackup, SeveralFolders = FeatureSeveralFolders,
             Highlights = FeatureHighlights, SmartTitles = FeatureSmartTitles, AutoTitles = FeatureAutoTitles && FeatureSmartTitles,
-            Speech = FeatureSpeech,
+            Speech = FeatureSpeech, Visual = FeatureVisual,
         };
         WriteEditing(settings);
         // Switching a module off switches off what it was doing, not only its buttons.

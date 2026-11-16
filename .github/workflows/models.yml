@@ -27,7 +27,24 @@ jobs:
             echo "$sha  $file" | sha256sum -c -
           done <<'LIST'
           ggml-base-q5_1.bin 422f1ae452ade6f30a004d7e5c6a43195e4433bc370bf23fac9cc591f01a8898 https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base-q5_1.bin
+          clip-vit-b32-vision-q8.onnx 583fd1110a514667812fee7d684952aaf82a99b959760c8d7dca7e0ab9839299 https://huggingface.co/Xenova/clip-vit-base-patch32/resolve/main/onnx/vision_model_quantized.onnx
+          clip-vit-b32-text-q8.onnx 73baab855d406190da9faa498cfedf65f15cf309f4cc7385b7b032e6d08e5c3a https://huggingface.co/Xenova/clip-vit-base-patch32/resolve/main/onnx/text_model_quantized.onnx
+          clip-vocab.json 5047b556ce86ccaf6aa22b3ffccfc52d391ea4accdab9c2f2407da5b742d4363 https://huggingface.co/Xenova/clip-vit-base-patch32/resolve/main/vocab.json
+          clip-merges.txt 9fd691f7c8039210e0fced15865466c65820d09b63988b0174bfe25de299051a https://huggingface.co/Xenova/clip-vit-base-patch32/resolve/main/merges.txt
           LIST
+          # ONNX Runtime for visual search, per platform, out of the official NuGet package.
+          curl -fsSL --retry 3 -o ort.nupkg https://api.nuget.org/v3-flatcontainer/microsoft.ml.onnxruntime/1.23.2/microsoft.ml.onnxruntime.1.23.2.nupkg
+          unzip -q ort.nupkg 'runtimes/*/native/*onnxruntime.*' -d ort
+          while read -r from file sha; do
+            cp "ort/runtimes/$from" "$file"
+            echo "$sha  $file" | sha256sum -c -
+          done <<'LIST'
+          osx-arm64/native/libonnxruntime.dylib onnxruntime-1.23.2-osx-arm64.dylib d306d2bc768540766c7ed8a1e0ff05d2870c77a934ebeee4a7bafa1b732ef299
+          osx-x64/native/libonnxruntime.dylib onnxruntime-1.23.2-osx-x64.dylib 8c9c78de65ea3786f987c0d980e9c1b13a3a5fbc6b3e2965ba05b450e6e4c054
+          linux-x64/native/libonnxruntime.so onnxruntime-1.23.2-linux-x64.so 13ab8084954fa4a47c777880180b90810d6020f021441395712b48a75b74c68b
+          win-x64/native/onnxruntime.dll onnxruntime-1.23.2-win-x64.dll dec964ab1ee36cc9b0ae247d13b376627992fc57dec0454354017ab8fd84f1ea
+          LIST
+          rm -rf ort ort.nupkg
           ls -la
       - name: Publish
         run: |
@@ -38,6 +55,10 @@ jobs:
           if ! gh release view models --repo "$PUBLIC_REPO" >/dev/null 2>&1; then
             gh release create models --repo "$PUBLIC_REPO" --prerelease --latest=false \
               --title "Optional models" \
-              --notes "Models for Savefile's optional smart features (voice search and captions). Savefile downloads them itself when you switch a feature on in Settings and checks each one's SHA-256. Whisper models: MIT licence, from ggerganov/whisper.cpp."
+              --notes "Models for Savefile's optional smart features (voice search and captions, visual search). Savefile downloads them itself when you switch a feature on in Settings and checks each one's SHA-256. Whisper (MIT, ggerganov/whisper.cpp), CLIP ViT-B/32 (MIT, OpenAI; ONNX by Xenova), ONNX Runtime 1.23.2 (MIT, Microsoft)."
           fi
-          gh release upload models ./* --repo "$PUBLIC_REPO" --clobber
+          # Upload only what isn't there yet (the files never change: a new version gets a new name).
+          have=$(gh release view models --repo "$PUBLIC_REPO" --json assets -q '.assets[].name')
+          for f in *; do
+            if ! grep -qx "$f" <<<"$have"; then gh release upload models "$f" --repo "$PUBLIC_REPO"; fi
+          done
