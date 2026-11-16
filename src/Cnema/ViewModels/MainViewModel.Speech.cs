@@ -194,6 +194,7 @@ public sealed partial class MainViewModel
             speech?.Dispose();
             SpeechActivity = "";
             OnCostsChanged();
+            StartVoicePass(); // the lines just written down can be told apart now
             if (done > 0)
             {
                 _library.SaveCache();

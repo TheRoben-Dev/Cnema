@@ -113,6 +113,7 @@ public sealed partial class MainViewModel
                 if (todo.Count == 0)
                 {
                     if (SpeechActivity.Length == 0) break;
+                    VoiceActivity = ""; // waiting for Voice search to write more down
                     await Task.Delay(TimeSpan.FromSeconds(30), ct);
                     continue;
                 }
@@ -135,6 +136,7 @@ public sealed partial class MainViewModel
                     {
                         var entry = item.Entry;
                         info = await Task.Run(() => model.ListenAsync(entry, limit.Token), limit.Token);
+                        if (watch.Elapsed.TotalSeconds >= 0.5) CostMeter.Record(CostMeter.Voices, watch.Elapsed.TotalSeconds, entry.DurationMs);
                     }
                     catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
                     catch (Exception ex)
@@ -168,6 +170,7 @@ public sealed partial class MainViewModel
             Log.Info($"Voice pass ended: {done} done");
             model?.Dispose();
             VoiceActivity = "";
+            OnCostsChanged();
             if (done > 0)
             {
                 _library.SaveCache();

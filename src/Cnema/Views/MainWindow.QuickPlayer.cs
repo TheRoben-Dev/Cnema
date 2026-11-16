@@ -77,7 +77,10 @@ public partial class MainWindow
         if (Vm is not { } vm || vm.Player.Current is not { } item) return;
         vm.ToggleFavoriteCommand.Execute(item);
         vm.Player.RefreshFavorite();
-        if (item.IsFavorite) _ = BurstAsync(vm.ReducedMotion);
+        if (!item.IsFavorite) return;
+        _ = BurstAsync(vm.ReducedMotion);
+        // The star shows on the next layout pass; shine once it's there.
+        Avalonia.Threading.Dispatcher.UIThread.Post(QuickGoldStar.Shine, Avalonia.Threading.DispatcherPriority.Background);
     }
 
     private async Task BurstAsync(bool still)

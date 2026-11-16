@@ -47,6 +47,12 @@ public sealed partial class MainViewModel
             _settings.Current.PlayingWith = squad.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
             _settings.Save();
             RaiseSquad();
+            // Mochi's ear follows the name too.
+            RenameVoice(from, to);
+            foreach (var v in _items.Values)
+                if (v.Entry.Voices?.Added is { } added)
+                    for (var i = 0; i < added.Count; i++)
+                        if (string.Equals(added[i], from, StringComparison.OrdinalIgnoreCase)) added[i] = to;
         }
         UpdateCounts();
         // Stay on the renamed row if it was the one being viewed.

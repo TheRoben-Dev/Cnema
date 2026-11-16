@@ -1781,5 +1781,11 @@
   "maybe": "kanske",
   "not heard yet": "inte hörd än",
   "pretty sure": "ganska säker",
-  "Voices can't be told apart on this computer: {0}": "Röster kan inte skiljas åt på den här datorn: {0}"
+  "Voices can't be told apart on this computer: {0}": "Röster kan inte skiljas åt på den här datorn: {0}",
+  "Download the voice model": "Ladda ner röstmodellen",
+  "Frees the space. The voices Mochi knows stay.": "Frigör utrymmet. Rösterna Mochi känner igen finns kvar.",
+  "Help recognise voices…": "Hjälp till att känna igen röster…",
+  "Savefile tells your friends' voices apart in the lines Voice search writes down, and fills in Who was there for the clips it's sure about. Mochi learns the voices from a little game: you listen to a few snippets and say who it is.": "Savefile skiljer dina kompisars röster åt i replikerna som Röstsökning skriver ner och fyller i Vilka som var med för klippen den är säker på. Mochi lär sig rösterna genom ett litet spel: du lyssnar på några korta snuttar och säger vem det är.",
+  "Who's talking": "Vem som pratar",
+  "two CPU cores at low priority, a moment per line said": "två processorkärnor med låg prioritet, ett ögonblick per replik"
 }
