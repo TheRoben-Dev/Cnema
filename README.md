@@ -37,15 +37,18 @@ Savefile updates itself after that.
   MinIO), and restore on a new computer. Off by default; nothing leaves your network.
 - **Smart, on your computer:** best moments found by sound and picture (a sparkle on the ones that stand out,
   and they lead Worth a rewatch, montages and Year in clips), smart titles from game, friends and date, and
-  Smart rename for the whole library. No account, no cloud, nothing downloaded. Every smart setting says what it
+  Smart rename for the whole library, thumbnails from a lively frame and trim suggestions for dead air at the
+  start or end. No account, no cloud, nothing downloaded. Every smart setting says what it
   costs (CPU, memory, download, time for your library) before you switch it on.
 - **Voice search and captions:** what's said in your videos is written down on your computer, so you can
   search for it, watch with captions, and turn it into captions for an export (optional 57 MB speech model).
 - **Visual search and similar videos:** search for what's on screen ("snow", "a car"), see Videos like this one,
   and let Clean up spot copies saved twice (optional 169 MB visual model; runs on your computer).
+- **Laughter and hype:** the videos where everyone lost it come first in Worth a rewatch, and search finds
+  "laughing" or "hype" (optional 15 MB sound model).
 - **Quick player:** videos open in a large player over the library; **Edit** takes you to the full editor.
 - **Editor:** a tool rail with Trim, Captions, Speed, Sound, Brand and Export. Lossless or frame-accurate trims,
-  multi-part export, captions, slow-mo with ramps, loudness and voice tools, watermark and intro/outro,
+  multi-part export, captions, slow-mo with ramps, loudness and voice tools (including noise removal), watermark and intro/outro,
   and a background export queue. Optionally remembers your edits per video until you start over.
 - **Share:** one-click presets for Discord (10 / 50 MB), vertical 9:16 and GIF.
 - **Clipping:** a rolling replay buffer with GPU encoding (H.264, HEVC, AV1). Several hotkeys with their own

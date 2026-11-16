@@ -21,8 +21,8 @@ public sealed class SoundService : IDisposable
     private static readonly int[] LaughClasses = { 13, 14, 15, 16, 17, 18 }; // Laughter, Baby laughter, Giggle, Snicker, Belly laugh, Chuckle/chortle
     private static readonly int[] HypeClasses = { 6, 8, 9, 11, 61, 62 };     // Shout, Whoop, Yell, Screaming, Cheering, Applause
 
-    /// <summary>A second counts when a class group scores this much (YAMNet's scores run 0 to 1).</summary>
-    internal const float LaughAt = 0.25f, HypeAt = 0.3f;
+    /// <summary>A moment counts when a class group scores this much (0 to 1). Real laughter in game noise scores 0.15–0.4; speech and music stay at 0.</summary>
+    internal const float LaughAt = 0.15f, HypeAt = 0.3f;
 
     private readonly InferenceSession _model;
     private readonly string _input;

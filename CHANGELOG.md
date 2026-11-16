@@ -2,6 +2,12 @@
 
 What changed in each Savefile (formerly Cnema) release. The app shows the entries you have not seen yet after it updates.
 
+## 0.34.0
+- Laughter and hype: Savefile can listen for laughing, cheering and shouting, on this computer and only when it isn't busy. The videos where everyone lost it come first in Worth a rewatch, the blob tells you about them ("You and Sam couldn't stop laughing on Friday"), and searching "laughing" or "hype" finds them. It needs a small sound model, a one-time download of 15 MB, and costs about a second per minute of video. Settings, Features, Smart, Laughter and hype.
+- Smart thumbnails: thumbnails now come from a lively frame near the best moment, never a black screen or a loading screen. A frame you picked yourself stays. Settings, Features, Smart thumbnails.
+- Trim suggestions: when a video starts or ends with a blank screen and no sound (a loading screen, a fade, the menu before the round), the editor's Trim page offers to cut it. Nothing is cut until you say so.
+- Clean up my voice: a new switch under the editor's Sound removes background hum, fans and keyboard noise from the voice track of an export and evens out its level. It runs inside the export, nothing to download.
+
 ## 0.33.0
 - Meet the blob: a little purple blob now presents Worth a rewatch, with something to say about your clips. "Your Valorant clip from last night is a keeper", "3 new moments with Alex this week", "A year ago today you were playing ARK with Jo": every line comes from your own library (friends, games, dates, best moments, On this day), never made up. It changes every few seconds; click the blob for the next one. Turn it off under Settings, Features, The blob. With Reduced motion it holds still.
 - A loading screen: the logo, the name and the blob while Savefile starts, saying what it's getting ready, including waking up the smart models you switched on so the first search answers at once. It stays at most 8 seconds (whatever is still loading carries on in the background), a click skips it, and it never shows when Savefile starts at login. Settings, Features, Loading screen.
