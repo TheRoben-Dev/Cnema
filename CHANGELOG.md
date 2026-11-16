@@ -2,6 +2,13 @@
 
 What changed in each Savefile (formerly Cnema) release. The app shows the entries you have not seen yet after it updates.
 
+## 0.35.0
+- Big libraries scroll smoothly: the library grid no longer bends out of shape far down a long list, and scrolling to the bottom of hundreds of clips doesn't freeze any more. Every card is now the same size, only the rows on screen are built, and thumbnails you've already scrolled past aren't loaded. Tested with 1,140 clips.
+- The bin: deleting a video anywhere in Savefile (the card's delete button, right-click, select and delete, Clean up, storage limits and the Quick player) moves it to Savefile's bin instead of the system Trash. Each video waits there for 24 hours from when you deleted it, on its own clock, then it's deleted for good. Bin in the sidebar shows how long each one has left, and Put back brings it back with its favourite, tags, friends and notes. You can turn it off under Settings, Features, Savefile bin.
+- Quick player: new buttons to change the name, tags and friends (or press I) and to delete (or press Del). Deleting moves the video to the bin and the next one starts playing.
+- Thinner scroll bars that stay out of the way until you point at them. The sidebar and Worth a rewatch have none at all; the shelf has arrows instead.
+- In Swedish, dates are Swedish too ("måndag 27 juli", "sedan februari 2024").
+
 ## 0.34.0
 - Swedish speech: pick Better Swedish under Settings, Features, Voice search and captions to use KB-Whisper from the National Library of Sweden (175 MB download). It's far more accurate in Swedish and still handles English mixed in. Search also ignores accents now, so "rakna" finds "räkna".
 - Drag a video into Discord and it fits: a video too big for Discord's 10 MB limit becomes a copy that fits while you hold it (50 MB if you switch on I have Discord Nitro). Smaller videos go as they are, and you can switch it off to always drag the original.

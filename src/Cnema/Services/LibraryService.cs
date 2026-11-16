@@ -62,6 +62,7 @@ public sealed class LibraryService : IDisposable
             {
                 if (!VideoExtensions.Contains(Path.GetExtension(path))) continue;
                 if (Path.GetFileName(path).StartsWith("._")) continue; // macOS resource forks on exFAT
+                if (BinService.IsBinPath(path)) continue; // deleted, waiting out its 24 hours
                 files.Add(new FileInfo(path));
             }
         }
@@ -209,6 +210,12 @@ public sealed class LibraryService : IDisposable
     public void Delete(VideoEntry entry)
     {
         PlatformShell.MoveToTrash(entry.Path);
+        Forget(entry);
+    }
+
+    /// <summary>Drops a video that has left (to the bin, say) from the library, with its thumbnails.</summary>
+    public void Forget(VideoEntry entry)
+    {
         lock (_cacheLock) _cache.Entries.Remove(entry.Path);
         try
         {

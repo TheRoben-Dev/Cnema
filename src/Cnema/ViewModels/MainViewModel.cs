@@ -298,8 +298,14 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         if (PendingDelete is not { } item) return;
         try
         {
-            _library.Delete(item.Entry);
-            _items.Remove(item.Entry.Path);
+            if (ReferenceEquals(Player.Current, item))
+            {
+                // Let go of the file before it moves.
+                Player.Close();
+                IsMiniPlayerOpen = false;
+                IsPlayerOpen = false;
+            }
+            RemoveVideo(item);
             PendingDelete = null;
             RefreshView();
             ShowToast(F("Moved to the {0}: {1}", TrashName, item.Title));
@@ -565,6 +571,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         IsSetupOpen = _settings.IsFirstRun || Environment.GetEnvironmentVariable("CNEMA_SETUP") == "1";
         _ = RecoverThenApplyClipsAsync();
         _ = Task.Run(TrimDragCopies);
+        StartBin();
         _ = CheckForUpdatesAsync();
         LoadWrappedSongs();
         StartWrappedSeason();
@@ -822,6 +829,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(HasNoResults));
         OnPropertyChanged(nameof(CanPlayAll));
         OnPropertyChanged(nameof(ShowFriendMontage));
+        OnPropertyChanged(nameof(ShowFriendWrapped));
+        OnPropertyChanged(nameof(FriendWrappedLabel));
         UpdateCounts();
     }
 
@@ -1273,11 +1282,22 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         {
             var favourites = _items.Values.Where(i => i.Entry.Favorite)
                 .Select(i => i.Entry.Path).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var entries = _items.Values.ToDictionary(i => i.Entry.Path, i => i.Entry, StringComparer.OrdinalIgnoreCase);
+            var forget = new System.Collections.Concurrent.ConcurrentBag<Models.VideoEntry>();
             var result = await Task.Run(() =>
             {
                 var plan = StorageService.Plan(c, favourites.Contains, DateTime.UtcNow);
-                return plan.Count == 0 ? null : StorageService.Apply(c, plan);
+                if (plan.Count == 0) return null;
+                // With the bin on, each clip waits 24 hours there like any other delete.
+                Action<string>? toBin = UseBin ? path =>
+                {
+                    var entry = entries.TryGetValue(path, out var e) ? e : new Models.VideoEntry { Path = path };
+                    _bin.Add(entry);
+                    forget.Add(entry);
+                } : null;
+                return StorageService.Apply(c, plan, toBin);
             });
+            foreach (var e in forget) _library.Forget(e);
             if (result is { Removed: > 0 }) _ = RescanAsync();
             if (result is { Removed: > 0 })
                 ShowToast(F(result.Archived

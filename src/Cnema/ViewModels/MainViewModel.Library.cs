@@ -310,6 +310,8 @@ public sealed partial class MainViewModel
         OnPropertyChanged(nameof(HeaderCount));
         OnPropertyChanged(nameof(CanPlayAll));
         OnPropertyChanged(nameof(ShowFriendMontage));
+        OnPropertyChanged(nameof(ShowFriendWrapped));
+        OnPropertyChanged(nameof(FriendWrappedLabel));
     }
 
     private void SelectionChanged()
@@ -379,10 +381,13 @@ public sealed partial class MainViewModel
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(IsConfirmingDelete), nameof(DeletePrompt), nameof(DeleteTitle), nameof(DeleteHint))]
     private IReadOnlyList<VideoItemViewModel>? _pendingBulkDelete;
     public string DeleteTitle => PendingBulkDelete is { Count: > 1 } ? T("Let these go?") : T("Let this one go?");
-    public string DeleteHint => PendingBulkDelete is { Count: > 1 }
+    public string DeleteHint => UseBin
+        ? PendingBulkDelete is { Count: > 1 } ? T("They wait in the bin for 24 hours, so you can put them back, then they're deleted for good.")
+            : T("It waits in the bin for 24 hours, so you can put it back, then it's deleted for good.")
+        : PendingBulkDelete is { Count: > 1 }
         ? F("You can restore them from the {0} if you change your mind.", TrashName)
         : F("You can restore it from the {0} if you change your mind.", TrashName);
-    private static string TrashName => T(OperatingSystem.IsWindows() ? "Recycle Bin" : "Trash");
+    private string TrashName => UseBin ? T("bin") : T(OperatingSystem.IsWindows() ? "Recycle Bin" : "Trash");
 
     /// <summary>Moves several videos to the trash; returns how many could not be moved.</summary>
     private int DeleteMany(IReadOnlyList<VideoItemViewModel> items)
@@ -392,8 +397,7 @@ public sealed partial class MainViewModel
         {
             try
             {
-                _library.Delete(item.Entry);
-                _items.Remove(item.Entry.Path);
+                RemoveVideo(item);
             }
             catch (Exception ex)
             {

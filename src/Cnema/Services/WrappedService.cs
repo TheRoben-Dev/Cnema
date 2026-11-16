@@ -115,8 +115,14 @@ public static class WrappedService
     /// your clip personality, then and now, a hidden gem, your top five, and the funniest moment to close.
     /// Every number comes from the clips themselves: Savefile knows what you saved, not how long you played.
     /// </summary>
-    public static WrappedScript Script(IReadOnlyList<VideoEntry> clips, int year, bool people, Func<VideoEntry, string?> gameOf)
+    /// <summary>
+    /// The year's video. With <paramref name="friend"/> it's a shorter cut of only the clips with that friend:
+    /// what you played together, your biggest night and laughs together, your best clips together.
+    /// </summary>
+    public static WrappedScript Script(IReadOnlyList<VideoEntry> clips, int year, bool people, Func<VideoEntry, string?> gameOf, string? friend = null)
     {
+        if (friend is not null)
+            clips = clips.Where(e => e.People.Any(p => string.Equals(p.Trim(), friend, StringComparison.OrdinalIgnoreCase))).ToList();
         var s = Stats(clips, year, people, gameOf);
         var moments = Moments(clips, gameOf);
         var byPath = clips.ToDictionary(c => c.Path, StringComparer.Ordinal);
@@ -133,13 +139,14 @@ public static class WrappedService
         var best = moments.Take(24).ToList();
 
         // Hello, and a taste of the best.
-        acts.Add(new WrappedAct(Card(new("intro", "savefile", F("Your {0}", year), T("wrapped"), WrappedDirector.IntroSeconds)), WrappedActStyle.Burst, best, 0.6));
-        acts.Add(new WrappedAct(Card(new("moments", T("This year you saved"), P(s.Moments, "{0} clip", "{0:N0} clips"),
+        acts.Add(new WrappedAct(Card(new("intro", "savefile", friend is null ? F("Your {0}", year) : F("Your {0} with {1}", year, friend), T("wrapped"),
+            WrappedDirector.IntroSeconds)), WrappedActStyle.Burst, best, 0.6));
+        acts.Add(new WrappedAct(Card(new("moments", friend is null ? T("This year you saved") : F("This year you and {0} saved", friend), P(s.Moments, "{0} clip", "{0:N0} clips"),
             F("{0} of memories, across {1}.", Span(s.TotalMs), P(s.Days, "{0} day", "{0:N0} days")), WrappedDirector.CardSeconds)), WrappedActStyle.Card, Array.Empty<WrappedMoment>()));
 
         // Month by month: the best clip of each month with clips.
         var months = moments.GroupBy(m => m.Local.Month).OrderBy(g => g.Key).Select(g => g.OrderByDescending(m => m.Score).First()).ToList();
-        if (months.Count >= 3)
+        if (months.Count >= 3 && friend is null)
         {
             acts.Add(new WrappedAct(Card(new("chapter", T("Your year"), T("Month by month"), "", WrappedDirector.ChapterSeconds)), WrappedActStyle.Flash, months, 0,
                 months.Select(m => c.DateTimeFormat.GetMonthName(m.Local.Month)).ToList<string?>()));
@@ -152,14 +159,25 @@ public static class WrappedService
             var (game, count) = s.Games[0];
             var share = s.Moments > 0 ? (int)Math.Round(100.0 * count / s.Moments) : 0;
             var others = s.Games.Skip(1).Select(g => F("{0} ({1})", SmartTitles.Pretty(g.Name), g.Count)).ToList();
-            acts.Add(new WrappedAct(Card(new("game", T("Your most-clipped game"), SmartTitles.Pretty(game),
-                    F("{0} · {1}% of your clips", P(count, "{0} clip", "{0:N0} clips"), share), WrappedDirector.CardSeconds,
+            acts.Add(new WrappedAct(Card(new("game", friend is null ? T("Your most-clipped game") : T("What you clipped most together"), SmartTitles.Pretty(game),
+                    friend is null ? F("{0} · {1}% of your clips", P(count, "{0} clip", "{0:N0} clips"), share)
+                        : F("{0} · {1}% of your clips together", P(count, "{0} clip", "{0:N0} clips"), share), WrappedDirector.CardSeconds,
                     others.Count > 0 ? F("Then {0}", string.Join(", ", others)) : "")),
                 WrappedActStyle.Mix, moments.Where(m => s.Games.Any(g => string.Equals(g.Name, m.Game, StringComparison.OrdinalIgnoreCase))).ToList(), 2));
         }
 
         // Your people: a card per friend in the crew, then your clips together.
-        if (s.Friends.Count > 0)
+        if (friend is not null)
+        {
+            // One card for the friend: the clips together and something they said.
+            var quote = Quote(clips);
+            var others = s.Friends.Where(f => !string.Equals(f.Name, friend, StringComparison.OrdinalIgnoreCase)).Select(f => f.Name).Take(3).ToList();
+            acts.Add(new WrappedAct(Card(new("crew", T("Your crew"), friend,
+                    others.Count > 0 ? F("Often with {0} too", Join(others)) : P(s.Moments, "{0} clip together", "{0:N0} clips together"),
+                    WrappedDirector.CardSeconds, quote is null ? "" : F("“{0}”, heard in a clip with {1}", quote, friend))),
+                WrappedActStyle.Mix, moments.Skip(24).ToList(), 1.3));
+        }
+        else if (s.Friends.Count > 0)
         {
             Chapter(T("Your people"));
             foreach (var (name, count) in s.Friends)
@@ -180,7 +198,7 @@ public static class WrappedService
         {
             Chapter(T("Your biggest night"));
             var that = moments.Where(m => NightOf(m.Local) == night).OrderBy(m => m.Local).ToList();
-            acts.Add(new WrappedAct(Card(new("night", T("The night you saved the most clips"), night.ToString("dddd d MMMM", c),
+            acts.Add(new WrappedAct(Card(new("night", friend is null ? T("The night you saved the most clips") : F("Your biggest night with {0}", friend), night.ToString("dddd d MMMM", c),
                     s.BiggestNightWho.Count > 0 ? F("{0} with {1}", P(s.BiggestNightCount, "{0} clip", "{0} clips"), Join(s.BiggestNightWho))
                         : P(s.BiggestNightCount, "{0} clip", "{0} clips"), WrappedDirector.CardSeconds)),
                 WrappedActStyle.Mix, that, 1));
@@ -197,7 +215,7 @@ public static class WrappedService
         }
 
         // Your clip personality, then everything else that was good.
-        if (Personality(clips, s) is { } who)
+        if (friend is null && Personality(clips, s) is { } who)
             acts.Add(new WrappedAct(Card(new("personality", T("Your clip personality"), who.Label, who.Why, WrappedDirector.CardSeconds, T("Based on when and what you clipped."))),
                 WrappedActStyle.Burst, moments.Skip(24).Take(120).ToList(), 1.2));
 
@@ -216,7 +234,7 @@ public static class WrappedService
         }
 
         // A hidden gem: one of the best, never opened in Savefile.
-        var gem = moments.Take(60).FirstOrDefault(m => byPath.GetValueOrDefault(m.Path) is { LastPlayedUtc: null, Favorite: false });
+        var gem = friend is not null ? null : moments.Take(60).FirstOrDefault(m => byPath.GetValueOrDefault(m.Path) is { LastPlayedUtc: null, Favorite: false });
         if (gem is not null)
             acts.Add(new WrappedAct(Card(new("gem", T("A hidden gem"), T("You haven't watched this one yet"),
                 T("One of your best clips this year, and you've never opened it in Savefile."), WrappedDirector.CardSeconds)), WrappedActStyle.Story, new[] { gem }, 0,
@@ -232,7 +250,8 @@ public static class WrappedService
             acts.Add(new WrappedAct(Card(new("chapter", T("And to close"), T("Your funniest moment"), "", WrappedDirector.ChapterSeconds)), WrappedActStyle.Story,
                 new[] { closer }, 0, new string?[] { null }, 16));
 
-        acts.Add(new WrappedAct(Card(new("outro", F("That was your {0}.", year), T("Some saves you never overwrite."), F("See you in {0}.", year + 1), WrappedDirector.OutroSeconds)),
+        acts.Add(new WrappedAct(Card(new("outro", friend is null ? F("That was your {0}.", year) : F("That was {0} with {1}.", year, friend),
+                T("Some saves you never overwrite."), F("See you in {0}.", year + 1), WrappedDirector.OutroSeconds)),
             WrappedActStyle.Card, Array.Empty<WrappedMoment>()));
         return new WrappedScript(cards, acts);
     }
@@ -307,6 +326,9 @@ public static class WrappedService
     public static async Task RenderAsync(WrappedPlan plan, string work, int width, int height, string output,
         CardDrawer drawCard, CaptionDrawer drawCaption, IProgress<double>? progress, CancellationToken ct)
     {
+        // ffmpeg reads the parts list relative to its own folder, so every path is made absolute.
+        work = Path.GetFullPath(work);
+        output = Path.GetFullPath(output);
         var ffmpeg = ToolLocator.Ffmpeg ?? throw new InvalidOperationException(T("ffmpeg not found."));
         Directory.CreateDirectory(work);
         var music = plan.Songs.Count > 0;

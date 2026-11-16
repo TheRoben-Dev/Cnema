@@ -198,6 +198,8 @@ public sealed class FeatureSettings
     public bool DragOut { get; set; } = true;
     /// <summary>A dragged-out video bigger than Discord allows becomes a copy that fits (10 MB, or 50 MB with Nitro).</summary>
     public bool DragDiscord { get; set; } = true;
+    /// <summary>Deleted videos wait 24 hours in Savefile's bin (each on its own clock); off, they go to the system Trash.</summary>
+    public bool Bin { get; set; } = true;
     /// <summary>The person has Discord Nitro: dragged-out copies may be up to 50 MB.</summary>
     public bool DiscordNitro { get; set; }
     /// <summary>Bring in videos from OBS, NVIDIA, Xbox Game Bar and Steam.</summary>

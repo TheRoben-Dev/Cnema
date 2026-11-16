@@ -57,9 +57,37 @@ public static class Loc
         var resolved = string.IsNullOrEmpty(code) ? SystemLanguage : code;
         if (!Languages.Any(l => l.Code == resolved)) resolved = "en";
         _strings = resolved == "en" ? new() : LoadFile(resolved);
+        ApplyDates(resolved);
         var changed = resolved != Current;
         Current = resolved;
         if (changed) Changed?.Invoke();
+    }
+
+    private static CultureInfo? _system;
+
+    /// <summary>
+    /// Month and day names follow the app's language ("måndag 27 juli" in Swedish), while numbers keep the
+    /// system's own format: only the date names and patterns are swapped in.
+    /// </summary>
+    private static void ApplyDates(string code)
+    {
+        try
+        {
+            _system ??= CultureInfo.CurrentCulture;
+            CultureInfo culture;
+            if (_system.TwoLetterISOLanguageName == code) culture = _system;
+            else
+            {
+                culture = (CultureInfo)_system.Clone();
+                culture.DateTimeFormat = (DateTimeFormatInfo)CultureInfo.GetCultureInfo(code == "sv" ? "sv-SE" : "en-GB").DateTimeFormat.Clone();
+            }
+            CultureInfo.CurrentCulture = culture;
+            CultureInfo.DefaultThreadCurrentCulture = culture;
+        }
+        catch (Exception ex)
+        {
+            Log.Warn($"Date names for {code}: {ex.Message}");
+        }
     }
 
     private static Dictionary<string, string> LoadFile(string code)
