@@ -42,9 +42,10 @@ public sealed partial class MainViewModel
     {
         if (!Features.Rewatch || _items.Count < 8) return new();
         var now = DateTime.Now;
+        var friend = ShelfFriend;
         var rng = new Random(now.Year * 1000 + now.DayOfYear);
         return _items.Values
-            .Where(v => v.Entry.DurationMs > 0)
+            .Where(v => v.Entry.DurationMs > 0 && (friend.Length == 0 || With(v.Entry, friend)))
             .Select(v =>
             {
                 var age = (now - v.Entry.ModifiedUtc.ToLocalTime()).TotalDays;
@@ -117,6 +118,7 @@ public sealed partial class MainViewModel
     /// <summary>Re-picks the rewatch row and the memory card; called whenever the library view refreshes.</summary>
     private void RefreshMemories()
     {
+        RefreshShelfFriends();
         var (item, title) = PickMemory();
         // The clip on the memory card isn't repeated in the row under it.
         var picked = PickFeatured().Where(v => !ReferenceEquals(v, item)).ToList();

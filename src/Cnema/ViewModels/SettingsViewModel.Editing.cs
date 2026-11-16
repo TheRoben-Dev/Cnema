@@ -55,6 +55,7 @@ public sealed partial class SettingsViewModel
     [ObservableProperty] private bool _featureMochiHelper;
     [ObservableProperty] private bool _featureLaughs;
     [ObservableProperty] private bool _featureVoices;
+    [ObservableProperty] private bool _featureFriendShelf;
     [ObservableProperty] private bool _featureWrapped;
     [ObservableProperty] private bool _featureSmartThumbs;
     [ObservableProperty] private bool _featureTrimSuggestions;
@@ -107,6 +108,7 @@ public sealed partial class SettingsViewModel
         FeatureMontage = f.Montage;
         FeatureRecoverSessions = f.RecoverSessions;
         FeatureRewatch = f.Rewatch;
+        FeatureFriendShelf = f.FriendShelf;
         FeatureOnThisDay = f.OnThisDay;
         FeaturePeople = f.People;
         FeatureMilestones = f.Milestones;

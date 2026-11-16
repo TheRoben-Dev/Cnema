@@ -227,6 +227,8 @@ public sealed class FeatureSettings
     public bool Montage { get; set; } = true;
     /// <summary>A "Worth a rewatch" row of older favourites and forgotten clips at the top of the library.</summary>
     public bool Rewatch { get; set; } = true;
+    /// <summary>Friend picks: your closest friends' names above Worth a rewatch; pick one for your best clips together.</summary>
+    public bool FriendShelf { get; set; } = true;
     /// <summary>A card at the top of the library with what you recorded on this day in earlier years.</summary>
     public bool OnThisDay { get; set; } = true;
     /// <summary>Tag the friends who were there; it shows on the card and search finds them with @name.</summary>
