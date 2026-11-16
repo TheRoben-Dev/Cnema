@@ -18,6 +18,7 @@ public sealed partial class MainViewModel
     private void ExpandMiniPlayer()
     {
         if (!IsMiniPlayerOpen) return;
+        PlayAll = false; // the editor is for one video
         IsMiniPlayerOpen = false;
         IsPlayerOpen = true;
     }
@@ -87,7 +88,7 @@ public sealed partial class MainViewModel
     /// <summary>In the Quick player, each video is followed by the next one in the library's order.</summary>
     [ObservableProperty] private bool _playAll;
     public bool ShowPlayAll => Features.PlayAll && UseMiniPlayer;
-    public bool CanPlayAll => ShowPlayAll && Videos.Count > 1;
+    public bool CanPlayAll => ShowPlayAll && Videos.Count > 1 && !IsSelecting;
 
     [RelayCommand]
     private void TogglePlayAll()

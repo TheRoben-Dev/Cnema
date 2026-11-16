@@ -308,6 +308,7 @@ public sealed partial class MainViewModel
         OnPropertyChanged(nameof(ShowFeatured));
         OnPropertyChanged(nameof(ShowMemory));
         OnPropertyChanged(nameof(HeaderCount));
+        OnPropertyChanged(nameof(CanPlayAll));
     }
 
     private void SelectionChanged()

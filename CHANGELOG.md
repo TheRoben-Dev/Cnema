@@ -16,6 +16,11 @@ What changed in each Savefile (formerly Cnema) release. The app shows the entrie
 - Fixed: a thumbnail cut off halfway through stayed broken until the video changed.
 - Fixed: one error in a controller action switched the controller off until restart, and a button held while the window was in the background fired when it came back.
 - Fixed: Clean up suggested binning videos that were still being recorded.
+- Fixed: keyboard shortcuts you changed weren't remembered if you saved Settings afterwards (since 0.25.0).
+- Fixed: switching off Sessions under Settings, Features while a session was recording left it running with no way to stop it. It's now finished and saved.
+- Fixed: renamed or removed tags and friends came back on videos stored on a drive that was unplugged at the time.
+- Fixed: Play all stayed on after going from the Quick player to the editor, and the Play all button could select a video in select mode.
+- Fixed: renaming a tag or a friend in the sidebar no longer jumps to it, and clicking through videos quickly no longer loses where you were in one.
 - The loud-moments scan stops when the player closes, instead of reading the rest of a long session recording.
 
 ## 0.25.0

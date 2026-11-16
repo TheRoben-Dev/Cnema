@@ -104,7 +104,9 @@ public sealed class LibraryService : IDisposable
         lock (_cacheLock)
         {
             var live = new HashSet<string>(result.Select(r => r.Path), StringComparer.OrdinalIgnoreCase);
-            var orphans = _cache.Entries.Values.Where(v => !live.Contains(v.Path)).ToList();
+            // Rows kept for an unplugged drive are not "gone": they must not take part in the matching.
+            var offlineNow = folders.Where(f => !Directory.Exists(f)).ToList();
+            var orphans = _cache.Entries.Values.Where(v => !live.Contains(v.Path) && !offlineNow.Any(f => IsUnder(v.Path, f))).ToList();
             foreach (var e in work.Where(w => !_cache.Entries.ContainsKey(w.Path)))
             {
                 var matches = orphans.Where(o => o.Size == e.Size && o.ModifiedUtc == e.ModifiedUtc).ToList();

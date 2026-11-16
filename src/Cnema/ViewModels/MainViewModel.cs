@@ -1174,10 +1174,14 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             return;
         }
         _settings.ReplaceWith(draft); // saves
+        // The shortcut sheet edits the live dictionary; point it at the one that is now saved.
+        Shortcuts.Load(_settings.Current.Shortcuts);
         SettingsEditor = null;
         OnPropertyChanged(nameof(IsControllerMode));
         ControllerModeChanged?.Invoke();
         RaiseFeatures();
+        // Sessions switched off mid-session: save it now, or it would record on with no stop button.
+        if (!Features.Sessions && IsSession) await ToggleSessionAsync();
         await ApplyClipSettingsAsync();
         await RunStorageCleanupAsync();
     }

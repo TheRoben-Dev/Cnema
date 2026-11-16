@@ -269,7 +269,7 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
         }
         HideToast();
         // Switching videos in the quick player or with ← / →: remember where the last one was left.
-        if (_active && Current is { } previous && !ReferenceEquals(previous, item))
+        if (_active && !_openInFlight && Current is { } previous && !ReferenceEquals(previous, item))
         {
             SaveProgress(previous);
             RememberEdits(previous);

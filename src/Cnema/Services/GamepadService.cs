@@ -115,6 +115,7 @@ public sealed class GamepadService : IDisposable
             // Count everything as held, so a button still down when the window comes back doesn't fire;
             // the first poll after that sees which ones were really let go.
             Array.Fill(_down, true);
+            Array.Fill(_nextRepeat, DateTime.MaxValue); // and a held direction doesn't start repeating
             return;
         }
         try

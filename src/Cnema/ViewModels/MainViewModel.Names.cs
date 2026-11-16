@@ -33,6 +33,7 @@ public sealed partial class MainViewModel
     {
         if (_renamingRow is not { } row) return;
         var from = row.Name;
+        var wasActive = ReferenceEquals(ActiveNav, row);
         var to = RenameText.Trim().TrimStart(row.Kind == NavKind.Tag ? '#' : '@').Trim();
         CancelRename();
         if (to.Length == 0 || to.Length > 40 || to == from) return;
@@ -48,8 +49,9 @@ public sealed partial class MainViewModel
             RaiseSquad();
         }
         UpdateCounts();
-        // Stay on the renamed row.
-        if (row.Kind == NavKind.Tag) SelectedTag = Tags.FirstOrDefault(t => string.Equals(t.Name, to, StringComparison.OrdinalIgnoreCase));
+        // Stay on the renamed row if it was the one being viewed.
+        if (!wasActive) { }
+        else if (row.Kind == NavKind.Tag) SelectedTag = Tags.FirstOrDefault(t => string.Equals(t.Name, to, StringComparison.OrdinalIgnoreCase));
         else SelectedFriend = Friends.FirstOrDefault(t => string.Equals(t.Name, to, StringComparison.OrdinalIgnoreCase));
         RefreshView();
         ShowToast(F("Renamed {0} to {1} on {2}", from, to, P(n, "{0} video", "{0} videos")));
