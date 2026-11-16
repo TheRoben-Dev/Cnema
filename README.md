@@ -9,10 +9,7 @@ caption and send to the group chat. No account, no cloud. Built on the VLC engin
 Savefile was called **Cnema** up to v0.22. The repository, the release mirror and the app file
 (`Cnema.app`, `Cnema.exe`) keep the old name for now so existing installs keep updating themselves.
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/savefile-hero-dark.png">
-  <img alt="Savefile: Mochi the blob next to the Savefile library, with smart search, best moments, friends and Wrapped" src="docs/savefile-hero-light.png">
-</picture>
+![Library](docs/library.png)
 
 ## Download
 

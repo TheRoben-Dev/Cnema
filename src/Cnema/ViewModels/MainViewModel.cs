@@ -1336,6 +1336,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     public void Dispose()
     {
+        SavePlaytime();
         _quitting = true;
         Exports.CancelAll();
         _hotkey.Dispose();

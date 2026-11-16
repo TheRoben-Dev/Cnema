@@ -130,6 +130,7 @@ public sealed partial class MainViewModel
         OnPropertyChanged(nameof(RecapBannerTitle));
         OnPropertyChanged(nameof(RecapBannerText));
         RefreshMascot();
+        CheckBadges();
     }
 
     // ---------- who was there ----------

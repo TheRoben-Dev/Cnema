@@ -20,9 +20,20 @@ public sealed class StatsViewModel
     public IReadOnlyList<StatBar> Weeks { get; }
     public IReadOnlyList<StatBar> Games { get; }
     public bool HasGames => Games.Count > 0;
+    public IReadOnlyList<BadgeRow> Badges { get; }
+    public bool HasBadges => Badges.Count > 0;
+    public string BadgeCount => F("{0} of {1}", Badges.Count(b => b.Earned), Badges.Count);
+    public IReadOnlyList<PlayBar> Playtime { get; }
+    public bool HasPlaytime => PlaytimeSince.Length > 0;
+    public bool HasPlaytimeBars => Playtime.Count > 0;
+    public string PlaytimeSince { get; }
 
-    public StatsViewModel(IReadOnlyList<VideoEntry> all, string clipsFolder)
+    public StatsViewModel(IReadOnlyList<VideoEntry> all, string clipsFolder, IReadOnlyList<BadgeRow>? badges = null,
+        IReadOnlyList<PlayBar>? playtime = null, string playtimeSince = "")
     {
+        Badges = badges ?? Array.Empty<BadgeRow>();
+        Playtime = playtime ?? Array.Empty<PlayBar>();
+        PlaytimeSince = playtimeSince;
         var prefix = clipsFolder.TrimEnd('/', '\\') + Path.DirectorySeparatorChar;
         var clips = all.Where(e => e.Path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)).ToList();
         var weekStart = DateTime.Today.AddDays(-(((int)DateTime.Today.DayOfWeek + 6) % 7)); // Monday

@@ -462,8 +462,11 @@ public sealed partial class MainViewModel
     public bool ShowStats => Features.Stats;
 
     [RelayCommand]
-    private void OpenStats() =>
-        Stats = new StatsViewModel(_items.Values.Select(v => v.Entry).ToList(), _settings.Current.Clip.ResolvedFolder);
+    private void OpenStats()
+    {
+        var (play, since) = PlaytimeRows();
+        Stats = new StatsViewModel(_items.Values.Select(v => v.Entry).ToList(), _settings.Current.Clip.ResolvedFolder, BadgeRows(), play, since);
+    }
 
     [RelayCommand] private void CloseStats() => Stats = null;
 
