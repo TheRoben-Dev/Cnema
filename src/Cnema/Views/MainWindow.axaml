@@ -2333,6 +2333,10 @@
                       <StackPanel Spacing="2">
                         <TextBlock svc:Tr.Text="Best moments" />
                         <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Savefile listens to and watches your videos, on this computer and only when it's not busy, to find the moments that stand out. They get a sparkle, come first under Best moments, and lead Worth a rewatch, montages and Year in clips. It waits while you play." />
+                        <Grid ColumnDefinitions="Auto,*" Margin="0,4,0,0">
+                          <PathIcon Data="{StaticResource IcSpeed}" Width="11" Height="11" Margin="0,2,6,0" VerticalAlignment="Top" Foreground="{DynamicResource TextDim}" />
+                          <TextBlock Grid.Column="1" Classes="dim cost" FontSize="11" TextWrapping="Wrap" Text="{Binding #Root.((vm:MainViewModel)DataContext).MomentsCostText}" />
+                        </Grid>
                         <TextBlock Classes="dim" FontSize="11" Foreground="{DynamicResource Highlight}" Text="{Binding #Root.((vm:MainViewModel)DataContext).SmartActivity}"
                                    IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).SmartActivity, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
                       </StackPanel>
@@ -2343,6 +2347,10 @@
                       <StackPanel Spacing="2">
                         <TextBlock svc:Tr.Text="Smart titles" />
                         <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Names from the game, who was there and when, like &quot;Late-night Valorant with Alex · 16 Nov&quot;. Suggested when you edit a video, and for the whole library under Tools, Smart rename." />
+                        <Grid ColumnDefinitions="Auto,*" Margin="0,4,0,0">
+                          <PathIcon Data="{StaticResource IcSpeed}" Width="11" Height="11" Margin="0,2,6,0" VerticalAlignment="Top" Foreground="{DynamicResource TextDim}" />
+                          <TextBlock Grid.Column="1" Classes="dim cost" FontSize="11" TextWrapping="Wrap" Text="{Binding #Root.((vm:MainViewModel)DataContext).TitlesCostText}" />
+                        </Grid>
                       </StackPanel>
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureSmartTitles}" />
                     </Grid>
@@ -2359,6 +2367,10 @@
                       <StackPanel Spacing="2">
                         <TextBlock svc:Tr.Text="Voice search and captions" />
                         <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Savefile writes down what's said in your videos, on this computer and only when it's not busy. Search finds the words and opens the video where they're said, the player can show them as captions, and the editor turns them into captions for an export." />
+                        <Grid ColumnDefinitions="Auto,*" Margin="0,4,0,0">
+                          <PathIcon Data="{StaticResource IcSpeed}" Width="11" Height="11" Margin="0,2,6,0" VerticalAlignment="Top" Foreground="{DynamicResource TextDim}" />
+                          <TextBlock Grid.Column="1" Classes="dim cost" FontSize="11" TextWrapping="Wrap" Text="{Binding #Root.((vm:MainViewModel)DataContext).SpeechCostText}" />
+                        </Grid>
                       </StackPanel>
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureSpeech}" />
                     </Grid>
@@ -2386,6 +2398,10 @@
                       <StackPanel Spacing="2">
                         <TextBlock svc:Tr.Text="Visual search and similar videos" />
                         <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Savefile looks at a few frames of each video, on this computer and only when it's not busy. Search finds what's on screen (&quot;snow&quot;, &quot;a car&quot;, &quot;night&quot;), right-click a video for Videos like this one, and Clean up spots copies that were saved again." />
+                        <Grid ColumnDefinitions="Auto,*" Margin="0,4,0,0">
+                          <PathIcon Data="{StaticResource IcSpeed}" Width="11" Height="11" Margin="0,2,6,0" VerticalAlignment="Top" Foreground="{DynamicResource TextDim}" />
+                          <TextBlock Grid.Column="1" Classes="dim cost" FontSize="11" TextWrapping="Wrap" Text="{Binding #Root.((vm:MainViewModel)DataContext).VisualCostText}" />
+                        </Grid>
                       </StackPanel>
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureVisual}" />
                     </Grid>

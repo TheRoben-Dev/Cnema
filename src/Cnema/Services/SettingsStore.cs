@@ -39,6 +39,8 @@ public sealed class AppSettings
 
     /// <summary>Which optional parts of Cnema are switched on (Settings, Features).</summary>
     public FeatureSettings Features { get; set; } = new();
+    /// <summary>How long this computer takes for each smart feature (see <see cref="CostMeter"/>).</summary>
+    public Dictionary<string, double> WorkRates { get; set; } = new();
     public AccessibilitySettings Accessibility { get; set; } = new();
     /// <summary>Keyboard shortcuts changed from their defaults: action id to gesture, "" for none.</summary>
     public Dictionary<string, string> Shortcuts { get; set; } = new();

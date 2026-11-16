@@ -23,6 +23,7 @@ public sealed partial class SpeechService : IDisposable
     /// <summary>Loads the model, or says why it can't (no model, or the speech library won't load here).</summary>
     public static SpeechService Load(string modelPath)
     {
+        PreloadBundled();
         try { return new SpeechService(WhisperFactory.FromPath(modelPath)); }
         catch (Exception ex)
         {
@@ -31,9 +32,21 @@ public sealed partial class SpeechService : IDisposable
         }
     }
 
+    /// <summary>
+    /// Linux: the OpenMP runtime the speech library needs ships in runtimes/linux-x64. Loading it first by
+    /// its full path lets the speech library find it without anything installed on the system.
+    /// </summary>
+    private static void PreloadBundled()
+    {
+        if (!OperatingSystem.IsLinux()) return;
+        var gomp = Path.Combine(AppContext.BaseDirectory, "runtimes", "linux-x64", "libgomp.so.1");
+        if (File.Exists(gomp)) System.Runtime.InteropServices.NativeLibrary.TryLoad(gomp, out _);
+    }
+
     /// <summary>The speech library's build info, or null when its native part doesn't load (self-test).</summary>
     public static string? RuntimeCheck()
     {
+        PreloadBundled();
         try { return WhisperFactory.GetRuntimeInfo()?.Trim() is { Length: > 0 } s ? s.Split('\n')[0] : "loaded"; }
         catch (Exception ex) { Console.Error.WriteLine(ex.Message); return null; }
     }

@@ -127,7 +127,7 @@ public sealed partial class MainViewModel
                     tried.Add(item);
                     if (item.Entry.Visual is { Version: VisualService.Version } || !File.Exists(item.Entry.Path)) continue;
                     while (VisualShouldWait && !ct.IsCancellationRequested) await Task.Delay(5000, ct);
-                    VisualActivity = F("Looking at your videos: {0} to go", (todo.Count - i).ToString("N0"));
+                    VisualActivity = F("Looking at your videos: {0} to go, {1}", (todo.Count - i).ToString("N0"), CostMeter.Span(LeftSeconds(CostMeter.Visual, todo.Skip(i))));
                     var model = _visual ?? await Task.Run(VisualModel, ct);
                     if (model is null) return;
                     VisualInfo? info;
@@ -135,7 +135,9 @@ public sealed partial class MainViewModel
                     {
                         var path = item.Entry.Path;
                         var length = item.Entry.DurationMs;
+                        var watch = System.Diagnostics.Stopwatch.StartNew();
                         info = await Task.Run(() => model.LookAsync(path, length, ct), ct);
+                        CostMeter.Record(CostMeter.Visual, watch.Elapsed.TotalSeconds, length);
                     }
                     catch (OperationCanceledException) { throw; }
                     catch (Exception ex)
@@ -145,7 +147,7 @@ public sealed partial class MainViewModel
                     }
                     if (_items.TryGetValue(item.Entry.Path, out var still) && ReferenceEquals(still, item))
                         item.Entry.Visual = info ?? new VisualInfo { Version = VisualService.Version };
-                    if (++done % 25 == 0) { _library.SaveCache(); OnPropertyChanged(nameof(VisualModelText)); }
+                    if (++done % 25 == 0) { _library.SaveCache(); OnPropertyChanged(nameof(VisualModelText)); OnCostsChanged(); }
                     await Task.Delay(100, ct);
                 }
             }
@@ -159,6 +161,7 @@ public sealed partial class MainViewModel
         finally
         {
             VisualActivity = "";
+            OnCostsChanged();
             if (done > 0)
             {
                 _library.SaveCache();
