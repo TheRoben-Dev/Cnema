@@ -29,7 +29,7 @@ Savefile updates itself after that.
   "Who was there" tags that search finds with `@name` (with a Friends list in the sidebar and "Playing with"
   to tag everyone on every save), Year in clips (a look back on a year, with a montage of it and a picture to share), Play all (a
   slideshow of any view in the Quick player), and small
-  milestones as your saves add up.
+  milestones as your saves add up. The blob, Savefile's mascot, presents Worth a rewatch with a line about your clips.
 - **Library:** one library folder (or several, if you like), merging scattered folders into one, thumbnails with hover scrub, search (names, `#tags`, `@friends`, years, months),
   filters, tags, favourites, collections, bulk select, duplicate finder and stats.
 - **Backup to your own server:** favourites or every video, with their tags, friends and notes, to a folder
@@ -37,7 +37,8 @@ Savefile updates itself after that.
   MinIO), and restore on a new computer. Off by default; nothing leaves your network.
 - **Smart, on your computer:** best moments found by sound and picture (a sparkle on the ones that stand out,
   and they lead Worth a rewatch, montages and Year in clips), smart titles from game, friends and date, and
-  Smart rename for the whole library. No account, no cloud, nothing downloaded.
+  Smart rename for the whole library. No account, no cloud, nothing downloaded. Every smart setting says what it
+  costs (CPU, memory, download, time for your library) before you switch it on.
 - **Voice search and captions:** what's said in your videos is written down on your computer, so you can
   search for it, watch with captions, and turn it into captions for an export (optional 57 MB speech model).
 - **Visual search and similar videos:** search for what's on screen ("snow", "a car"), see Videos like this one,
