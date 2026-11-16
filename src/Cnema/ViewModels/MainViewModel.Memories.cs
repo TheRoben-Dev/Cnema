@@ -51,6 +51,7 @@ public sealed partial class MainViewModel
                 var sinceSeen = v.Entry.LastPlayedUtc is { } seen ? (now - seen.ToLocalTime()).TotalDays : age;
                 double score = rng.NextDouble() * 2.5;            // a little luck, so it isn't always the same ten
                 if (v.Entry.Favorite) score += 3;
+                if (Features.Highlights && v.Entry.Smart is { } sm) score += sm.Excitement * 3; // a moment that stands out
                 if (v.Entry.People.Count > 0) score += 1.5;       // clips with friends in them
                 if (!string.IsNullOrWhiteSpace(v.Entry.Note)) score += 1;
                 if (age > 14) score += 1;                         // rediscovery, not what you saved an hour ago

@@ -21,6 +21,9 @@ public static class MontageService
     /// <summary>
     /// Picks the part of each video to use: the loudest stretch of <paramref name="seconds"/> (0 = the whole video).
     /// </summary>
+    /// <summary>A video's best moment in ms when the smart features found it already (null: not known).</summary>
+    public static Func<string, double?>? KnownBestMoment { get; set; }
+
     public static async Task<List<MontagePart>> PlanAsync(IReadOnlyList<(string Path, long DurationMs)> videos, int seconds, CancellationToken ct)
     {
         var parts = new List<MontagePart>();
@@ -30,7 +33,9 @@ public static class MontageService
             if (duration < 1000) continue;
             var length = seconds <= 0 ? duration : Math.Min(duration, seconds * 1000L);
             if (length >= duration) { parts.Add(new MontagePart(path, 0, duration)); continue; }
-            var best = await HighlightService.BestMomentAsync(path, Math.Min(seconds, 4), ct) ?? duration / 2.0;
+            // Best moments already found in the background: no need to listen again.
+            var best = KnownBestMoment?.Invoke(path) is { } known && known >= 0 ? known
+                : await HighlightService.BestMomentAsync(path, Math.Min(seconds, 4), ct) ?? duration / 2.0;
             // A little more after the peak than before it: the reaction is part of the moment.
             var start = (long)Math.Clamp(best - length * 0.55, 0, duration - length);
             parts.Add(new MontagePart(path, start, start + length));

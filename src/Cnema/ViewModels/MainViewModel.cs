@@ -24,7 +24,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     public ClipService Clips { get; }
 
-    public static LocalizedText[] SortModes { get; } = LocalizedText.List("Name", "Recently modified", "Recently played", "Longest", "Largest");
+    public static LocalizedText[] SortModes { get; } = LocalizedText.List("Name", "Recently modified", "Recently played", "Longest", "Largest", "Best moments");
 
     public ObservableCollection<FolderViewModel> Folders { get; } = new();
     public ObservableCollection<FolderViewModel> Tags { get; } = new();
@@ -501,6 +501,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
         _library.FoldersChanged += () => Dispatcher.UIThread.Post(() => _ = RescanAsync());
         _library.GameTagger = GameTagFor;
+        MontageService.KnownBestMoment = path => Features.Highlights && _items.TryGetValue(path, out var v) && v.Entry.Smart is { BestMs: >= 0 } sm ? sm.BestMs : null;
         Player.Finished += OnPlayerFinished;
         VideoItemViewModel.BackedUp = e => Features.Backup && _backup.IsBackedUp(e);
         // A file renamed or moved outside the app keeps its collections and remembered edits.
@@ -634,6 +635,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 IsScanning = false;
                 ScanStatus = "";
                 OnPropertyChanged(nameof(HasNoResults));
+                StartSmartPass();
             }
         }
     }
@@ -658,6 +660,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         {
             // A clip just saved from this game: tag it so the sidebar groups clips per game.
             if (!e.Tags.Contains(game, StringComparer.OrdinalIgnoreCase)) e.Tags.Add(game);
+            RememberGame(game);
             _items[e.Path].RefreshAll();
             _library.SaveCache();
         }
@@ -733,6 +736,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 : t.StartsWith('@')
                 ? t.Length > 1 && people && v.Entry.People.Any(p => p.Contains(t[1..], StringComparison.OrdinalIgnoreCase))
                 : v.Entry.Path.Contains(t, StringComparison.OrdinalIgnoreCase) ||
+                  (v.Entry.Title is { } title && title.Contains(t, StringComparison.OrdinalIgnoreCase)) ||
                   v.Entry.Tags.Any(tag => tag.Contains(t, StringComparison.OrdinalIgnoreCase)) ||
                   (notes && v.Entry.Note is { } n && n.Contains(t, StringComparison.OrdinalIgnoreCase)) ||
                   (people && v.Entry.People.Any(p => p.Contains(t, StringComparison.OrdinalIgnoreCase))) ||
@@ -745,6 +749,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             2 => q.OrderByDescending(v => v.Entry.LastPlayedUtc ?? DateTime.MinValue).ThenByDescending(v => v.Entry.ModifiedUtc),
             3 => q.OrderByDescending(v => v.Entry.DurationMs),
             4 => q.OrderByDescending(v => v.Entry.Size),
+            5 => q.OrderByDescending(v => v.Entry.Smart?.Excitement ?? -1).ThenByDescending(v => v.Entry.ModifiedUtc),
             _ => q.OrderBy(v => v.Title, StringComparer.CurrentCultureIgnoreCase),
         };
         Videos = new ObservableCollection<VideoItemViewModel>(q);
@@ -857,7 +862,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private void BeginEdit(VideoItemViewModel? item)
     {
         if (item is not null)
-            Editor = new EditViewModel(item, Folders, AllTags) { ShowNote = Features.Notes, ShowPeople = Features.People, AllPeople = AllPeople };
+            Editor = new EditViewModel(item, Folders, AllTags)
+            {
+                ShowNote = Features.Notes, ShowPeople = Features.People, AllPeople = AllPeople,
+                Suggest = Features.SmartTitles ? e => SuggestTitle(e) : null,
+            };
     }
 
     [RelayCommand] private void CancelEdit() => Editor = null;
@@ -874,7 +883,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         {
             // Moving to another library folder puts the file at that folder's top level.
             var targetDir = ed.Folder is not null && !ReferenceEquals(ed.Folder, ed.OriginalFolder) ? ed.Folder.Path : null;
-            var newPath = _library.Relocate(entry, ed.Name, targetDir);
+            // A video with a title in Savefile: the name box edits that title (empty goes back to the file
+            // name) and the file keeps its name. Otherwise it renames the file, as always.
+            var fileName = Path.GetFileNameWithoutExtension(oldPath);
+            var hadTitle = entry.Title is not null;
+            var newPath = _library.Relocate(entry, hadTitle ? fileName : ed.Name, targetDir);
+            if (hadTitle) entry.Title = ed.Name.Trim() is { Length: > 0 } t && t != fileName ? t : null;
             if (!string.Equals(newPath, oldPath, StringComparison.Ordinal))
             {
                 _items.Remove(oldPath);

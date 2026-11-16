@@ -34,14 +34,19 @@ public sealed partial class MainViewModel
         if (!ShowPlayAll) PlayAll = false;
         if (!Features.People && SelectedFriend is not null) SelectedFolder = Folders.FirstOrDefault();
         RebuildTags();
-        RefreshMemories();
         RaiseMergeSuggestion();
+        // Smart features: start or stop the background pass, and only name clips from the moment it was switched on.
+        if (Features.AutoTitles && _settings.Current.AutoTitlesSinceUtc == default) { _settings.Current.AutoTitlesSinceUtc = DateTime.UtcNow; _settings.Save(); }
+        if (!Features.AutoTitles && _settings.Current.AutoTitlesSinceUtc != default) { _settings.Current.AutoTitlesSinceUtc = default; _settings.Save(); }
+        if (Features.Highlights) StartSmartPass(); else StopSmartPass();
+        UpdateHighlightMarks();
+        RefreshMemories();
         OnPropertyChanged(nameof(HeaderCount));
         foreach (var name in new[]
                  {
                      nameof(ShowClipping), nameof(ShowSessionButton), nameof(ShowCollections),
                      nameof(ShowCleanUp), nameof(ShowStats), nameof(ShowTools), nameof(ShowUnwatchedFilter),
-                     nameof(ShowMiniPlayerButton), nameof(ShowRecorders), nameof(ShowNotes), nameof(ShowMontage), nameof(ShowPeople), nameof(ShowRecap), nameof(ShowRecapMontage), nameof(ShowPlayingWith), nameof(HasSquad), nameof(PlayingWithLabel), nameof(ShowPlayAll), nameof(CanPlayAll), nameof(ShowFriendMontage), nameof(ShowBackup),
+                     nameof(ShowMiniPlayerButton), nameof(ShowRecorders), nameof(ShowNotes), nameof(ShowMontage), nameof(ShowPeople), nameof(ShowRecap), nameof(ShowRecapMontage), nameof(ShowPlayingWith), nameof(HasSquad), nameof(PlayingWithLabel), nameof(ShowPlayAll), nameof(CanPlayAll), nameof(ShowFriendMontage), nameof(ShowBackup), nameof(ShowSmartTitles),
                  })
             OnPropertyChanged(name);
         AppearanceChanged?.Invoke();

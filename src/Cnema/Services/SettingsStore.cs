@@ -3,6 +3,10 @@ namespace Cnema.Services;
 public sealed class AppSettings
 {
     public List<string> Folders { get; set; } = new();
+    /// <summary>Tags that name a game (auto-tagged from a detected game or a recorder folder), for Smart titles.</summary>
+    public List<string> GameTags { get; set; } = new();
+    /// <summary>When "Name new clips by themselves" was switched on: only clips from then on are named.</summary>
+    public DateTime AutoTitlesSinceUtc { get; set; }
     /// <summary>"Merge your folders into one?" was closed for good.</summary>
     public bool MergeSuggestionClosed { get; set; }
     public int SortIndex { get; set; }
@@ -182,6 +186,12 @@ public sealed class FeatureSettings
     public bool PlayAll { get; set; } = true;
     /// <summary>Backup to your own server. Off until switched on.</summary>
     public bool Backup { get; set; }
+    /// <summary>Best moments: Savefile listens to and watches each video (at idle priority) to find what stands out.</summary>
+    public bool Highlights { get; set; } = true;
+    /// <summary>Smart titles: names from the game, who was there and when, suggested in Edit and for the whole library.</summary>
+    public bool SmartTitles { get; set; } = true;
+    /// <summary>New clips with a recorder's made-up name get a smart title by themselves.</summary>
+    public bool AutoTitles { get; set; }
     /// <summary>
     /// Watch several folders. Off: the library is one folder, the one clips are saved to.
     /// Null in settings from before this existed: on when more than one folder was already added.

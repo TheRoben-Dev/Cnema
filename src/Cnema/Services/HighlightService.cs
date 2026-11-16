@@ -10,7 +10,7 @@ namespace Cnema.Services;
 public static class HighlightService
 {
     private const int Rate = 8000;
-    private const double WindowSeconds = 0.5;
+    internal const double WindowSeconds = 0.5;
     private const int MaxMarkers = 12;
     private static readonly ConcurrentDictionary<string, IReadOnlyList<double>> Cache = new();
 
@@ -49,7 +49,7 @@ public static class HighlightService
     }
 
     /// <summary>RMS level in dB for every half second of audio.</summary>
-    private static List<double> ReadLevels(string ffmpeg, string path, CancellationToken ct)
+    internal static List<double> ReadLevels(string ffmpeg, string path, CancellationToken ct, bool background = false)
     {
         var levels = new List<double>();
         var psi = new ProcessStartInfo(ffmpeg)
@@ -61,6 +61,7 @@ public static class HighlightService
             psi.ArgumentList.Add(a);
         using var p = Process.Start(psi);
         if (p is null) return levels;
+        if (background) ProcessRunner.Lower(p);
         p.ErrorDataReceived += (_, _) => { };
         p.BeginErrorReadLine();
         try
