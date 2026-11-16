@@ -42,7 +42,12 @@ public sealed partial class MainViewModel
     private string? WrappedVideo(int year) =>
         _settings.Current.Wrapped.Made.TryGetValue(year, out var p) && File.Exists(p) ? p : null;
 
-    partial void OnWrappedStatusChanged(string value) => OnPropertyChanged(nameof(IsMakingWrapped));
+    partial void OnWrappedStatusChanged(string value)
+    {
+        OnPropertyChanged(nameof(IsMakingWrapped));
+        OnPropertyChanged(nameof(GiftTip));
+        if (value.Length == 0) WrappedProgress = -1;
+    }
 
     /// <summary>What the video will be and how much music it wants, for Year in clips.</summary>
     public string WrappedPlanText
@@ -86,6 +91,7 @@ public sealed partial class MainViewModel
         OnPropertyChanged(nameof(MakeWrappedLabel));
         OnPropertyChanged(nameof(WrappedPlanText));
         OnPropertyChanged(nameof(WrappedCostText));
+        RaiseGift();
     }
 
 
@@ -211,6 +217,7 @@ public sealed partial class MainViewModel
     private void QueueWrapped(WrappedJob job, WrappedScript? script, List<string>? songs, bool byItself)
     {
         WrappedStatus = T("Getting your Wrapped ready…");
+        WrappedProgress = 0;
         var year = job.Year;
         Exports.Add(job.Output, F("Your {0} Wrapped", year), async (progress, ct) =>
         {
@@ -242,7 +249,12 @@ public sealed partial class MainViewModel
                 var inner = new Progress<double>(p =>
                 {
                     progress.Report(p);
-                    Dispatcher.UIThread.Post(() => { if (!finished) WrappedStatus = F("Making your Wrapped: {0:0}%", p * 100); });
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        if (finished) return;
+                        WrappedStatus = F("Making your Wrapped: {0:0}%", p * 100);
+                        WrappedProgress = p;
+                    });
                 });
                 await WrappedService.RenderAsync(saved.Plan, job.Work, job.Width, job.Height, job.Output,
                     (card, seconds, beats, downs, path, c) => Views.WrappedMotion.RenderAsync(saved.Cards[card], seconds, beats, downs, job.Width, job.Height, WrappedService.Fps, path, c),
@@ -281,60 +293,198 @@ public sealed partial class MainViewModel
     {
         var year = WrappedYear;
         if (WrappedVideo(year) is not { } path) return;
-        _settings.Current.Wrapped.Watched = Math.Max(_settings.Current.Wrapped.Watched, year);
-        _settings.Save();
-        RefreshMascot();
-        if (_items.TryGetValue(path, out var item))
-        {
-            Recap = null;
-            await OpenCommand.ExecuteAsync(item);
-        }
-        else PlatformShell.Reveal(path);
+        await OpenTheatreAsync(path, first: _settings.Current.Wrapped.Watched < year);
     }
 
-    // ---------- in December, by itself ----------
+    // ---------- the present (1 November to 31 December) ----------
 
     private DispatcherTimer? _wrappedTimer;
+    private string? _giftPictureFor;
+    [ObservableProperty] private Avalonia.Media.Imaging.Bitmap? _wrappedPicture;
+    [ObservableProperty] private double _wrappedProgress = -1;
+    [ObservableProperty] private bool _isWrappedGiftOpen;
 
-    /// <summary>Checks now and then whether it's time to make this year's video (from 1 December, once).</summary>
+    /// <summary>The present shows from 1 November to the end of the year (SAVEFILE_SEASON=1 shows it any time, for testing).</summary>
+    private static bool InWrappedSeason(DateTime now) =>
+        now.Month is 11 or 12 || Environment.GetEnvironmentVariable("SAVEFILE_SEASON") == "1";
+
+    /// <summary>The present is offered once a season; after that it stays, opened.</summary>
+    public bool GiftOpened => _settings.Current.Wrapped.GiftOffered >= DateTime.Now.Year;
+
+    public bool ShowWrappedGift
+    {
+        get
+        {
+            var now = DateTime.Now;
+            if (!ShowWrapped || !ShowMascot || !InWrappedSeason(now)) return false;
+            return GiftOpened || WrappedService.YearClips(_items.Values.Select(v => v.Entry), now.Year).Count >= 3;
+        }
+    }
+
+    public string GiftTip => !GiftOpened ? T("A present from the blob. Click to open it.")
+        : IsMakingWrapped ? WrappedStatus
+        : WrappedVideo(DateTime.Now.Year) is not null ? T("Watch your Wrapped again, or save a copy")
+        : T("Make your Wrapped");
+
+    public string GiftTitle => F("Your {0} Wrapped", DateTime.Now.Year);
+
+    private void RaiseGift()
+    {
+        OnPropertyChanged(nameof(ShowWrappedGift));
+        OnPropertyChanged(nameof(GiftOpened));
+        OnPropertyChanged(nameof(GiftTip));
+        OnPropertyChanged(nameof(GiftTitle));
+        LoadGiftPicture();
+    }
+
+    /// <summary>A frame of the finished video for the card in the open box.</summary>
+    private void LoadGiftPicture()
+    {
+        var path = WrappedVideo(DateTime.Now.Year);
+        var thumb = path is not null && _items.TryGetValue(path, out var item) ? item.Entry.ThumbPath : null;
+        if (thumb == _giftPictureFor) return;
+        _giftPictureFor = thumb;
+        var old = WrappedPicture;
+        WrappedPicture = null;
+        old?.Dispose();
+        if (thumb is null || !File.Exists(thumb)) return;
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                using var fs = File.OpenRead(thumb);
+                return Avalonia.Media.Imaging.Bitmap.DecodeToWidth(fs, 240);
+            }
+            catch { return null; }
+        }).ContinueWith(t => Dispatcher.UIThread.Post(() =>
+        {
+            if (_giftPictureFor == thumb) WrappedPicture = t.Result;
+            else t.Result?.Dispose();
+        }));
+    }
+
     private void StartWrappedSeason()
     {
+        // Looks again now and then, so the present turns up on 1 November while Savefile is open.
         _wrappedTimer ??= new DispatcherTimer(TimeSpan.FromMinutes(20), DispatcherPriority.Background, (_, _) => CheckWrappedSeason());
         _wrappedTimer.Start();
-        // A first look a few minutes after start, once the library and the smart passes have settled.
-        DispatcherTimer.RunOnce(CheckWrappedSeason, TimeSpan.FromMinutes(3));
+        CheckWrappedSeason();
     }
 
     private void CheckWrappedSeason()
     {
         if (!WrappedReady) return;
-        var now = DateTime.Now;
-        if (!ShowWrapped || now.Month != 12 || WrappedVideo(now.Year) is not null || IsMakingWrapped) return;
-        if (SmartShouldWait || Player.Current is not null) return; // not while playing or watching
-        if (WrappedService.YearClips(_items.Values.Select(v => v.Entry), now.Year).Count < 8) return;
-        Log.Info($"Making the {now.Year} Wrapped by itself");
-        MakeWrappedFor(now.Year, byItself: true);
+        RaiseGift();
+        RefreshMascot();
     }
 
-    /// <summary>The blob's news, when this season's video is made and hasn't been watched yet.</summary>
+    /// <summary>A click on the present: the first time it unwraps and explains; then it plays the video.</summary>
+    [RelayCommand]
+    private async Task OpenGiftAsync()
+    {
+        var year = DateTime.Now.Year;
+        if (!GiftOpened)
+        {
+            _settings.Current.Wrapped.GiftOffered = year;
+            _settings.Save();
+            RaiseGift();
+            RefreshMascot();
+            await Task.Delay(ReducedMotion ? 0 : 650); // let the lid come off first
+            IsWrappedGiftOpen = true;
+            return;
+        }
+        if (WrappedVideo(year) is { } path) { await OpenTheatreAsync(path, first: _settings.Current.Wrapped.Watched < year); return; }
+        if (IsMakingWrapped) { ShowToast(WrappedStatus); return; }
+        IsWrappedGiftOpen = true;
+    }
+
+    [RelayCommand] private void CloseWrappedGift() => IsWrappedGiftOpen = false;
+
+    [RelayCommand]
+    private void MakeWrappedFromGift()
+    {
+        if (MakeWrappedFor(DateTime.Now.Year, byItself: false)) IsWrappedGiftOpen = false;
+    }
+
+    /// <summary>The blob's line about the present, or about the finished video nobody has watched yet.</summary>
     private string? WrappedNews(DateTime now)
     {
-        if (!WrappedReady) return null;
+        if (!WrappedReady || !ShowWrapped) return null;
+        if (ShowWrappedGift && !GiftOpened) return T("I wrapped something for you. Open the present!");
         var year = now.Month == 1 ? now.Year - 1 : now.Year;
-        if (!ShowWrapped || now.Month is not (12 or 1) || _settings.Current.Wrapped.Watched >= year || WrappedVideo(year) is null) return null;
+        if (now.Month is not (11 or 12 or 1) || _settings.Current.Wrapped.Watched >= year || WrappedVideo(year) is null) return null;
         return F("Your {0} Wrapped is ready! Click me to watch it.", year);
     }
 
-    /// <summary>A click on the blob while it announces the year's video plays it.</summary>
+    /// <summary>A click on the blob while it talks about the present opens it, or plays the finished video.</summary>
     private bool PlayWrappedFromBlob()
     {
         if (WrappedNews(DateTime.Now) is not { } news || MascotLine != news) return false;
+        if (!GiftOpened && ShowWrappedGift) { _ = OpenGiftAsync(); return true; }
         var year = DateTime.Now.Month == 1 ? DateTime.Now.Year - 1 : DateTime.Now.Year;
         if (WrappedVideo(year) is not { } path) return false;
-        _settings.Current.Wrapped.Watched = year;
-        _settings.Save();
-        RefreshMascot();
-        if (_items.TryGetValue(path, out var item)) _ = OpenCommand.ExecuteAsync(item);
+        _ = OpenTheatreAsync(path, first: true);
         return true;
+    }
+
+
+    // ---------- watching it: a plain screen with pause and scrubbing ----------
+
+    [ObservableProperty] private bool _isTheatreOpen;
+    /// <summary>The first viewing fills the screen; later ones play in the window with Save a copy.</summary>
+    [ObservableProperty] private bool _theatreFirst;
+    private string? _theatrePath;
+
+    private async Task OpenTheatreAsync(string path, bool first)
+    {
+        if (!_items.TryGetValue(path, out var item)) { PlatformShell.Reveal(path); return; }
+        var year = _settings.Current.Wrapped.Made.FirstOrDefault(kv => kv.Value == path).Key;
+        if (year > 0 && _settings.Current.Wrapped.Watched < year)
+        {
+            _settings.Current.Wrapped.Watched = year;
+            _settings.Save();
+        }
+        IsWrappedGiftOpen = false;
+        Recap = null;
+        if (IsMiniPlayerOpen) CloseMiniPlayer();
+        if (IsPlayerOpen) ClosePlayer();
+        PlayAll = false;
+        _theatrePath = path;
+        TheatreFirst = first;
+        IsTheatreOpen = true;
+        RefreshMascot();
+        if (first) Player.StartAt = 0; // from the very start, not where it was left
+        await Player.OpenAsync(item);
+    }
+
+    [RelayCommand]
+    private void CloseTheatre()
+    {
+        if (!IsTheatreOpen) return;
+        Player.Close();
+        IsTheatreOpen = false;
+        TheatreFirst = false;
+        _library.SaveCache();
+    }
+
+    [RelayCommand]
+    private async Task SaveTheatreCopyAsync()
+    {
+        if (_theatrePath is not { } path || !File.Exists(path) || Player.PickSavePath is null) return;
+        var start = Environment.GetFolderPath(Environment.SpecialFolder.MyVideos);
+        if (string.IsNullOrEmpty(start)) start = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        var target = await Player.PickSavePath(Path.GetFileName(path), start);
+        if (target is null || string.Equals(Path.GetFullPath(target), Path.GetFullPath(path), StringComparison.OrdinalIgnoreCase)) return;
+        try
+        {
+            Player.ShowToast(T("Saving a copy…"));
+            await Task.Run(() => File.Copy(path, target, overwrite: true));
+            Player.ShowToast(F("Saved a copy to {0}", Path.GetDirectoryName(target) ?? target));
+        }
+        catch (Exception ex)
+        {
+            Log.Warn($"Saving a copy of the Wrapped: {ex.Message}");
+            Player.ShowToast(F("Couldn't save the copy: {0}", ex.Message));
+        }
     }
 }

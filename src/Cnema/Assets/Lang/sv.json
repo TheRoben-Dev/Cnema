@@ -1419,5 +1419,20 @@
   "Your library, {0} ({1}): {2} in the background the first time, then {3} per new clip ({4}).": "Ditt bibliotek, {0} ({1}): {2} i bakgrunden första gången, sedan {3} per nytt klipp ({4}).",
   "{0} to go ({1}): {2} in the background, then {3} per new clip ({4}).": "{0} kvar ({1}): {2} i bakgrunden, sedan {3} per nytt klipp ({4}).",
   "Quick player: play/pause, previous / next video, seek, mute, captions, close": "Snabbspelare: spela/pausa, föregående / nästa video, spola, ljud av, undertexter, stäng",
-  "Show what's said as captions": "Visa det som sägs som undertexter"
+  "Show what's said as captions": "Visa det som sägs som undertexter",
+  "A present from the blob. Click to open it.": "En present från bloben. Klicka för att öppna den.",
+  "Couldn't save the copy: {0}": "Kunde inte spara kopian: {0}",
+  "I wrapped something for you. Open the present!": "Jag har slagit in något åt dig. Öppna paketet!",
+  "Make your Wrapped": "Gör din Wrapped",
+  "Saved a copy to {0}": "Sparade en kopia i {0}",
+  "Saving a copy…": "Sparar en kopia…",
+  "Watch your Wrapped again, or save a copy": "Se din Wrapped igen, eller spara en kopia",
+  "1. Add two or three songs you love (MP3 or similar). Without songs, the clips keep their own sound.": "1. Lägg till två eller tre låtar du gillar (MP3 eller liknande). Utan låtar behåller klippen sitt eget ljud.",
+  "2. Savefile makes it on this computer, in the background. Nothing leaves it. If you quit, it carries on next time.": "2. Savefile gör den på den här datorn, i bakgrunden. Inget lämnar den. Om du avslutar fortsätter den nästa gång.",
+  "3. When it's ready, the present next to the blob holds it. The first time, it plays full screen.": "3. När den är klar ligger den i paketet bredvid bloben. Första gången spelas den i helskärm.",
+  "A 5 to 10 minute video of your year, made only from your clips: your games, your people, your biggest night and the best laughs, with a card for each friend and your best moments cut to the beat of your own music.": "En video på 5 till 10 minuter om ditt år, gjord bara av dina klipp: dina spel, ditt gäng, din största kväll och de bästa skratten, med ett kort för varje kompis och dina bästa stunder klippta i takt med din egen musik.",
+  "How it works": "Så funkar det",
+  "Not now": "Inte nu",
+  "Save a copy of the video somewhere else": "Spara en kopia av videon någon annanstans",
+  "Your year in clips, as a film.": "Ditt år i klipp, som en film."
 }

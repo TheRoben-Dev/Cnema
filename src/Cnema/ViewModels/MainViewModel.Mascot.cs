@@ -112,6 +112,8 @@ public sealed partial class MainViewModel
         if (recent is not null)
         {
             var when = WhenWords(Local(recent), now);
+            var day = CultureInfo.CurrentCulture.DateTimeFormat.GetDayName(Local(recent).DayOfWeek);
+            if (when == F("on {0}", day)) when = day; // "from Tuesday", not "from on Tuesday"
             lines.Add(GameOf(recent) is { } game ? F("Your {0} clip from {1} is a keeper.", game, when) : F("That clip from {0} is a keeper.", when));
         }
 
