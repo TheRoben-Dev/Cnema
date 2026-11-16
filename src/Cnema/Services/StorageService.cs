@@ -66,7 +66,7 @@ public static class StorageService
         return picked;
     }
 
-    public static Result Apply(ClipSettings c, IEnumerable<FileInfo> files)
+    public static Result Apply(ClipSettings c, IEnumerable<FileInfo> files, Action<string>? toBin = null)
     {
         var removed = 0;
         long bytes = 0;
@@ -76,7 +76,8 @@ public static class StorageService
             try
             {
                 var size = f.Length;
-                if (archive is null) PlatformShell.MoveToTrash(f.FullName);
+                if (archive is null && toBin is not null) toBin(f.FullName);
+                else if (archive is null) PlatformShell.MoveToTrash(f.FullName);
                 else
                 {
                     Directory.CreateDirectory(archive);

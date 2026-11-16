@@ -24,6 +24,7 @@ public sealed partial class MainViewModel
         VideoItemViewModel.NotesEnabled = Features.Notes;
         VideoItemViewModel.PeopleEnabled = Features.People;
         PlayerViewModel.TrimSuggestions = Features.TrimSuggestions;
+        OnPropertyChanged(nameof(ShowBinNav));
         Player.RefreshTrimSuggestion();
         if (ThumbnailService.SmartThumbs != Features.SmartThumbs)
         {

@@ -39,8 +39,9 @@ public sealed partial class MainViewModel
 
     private bool UseBin => Features.Bin;
     public int BinCount => _bin.Items.Count;
-    public bool ShowBinNav => BinCount > 0;
-    public string BinCountText => BinCount.ToString(System.Globalization.CultureInfo.CurrentCulture);
+    public bool ShowBinNav => UseBin;
+    public bool BinIsEmpty => BinCount == 0;
+    public string BinCountText => BinCount == 0 ? "" : BinCount.ToString(System.Globalization.CultureInfo.CurrentCulture);
 
     private void StartBin()
     {
@@ -63,6 +64,7 @@ public sealed partial class MainViewModel
         OnPropertyChanged(nameof(BinCount));
         OnPropertyChanged(nameof(ShowBinNav));
         OnPropertyChanged(nameof(BinCountText));
+        OnPropertyChanged(nameof(BinIsEmpty));
         if (IsShowingBin) FillBinRows();
     }
 
@@ -110,7 +112,6 @@ public sealed partial class MainViewModel
             if (row.Item.Details is { } details) _library.Adopt(path, details);
             ShowToast(F("Put back: {0}", row.Name));
             FillBinRows();
-            if (BinRows.Count == 0) IsShowingBin = false;
             await RescanAsync();
         }
         catch (Exception ex)
@@ -126,7 +127,6 @@ public sealed partial class MainViewModel
         if (row is null) return;
         await Task.Run(() => _bin.DeleteNow(row.Item));
         FillBinRows();
-        if (BinRows.Count == 0) IsShowingBin = false;
     }
 
     /// <summary>The bin's countdowns, refreshed while it's open.</summary>

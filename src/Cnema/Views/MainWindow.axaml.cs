@@ -30,7 +30,6 @@ public partial class MainWindow : Window
             item.EndScrub(); // recycled while hovered: let go of the filmstrip too
             item.ReleaseThumbnail();
         };
-        VideoGrid.ElementIndexChanged += (_, e) => (e.Element.DataContext as VideoItemViewModel)?.AcquireThumbnail();
 
         SurfaceHit.Tapped += (_, _) =>
         {

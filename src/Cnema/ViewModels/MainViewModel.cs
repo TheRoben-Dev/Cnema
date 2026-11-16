@@ -1282,11 +1282,22 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         {
             var favourites = _items.Values.Where(i => i.Entry.Favorite)
                 .Select(i => i.Entry.Path).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var entries = _items.Values.ToDictionary(i => i.Entry.Path, i => i.Entry, StringComparer.OrdinalIgnoreCase);
+            var forget = new System.Collections.Concurrent.ConcurrentBag<Models.VideoEntry>();
             var result = await Task.Run(() =>
             {
                 var plan = StorageService.Plan(c, favourites.Contains, DateTime.UtcNow);
-                return plan.Count == 0 ? null : StorageService.Apply(c, plan);
+                if (plan.Count == 0) return null;
+                // With the bin on, each clip waits 24 hours there like any other delete.
+                Action<string>? toBin = UseBin ? path =>
+                {
+                    var entry = entries.TryGetValue(path, out var e) ? e : new Models.VideoEntry { Path = path };
+                    _bin.Add(entry);
+                    forget.Add(entry);
+                } : null;
+                return StorageService.Apply(c, plan, toBin);
             });
+            foreach (var e in forget) _library.Forget(e);
             if (result is { Removed: > 0 }) _ = RescanAsync();
             if (result is { Removed: > 0 })
                 ShowToast(F(result.Archived

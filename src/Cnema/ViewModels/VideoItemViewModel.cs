@@ -190,9 +190,12 @@ public sealed partial class VideoItemViewModel : ObservableObject
         {
             var bmp = await Task.Run(() =>
             {
+                // Scrolled past before its turn came: don't decode a picture nobody will see.
+                if (Volatile.Read(ref _thumbRefs) == 0) return null;
                 using var fs = File.OpenRead(path);
                 return Bitmap.DecodeToWidth(fs, 400);
             });
+            if (bmp is null) return;
             if (_thumbRefs > 0 && Entry.ThumbPath == path) { Thumbnail?.Dispose(); Thumbnail = bmp; }
             else bmp.Dispose();
         }
