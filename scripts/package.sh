@@ -36,6 +36,10 @@ case "$RID" in
       (cd dist && 7z a -bso0 "Savefile-v$VERSION-windows-x64.zip" Cnema)
     else
       cp src/Cnema/Assets/cnema.png "$out/cnema.png"
+      # The speech library needs GCC's OpenMP runtime; bring it along (SpeechService loads it first),
+      # so nothing has to be installed for voice search.
+      cp "$(gcc -print-file-name=libgomp.so.1 2>/dev/null || echo /usr/lib/x86_64-linux-gnu/libgomp.so.1)" "$out/runtimes/linux-x64/libgomp.so.1" \
+        || cp /usr/lib/x86_64-linux-gnu/libgomp.so.1 "$out/runtimes/linux-x64/libgomp.so.1"
       tar -C dist -czf "dist/Savefile-v$VERSION-linux-x64.tar.gz" Cnema
     fi
     ;;

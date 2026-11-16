@@ -31,7 +31,7 @@ its own licence. None of them are modified.
 - Source: https://github.com/ggml-org/whisper.cpp
 - Windows builds also carry the Microsoft Visual C++ runtime (`msvcp140`, `vcruntime140`, `vcruntime140_1`,
   `vcomp140`) next to these libraries, redistributed under the Visual Studio redistributable terms.
-  Linux needs `libgomp1` (GCC's OpenMP runtime), which most distributions install by default.
+  Linux builds carry `libgomp.so.1` (GCC's OpenMP runtime, GPL with the GCC Runtime Library Exception) so nothing extra needs installing.
 
 ## Visual search (downloaded only when switched on)
 

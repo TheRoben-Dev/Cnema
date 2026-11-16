@@ -46,55 +46,134 @@ public partial class App : Application
             // Language first, so even start-up errors (libVLC missing) are translated.
             var settings = new SettingsStore();
             Loc.Apply(settings.Current.Language);
-            VlcBootstrap.Initialize();
-            AutostartService.RefreshIfEnabled();
-
             ThemeService.Mode = settings.Current.ThemeMode;
             ThemeService.Apply(settings.Current.ColorScheme, settings.Current.Accessibility.HighContrast);
-            Shortcuts.Load(settings.Current.Shortcuts);
-            _vm = new MainViewModel(settings, new LibraryService(), new ClipService(settings));
-            _window = new MainWindow { DataContext = _vm };
-
             // The window is one view onto a process that may live on in the tray, so the app
             // decides when to exit, not the last window closing.
             desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
-            desktop.ShutdownRequested += (_, _) =>
+
+            // The loading screen goes up first and stays while the rest gets ready (not when starting
+            // hidden at login: then nothing shows until the tray is clicked).
+            SplashWindow? splash = null;
+            if (!startHidden && settings.Current.Features.Splash && Environment.GetEnvironmentVariable("CNEMA_NO_SPLASH") != "1")
             {
-                IsQuitting = true;
-                _instance?.Dispose();
-                _vm.Dispose();
-            };
-            _window.Closed += (_, _) => { if (!IsQuitting) Quit(); };
-            if (!startHidden) desktop.MainWindow = _window;
-
-            BuildTray();
-            _vm.BackgroundStateChanged += UpdateTray;
-            UpdateTray();
-
-            // Logging out, `kill`, Ctrl+C: shut down properly so the capture process never outlives us.
-            if (!OperatingSystem.IsWindows())
-            {
-                _signals.Add(PosixSignalRegistration.Create(PosixSignal.SIGTERM, OnSignal));
-                _signals.Add(PosixSignalRegistration.Create(PosixSignal.SIGINT, OnSignal));
-                _signals.Add(PosixSignalRegistration.Create(PosixSignal.SIGHUP, OnSignal));
-            }
-            AppDomain.CurrentDomain.ProcessExit += (_, _) => _vm?.Clips.Dispose();
-
-            _instance = new SingleInstance();
-            _instance.ShowRequested += () => Dispatcher.UIThread.Post(ShowWindow);
-            _instance.Listen();
-
-            // macOS: clicking the Dock icon of the running app brings the window back.
-            if (this.TryGetFeature<IActivatableLifetime>() is { } activatable)
-                activatable.Activated += (_, e) =>
+                try
                 {
-                    if (e.Kind == ActivationKind.Reopen) ShowWindow();
-                };
-
-            _vm.QuitRequested += () => Dispatcher.UIThread.Post(Quit);
-            _ = _vm.InitializeAsync();
+                    splash = new SplashWindow(settings.Current.Accessibility.ReducedMotion);
+                    splash.Report(T("Getting ready…"), 0.05);
+                    splash.Show();
+                }
+                catch (Exception ex)
+                {
+                    Log.Warn($"Loading screen: {ex.Message}");
+                    splash = null;
+                }
+            }
+            if (splash is null) _ = Start(desktop, settings, startHidden);
+            else Dispatcher.UIThread.Post(() => _ = StartWithSplashAsync(desktop, settings, splash), DispatcherPriority.Background);
         }
         base.OnFrameworkInitializationCompleted();
+    }
+
+    /// <summary>Everything after settings and theme: the video player, the library, the window, the tray.</summary>
+    private Task Start(IClassicDesktopStyleApplicationLifetime desktop, SettingsStore settings, bool startHidden)
+    {
+        VlcBootstrap.Initialize();
+        AutostartService.RefreshIfEnabled();
+
+        Shortcuts.Load(settings.Current.Shortcuts);
+        _vm = new MainViewModel(settings, new LibraryService(), new ClipService(settings));
+        _window = new MainWindow { DataContext = _vm };
+
+        desktop.ShutdownRequested += (_, _) =>
+        {
+            IsQuitting = true;
+            _instance?.Dispose();
+            _vm.Dispose();
+        };
+        _window.Closed += (_, _) => { if (!IsQuitting) Quit(); };
+        // The lifetime shows it at start; after the loading screen, that shows it when it's done.
+        if (!startHidden) desktop.MainWindow = _window;
+
+        BuildTray();
+        _vm.BackgroundStateChanged += UpdateTray;
+        UpdateTray();
+
+        // Logging out, `kill`, Ctrl+C: shut down properly so the capture process never outlives us.
+        if (!OperatingSystem.IsWindows())
+        {
+            _signals.Add(PosixSignalRegistration.Create(PosixSignal.SIGTERM, OnSignal));
+            _signals.Add(PosixSignalRegistration.Create(PosixSignal.SIGINT, OnSignal));
+            _signals.Add(PosixSignalRegistration.Create(PosixSignal.SIGHUP, OnSignal));
+        }
+        AppDomain.CurrentDomain.ProcessExit += (_, _) => _vm?.Clips.Dispose();
+
+        _instance = new SingleInstance();
+        _instance.ShowRequested += () => Dispatcher.UIThread.Post(ShowWindow);
+        _instance.Listen();
+
+        // macOS: clicking the Dock icon of the running app brings the window back.
+        if (this.TryGetFeature<IActivatableLifetime>() is { } activatable)
+            activatable.Activated += (_, e) =>
+            {
+                if (e.Kind == ActivationKind.Reopen) ShowWindow();
+            };
+
+        _vm.QuitRequested += () => Dispatcher.UIThread.Post(Quit);
+        return _vm.InitializeAsync();
+    }
+
+    /// <summary>
+    /// The loading screen's steps, each said as it happens: the video player, the library, then the models
+    /// that are switched on. It shows for a moment at least (so it doesn't flash), at most 8 seconds, and a click
+    /// skips it; a model still loading then carries on in the background.
+    /// </summary>
+    private async Task StartWithSplashAsync(IClassicDesktopStyleApplicationLifetime desktop, SettingsStore settings, SplashWindow splash)
+    {
+        var shown = System.Diagnostics.Stopwatch.StartNew();
+        var minimum = TimeSpan.FromMilliseconds(settings.Current.Accessibility.ReducedMotion ? 500 : 1600);
+        var deadline = Task.Delay(TimeSpan.FromSeconds(8));
+        var skip = splash.Skipped;
+        try
+        {
+            splash.Report(T("Starting the video player…"), 0.15);
+            await Task.Run(VlcBootstrap.Initialize);
+            Log.Info($"Start-up: video player ready after {shown.ElapsedMilliseconds} ms");
+            splash.Report(T("Opening your library…"), 0.35);
+            // Building the window holds the screen for a moment, so the intro gets to play out first.
+            var intro = TimeSpan.FromMilliseconds(settings.Current.Accessibility.ReducedMotion ? 50 : 900) - shown.Elapsed;
+            if (intro > TimeSpan.Zero) await Task.WhenAny(Task.Delay(intro), skip);
+            await Task.Yield();
+            var init = Start(desktop, settings, false);
+            Log.Info($"Start-up: library open after {shown.ElapsedMilliseconds} ms");
+
+            var steps = _vm?.WarmUpSteps() ?? Array.Empty<(string, Func<Task>)>();
+            for (var i = 0; i < steps.Count && !skip.IsCompleted && !deadline.IsCompleted; i++)
+            {
+                var (status, work) = steps[i];
+                splash.Report(status, 0.5 + 0.45 * i / steps.Count);
+                Task task;
+                try { task = work(); }
+                catch (Exception ex) { Log.Warn($"Warm-up: {ex.Message}"); continue; }
+                await Task.WhenAny(task, skip, deadline);
+                Log.Info($"Start-up: {status} done after {shown.ElapsedMilliseconds} ms");
+            }
+            splash.Report(T("Ready"), 1);
+            var left = minimum - shown.Elapsed;
+            if (left > TimeSpan.Zero && !skip.IsCompleted) await Task.WhenAny(Task.Delay(left), skip);
+            _ = init.ContinueWith(t => Log.Warn($"Library start: {t.Exception?.GetBaseException().Message}"), TaskContinuationOptions.OnlyOnFaulted);
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Start-up", ex);
+        }
+        finally
+        {
+            if (_vm is null) _ = Start(desktop, settings, false);
+            _window?.Show();
+            _window?.Activate();
+            await splash.FadeOutAsync();
+        }
     }
 
     private readonly List<PosixSignalRegistration> _signals = new();

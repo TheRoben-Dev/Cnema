@@ -39,6 +39,8 @@ public sealed class AppSettings
 
     /// <summary>Which optional parts of Cnema are switched on (Settings, Features).</summary>
     public FeatureSettings Features { get; set; } = new();
+    /// <summary>How long this computer takes for each smart feature (see <see cref="CostMeter"/>).</summary>
+    public Dictionary<string, double> WorkRates { get; set; } = new();
     public AccessibilitySettings Accessibility { get; set; } = new();
     /// <summary>Keyboard shortcuts changed from their defaults: action id to gesture, "" for none.</summary>
     public Dictionary<string, string> Shortcuts { get; set; } = new();
@@ -198,6 +200,10 @@ public sealed class FeatureSettings
     public bool Speech { get; set; }
     /// <summary>Visual search, similar videos and look-alike copies: a visual model (a one-time download) looks at a few frames of each video.</summary>
     public bool Visual { get; set; }
+    /// <summary>The blob: Savefile's mascot presents Worth a rewatch with a line about your clips.</summary>
+    public bool Mascot { get; set; } = true;
+    /// <summary>The loading screen at start: logo, name, the blob and what's being got ready.</summary>
+    public bool Splash { get; set; } = true;
     /// <summary>
     /// Watch several folders. Off: the library is one folder, the one clips are saved to.
     /// Null in settings from before this existed: on when more than one folder was already added.

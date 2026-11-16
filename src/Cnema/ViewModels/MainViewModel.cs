@@ -486,6 +486,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public MainViewModel(SettingsStore settings, LibraryService library, ClipService clips)
     {
         _settings = settings;
+        CostMeter.Attach(settings);
         _library = library;
         Clips = clips;
         _hotkey = new GlobalHotkey(() => Dispatcher.UIThread.Post(() => SaveClipCommand.Execute(null)));
@@ -1182,6 +1183,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     {
         var editor = new SettingsViewModel(_settings.Current) { PickFolder = PickFolder, PickFile = PickFile };
         SettingsEditor = editor;
+        OnCostsChanged();
         _ = editor.LoadDevicesAsync();
         _ = editor.LoadStorageUsageAsync();
     }

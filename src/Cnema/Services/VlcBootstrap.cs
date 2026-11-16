@@ -18,8 +18,12 @@ public static class VlcBootstrap
     [DllImport("libc", EntryPoint = "setenv")]
     private static extern int SetEnvNative(string name, string value, int overwrite);
 
+    private static int _started;
+
+    /// <summary>Once per run; later calls (the loading screen did it already) do nothing.</summary>
     public static void Initialize()
     {
+        if (Interlocked.Exchange(ref _started, 1) == 1) return;
         try
         {
             if (OperatingSystem.IsLinux()) MapLinuxSonames();

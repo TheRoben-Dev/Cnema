@@ -14,6 +14,7 @@ public static class Converters
             _ => "IcFolder",
         }));
 
+    public static readonly IValueConverter BoolToOpacity = new FuncValueConverter<bool, double>(v => v ? 1 : 0);
     public static readonly IValueConverter IsZero = new FuncValueConverter<double, bool>(v => v <= 0);
 
     /// <summary>Width (minus card padding) → 16:9 height.</summary>

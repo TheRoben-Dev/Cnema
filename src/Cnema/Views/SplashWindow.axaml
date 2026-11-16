@@ -1,0 +1,43 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:c="using:Cnema.Controls"
+        x:Class="Cnema.Views.SplashWindow"
+        Title="Savefile"
+        Width="520" Height="340" CanResize="False"
+        SystemDecorations="None" WindowStartupLocation="CenterScreen"
+        ShowInTaskbar="True" Topmost="False"
+        Background="Transparent" TransparencyLevelHint="Transparent"
+        Icon="avares://Cnema/Assets/cnema.png">
+  <!-- The loading screen: the mark, the name, the tagline and the blob come in one after another, while
+       the status line says what is really being got ready. Click anywhere to skip. -->
+  <Border x:Name="Card" CornerRadius="20" Background="{DynamicResource Bg1}" BorderBrush="{DynamicResource Line}" BorderThickness="1"
+          ClipToBounds="True" PointerPressed="OnSkip" Cursor="Hand">
+    <Grid RowDefinitions="*,Auto">
+      <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="6" Margin="0,18,0,0">
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="14">
+          <!-- the Savefile mark, as on the sidebar -->
+          <Viewbox x:Name="Mark" Classes="intro" Width="44" Height="58" VerticalAlignment="Center">
+            <Canvas Width="240" Height="324">
+              <Path Data="M14 0H194L240 46V296A28 28 0 0 1 212 324H28A28 28 0 0 1 0 296V14A14 14 0 0 1 14 0Z" Fill="{DynamicResource Accent}" />
+              <Path Data="M40 260h18v40h-18z M76 260h18v40h-18z M112 260h18v40h-18z M148 260h18v40h-18z M184 260h18v40h-18z" Fill="{DynamicResource Bg1}" Opacity="0.45" />
+              <Path Data="M92 90L92 194L174 142Z" Fill="{DynamicResource Bg1}" Stroke="{DynamicResource Bg1}" StrokeThickness="24" StrokeJoin="Round" />
+            </Canvas>
+          </Viewbox>
+          <TextBlock x:Name="AppName" Classes="intro" Text="savefile" FontSize="44" FontWeight="Bold" LetterSpacing="-1" VerticalAlignment="Center"
+                     Foreground="{DynamicResource Text}" />
+        </StackPanel>
+        <TextBlock x:Name="Tagline" Classes="intro" Text="Some saves you never overwrite." FontSize="15" HorizontalAlignment="Center"
+                   Foreground="{DynamicResource TextDim}" />
+        <c:BlobMascot x:Name="Blob" Classes="intro" Width="76" Height="68" HorizontalAlignment="Center" Margin="0,16,0,0" />
+      </StackPanel>
+      <StackPanel Grid.Row="1" Margin="28,0,28,22" Spacing="8">
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock x:Name="Status" FontSize="12" Foreground="{DynamicResource TextDim}" TextTrimming="CharacterEllipsis" />
+          <TextBlock x:Name="SkipHint" Grid.Column="1" FontSize="11" Foreground="{DynamicResource TextDim}" Opacity="0.7" />
+        </Grid>
+        <ProgressBar x:Name="Bar" Minimum="0" Maximum="1" Height="4" MinHeight="4" CornerRadius="2"
+                     Foreground="{DynamicResource Brand}" Background="{DynamicResource Bg3}" />
+      </StackPanel>
+    </Grid>
+  </Border>
+</Window>

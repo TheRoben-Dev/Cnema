@@ -2,6 +2,13 @@
 
 What changed in each Savefile (formerly Cnema) release. The app shows the entries you have not seen yet after it updates.
 
+## 0.33.0
+- Meet the blob: a little purple blob now presents Worth a rewatch, with something to say about your clips. "Your Valorant clip from last night is a keeper", "3 new moments with Alex this week", "A year ago today you were playing ARK with Jo": every line comes from your own library (friends, games, dates, best moments, On this day), never made up. It changes every few seconds; click the blob for the next one. Turn it off under Settings, Features, The blob. With Reduced motion it holds still.
+- A loading screen: the logo, the name and the blob while Savefile starts, saying what it's getting ready, including waking up the smart models you switched on so the first search answers at once. It stays at most 8 seconds (whatever is still loading carries on in the background), a click skips it, and it never shows when Savefile starts at login. Settings, Features, Loading screen.
+- What smart features cost: every smart setting now says what it uses while it works (CPU, memory, download) and how long your library will take, first as an estimate and then timed on your own computer. While a pass runs, Settings also says how long is left.
+- Best moments is about 12 times lighter: it now looks only at the key frames of each video. A 2-minute 1080p60 clip takes about a second instead of most of a minute.
+- Linux: the speech library's one system dependency now comes with Savefile, so nothing extra needs installing.
+
 ## 0.32.0
 - Visual search: Savefile can look at a few frames of each video, on this computer and only when it isn't busy, and then find videos by what's on screen. Search for "snow", "a car", "night" or "a boss fight" and the videos that look like it come after the ones whose names match, marked "Looks like it". Opening one starts near the frame that matched.
 - Videos like this one: right-click a video to see the ones that look most alike (the same map, the same game, the same evening). Done takes you back.

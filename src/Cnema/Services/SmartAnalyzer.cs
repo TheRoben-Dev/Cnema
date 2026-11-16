@@ -6,8 +6,10 @@ namespace Cnema.Services;
 
 /// <summary>
 /// Best moments, without any model: listens for loud spikes and watches how much the picture changes,
-/// on this computer, at idle priority. One small ffmpeg pass for the sound and one for the picture
-/// (two frames a second, 64 pixels wide), so a 30-second clip takes about a second.
+/// on this computer, at idle priority. One small ffmpeg pass for the sound and one for the picture.
+/// The picture pass decodes only keyframes (a recorder writes one every second or two), sampled at two a
+/// second and 64 pixels wide: a fraction of the work of decoding every frame, so a 2-minute 1080p60 clip
+/// costs about a second of one core instead of most of a minute.
 /// </summary>
 public static partial class SmartAnalyzer
 {
@@ -29,7 +31,7 @@ public static partial class SmartAnalyzer
         {
             var r = await ProcessRunner.RunAsync(ffmpeg, new[]
             {
-                "-hide_banner", "-nostats", "-v", "info", "-an", "-sn", "-dn", "-i", path,
+                "-hide_banner", "-nostats", "-v", "info", "-threads", "1", "-skip_frame", "nokey", "-an", "-sn", "-dn", "-i", path,
                 "-vf", "fps=2,scale=64:-2,select='gte(scene\\,0)',metadata=print:key=lavfi.scene_score",
                 "-f", "null", "-",
             }, ct: ct, background: true);

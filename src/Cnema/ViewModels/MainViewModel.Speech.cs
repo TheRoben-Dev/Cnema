@@ -114,7 +114,7 @@ public sealed partial class MainViewModel
                     tried.Add(item);
                     if (item.Entry.Speech is { Version: SpeechService.Version } || !File.Exists(item.Entry.Path)) continue;
                     while (SpeechShouldWait && !ct.IsCancellationRequested) await Task.Delay(5000, ct);
-                    SpeechActivity = F("Listening for what's said: {0} to go", (todo.Count - i).ToString("N0"));
+                    SpeechActivity = F("Listening for what's said: {0} to go, {1}", (todo.Count - i).ToString("N0"), CostMeter.Span(LeftSeconds(CostMeter.Speech, todo.Skip(i))));
                     // Loaded only once there's something to do, and let go of when the pass ends (it holds memory).
                     speech ??= await Task.Run(() => SpeechService.Load(ModelStore.PathOf(ModelStore.Speech)), ct);
                     SpeechInfo? info;
@@ -122,7 +122,10 @@ public sealed partial class MainViewModel
                     {
                         var path = item.Entry.Path;
                         var length = item.Entry.DurationMs;
+                        var watch = System.Diagnostics.Stopwatch.StartNew();
                         info = await Task.Run(() => speech.TranscribeAsync(path, length, ct), ct);
+                        // A video with no sound is skipped in a blink; that says nothing about this computer's pace.
+                        if (info.Language is not null || watch.Elapsed.TotalSeconds >= 1) CostMeter.Record(CostMeter.Speech, watch.Elapsed.TotalSeconds, length);
                     }
                     catch (OperationCanceledException) { throw; }
                     catch (Exception ex)
@@ -135,7 +138,7 @@ public sealed partial class MainViewModel
                         item.Entry.Speech = info ?? new SpeechInfo { Version = SpeechService.Version };
                         if (ReferenceEquals(Player.Current, item)) Player.RefreshSpeech();
                     }
-                    if (++done % 10 == 0) { _library.SaveCache(); OnPropertyChanged(nameof(SpeechModelText)); }
+                    if (++done % 10 == 0) { _library.SaveCache(); OnPropertyChanged(nameof(SpeechModelText)); OnCostsChanged(); }
                     await Task.Delay(150, ct);
                 }
             }
@@ -150,6 +153,7 @@ public sealed partial class MainViewModel
         {
             speech?.Dispose();
             SpeechActivity = "";
+            OnCostsChanged();
             if (done > 0)
             {
                 _library.SaveCache();

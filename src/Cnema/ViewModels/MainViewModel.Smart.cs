@@ -96,10 +96,15 @@ public sealed partial class MainViewModel
                     var item = todo[i];
                     tried.Add(item);
                     if (item.Entry.Smart is { Version: SmartAnalyzer.Version } || !File.Exists(item.Entry.Path)) continue; // unplugged drive
-                    SmartActivity = F("Finding best moments: {0} to go", (todo.Count - i).ToString("N0"));
+                    SmartActivity = F("Finding best moments: {0} to go, {1}", (todo.Count - i).ToString("N0"), CostMeter.Span(LeftSeconds(CostMeter.Moments, todo.Skip(i))));
                     while (SmartShouldWait && !ct.IsCancellationRequested) await Task.Delay(5000, ct);
                     SmartInfo? info;
-                    try { info = await SmartAnalyzer.AnalyzeAsync(item.Entry.Path, item.Entry.DurationMs, ct); }
+                    var watch = System.Diagnostics.Stopwatch.StartNew();
+                    try
+                    {
+                        info = await SmartAnalyzer.AnalyzeAsync(item.Entry.Path, item.Entry.DurationMs, ct);
+                        CostMeter.Record(CostMeter.Moments, watch.Elapsed.TotalSeconds, item.Entry.DurationMs);
+                    }
                     catch (OperationCanceledException) { throw; }
                     catch (Exception ex)
                     {
@@ -112,7 +117,7 @@ public sealed partial class MainViewModel
                         item.Entry.Smart = info ?? new SmartInfo { Version = SmartAnalyzer.Version };
                         AutoTitle(item);
                     }
-                    if (++done % 25 == 0) { _library.SaveCache(); UpdateHighlightMarks(); }
+                    if (++done % 25 == 0) { _library.SaveCache(); UpdateHighlightMarks(); OnCostsChanged(); }
                     if (DateTime.UtcNow - since > TimeSpan.FromSeconds(30) && SortIndex == 5) { since = DateTime.UtcNow; RefreshView(); }
                     // Breathe between videos: this is background work.
                     await Task.Delay(150, ct);
@@ -124,6 +129,7 @@ public sealed partial class MainViewModel
         finally
         {
             SmartActivity = "";
+            OnCostsChanged();
             _library.SaveCache();
             UpdateHighlightMarks();
             if (done > 0) RefreshMemories();
