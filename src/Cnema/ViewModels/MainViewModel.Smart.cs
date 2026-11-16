@@ -76,11 +76,12 @@ public sealed partial class MainViewModel
     }
 
     /// <summary>Gaming (a game profile is on), recording a session or exporting: wait, so the game gets the computer.</summary>
-    private bool SmartShouldWait => Clips.ActiveGame is not null || Clips.IsSession || Exports.IsBusy || Player.IsExporting || IsScanning;
+    private bool SmartShouldWait => IsIndexPaused || Clips.ActiveGame is not null || Clips.IsSession || Exports.IsBusy || Player.IsExporting || IsScanning;
 
     /// <summary>What the smart features are waiting for, said in Settings.</summary>
     private string WaitReason =>
-        Clips.IsSession ? T("Paused while a session records.")
+        IsIndexPaused ? T("Paused for now.")
+        : Clips.IsSession ? T("Paused while a session records.")
         : Clips.ActiveGame is not null ? T("Paused while you play.")
         : Exports.IsBusy || Player.IsExporting ? T("Paused until the export is done.")
         : IsScanning ? T("Paused while the library is scanned.")
@@ -94,7 +95,7 @@ public sealed partial class MainViewModel
     private readonly SemaphoreSlim _workGate = new(1, 1);
 
     /// <summary>Waits until the computer is free and it's this feature's turn, saying so; release <see cref="_workGate"/> after.</summary>
-    private async Task TakeTurnAsync(Action<string> show, string working, string feature, CancellationToken ct)
+    private async Task<TimeSpan> TakeTurnAsync(Action<string> show, string working, string feature, CancellationToken ct)
     {
         var since = DateTime.UtcNow;
         var logged = false;
@@ -110,7 +111,36 @@ public sealed partial class MainViewModel
         }
         show(working);
         await _workGate.WaitAsync(ct);
+        return DateTime.UtcNow - since;
     }
+
+    /// <summary>
+    /// How long one video may take before it's skipped (a file ffmpeg chokes on must never hold up the
+    /// rest): three minutes plus twice its length.
+    /// </summary>
+    internal static TimeSpan ItemLimit(long durationMs) => TimeSpan.FromMinutes(3) + TimeSpan.FromMilliseconds(Math.Max(0, durationMs) * 2);
+
+    /// <summary>A pass's pace in the log: slow videos one by one, and a summary every 10, so a stall shows.</summary>
+    private sealed class PassLog(string feature)
+    {
+        private int _n;
+        private double _work, _wait;
+
+        public void Add(string file, TimeSpan waited, TimeSpan work)
+        {
+            _n++;
+            _work += work.TotalSeconds;
+            _wait += waited.TotalSeconds;
+            if (work.TotalSeconds >= 60 || waited.TotalSeconds >= 120)
+                Log.Info($"{feature}: {file} took {work.TotalSeconds:0.0} s (waited {waited.TotalSeconds:0} s for its turn)");
+            if (_n % 10 == 0)
+                Log.Info($"{feature}: {_n} done this run, {_work / _n:0.0} s each on average, {_wait / _n:0.0} s waiting");
+        }
+    }
+
+    /// <summary>Why a video was skipped, for the log: a time limit or the error.</summary>
+    private static string SkipReason(Exception ex, long durationMs) =>
+        ex is OperationCanceledException ? $"took longer than {ItemLimit(durationMs).TotalMinutes:0} min, skipped" : ex.Message;
 
     /// <summary>Loads a model off the UI thread, giving up after two minutes with a message fit to show.</summary>
     private static async Task<T> LoadModelAsync<T>(string feature, Func<T> load, CancellationToken ct)
@@ -151,6 +181,8 @@ public sealed partial class MainViewModel
         {
             var since = DateTime.UtcNow;
             var tried = new HashSet<VideoItemViewModel>();
+            var pace = new PassLog("Best moments");
+            using var awake = PlatformShell.StayAwake("Finding best moments");
             Log.Info($"Best moments pass: {_items.Values.Count(v => v.Entry.Smart is not { Version: SmartAnalyzer.Version })} to do");
             while (!ct.IsCancellationRequested && Features.Highlights)
             {
@@ -163,32 +195,35 @@ public sealed partial class MainViewModel
                     var item = todo[i];
                     tried.Add(item);
                     if (item.Entry.Smart is { Version: SmartAnalyzer.Version } || !File.Exists(item.Entry.Path)) continue; // unplugged drive
-                    await TakeTurnAsync(s => SmartActivity = s, F("Finding best moments: {0} to go, {1}.", (todo.Count - i).ToString("N0"), CostMeter.Span(LeftSeconds(CostMeter.Moments, todo.Skip(i)))), "Best moments", ct);
+                    var waited = await TakeTurnAsync(s => SmartActivity = s, F("Finding best moments: {0} to go, {1}.", (todo.Count - i).ToString("N0"), CostMeter.Span(LeftSeconds(CostMeter.Moments, todo.Skip(i)))), "Best moments", ct);
                     SmartInfo? info;
                     var watch = System.Diagnostics.Stopwatch.StartNew();
+                    using var limit = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                    limit.CancelAfter(ItemLimit(item.Entry.DurationMs));
                     try
                     {
-                        info = await SmartAnalyzer.AnalyzeAsync(item.Entry.Path, item.Entry.DurationMs, ct);
+                        info = await SmartAnalyzer.AnalyzeAsync(item.Entry.Path, item.Entry.DurationMs, limit.Token);
                         CostMeter.Record(CostMeter.Moments, watch.Elapsed.TotalSeconds, item.Entry.DurationMs);
                     }
-                    catch (OperationCanceledException) { throw; }
+                    catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
                     catch (Exception ex)
                     {
-                        Log.Warn($"Best moments for {item.Entry.FileName}: {ex.Message}");
+                        Log.Warn($"Best moments for {item.Entry.FileName}: {SkipReason(ex, item.Entry.DurationMs)}");
                         CountFailure("Best moments");
                         info = null;
                     }
-                    finally { _workGate.Release(); }
+                    finally { _workGate.Release(); pace.Add(item.Entry.FileName, waited, watch.Elapsed); }
                     // The item may have been renamed, moved or deleted meanwhile.
                     if (_items.TryGetValue(item.Entry.Path, out var still) && ReferenceEquals(still, item))
                     {
                         item.Entry.Smart = info ?? new SmartInfo { Version = SmartAnalyzer.Version };
+                        if (info is { Excitement: >= 0.8 }) IndexCheer++; // a really good one: the blob hops
                         AutoTitle(item);
                         if (ReferenceEquals(Player.Current, item)) Player.RefreshTrimSuggestion();
                         if (Features.SmartThumbs && item.Entry.Smart.ThumbMs > 0 && item.Entry.ThumbAtMs == 0)
                             await RefreshSmartThumbsAsync(new[] { item }, ct);
                     }
-                    if (++done % 25 == 0) { _library.SaveCache(); UpdateHighlightMarks(); OnCostsChanged(); }
+                    if (++done % 10 == 0) { _library.SaveCache(); UpdateHighlightMarks(); OnCostsChanged(); }
                     if (DateTime.UtcNow - since > TimeSpan.FromSeconds(30) && SortIndex == 5) { since = DateTime.UtcNow; RefreshView(); }
                     // Breathe between videos: this is background work.
                     await Task.Delay(150, ct);

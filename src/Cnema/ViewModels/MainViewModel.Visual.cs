@@ -114,6 +114,8 @@ public sealed partial class MainViewModel
         try
         {
             var tried = new HashSet<VideoItemViewModel>();
+            var pace = new PassLog("Visual");
+            using var awake = PlatformShell.StayAwake("Visual");
             Log.Info($"Visual pass: {_items.Values.Count(v => v.Entry.Visual is not { Version: VisualService.Version })} to do");
             while (!ct.IsCancellationRequested && Features.Visual)
             {
@@ -129,27 +131,29 @@ public sealed partial class MainViewModel
                     if (_visual is null) VisualActivity = T("Starting the visual model…");
                     var model = _visual ?? await LoadModelAsync("Visual", VisualModel, ct);
                     if (model is null) return;
-                    await TakeTurnAsync(s => VisualActivity = s, working, "Visual", ct);
+                    var waited = await TakeTurnAsync(s => VisualActivity = s, working, "Visual", ct);
+                    using var limit = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                    limit.CancelAfter(ItemLimit(item.Entry.DurationMs));
+                    var watch = System.Diagnostics.Stopwatch.StartNew();
                     VisualInfo? info;
                     try
                     {
                         var path = item.Entry.Path;
                         var length = item.Entry.DurationMs;
-                        var watch = System.Diagnostics.Stopwatch.StartNew();
-                        info = await Task.Run(() => model.LookAsync(path, length, ct), ct);
+                        info = await Task.Run(() => model.LookAsync(path, length, limit.Token), limit.Token);
                         CostMeter.Record(CostMeter.Visual, watch.Elapsed.TotalSeconds, length);
                     }
-                    catch (OperationCanceledException) { throw; }
+                    catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
                     catch (Exception ex)
                     {
-                        Log.Warn($"Visual for {item.Entry.FileName}: {ex.Message}");
+                        Log.Warn($"Visual for {item.Entry.FileName}: {SkipReason(ex, item.Entry.DurationMs)}");
                         CountFailure("Visual");
                         info = null;
                     }
-                    finally { _workGate.Release(); }
+                    finally { _workGate.Release(); pace.Add(item.Entry.FileName, waited, watch.Elapsed); }
                     if (_items.TryGetValue(item.Entry.Path, out var still) && ReferenceEquals(still, item))
                         item.Entry.Visual = info ?? new VisualInfo { Version = VisualService.Version };
-                    if (++done % 25 == 0) { _library.SaveCache(); OnPropertyChanged(nameof(VisualModelText)); OnCostsChanged(); }
+                    if (++done % 10 == 0) { _library.SaveCache(); OnPropertyChanged(nameof(VisualModelText)); OnCostsChanged(); }
                     await Task.Delay(100, ct);
                 }
             }

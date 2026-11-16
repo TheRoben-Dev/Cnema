@@ -10,7 +10,9 @@ public static class ProcessRunner
     /// <summary>Background work (the smart features): give way to games and everything else.</summary>
     public static void Lower(Process p)
     {
-        try { p.PriorityClass = ProcessPriorityClass.Idle; }
+        // Not Idle on macOS: nice 19 lands in the kernel's throttled tier there (efficiency cores only and
+        // throttled disk reads), so ffmpeg barely moved while anything else was busy. Below normal still gives way.
+        try { p.PriorityClass = OperatingSystem.IsWindows() ? ProcessPriorityClass.Idle : ProcessPriorityClass.BelowNormal; }
         catch { /* gone already, or not allowed: runs at normal priority */ }
     }
 

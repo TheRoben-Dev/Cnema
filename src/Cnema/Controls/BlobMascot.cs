@@ -20,6 +20,7 @@ public sealed class BlobMascot : Control
 
     public static readonly StyledProperty<IBrush?> BodyProperty = AvaloniaProperty.Register<BlobMascot, IBrush?>(nameof(Body));
     public static readonly StyledProperty<bool> StillProperty = AvaloniaProperty.Register<BlobMascot, bool>(nameof(Still));
+    public static readonly StyledProperty<bool> ReadingProperty = AvaloniaProperty.Register<BlobMascot, bool>(nameof(Reading));
     public static readonly StyledProperty<int> CheerTickProperty = AvaloniaProperty.Register<BlobMascot, int>(nameof(CheerTick));
 
     /// <summary>The body colour; the brand violet when unset.</summary>
@@ -28,6 +29,9 @@ public sealed class BlobMascot : Control
     public bool Still { get => GetValue(StillProperty); set => SetValue(StillProperty, value); }
     /// <summary>Bump it to make the blob hop and squint happily (a new line to say).</summary>
     public int CheerTick { get => GetValue(CheerTickProperty); set => SetValue(CheerTickProperty, value); }
+
+    /// <summary>Looking through a little stack of clips: eyes scan along the top card, which flips now and then.</summary>
+    public bool Reading { get => GetValue(ReadingProperty); set => SetValue(ReadingProperty, value); }
 
     private static readonly IBrush Eye = Brushes.White;
     private const int N = 30;              // points around the edge
@@ -54,7 +58,7 @@ public sealed class BlobMascot : Control
 
     static BlobMascot()
     {
-        AffectsRender<BlobMascot>(BodyProperty, StillProperty);
+        AffectsRender<BlobMascot>(BodyProperty, StillProperty, ReadingProperty);
     }
 
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
@@ -131,6 +135,8 @@ public sealed class BlobMascot : Control
     {
         if (Still || !IsEffectivelyVisible || TopLevel.GetTopLevel(this) is not { } top) { _running = false; InvalidateVisual(); return; }
         var now = Now;
+        // Reading goes on for a long time in the sidebar: 24 frames a second is plenty and costs little.
+        if (Reading && _last >= 0 && now - _last < 1 / 24.0) { top.RequestAnimationFrame(Frame); return; }
         if (_last >= 0) Step(now, Math.Min(now - _last, 1 / 20.0));
         _last = now;
         InvalidateVisual();
@@ -152,7 +158,13 @@ public sealed class BlobMascot : Control
     private void Step(double t, double dt)
     {
         // Where the eyes look: a quick dart now and then, and the body sways after them.
-        if (t >= _nextLook)
+        if (Reading)
+        {
+            // Reading along the card: a slow sweep left to right, a quick glance back.
+            var sweep = t % 1.8 / 1.8;
+            _lookTo = sweep < 0.8 ? -0.7 + 1.4 * (sweep / 0.8) : 0.7 - 1.4 * ((sweep - 0.8) / 0.2);
+        }
+        else if (t >= _nextLook)
         {
             _lookTo = _rng.NextDouble() < 0.35 ? 0 : (_rng.NextDouble() * 2 - 1);
             _nextLook = t + 1.4 + _rng.NextDouble() * 2.8;
@@ -277,7 +289,8 @@ public sealed class BlobMascot : Control
 
         // Eyes ride along with the body: they squash with it and sway with the top.
         var look = still ? 0 : _look * w * 0.035;
-        var eyeY = cy - ry * 0.08;
+        var eyeY = cy - ry * (Reading ? 0.22 : 0.08);
+        if (Reading) DrawCards(ctx, w, h, ground, t, still);
         var eyeLean = lean * 0.45;
         var gap = rx * 0.4;
         var ew = w * 0.085;
@@ -330,6 +343,53 @@ public sealed class BlobMascot : Control
                 g.EndFigure(true);
             }
             ctx.DrawGeometry(Eye, join, eye);
+        }
+    }
+
+    /// <summary>
+    /// The little stack of clips it's looking through, held in front: two cards behind and one on top that
+    /// flips over every 1.8 seconds to show the next clip.
+    /// </summary>
+    private void DrawCards(DrawingContext ctx, double w, double h, double ground, double t, bool still)
+    {
+        IBrush Res(string key, IBrush fallback) => this.TryFindResource(key, ActualThemeVariant, out var v) && v is IBrush b ? b : fallback;
+        var card = Res("Bg1", Brushes.White);
+        var line = new Pen(Res("Line", Brushes.Gray), Math.Max(1, w * 0.012));
+        var tints = new[] { Res("Brand", Brushes.BlueViolet), Res("TextDim", Brushes.Gray), Res("Highlight", Brushes.MediumPurple) };
+        var cw = w * 0.46;
+        var ch = h * 0.27;
+        var x0 = w * 0.5 - cw / 2 + w * 0.04;
+        var y0 = ground - ch * 0.9;
+        var radius = Math.Max(2, w * 0.05);
+        for (var k = 2; k >= 1; k--)
+        {
+            var off = k * w * 0.035;
+            ctx.DrawRectangle(card, line, new Rect(x0 + off, y0 - off, cw, ch), radius, radius);
+        }
+        var flips = still ? 0 : (int)(t / 1.8);
+        var phase = still ? 1 : Math.Min(1, t % 1.8 / 0.32);
+        var sx = Math.Abs(Math.Cos(phase * Math.PI)); // 1 → 0 (edge on) → 1, the next clip showing
+        var showing = phase < 0.5 ? flips : flips + 1;
+        var cxCard = x0 + cw / 2;
+        using (ctx.PushTransform(Matrix.CreateTranslation(-cxCard, 0) * Matrix.CreateScale(Math.Max(0.02, sx), 1) * Matrix.CreateTranslation(cxCard, 0)))
+        {
+            var rect = new Rect(x0, y0, cw, ch);
+            ctx.DrawRectangle(card, line, rect, radius, radius);
+            var pic = rect.Deflate(Math.Max(1.5, w * 0.03));
+            using (ctx.PushOpacity(0.55))
+                ctx.DrawRectangle(tints[showing % tints.Length], null, pic, radius * 0.6, radius * 0.6);
+            // A tiny play mark, so it reads as a video.
+            var c = pic.Center;
+            var s2 = pic.Height * 0.22;
+            var tri = new StreamGeometry();
+            using (var g = tri.Open())
+            {
+                g.BeginFigure(new Point(c.X - s2 * 0.6, c.Y - s2), true);
+                g.LineTo(new Point(c.X + s2, c.Y));
+                g.LineTo(new Point(c.X - s2 * 0.6, c.Y + s2));
+                g.EndFigure(true);
+            }
+            ctx.DrawGeometry(Eye, null, tri);
         }
     }
 
