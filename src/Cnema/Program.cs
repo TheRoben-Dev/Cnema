@@ -9,6 +9,7 @@ internal static class Program
     public static int Main(string[] args)
     {
         if (args.Contains("--selftest")) return SelfTest();
+        if (Array.IndexOf(args, "--selftest-models") is var mi and >= 0) return ModelSelfTest(args.Skip(mi + 1).FirstOrDefault());
         Log.HookUnhandled();
         Log.Info($"Cnema {UpdateService.CurrentText} starting on {System.Runtime.InteropServices.RuntimeInformation.OSDescription}");
         // Cnema can live in the tray: a second launch just brings the running copy forward.
@@ -53,6 +54,81 @@ internal static class Program
         Console.WriteLine(ok ? "selftest OK" : "selftest FAILED");
         return ok ? 0 : 1;
     }
+    /// <summary>
+    /// CI on packaged builds, with network: downloads the optional models like the app does (mirror, then fallback,
+    /// SHA-256 checked) and runs every smart feature on a test video, so a model that can't load or run on this
+    /// platform fails the build instead of silently doing nothing on someone's computer. With a speech recording
+    /// (the macOS runner makes one with `say`), it also checks that the words come back.
+    /// </summary>
+    private static int ModelSelfTest(string? speechAudio)
+    {
+        var ok = true;
+        void Check(string name, Func<string> run)
+        {
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            try
+            {
+                // A model that hangs while starting fails here, instead of leaving the app waiting forever.
+                var task = Task.Run(run);
+                if (!task.Wait(TimeSpan.FromMinutes(5))) throw new TimeoutException("no answer within 5 minutes");
+                Console.WriteLine($"{name}: {task.Result} ({sw.ElapsedMilliseconds} ms)");
+            }
+            catch (AggregateException ex) when (ex.InnerException is { } inner) { ok = false; Console.WriteLine($"{name}: FAILED - {inner.GetType().Name}: {inner.Message}"); }
+            catch (Exception ex) { ok = false; Console.WriteLine($"{name}: FAILED - {ex.GetType().Name}: {ex.Message}"); }
+        }
+        var ffmpeg = ToolLocator.Ffmpeg;
+        if (ffmpeg is null) { Console.WriteLine("ffmpeg: MISSING"); return 1; }
+        Console.WriteLine($"models: {ModelStore.Dir}");
+        Check("download", () =>
+        {
+            foreach (var pack in new IReadOnlyList<ModelInfo>[] { new[] { ModelStore.Speech }, ModelStore.Visual, ModelStore.Sound })
+                ModelStore.DownloadAsync(pack, null, CancellationToken.None).GetAwaiter().GetResult();
+            return "OK";
+        });
+
+        var video = Path.Combine(Path.GetTempPath(), $"cnema-models-{Environment.ProcessId}.mp4");
+        var audio = speechAudio is { Length: > 0 } && File.Exists(speechAudio)
+            ? new[] { "-i", speechAudio }
+            : new[] { "-f", "lavfi", "-i", "sine=frequency=440:duration=8" };
+        var made = ProcessRunner.RunAsync(ffmpeg, new[] { "-hide_banner", "-loglevel", "error", "-y", "-f", "lavfi", "-i", "testsrc2=size=640x360:rate=30:duration=8" }
+            .Concat(audio).Concat(new[] { "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac", "-shortest", video })).GetAwaiter().GetResult();
+        if (made.ExitCode != 0) { Console.WriteLine("test video: FAILED - " + made.StdErr.Trim()); return 1; }
+        var entry = new Models.VideoEntry { Path = video };
+        MediaProbe.ProbeAsync(entry, CancellationToken.None).GetAwaiter().GetResult();
+
+        Check("best moments", () =>
+        {
+            var info = SmartAnalyzer.AnalyzeAsync(video, entry.DurationMs, CancellationToken.None).GetAwaiter().GetResult();
+            return info is null ? throw new InvalidOperationException("no result") : $"OK (excitement {info.Excitement:0.00}, thumb {info.ThumbMs} ms)";
+        });
+        Check("speech", () =>
+        {
+            using var speech = SpeechService.Load(ModelStore.PathOf(ModelStore.Speech));
+            var info = speech.TranscribeAsync(video, entry.DurationMs, CancellationToken.None).GetAwaiter().GetResult();
+            var text = string.Join(" ", info.Lines.Select(l => l.Text));
+            if (speechAudio is { Length: > 0 } && !text.Contains("savefile", StringComparison.OrdinalIgnoreCase) && !text.Contains("test", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException($"heard \"{text}\"");
+            return $"OK ({info.Lines.Count} lines, {info.Language ?? "no language"}: \"{text}\")";
+        });
+        Check("visual", () =>
+        {
+            using var visual = VisualService.Load();
+            var info = visual.LookAsync(video, entry.DurationMs, CancellationToken.None).GetAwaiter().GetResult();
+            if (info is null || info.Frames.Length == 0) throw new InvalidOperationException("no frames looked at");
+            var words = visual.EmbedText("a colourful test pattern");
+            return $"OK ({info.Frames.Length} frames, match {Models.VisualInfo.Dot(info.Mean, words):0.000})";
+        });
+        Check("sound", () =>
+        {
+            using var sound = SoundService.Load();
+            var info = sound.ListenAsync(video, entry.DurationMs, CancellationToken.None).GetAwaiter().GetResult();
+            return $"OK ({info.Laugh.Count} laugh, {info.Hype.Count} hype moments)";
+        });
+        try { File.Delete(video); } catch { /* temp */ }
+        Console.WriteLine(ok ? "model selftest OK" : "model selftest FAILED");
+        return ok ? 0 : 1;
+    }
+
     /// <summary>
     /// Makes a two-second H.264/AAC file with ffmpeg, reads its metadata and decodes it with libVLC.
     /// Proves that the libVLC plugins left in the package are enough to play ordinary video.

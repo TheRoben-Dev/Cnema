@@ -27,7 +27,8 @@ public sealed partial class MainViewModel
     public string SpeechModelText =>
         IsDownloadingSpeech ? F("Downloading the speech model: {0:0}%", SpeechDownloadProgress * 100)
         : SpeechModelError is { } err ? err
-        : SpeechModelReady ? F("Speech model installed ({0}). Speech found in {1} so far.", BackupViewModel.SizeText(ModelStore.Speech.Bytes), SpeechCountText)
+        : SpeechModelReady ? F("Speech model installed ({0}). Listened to {1} of {2}; speech found in {3}.", BackupViewModel.SizeText(ModelStore.Speech.Bytes),
+            _items.Values.Count(v => v.Entry.Speech is { Version: SpeechService.Version }).ToString("N0"), _items.Count.ToString("N0"), SpeechCountText) + FailedText("Speech")
         : F("Needs a one-time download of a speech model ({0}). After that, nothing leaves this computer.", BackupViewModel.SizeText(ModelStore.Speech.Bytes));
 
     private string SpeechCountText
@@ -93,8 +94,6 @@ public sealed partial class MainViewModel
         SpeechActivity = "";
     }
 
-    /// <summary>Waits for games, exports and the best-moments pass: one background job at a time.</summary>
-    private bool SpeechShouldWait => SmartShouldWait || _smartRun is { IsCompleted: false };
 
     private async Task RunSpeechPassAsync(CancellationToken ct)
     {
@@ -103,6 +102,7 @@ public sealed partial class MainViewModel
         try
         {
             var tried = new HashSet<VideoItemViewModel>();
+            Log.Info($"Speech pass: {_items.Values.Count(v => v.Entry.Speech is not { Version: SpeechService.Version })} to do");
             while (!ct.IsCancellationRequested && Features.Speech)
             {
                 var todo = _items.Values.Where(v => v.Entry.Speech is not { Version: SpeechService.Version } && !tried.Contains(v))
@@ -113,10 +113,14 @@ public sealed partial class MainViewModel
                     var item = todo[i];
                     tried.Add(item);
                     if (item.Entry.Speech is { Version: SpeechService.Version } || !File.Exists(item.Entry.Path)) continue;
-                    while (SpeechShouldWait && !ct.IsCancellationRequested) await Task.Delay(5000, ct);
-                    SpeechActivity = F("Listening for what's said: {0} to go, {1}", (todo.Count - i).ToString("N0"), CostMeter.Span(LeftSeconds(CostMeter.Speech, todo.Skip(i))));
-                    // Loaded only once there's something to do, and let go of when the pass ends (it holds memory).
-                    speech ??= await Task.Run(() => SpeechService.Load(ModelStore.PathOf(ModelStore.Speech)), ct);
+                    var working = F("Listening for what's said: {0} to go, {1}.", (todo.Count - i).ToString("N0"), CostMeter.Span(LeftSeconds(CostMeter.Speech, todo.Skip(i))));
+                    if (speech is null)
+                    {
+                        // Loaded only once there's something to do, and let go of when the pass ends (it holds memory).
+                        SpeechActivity = T("Starting the speech model…");
+                        speech = await LoadModelAsync("Speech", () => SpeechService.Load(ModelStore.PathOf(ModelStore.Speech)), ct);
+                    }
+                    await TakeTurnAsync(s => SpeechActivity = s, working, "Speech", ct);
                     SpeechInfo? info;
                     try
                     {
@@ -131,8 +135,10 @@ public sealed partial class MainViewModel
                     catch (Exception ex)
                     {
                         Log.Warn($"Speech for {item.Entry.FileName}: {ex.Message}");
+                        CountFailure("Speech");
                         info = null;
                     }
+                    finally { _workGate.Release(); }
                     if (_items.TryGetValue(item.Entry.Path, out var still) && ReferenceEquals(still, item))
                     {
                         item.Entry.Speech = info ?? new SpeechInfo { Version = SpeechService.Version };
@@ -151,6 +157,7 @@ public sealed partial class MainViewModel
         }
         finally
         {
+            Log.Info($"Speech pass ended: {done} done");
             speech?.Dispose();
             SpeechActivity = "";
             OnCostsChanged();

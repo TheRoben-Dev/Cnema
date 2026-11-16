@@ -24,7 +24,8 @@ public sealed partial class SpeechService : IDisposable
     public static SpeechService Load(string modelPath)
     {
         PreloadBundled();
-        try { return new SpeechService(WhisperFactory.FromPath(modelPath)); }
+        // CPU only: steady, light on a computer that may be gaming, and no GPU shader warm-up at start.
+        try { return new SpeechService(WhisperFactory.FromPath(modelPath, new WhisperFactoryOptions { UseGpu = false })); }
         catch (Exception ex)
         {
             Log.Warn($"Speech model didn't load: {ex}");
@@ -52,12 +53,11 @@ public sealed partial class SpeechService : IDisposable
     }
 
     /// <summary>
-    /// Gets the speech model ready for the loading screen: loads the native library and reads the model file
-    /// once, so the first video it listens to doesn't wait on the disk. Holds no memory afterwards.
+    /// Gets the speech model ready for the loading screen: reads the model file once, so the first video
+    /// it listens to doesn't wait on the disk. Holds no memory afterwards.
     /// </summary>
     public static void Warm(string modelPath)
     {
-        RuntimeCheck();
         if (!File.Exists(modelPath)) return;
         using var f = new FileStream(modelPath, FileMode.Open, FileAccess.Read, FileShare.Read, 1 << 20, FileOptions.SequentialScan);
         var buffer = new byte[1 << 20];

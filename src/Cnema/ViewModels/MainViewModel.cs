@@ -241,11 +241,27 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             $"Library: {_items.Count} videos in {_settings.Current.Folders.Count} folders",
             $"Clipping: enabled={clip.Enabled} state={Clips.State} encoder={Clips.Encoder ?? "-"} error={Clips.Error ?? "-"}",
             $"Clip settings: {clip.Seconds}s {clip.Fps}fps height={clip.Height} {clip.BitrateMbps}Mbps codec={clip.Codec} hw={clip.HardwareEncoder} audio1={(clip.Audio1 is null ? "-" : "set")} audio2={(clip.Audio2 is null ? "-" : "set")} hotkey={clip.HotkeyText} hotkeyRefused={_hotkeyRefused} extraHotkeys={clip.ExtraHotkeys.Count} extraRefused={_refusedExtras.Count}",
+            SmartDiagnostics(),
             "",
             "--- log ---",
             Log.Tail(80),
         };
         return string.Join(Environment.NewLine, lines);
+    }
+
+    /// <summary>The smart features in diagnostics: switched on, model there, how far, what they're doing now, errors.</summary>
+    private string SmartDiagnostics()
+    {
+        var all = _items.Values.Select(v => v.Entry).ToList();
+        string failed;
+        lock (_workFailed) failed = string.Join(" ", _workFailed.Select(kv => $"{kv.Key}={kv.Value}"));
+        return string.Join(Environment.NewLine,
+            $"Smart: moments={Features.Highlights} {all.Count(e => e.Smart is { Version: SmartAnalyzer.Version })}/{all.Count}" +
+            $" | speech={Features.Speech} model={SpeechModelReady} {all.Count(e => e.Speech is { Version: SpeechService.Version })}/{all.Count} with words {all.Count(e => e.Speech is { Lines.Count: > 0 })}" +
+            $" | visual={Features.Visual} model={VisualModelReady} {all.Count(e => e.Visual is { Version: VisualService.Version })}/{all.Count} with frames {all.Count(e => e.Visual is { Vectors.Length: > 0 })}" +
+            $" | sound={Features.Laughs} model={SoundModelReady} {all.Count(e => e.Sound is { Version: SoundService.Version })}/{all.Count}",
+            $"Smart now: moments=[{SmartActivity}] speech=[{SpeechActivity}] visual=[{VisualActivity}] sound=[{SoundActivity}] wait=[{WaitReason}]",
+            $"Smart errors: speech={SpeechModelError ?? "-"} visual={VisualModelError ?? "-"} sound={SoundModelError ?? "-"} failed={(failed.Length == 0 ? "-" : failed)}");
     }
 
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(IsConfirmingDelete), nameof(DeletePrompt))] private VideoItemViewModel? _pendingDelete;

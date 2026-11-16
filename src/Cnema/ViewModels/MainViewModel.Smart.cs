@@ -78,6 +78,72 @@ public sealed partial class MainViewModel
     /// <summary>Gaming (a game profile is on), recording a session or exporting: wait, so the game gets the computer.</summary>
     private bool SmartShouldWait => Clips.ActiveGame is not null || Clips.IsSession || Exports.IsBusy || Player.IsExporting || IsScanning;
 
+    /// <summary>What the smart features are waiting for, said in Settings.</summary>
+    private string WaitReason =>
+        Clips.IsSession ? T("Paused while a session records.")
+        : Clips.ActiveGame is not null ? T("Paused while you play.")
+        : Exports.IsBusy || Player.IsExporting ? T("Paused until the export is done.")
+        : IsScanning ? T("Paused while the library is scanned.")
+        : "";
+
+    /// <summary>
+    /// The smart features take turns, one video at a time, so only one of them works at once and each makes
+    /// progress (before, each waited for the one before it to finish the whole library, which on a big library
+    /// looked like nothing was happening).
+    /// </summary>
+    private readonly SemaphoreSlim _workGate = new(1, 1);
+
+    /// <summary>Waits until the computer is free and it's this feature's turn, saying so; release <see cref="_workGate"/> after.</summary>
+    private async Task TakeTurnAsync(Action<string> show, string working, string feature, CancellationToken ct)
+    {
+        var since = DateTime.UtcNow;
+        var logged = false;
+        while (SmartShouldWait && !ct.IsCancellationRequested)
+        {
+            show(working + " " + WaitReason);
+            if (!logged && DateTime.UtcNow - since > TimeSpan.FromMinutes(2))
+            {
+                logged = true;
+                Log.Info($"{feature} paused: game={Clips.ActiveGame is not null} session={Clips.IsSession} export={Exports.IsBusy || Player.IsExporting} scan={IsScanning}");
+            }
+            await Task.Delay(5000, ct);
+        }
+        show(working);
+        await _workGate.WaitAsync(ct);
+    }
+
+    /// <summary>Loads a model off the UI thread, giving up after two minutes with a message fit to show.</summary>
+    private static async Task<T> LoadModelAsync<T>(string feature, Func<T> load, CancellationToken ct)
+    {
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        try
+        {
+            var model = await Task.Run(load, ct).WaitAsync(TimeSpan.FromMinutes(2), ct);
+            Log.Info($"{feature} model loaded in {watch.ElapsedMilliseconds} ms");
+            return model;
+        }
+        catch (TimeoutException)
+        {
+            Log.Warn($"{feature} model didn't load within 2 minutes");
+            throw new InvalidOperationException(F("The {0} model is taking too long to start. Restart Savefile to try again.", feature.ToLowerInvariant()));
+        }
+    }
+
+    /// <summary>Videos each feature couldn't read this session (shown in Settings and in diagnostics).</summary>
+    private readonly Dictionary<string, int> _workFailed = new();
+
+    private void CountFailure(string feature)
+    {
+        lock (_workFailed) _workFailed[feature] = _workFailed.GetValueOrDefault(feature) + 1;
+    }
+
+    private string FailedText(string feature)
+    {
+        int n;
+        lock (_workFailed) n = _workFailed.GetValueOrDefault(feature);
+        return n == 0 ? "" : " " + P(n, "{0} video couldn't be read (see the log).", "{0} videos couldn't be read (see the log).");
+    }
+
     private async Task RunSmartPassAsync(CancellationToken ct)
     {
         var done = 0;
@@ -85,6 +151,7 @@ public sealed partial class MainViewModel
         {
             var since = DateTime.UtcNow;
             var tried = new HashSet<VideoItemViewModel>();
+            Log.Info($"Best moments pass: {_items.Values.Count(v => v.Entry.Smart is not { Version: SmartAnalyzer.Version })} to do");
             while (!ct.IsCancellationRequested && Features.Highlights)
             {
                 // Newest first; videos added meanwhile are picked up by the next round.
@@ -96,8 +163,7 @@ public sealed partial class MainViewModel
                     var item = todo[i];
                     tried.Add(item);
                     if (item.Entry.Smart is { Version: SmartAnalyzer.Version } || !File.Exists(item.Entry.Path)) continue; // unplugged drive
-                    SmartActivity = F("Finding best moments: {0} to go, {1}", (todo.Count - i).ToString("N0"), CostMeter.Span(LeftSeconds(CostMeter.Moments, todo.Skip(i))));
-                    while (SmartShouldWait && !ct.IsCancellationRequested) await Task.Delay(5000, ct);
+                    await TakeTurnAsync(s => SmartActivity = s, F("Finding best moments: {0} to go, {1}.", (todo.Count - i).ToString("N0"), CostMeter.Span(LeftSeconds(CostMeter.Moments, todo.Skip(i)))), "Best moments", ct);
                     SmartInfo? info;
                     var watch = System.Diagnostics.Stopwatch.StartNew();
                     try
@@ -109,8 +175,10 @@ public sealed partial class MainViewModel
                     catch (Exception ex)
                     {
                         Log.Warn($"Best moments for {item.Entry.FileName}: {ex.Message}");
+                        CountFailure("Best moments");
                         info = null;
                     }
+                    finally { _workGate.Release(); }
                     // The item may have been renamed, moved or deleted meanwhile.
                     if (_items.TryGetValue(item.Entry.Path, out var still) && ReferenceEquals(still, item))
                     {
@@ -131,6 +199,7 @@ public sealed partial class MainViewModel
         catch (Exception ex) { Log.Warn($"Best moments pass stopped: {ex.Message}"); }
         finally
         {
+            Log.Info($"Best moments pass ended: {done} done");
             SmartActivity = "";
             OnCostsChanged();
             _library.SaveCache();

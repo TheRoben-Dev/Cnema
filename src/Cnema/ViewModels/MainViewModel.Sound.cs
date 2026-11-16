@@ -27,8 +27,9 @@ public sealed partial class MainViewModel
     public string SoundModelText =>
         IsDownloadingSound ? F("Downloading the sound model: {0:0}%", SoundDownloadProgress * 100)
         : SoundModelError is { } err ? err
-        : SoundModelReady ? F("Sound model installed. Laughter heard in {0} so far.",
-            P(_items.Values.Count(v => v.Entry.Sound is { Version: SoundService.Version, Laugh.Count: > 1 }), "{0} video", "{0:N0} videos"))
+        : SoundModelReady ? F("Sound model installed. Listened to {0} of {1}; laughter heard in {2}.",
+            _items.Values.Count(v => v.Entry.Sound is { Version: SoundService.Version }).ToString("N0"), _items.Count.ToString("N0"),
+            P(_items.Values.Count(v => v.Entry.Sound is { Version: SoundService.Version, Laugh.Count: > 1 }), "{0} video", "{0:N0} videos")) + FailedText("Sound")
         : F("Needs a one-time download of a small sound model ({0}). After that, nothing leaves this computer.", BackupViewModel.SizeText(SoundDownloadBytes));
 
     [RelayCommand]
@@ -83,7 +84,6 @@ public sealed partial class MainViewModel
     }
 
     /// <summary>One background job at a time: after best moments, listening and looking.</summary>
-    private bool SoundShouldWait => VisualShouldWait || _visualRun is { IsCompleted: false };
 
     private async Task RunSoundPassAsync(CancellationToken ct)
     {
@@ -92,6 +92,7 @@ public sealed partial class MainViewModel
         try
         {
             var tried = new HashSet<VideoItemViewModel>();
+            Log.Info($"Sound pass: {_items.Values.Count(v => v.Entry.Sound is not { Version: SoundService.Version })} to do");
             while (!ct.IsCancellationRequested && Features.Laughs)
             {
                 var todo = _items.Values.Where(v => v.Entry.Sound is not { Version: SoundService.Version } && !tried.Contains(v))
@@ -102,9 +103,13 @@ public sealed partial class MainViewModel
                     var item = todo[i];
                     tried.Add(item);
                     if (item.Entry.Sound is { Version: SoundService.Version } || !File.Exists(item.Entry.Path)) continue;
-                    while (SoundShouldWait && !ct.IsCancellationRequested) await Task.Delay(5000, ct);
-                    SoundActivity = F("Listening for laughs: {0} to go, {1}", (todo.Count - i).ToString("N0"), CostMeter.Span(LeftSeconds(CostMeter.Sound, todo.Skip(i))));
-                    model ??= await Task.Run(SoundService.Load, ct);
+                    var working = F("Listening for laughs: {0} to go, {1}.", (todo.Count - i).ToString("N0"), CostMeter.Span(LeftSeconds(CostMeter.Sound, todo.Skip(i))));
+                    if (model is null)
+                    {
+                        SoundActivity = T("Starting the sound model…");
+                        model = await LoadModelAsync("Sound", SoundService.Load, ct);
+                    }
+                    await TakeTurnAsync(s => SoundActivity = s, working, "Sound", ct);
                     SoundInfo? info;
                     try
                     {
@@ -118,8 +123,10 @@ public sealed partial class MainViewModel
                     catch (Exception ex)
                     {
                         Log.Warn($"Laughs for {item.Entry.FileName}: {ex.Message}");
+                        CountFailure("Sound");
                         info = null;
                     }
+                    finally { _workGate.Release(); }
                     if (_items.TryGetValue(item.Entry.Path, out var still) && ReferenceEquals(still, item))
                         item.Entry.Sound = info ?? new SoundInfo { Version = SoundService.Version };
                     if (++done % 25 == 0) { _library.SaveCache(); OnPropertyChanged(nameof(SoundModelText)); OnCostsChanged(); }
@@ -135,6 +142,7 @@ public sealed partial class MainViewModel
         }
         finally
         {
+            Log.Info($"Sound pass ended: {done} done");
             model?.Dispose();
             SoundActivity = "";
             OnCostsChanged();

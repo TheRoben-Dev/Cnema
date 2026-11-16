@@ -50,6 +50,22 @@ jobs:
           esac
           "$D/tools/ffmpeg" -hide_banner -version | head -1
           "$D/Cnema" --selftest
+      - name: Self-test the smart models (downloads them like the app does, runs each on a test video)
+        shell: bash
+        timeout-minutes: 20
+        run: |
+          case "${{ matrix.rid }}" in
+            osx-arm64) D=dist/Cnema.app/Contents/MacOS ;;
+            osx-x64)   echo "Intel build: not runnable on an Apple Silicon runner, skipping"; exit 0 ;;
+            *)         D=dist/Cnema ;;
+          esac
+          export HOME="$RUNNER_TEMP/home" && mkdir -p "$HOME"
+          speech=""
+          if [ "$(uname)" = "Darwin" ]; then
+            say -o "$RUNNER_TEMP/speech.aiff" "Hello, this is a Savefile test. Testing one, two, three." || true
+            [ -s "$RUNNER_TEMP/speech.aiff" ] && speech="$RUNNER_TEMP/speech.aiff"
+          fi
+          "$D/Cnema" --selftest-models "$speech"
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.rid }}
