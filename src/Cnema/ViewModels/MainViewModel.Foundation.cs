@@ -54,6 +54,7 @@ public sealed partial class MainViewModel
         UpdateHighlightMarks();
         RefreshMemories();
         RefreshMascot();
+        RaiseWrapped();
         OnPropertyChanged(nameof(HeaderCount));
         foreach (var name in new[]
                  {

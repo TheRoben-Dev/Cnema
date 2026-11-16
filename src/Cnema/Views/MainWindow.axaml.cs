@@ -121,6 +121,7 @@ public partial class MainWindow : Window
         vm.PickFile = PickMediaFileAsync;
         vm.PickAnyFile = PickAnyFileAsync;
         vm.PickAudio = PickAudioFileAsync;
+        vm.PickAudios = PickAudioFilesAsync;
         vm.CaptureRecap = CaptureRecap;
         vm.Player.PickAudio = PickAudioFileAsync;
         vm.Player.PickSavePath = PickSavePathAsync;
@@ -228,6 +229,17 @@ public partial class MainWindow : Window
             FileTypeFilter = new[] { AudioFileType },
         });
         return files.FirstOrDefault()?.TryGetLocalPath();
+    }
+
+    private async Task<IReadOnlyList<string>> PickAudioFilesAsync()
+    {
+        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = T("Pick songs for your Wrapped"),
+            AllowMultiple = true,
+            FileTypeFilter = new[] { AudioFileType },
+        });
+        return files.Select(f => f.TryGetLocalPath()).OfType<string>().ToList();
     }
 
     private void OnClearMontageMusicClick(object? sender, RoutedEventArgs e)

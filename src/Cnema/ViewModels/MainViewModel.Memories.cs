@@ -193,7 +193,13 @@ public sealed partial class MainViewModel
 
     // ---------- year in clips ----------
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(IsShowingRecap))] private RecapViewModel? _recap;
-    partial void OnRecapChanged(RecapViewModel? oldValue, RecapViewModel? newValue) => oldValue?.Release();
+    partial void OnRecapChanged(RecapViewModel? oldValue, RecapViewModel? newValue)
+    {
+        oldValue?.Release();
+        if (newValue is not null)
+            newValue.Year.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(ChipGroup.Value)) RaiseWrapped(); };
+        RaiseWrapped();
+    }
     public bool IsShowingRecap => Recap is not null;
     public bool ShowRecap => Features.Recap;
     public bool ShowRecapMontage => Features.Montage;

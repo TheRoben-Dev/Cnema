@@ -50,6 +50,7 @@ public sealed partial class MainViewModel
     /// <summary>A click on the blob: it hops and says the next thing.</summary>
     public void PokeMascot()
     {
+        if (PlayWrappedFromBlob()) return;
         if (_mascotLines.Count < 2) { MascotCheer++; return; }
         _mascotTimer?.Stop();
         _mascotTimer?.Start(); // a full turn for the line it's about to say
@@ -99,6 +100,7 @@ public sealed partial class MainViewModel
         var lines = new List<string>();
         var all = _items.Values.Select(v => v.Entry).Where(e => e.DurationMs > 0).ToList();
         if (all.Count == 0) return lines;
+        if (WrappedNews(now) is { } news) lines.Add(news);
         DateTime Local(VideoEntry e) => e.ModifiedUtc.ToLocalTime();
         var week = all.Where(e => (now - Local(e)).TotalDays < 7).ToList();
         var month = all.Where(e => Local(e).Year == now.Year && Local(e).Month == now.Month).ToList();

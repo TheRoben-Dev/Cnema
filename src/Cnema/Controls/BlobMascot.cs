@@ -15,6 +15,9 @@ namespace Cnema.Controls;
 /// </summary>
 public sealed class BlobMascot : Control
 {
+    /// <summary>The shadow under the blob; the theme's Line colour when not set.</summary>
+    public IBrush? Shadow { get; set; }
+
     public static readonly StyledProperty<IBrush?> BodyProperty = AvaloniaProperty.Register<BlobMascot, IBrush?>(nameof(Body));
     public static readonly StyledProperty<bool> StillProperty = AvaloniaProperty.Register<BlobMascot, bool>(nameof(Still));
     public static readonly StyledProperty<int> CheerTickProperty = AvaloniaProperty.Register<BlobMascot, int>(nameof(CheerTick));
@@ -210,7 +213,7 @@ public sealed class BlobMascot : Control
         var h = Bounds.Height;
         if (w < 4 || h < 4) return;
         var body = Body ?? (this.TryFindResource("Brand", ActualThemeVariant, out var b) && b is IBrush brand ? brand : Brushes.BlueViolet);
-        var shadow = this.TryFindResource("Line", ActualThemeVariant, out var l) && l is IBrush line ? line : Brushes.Gray;
+        var shadow = Shadow ?? (this.TryFindResource("Line", ActualThemeVariant, out var l) && l is IBrush line ? line : Brushes.Gray);
         var still = Still;
         var t = still ? 0 : Now;
 

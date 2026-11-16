@@ -565,6 +565,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         IsSetupOpen = _settings.IsFirstRun || Environment.GetEnvironmentVariable("CNEMA_SETUP") == "1";
         _ = RecoverThenApplyClipsAsync();
         _ = CheckForUpdatesAsync();
+        LoadWrappedSongs();
+        StartWrappedSeason();
         await RescanAsync();
         await RunStorageCleanupAsync();
         await ImportRecordersAtLaunchAsync();

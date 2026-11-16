@@ -38,6 +38,7 @@ public sealed partial class SettingsViewModel
     [ObservableProperty] private bool _featureVisual;
     [ObservableProperty] private bool _featureMascot;
     [ObservableProperty] private bool _featureLaughs;
+    [ObservableProperty] private bool _featureWrapped;
     [ObservableProperty] private bool _featureSmartThumbs;
     [ObservableProperty] private bool _featureTrimSuggestions;
     [ObservableProperty] private bool _featureSplash;
@@ -100,6 +101,7 @@ public sealed partial class SettingsViewModel
         FeatureVisual = f.Visual;
         FeatureMascot = f.Mascot;
         FeatureLaughs = f.Laughs;
+        FeatureWrapped = f.Wrapped;
         FeatureSmartThumbs = f.SmartThumbs;
         FeatureTrimSuggestions = f.TrimSuggestions;
         FeatureSplash = f.Splash;

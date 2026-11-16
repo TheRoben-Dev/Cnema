@@ -56,6 +56,18 @@ public sealed class AppSettings
     public int RecapBannerClosed { get; set; }
     /// <summary>Backup to your own server (S3-compatible: Garage, SeaweedFS, MinIO…). The secret key is kept in the system keychain.</summary>
     public BackupSettings Backup { get; set; } = new();
+    /// <summary>The year's video: the person's songs and what has been made.</summary>
+    public WrappedSettings Wrapped { get; set; } = new();
+}
+
+public sealed class WrappedSettings
+{
+    /// <summary>Songs (MP3 and the like) the year's video is cut to, in the order they were added.</summary>
+    public List<string> Songs { get; set; } = new();
+    /// <summary>The video made for each year.</summary>
+    public Dictionary<int, string> Made { get; set; } = new();
+    /// <summary>The last year whose video was opened (the blob stops announcing it).</summary>
+    public int Watched { get; set; }
 }
 
 public sealed class BackupSettings
@@ -208,6 +220,8 @@ public sealed class FeatureSettings
     public bool TrimSuggestions { get; set; } = true;
     /// <summary>Laughter and hype: a small sound model (a one-time download) listens for laughing and cheering.</summary>
     public bool Laughs { get; set; }
+    /// <summary>Wrapped: in December, a video of the year cut to the person's songs.</summary>
+    public bool Wrapped { get; set; } = true;
     /// <summary>The blob: Savefile's mascot presents Worth a rewatch with a line about your clips.</summary>
     public bool Mascot { get; set; } = true;
     /// <summary>The loading screen at start: logo, name, the blob and what's being got ready.</summary>
