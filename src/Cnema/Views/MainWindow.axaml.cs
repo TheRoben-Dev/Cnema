@@ -564,6 +564,11 @@ public partial class MainWindow : Window
             if (e.Key == Key.Escape) { vm.CloseRecordersCommand.Execute(null); e.Handled = true; }
             return;
         }
+        if (vm.IsShowingBackup)
+        {
+            if (e.Key == Key.Escape) { vm.CloseBackupCommand.Execute(null); e.Handled = true; }
+            return;
+        }
         if (vm.IsSelecting && !vm.IsPlayerOpen && e.Source is not TextBox)
         {
             if (e.Key == Key.Escape) { vm.ToggleSelectModeCommand.Execute(null); e.Handled = true; return; }

@@ -123,7 +123,9 @@ public sealed class BackupService
             await client.ListObjectsV2Async(new ListObjectsV2Request { BucketName = s.Bucket.Trim(), MaxKeys = 1, Prefix = Root(s) }, ct);
             var key = Root(s) + ".savefile-test";
             await client.PutObjectAsync(new PutObjectRequest { BucketName = s.Bucket.Trim(), Key = key, ContentBody = "ok" }, ct);
-            await client.DeleteObjectAsync(s.Bucket.Trim(), key, ct);
+            // A key that may only add (a sensible setup against ransomware) can't delete: that's fine.
+            try { await client.DeleteObjectAsync(s.Bucket.Trim(), key, ct); }
+            catch (AmazonS3Exception) { /* left behind; harmless */ }
             return null;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
@@ -224,7 +226,6 @@ public sealed class BackupService
             {
                 return new(Explain(ex, s), false);
             }
-            s.LastRunUtc = DateTime.UtcNow;
             var already = chosen.Count - todo.Count;
             if (failed > 0) return new(F("{0} backed up, {1} couldn't be read. They'll be tried again next time.", P(done, "{0} video", "{0} videos"), failed), false);
             return new(done == 0
@@ -336,7 +337,7 @@ public sealed class BackupService
         var index = await ReadIndexAsync(client, s, ct);
         var here = library.Select(e => (e.Size, e.ModifiedUtc, Name: Path.GetFileName(e.Path)))
             .ToHashSet();
-        var missing = index.Where(i => !here.Contains((i.Size, i.ModifiedUtc, Path.GetFileName(i.OriginalPath)))).ToList();
+        var missing = index.Where(i => !here.Contains((i.Size, i.ModifiedUtc, NameOf(i)))).ToList();
         return new RestorePlan(missing, missing.Sum(m => m.Size));
     }
 
@@ -344,10 +345,10 @@ public sealed class BackupService
     /// Downloads the given videos into <paramref name="target"/>, keeping their folders, dates and (through
     /// <paramref name="adopt"/>) their favourites, tags, friends and notes.
     /// </summary>
-    public async Task<string> RestoreAsync(BackupSettings s, string secret, RestorePlan plan, string target,
+    public async Task<BackupResult> RestoreAsync(BackupSettings s, string secret, RestorePlan plan, string target,
         Action<string, VideoEntry> adopt, IProgress<BackupProgress>? progress, CancellationToken ct)
     {
-        if (!await _run.WaitAsync(0, ct)) return T("A backup is already running.");
+        if (!await _run.WaitAsync(0, ct)) return new(T("A backup is already running."), false);
         try
         {
             using var client = Client(s, secret);
@@ -358,12 +359,29 @@ public sealed class BackupService
             foreach (var item in plan.Missing)
             {
                 ct.ThrowIfCancellationRequested();
-                var inside = item.Key.StartsWith(prefix, StringComparison.Ordinal) ? item.Key[prefix.Length..] : Path.GetFileName(item.OriginalPath);
+                var inside = item.Key.StartsWith(prefix, StringComparison.Ordinal) ? item.Key[prefix.Length..] : NameOf(item);
                 // "Clips-3f9a1c/Valorant/x.mp4" → "Clips/Valorant/x.mp4"
                 var parts = inside.Split('/');
                 if (parts.Length > 1 && parts[0].LastIndexOf('-') is var dash and > 0) parts[0] = parts[0][..dash];
                 var local = Path.Combine(new[] { target }.Concat(parts.Select(SafeName)).ToArray());
-                if (File.Exists(local)) { done++; continue; }
+                if (File.Exists(local))
+                {
+                    var there = new FileInfo(local);
+                    if (there.Length == item.Size && there.LastWriteTimeUtc == item.ModifiedUtc)
+                    {
+                        // Restored before (a restore that was stopped): just give it its details again.
+                        adopt(local, item.Details);
+                        lock (_state)
+                            _state.Videos[local] = new BackedUpVideo { Key = item.Key, Size = item.Size, ModifiedUtc = item.ModifiedUtc, UploadedUtc = DateTime.UtcNow };
+                        Save();
+                        done++;
+                        continue;
+                    }
+                    // Another video with the same name (two folders called Clips): keep both.
+                    var stem = Path.Combine(Path.GetDirectoryName(local)!, Path.GetFileNameWithoutExtension(local));
+                    var ext = Path.GetExtension(local);
+                    for (var n = 2; File.Exists(local); n++) local = $"{stem} ({n}){ext}";
+                }
                 Directory.CreateDirectory(Path.GetDirectoryName(local)!);
                 var partial = local + ".part";
                 var request = new TransferUtilityDownloadRequest { BucketName = s.Bucket.Trim(), Key = item.Key, FilePath = partial };
@@ -373,21 +391,22 @@ public sealed class BackupService
                 try
                 {
                     await transfer.DownloadAsync(request, ct);
+                    File.SetLastWriteTimeUtc(partial, item.ModifiedUtc);
+                    // Details first, so a folder scan that sees the file right away already finds them.
+                    adopt(local, item.Details);
                     File.Move(partial, local);
-                    File.SetLastWriteTimeUtc(local, item.ModifiedUtc);
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
                     try { File.Delete(partial); } catch { /* nothing written */ }
                     if (ex is AmazonS3Exception { StatusCode: HttpStatusCode.NotFound }) continue;
-                    return Explain(ex, s);
+                    return new(Explain(ex, s), false);
                 }
                 catch (OperationCanceledException)
                 {
                     try { File.Delete(partial); } catch { /* nothing written */ }
                     throw;
                 }
-                adopt(local, item.Details);
                 // It's on the server already: no need to upload it again.
                 lock (_state)
                     _state.Videos[local] = new BackedUpVideo { Key = item.Key, Size = item.Size, ModifiedUtc = item.ModifiedUtc, UploadedUtc = DateTime.UtcNow };
@@ -395,13 +414,16 @@ public sealed class BackupService
                 doneBytes += item.Size;
                 done++;
             }
-            return P(done, "{0} video restored.", "{0:N0} videos restored.");
+            return new(P(done, "{0} video restored.", "{0:N0} videos restored."), true);
         }
         finally
         {
             _run.Release();
         }
     }
+
+    /// <summary>The file name, whichever system backed it up ("C:\\Clips\\x.mp4" on Windows).</summary>
+    private static string NameOf(BackupIndexEntry i) => i.OriginalPath.Replace('\\', '/').Split('/')[^1];
 
     private static string SafeName(string part)
     {

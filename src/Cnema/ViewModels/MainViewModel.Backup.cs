@@ -22,27 +22,31 @@ public sealed partial class MainViewModel
     private BackupSettings BackupConfig => _settings.Current.Backup;
 
     [RelayCommand]
-    private void OpenBackup()
+    private async Task OpenBackupAsync()
     {
-        var panel = new BackupViewModel(BackupConfig, SecretStore.Get(BackupService.SecretName));
+        // The keychain may take a moment (or ask to be unlocked): read it off the UI thread.
+        var secret = await Task.Run(() => SecretStore.Get(BackupService.SecretName));
+        var panel = new BackupViewModel(BackupConfig, secret);
         panel.Summary = BackupSummary();
         panel.IsBusy = _backup.IsRunning;
         BackupPanel = panel;
     }
 
     [RelayCommand]
-    private void CloseBackup()
+    private async Task CloseBackupAsync()
     {
-        if (BackupPanel is { } panel && !panel.IsBusy) SaveBackupSettings(panel);
+        var panel = BackupPanel;
         BackupPanel = null;
+        if (panel is { IsBusy: false }) await SaveBackupSettingsAsync(panel);
     }
 
-    private void SaveBackupSettings(BackupViewModel panel)
+    private async Task SaveBackupSettingsAsync(BackupViewModel panel)
     {
         panel.WriteTo(BackupConfig);
-        if (!SecretStore.Set(BackupService.SecretName, panel.SecretKey))
-            ShowToast(T("Couldn't store the secret key in the system keychain."));
         _settings.Save();
+        var secret = panel.SecretKey;
+        if (!await Task.Run(() => SecretStore.Set(BackupService.SecretName, secret)))
+            ShowToast(T("Couldn't store the secret key in the system keychain."));
     }
 
     private string BackupSummary()
@@ -57,7 +61,7 @@ public sealed partial class MainViewModel
     private async Task TestBackupAsync()
     {
         if (BackupPanel is not { } panel) return;
-        SaveBackupSettings(panel);
+        await SaveBackupSettingsAsync(panel);
         panel.ShowStatus(T("Connecting…"), false);
         panel.IsBusy = true;
         try
@@ -71,15 +75,16 @@ public sealed partial class MainViewModel
     [RelayCommand]
     private async Task BackUpNowAsync()
     {
-        if (BackupPanel is { } panel) SaveBackupSettings(panel);
+        if (BackupPanel is { } panel) await SaveBackupSettingsAsync(panel);
         await RunBackupAsync(quiet: false);
     }
 
     /// <summary>Runs a backup with progress on the panel (when open) and in the sidebar.</summary>
     private async Task RunBackupAsync(bool quiet)
     {
-        if (!Features.Backup || _backup.IsRunning) return;
-        var secret = SecretStore.Get(BackupService.SecretName);
+        if (!Features.Backup) return;
+        if (_backup.IsRunning) { _backupAgain = true; return; }
+        var secret = await Task.Run(() => SecretStore.Get(BackupService.SecretName));
         if (BackupService.Problem(BackupConfig, secret) is { } problem)
         {
             if (!quiet) BackupPanel?.ShowStatus(problem, true);
@@ -98,7 +103,11 @@ public sealed partial class MainViewModel
         try
         {
             result = await Task.Run(() => _backup.BackUpAsync(BackupConfig, secret!, library, folders, progress, _backupCts.Token));
-            _settings.Save();
+            if (result.Ok)
+            {
+                _settings.Current.Backup.LastRunUtc = DateTime.UtcNow;
+                _settings.Save();
+            }
         }
         catch (OperationCanceledException)
         {
@@ -117,7 +126,15 @@ public sealed partial class MainViewModel
             panel.Summary = BackupSummary();
         }
         else if (!quiet || !result.Ok) ShowToast(result.Text);
+        // Clips saved while this ran weren't in its list: go again for them.
+        if (_backupAgain)
+        {
+            _backupAgain = false;
+            QueueAutoBackup();
+        }
     }
+
+    private bool _backupAgain;
 
     [RelayCommand] private void StopBackup() => _backupCts?.Cancel();
 
@@ -128,7 +145,12 @@ public sealed partial class MainViewModel
         _autoBackup ??= new DispatcherTimer(TimeSpan.FromSeconds(30), DispatcherPriority.Background, async (_, _) =>
         {
             _autoBackup!.Stop();
-            await RunBackupAsync(quiet: true);
+            try { await RunBackupAsync(quiet: true); }
+            catch (Exception ex)
+            {
+                Log.Warn($"Automatic backup failed: {ex.Message}");
+                if (BackupPanel is { } open) open.IsBusy = false;
+            }
         });
         _autoBackup.Stop();
         _autoBackup.Start();
@@ -140,7 +162,7 @@ public sealed partial class MainViewModel
     private async Task FindRestoreAsync()
     {
         if (BackupPanel is not { } panel) return;
-        SaveBackupSettings(panel);
+        await SaveBackupSettingsAsync(panel);
         if (BackupService.Problem(BackupConfig, panel.SecretKey) is { } problem) { panel.ShowStatus(problem, true); return; }
         panel.IsBusy = true;
         panel.ShowStatus(T("Looking at the server…"), false);
@@ -178,10 +200,10 @@ public sealed partial class MainViewModel
         panel.ShowStatus("", false);
         var progress = new Progress<BackupProgress>(p =>
         {
-            panel.Report(p);
+            BackupPanel?.Report(p);
             BackupActivity = F("Restoring {0} of {1}…", Math.Min(p.Done + 1, p.Total), p.Total);
         });
-        string result;
+        BackupResult result;
         try
         {
             result = await Task.Run(() => _backup.RestoreAsync(BackupConfig, panel.SecretKey, plan, target,
@@ -189,18 +211,23 @@ public sealed partial class MainViewModel
         }
         catch (OperationCanceledException)
         {
-            result = T("Restore stopped. Find videos to restore again to carry on.");
+            result = new(T("Restore stopped. Find videos to restore again to carry on."), true);
         }
         finally
         {
             BackupActivity = "";
             _backupCts = null;
-            panel.IsBusy = false;
         }
         _library.SaveCache();
-        panel.RestorePlan = null;
-        panel.ShowStatus(result, false);
         await RescanAsync();
-        panel.Summary = BackupSummary();
+        // The panel may have been closed and opened again meanwhile: update the one on screen.
+        if (BackupPanel is { } now)
+        {
+            now.IsBusy = false;
+            now.RestorePlan = null;
+            now.ShowStatus(result.Text, !result.Ok);
+            now.Summary = BackupSummary();
+        }
+        else ShowToast(result.Text);
     }
 }

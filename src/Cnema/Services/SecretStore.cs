@@ -14,7 +14,19 @@ public static class SecretStore
 {
     private const string Service = "Savefile";
 
+    private static readonly Dictionary<string, string?> Cache = new();
+
+    /// <summary>Reads a secret (once; later reads come from memory). May start a helper: call it off the UI thread.</summary>
     public static string? Get(string name)
+    {
+        lock (Cache)
+            if (Cache.TryGetValue(name, out var known)) return known;
+        var value = Read(name);
+        lock (Cache) Cache[name] = value;
+        return value;
+    }
+
+    private static string? Read(string name)
     {
         try
         {
@@ -35,12 +47,25 @@ public static class SecretStore
     /// <summary>Stores the secret, or removes it when empty. Returns false when it couldn't be stored.</summary>
     public static bool Set(string name, string? value)
     {
+        if (Get(name) == (string.IsNullOrEmpty(value) ? null : value)) return true; // unchanged
+        var ok = Write(name, value);
+        lock (Cache) Cache.Remove(name);
+        return ok;
+    }
+
+    private static bool Write(string name, string? value)
+    {
         try
         {
             if (string.IsNullOrEmpty(value)) { Remove(name); return true; }
             if (OperatingSystem.IsMacOS())
             {
-                // -U updates an existing item; the Keychain keeps it encrypted for this user.
+                // -U updates an existing item; the Keychain keeps it encrypted for this user. The command
+                // goes in on stdin (security -i), so the secret never shows in the list of running processes.
+                static string Q(string s) => "\"" + s.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
+                Run("/usr/bin/security", $"add-generic-password -U -s {Q(Service)} -a {Q(name)} -w {Q(value)}\n", "-i");
+                if (Read(name) == value) return true;
+                // An older security that reads quotes differently: store it the plain way.
                 return Run("/usr/bin/security", null, "add-generic-password", "-U", "-s", Service, "-a", name, "-w", value) is not null;
             }
             if (OperatingSystem.IsWindows()) { SetWindows(name, value); return true; }
