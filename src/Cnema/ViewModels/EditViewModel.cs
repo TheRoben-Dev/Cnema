@@ -20,7 +20,7 @@ public sealed partial class EditViewModel : ObservableObject
     public Func<Cnema.Models.VideoEntry, string?>? Suggest { get; init; }
     public bool CanSuggest => Suggest is not null;
     /// <summary>A title shown in Savefile (Smart rename): the box edits it and the file keeps its name.</summary>
-    public bool HasTitle => Item.Entry.Title is not null;
+    public bool HasTitle => Item.Entry.Title is { Length: > 0 };
     public string NameLabel => HasTitle ? T("NAME") : T("FILE NAME");
     public string NameHint => HasTitle ? T("The name shown in Savefile. The file keeps its own name; clear the box to show it.") : T("Renames the actual file on disk.");
     public bool ShowExtension => !HasTitle;

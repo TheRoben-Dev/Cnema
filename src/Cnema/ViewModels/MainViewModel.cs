@@ -664,6 +664,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             _items[e.Path].RefreshAll();
             _library.SaveCache();
         }
+        // A new clip with a recorder's made-up name: a smart title, once its game and friends are on it.
+        if (Features.AutoTitles && _items.TryGetValue(e.Path, out var fresh) && fresh.Entry.Title is null) AutoTitle(fresh);
         if (!_refreshTimer.IsEnabled) _refreshTimer.Start();
     }
 
@@ -886,9 +888,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             // A video with a title in Savefile: the name box edits that title (empty goes back to the file
             // name) and the file keeps its name. Otherwise it renames the file, as always.
             var fileName = Path.GetFileNameWithoutExtension(oldPath);
-            var hadTitle = entry.Title is not null;
+            var hadTitle = entry.Title is { Length: > 0 };
             var newPath = _library.Relocate(entry, hadTitle ? fileName : ed.Name, targetDir);
-            if (hadTitle) entry.Title = ed.Name.Trim() is { Length: > 0 } t && t != fileName ? t : null;
+            // Cleared: "" (not null), so Name new clips by themselves doesn't name it again.
+            if (hadTitle) entry.Title = ed.Name.Trim() is { Length: > 0 } t && t != fileName ? t : "";
             if (!string.Equals(newPath, oldPath, StringComparison.Ordinal))
             {
                 _items.Remove(oldPath);

@@ -2,6 +2,13 @@
 
 What changed in each Savefile (formerly Cnema) release. The app shows the entries you have not seen yet after it updates.
 
+## 0.30.0
+- Best moments: Savefile now listens to and watches your videos, on this computer and only when it isn't busy, to find what stands out: sudden loud moments (shouts, gunfire, a crowd) and a lot going on on screen. It waits while you play. The moments that stand out most get a sparkle on their card, Sort by Best moments puts them first, and Worth a rewatch, Year in clips and Auto montage pick them (montages cut around the best few seconds it found). Nothing is downloaded and nothing leaves your computer.
+- Smart titles: names from the game, who was there and when, like "Late-night Valorant with Alex and Sam · 16 Nov". Edit has a new sparkle button that suggests one. Savefile never makes up what happened in a clip.
+- Smart rename (Tools): suggestions for your whole library at once. Clips with names a recorder made up ("Clip 2026-11-16 23-01-02", "Replay_20251114") are ticked; change any suggestion before you rename. Only the name shown in Savefile changes unless you tick Rename the files too, and Undo puts the old names back.
+- Name new clips by themselves (off at first): new clips with a made-up name get a smart title in Savefile.
+- All three are under Settings, Features, Smart.
+
 ## 0.29.0
 - Backup over SSH: back up to a folder on any computer you can SSH into (your Linux server, a NAS, a Mac with Remote Login on), no extra server software needed. Sign in with your SSH key (the one in your .ssh folder is found by itself; a passphrase is kept in the system keychain) or a password. SFTP (SSH) is the default in Backup now; S3 servers work as before.
 - Savefile remembers your server's key the first time it connects, like ssh does, and refuses a server that answers with a different one. Forget server key starts over if you reinstalled the server.

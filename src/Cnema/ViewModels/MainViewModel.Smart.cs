@@ -61,7 +61,7 @@ public sealed partial class MainViewModel
     /// <summary>Looks at every video not looked at yet, newest first, one at a time at idle priority.</summary>
     private void StartSmartPass()
     {
-        if (!Features.Highlights && !Features.AutoTitles) return;
+        if (!Features.Highlights) return;
         if (_smartRun is { IsCompleted: false }) return;
         if (ToolLocator.Ffmpeg is null) return;
         _smartCts = new CancellationTokenSource();
@@ -80,37 +80,43 @@ public sealed partial class MainViewModel
 
     private async Task RunSmartPassAsync(CancellationToken ct)
     {
+        var done = 0;
         try
         {
             var since = DateTime.UtcNow;
-            var done = 0;
-            while (!ct.IsCancellationRequested)
+            var tried = new HashSet<VideoItemViewModel>();
+            while (!ct.IsCancellationRequested && Features.Highlights)
             {
-                if (!Features.Highlights) break;
-                var todo = _items.Values.Where(v => v.Entry.Smart is not { Version: SmartAnalyzer.Version } && File.Exists(v.Entry.Path))
+                // Newest first; videos added meanwhile are picked up by the next round.
+                var todo = _items.Values.Where(v => v.Entry.Smart is not { Version: SmartAnalyzer.Version } && !tried.Contains(v))
                     .OrderByDescending(v => v.Entry.ModifiedUtc).ToList();
                 if (todo.Count == 0) break;
-                var item = todo[0];
-                SmartActivity = F("Finding best moments: {0} to go", todo.Count.ToString("N0"));
-                while (SmartShouldWait && !ct.IsCancellationRequested) await Task.Delay(5000, ct);
-                SmartInfo? info;
-                try { info = await SmartAnalyzer.AnalyzeAsync(item.Entry.Path, item.Entry.DurationMs, ct); }
-                catch (OperationCanceledException) { throw; }
-                catch (Exception ex)
+                for (var i = 0; i < todo.Count && !ct.IsCancellationRequested && Features.Highlights; i++)
                 {
-                    Log.Warn($"Best moments for {item.Entry.FileName}: {ex.Message}");
-                    info = new SmartInfo { Version = SmartAnalyzer.Version };
+                    var item = todo[i];
+                    tried.Add(item);
+                    if (item.Entry.Smart is { Version: SmartAnalyzer.Version } || !File.Exists(item.Entry.Path)) continue; // unplugged drive
+                    SmartActivity = F("Finding best moments: {0} to go", (todo.Count - i).ToString("N0"));
+                    while (SmartShouldWait && !ct.IsCancellationRequested) await Task.Delay(5000, ct);
+                    SmartInfo? info;
+                    try { info = await SmartAnalyzer.AnalyzeAsync(item.Entry.Path, item.Entry.DurationMs, ct); }
+                    catch (OperationCanceledException) { throw; }
+                    catch (Exception ex)
+                    {
+                        Log.Warn($"Best moments for {item.Entry.FileName}: {ex.Message}");
+                        info = null;
+                    }
+                    // The item may have been renamed, moved or deleted meanwhile.
+                    if (_items.TryGetValue(item.Entry.Path, out var still) && ReferenceEquals(still, item))
+                    {
+                        item.Entry.Smart = info ?? new SmartInfo { Version = SmartAnalyzer.Version };
+                        AutoTitle(item);
+                    }
+                    if (++done % 25 == 0) { _library.SaveCache(); UpdateHighlightMarks(); }
+                    if (DateTime.UtcNow - since > TimeSpan.FromSeconds(30) && SortIndex == 5) { since = DateTime.UtcNow; RefreshView(); }
+                    // Breathe between videos: this is background work.
+                    await Task.Delay(150, ct);
                 }
-                // The item may have been renamed, moved or deleted meanwhile.
-                if (_items.TryGetValue(item.Entry.Path, out var still) && ReferenceEquals(still, item))
-                {
-                    item.Entry.Smart = info ?? new SmartInfo { Version = SmartAnalyzer.Version };
-                    AutoTitle(item);
-                }
-                if (++done % 25 == 0) { _library.SaveCache(); UpdateHighlightMarks(); }
-                if (DateTime.UtcNow - since > TimeSpan.FromSeconds(30) && SortIndex == 5) { since = DateTime.UtcNow; RefreshView(); }
-                // Breathe between videos: this is background work.
-                await Task.Delay(150, ct);
             }
         }
         catch (OperationCanceledException) { /* stopped */ }
@@ -120,6 +126,7 @@ public sealed partial class MainViewModel
             SmartActivity = "";
             _library.SaveCache();
             UpdateHighlightMarks();
+            if (done > 0) RefreshMemories();
             if (SortIndex == 5) RefreshView();
         }
     }
@@ -131,7 +138,6 @@ public sealed partial class MainViewModel
         var threshold = scored.Count < 10 ? double.MaxValue : Math.Max(0.45, scored[Math.Max(0, scored.Count / 10 - 1)]);
         VideoItemViewModel.HighlightThreshold = Features.Highlights ? threshold : double.MaxValue;
         foreach (var v in _items.Values) v.RefreshHighlight();
-        RefreshMemories();
     }
 
     /// <summary>A new clip with a made-up name gets a smart title (Settings, Features, Name new clips by themselves).</summary>
@@ -143,6 +149,7 @@ public sealed partial class MainViewModel
         if (SuggestTitle(e) is not { } title) return;
         e.Title = title;
         item.RefreshAll();
+        _library.SaveCache();
     }
 
     // ---------- smart rename ----------

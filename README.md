@@ -35,6 +35,9 @@ Savefile updates itself after that.
 - **Backup to your own server:** favourites or every video, with their tags, friends and notes, to a folder
   on any computer you can SSH into (SFTP, key or password) or to an S3-compatible server (Garage, SeaweedFS,
   MinIO), and restore on a new computer. Off by default; nothing leaves your network.
+- **Smart, on your computer:** best moments found by sound and picture (a sparkle on the ones that stand out,
+  and they lead Worth a rewatch, montages and Year in clips), smart titles from game, friends and date, and
+  Smart rename for the whole library. No account, no cloud, nothing downloaded.
 - **Quick player:** videos open in a large player over the library; **Edit** takes you to the full editor.
 - **Editor:** a tool rail with Trim, Captions, Speed, Sound, Brand and Export. Lossless or frame-accurate trims,
   multi-part export, captions, slow-mo with ramps, loudness and voice tools, watermark and intro/outro,
