@@ -39,6 +39,12 @@ public partial class MainWindow : Window
             Vm?.Player.TogglePlayCommand.Execute(null);
         };
         SurfaceHit.DoubleTapped += (_, _) => ToggleFullscreen();
+        // The featured shelf: arrows on hover instead of a scroll bar.
+        ShelfPanel.PointerEntered += (_, _) => UpdateShelfArrows(true);
+        ShelfPanel.PointerExited += (_, _) => UpdateShelfArrows(false);
+        ShelfScroll.ScrollChanged += (_, _) => UpdateShelfArrows(ShelfPanel.IsPointerOver);
+        ShelfLeft.Click += (_, _) => ScrollShelf(-1);
+        ShelfRight.Click += (_, _) => ScrollShelf(1);
         TheatreHit.Tapped += (_, _) => Vm?.Player.TogglePlayCommand.Execute(null);
         Theatre.PointerMoved += (_, _) => WakeTheatreChrome();
         MiniHit.Tapped += (_, _) => Vm?.Player.TogglePlayCommand.Execute(null);
@@ -552,6 +558,31 @@ public partial class MainWindow : Window
             _preFullscreenState = WindowState;
             WindowState = WindowState.FullScreen;
             PlayerTopBar.IsVisible = false;
+        }
+    }
+
+    // ---------- the featured shelf ----------
+    private void UpdateShelfArrows(bool hover)
+    {
+        var max = ShelfScroll.Extent.Width - ShelfScroll.Viewport.Width;
+        ShelfLeft.IsVisible = hover && ShelfScroll.Offset.X > 1;
+        ShelfRight.IsVisible = hover && ShelfScroll.Offset.X < max - 1;
+    }
+
+    /// <summary>One step is most of a screenful, so the next cards slide in with a little of the last ones kept.</summary>
+    private async void ScrollShelf(int direction)
+    {
+        var max = Math.Max(0, ShelfScroll.Extent.Width - ShelfScroll.Viewport.Width);
+        var from = ShelfScroll.Offset.X;
+        var to = Math.Clamp(from + direction * ShelfScroll.Viewport.Width * 0.8, 0, max);
+        if (Vm?.ReducedMotion == true) { ShelfScroll.Offset = ShelfScroll.Offset.WithX(to); return; }
+        const int steps = 14;
+        for (var i = 1; i <= steps; i++)
+        {
+            var t = (double)i / steps;
+            var ease = 1 - Math.Pow(1 - t, 3);
+            ShelfScroll.Offset = ShelfScroll.Offset.WithX(from + (to - from) * ease);
+            await Task.Delay(16);
         }
     }
 

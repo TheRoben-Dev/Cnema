@@ -107,6 +107,69 @@
       <StreamGeometry x:Key="IcNote">M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z</StreamGeometry>
       <StreamGeometry x:Key="IcSkipStart">M6 6h2v12H6zm3.5 6 8.5 6V6z</StreamGeometry>
       <StreamGeometry x:Key="IcFilm">M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z</StreamGeometry>
+
+      <!-- Scroll bars: a thin rounded grey thumb laid over the content, no arrows or track. It shows while the
+           pointer is over the scrolling area, fades out otherwise, and widens when the pointer is on it. -->
+      <ControlTheme x:Key="{x:Type ScrollBar}" TargetType="ScrollBar">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="MinWidth" Value="12" />
+        <Setter Property="MinHeight" Value="12" />
+        <Setter Property="Template">
+          <ControlTemplate>
+            <Border Background="Transparent">
+              <Track Name="track" Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}"
+                     Value="{TemplateBinding Value, Mode=TwoWay}" ViewportSize="{TemplateBinding ViewportSize}"
+                     Orientation="{TemplateBinding Orientation}" DeferThumbDrag="{TemplateBinding ScrollViewer.IsDeferredScrollingEnabled}">
+                <Track.DecreaseButton><RepeatButton Name="PART_PageUpButton" Classes="sbpage" Focusable="False" /></Track.DecreaseButton>
+                <Track.IncreaseButton><RepeatButton Name="PART_PageDownButton" Classes="sbpage" Focusable="False" /></Track.IncreaseButton>
+                <Thumb Name="thumb">
+                  <Thumb.Template>
+                    <ControlTemplate>
+                      <Border Name="pill" Background="{DynamicResource TextDim}" CornerRadius="4" />
+                    </ControlTemplate>
+                  </Thumb.Template>
+                </Thumb>
+              </Track>
+            </Border>
+          </ControlTemplate>
+        </Setter>
+        <Style Selector="^:vertical">
+          <Setter Property="Width" Value="12" />
+        </Style>
+        <Style Selector="^:horizontal">
+          <Setter Property="Height" Value="12" />
+        </Style>
+        <Style Selector="^:vertical /template/ Track#track">
+          <Setter Property="IsDirectionReversed" Value="True" />
+        </Style>
+        <Style Selector="^ /template/ Thumb#thumb">
+          <Setter Property="Opacity" Value="0" />
+          <Setter Property="Transitions">
+            <Transitions><DoubleTransition Property="Opacity" Duration="0:0:0.25" /></Transitions>
+          </Setter>
+        </Style>
+        <Style Selector="^:vertical /template/ Border#pill">
+          <Setter Property="Width" Value="4" />
+          <Setter Property="HorizontalAlignment" Value="Right" />
+          <Setter Property="Margin" Value="0,2,3,2" />
+        </Style>
+        <Style Selector="^:horizontal /template/ Border#pill">
+          <Setter Property="Height" Value="4" />
+          <Setter Property="VerticalAlignment" Value="Bottom" />
+          <Setter Property="Margin" Value="2,0,2,3" />
+        </Style>
+        <Style Selector="^:pointerover /template/ Thumb#thumb">
+          <Setter Property="Opacity" Value="0.7" />
+        </Style>
+        <Style Selector="^:vertical:pointerover /template/ Border#pill">
+          <Setter Property="Width" Value="8" />
+          <Setter Property="Margin" Value="0,2,2,2" />
+        </Style>
+        <Style Selector="^:horizontal:pointerover /template/ Border#pill">
+          <Setter Property="Height" Value="8" />
+          <Setter Property="Margin" Value="2,0,2,2" />
+        </Style>
+      </ControlTheme>
     </ResourceDictionary>
   </Application.Resources>
 

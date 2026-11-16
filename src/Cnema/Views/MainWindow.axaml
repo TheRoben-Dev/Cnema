@@ -207,7 +207,7 @@
             </Grid>
           </StackPanel>
 
-          <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <ScrollViewer VerticalScrollBarVisibility="Hidden">
             <StackPanel>
               <TextBlock Classes="label" svc:Tr.Text="LIBRARY" Margin="10,0,0,8" />
           <ListBox x:Name="FolderList" Classes="nav" ItemsSource="{Binding Folders}" SelectedItem="{Binding SelectedFolder}">
@@ -586,7 +586,9 @@
                   </Border>
                 </Panel>
               </Grid>
-              <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+              <!-- The shelf scrolls sideways with a trackpad, Shift+wheel or the arrows that show on hover; no bar -->
+              <Panel x:Name="ShelfPanel">
+              <ScrollViewer x:Name="ShelfScroll" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled">
                 <ItemsControl ItemsSource="{Binding Featured}" Margin="20,0,20,10">
                   <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="6" /></ItemsPanelTemplate>
@@ -626,6 +628,13 @@
                   </ItemsControl.ItemTemplate>
                 </ItemsControl>
               </ScrollViewer>
+              <Button x:Name="ShelfLeft" Classes="shelfarrow" HorizontalAlignment="Left" Margin="10,0,0,40" svc:Tr.Tip="Back" IsVisible="False">
+                <PathIcon Data="{StaticResource IcChevronLeft}" Width="18" Height="18" />
+              </Button>
+              <Button x:Name="ShelfRight" Classes="shelfarrow" HorizontalAlignment="Right" Margin="0,0,10,40" svc:Tr.Tip="More" IsVisible="False">
+                <PathIcon Data="{StaticResource IcChevronRight}" Width="18" Height="18" />
+              </Button>
+              </Panel>
               <TextBlock svc:Tr.Text="Everything" FontSize="15" FontWeight="Bold" Margin="28,4,28,0" />
             </StackPanel>
 
