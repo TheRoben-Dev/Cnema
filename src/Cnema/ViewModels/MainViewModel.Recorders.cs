@@ -26,8 +26,14 @@ public sealed partial class MainViewModel
         .OrderByDescending(i => i.Path.Length)
         .FirstOrDefault();
 
-    private string? GameTagFor(string file) =>
-        _settings.Current.RecorderTags && ImportFor(file) is { } import ? RecorderService.GameFor(import, file) : null;
+    private string? GameTagFor(string file)
+    {
+        if (!_settings.Current.RecorderTags || ImportFor(file) is not { } import) return null;
+        // Savefile's own clips folder often sits inside OBS's or NVIDIA's (Videos / Movies); those
+        // clips are tagged by Savefile itself, not with "Savefile Clips" as a game.
+        if (import.Kind != RecorderKind.Steam && Under(file, _settings.Current.Clip.ResolvedFolder)) return null;
+        return RecorderService.GameFor(import, file);
+    }
 
     [RelayCommand]
     private async Task OpenRecordersAsync()
@@ -51,7 +57,7 @@ public sealed partial class MainViewModel
         if (row is null || PickFolder is null || await PickFolder() is not { Length: > 0 } path) return;
         var wasAdded = row.IsAdded;
         if (wasAdded) await RemoveRecorderAsync(row);
-        row.Path = Path.GetFullPath(path).TrimEnd('/', '\\');
+        row.Path = NormalizeFolder(path);
         if (wasAdded) await AddRecorderAsync(row);
     }
 
@@ -120,10 +126,26 @@ public sealed partial class MainViewModel
         try
         {
             var output = SteamOutput;
-            var pending = await Task.Run(() => RecorderService.PendingSteamClips(steam.Path, output), cts.Token);
+            var converted = new HashSet<string>(steam.Converted, StringComparer.OrdinalIgnoreCase);
+            var pending = await Task.Run(() => RecorderService.PendingSteamClips(steam.Path, output, converted), cts.Token);
+            void Remember()
+            {
+                // Looked up again: saving Settings meanwhile replaces the recorder objects.
+                if (_settings.Current.Recorders.FirstOrDefault(i => i.Kind == RecorderKind.Steam) is not { } live) return;
+                if (converted.Count == live.Converted.Count) return;
+                live.Converted = converted.ToList();
+                _settings.Save();
+            }
+            Remember();
             foreach (var clip in pending)
             {
-                if (await RecorderService.ConvertSteamClipAsync(clip, cts.Token)) done++; else failed++;
+                if (await RecorderService.ConvertSteamClipAsync(clip, cts.Token))
+                {
+                    done++;
+                    converted.Add(clip.Id);
+                    Remember();
+                }
+                else failed++;
                 if (row is not null) row.Pending = pending.Count - done - failed;
             }
         }
@@ -144,7 +166,8 @@ public sealed partial class MainViewModel
         var steam = _settings.Current.Recorders.FirstOrDefault(i => i.Kind == RecorderKind.Steam);
         if (steam is null) return;
         var output = SteamOutput;
-        row.Pending = (await Task.Run(() => RecorderService.PendingSteamClips(steam.Path, output))).Count;
+        var converted = new HashSet<string>(steam.Converted, StringComparer.OrdinalIgnoreCase);
+        row.Pending = (await Task.Run(() => RecorderService.PendingSteamClips(steam.Path, output, converted))).Count;
     }
 
     /// <summary>At launch: new Steam clips since last time become MP4s.</summary>

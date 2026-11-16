@@ -262,6 +262,11 @@ public sealed class ClipService : IDisposable
         await _gate.WaitAsync();
         try
         {
+            // Saving Settings for something unrelated (the theme, a feature switch) must not cut a
+            // running session in two or empty the replay buffer: restart only when capture changed.
+            var signature = CaptureSignature(Cfg);
+            if (Cfg.Enabled && State is (ClipState.Recording or ClipState.Starting) && signature == _runningSignature) return;
+            _runningSignature = Cfg.Enabled ? signature : null;
             await FinishSessionCoreAsync(); // a running session is saved before capture restarts
             StopCore();
             _restarts = 0;
@@ -270,11 +275,25 @@ public sealed class ClipService : IDisposable
             if (Cfg.Enabled) await StartCoreAsync();
             else Set(ClipState.Off, null);
         }
+        catch (Exception ex)
+        {
+            // A full or read-only disk, a probe that throws: say so instead of "Starting" forever.
+            Log.Error("Starting capture failed", ex);
+            _runningSignature = null;
+            Set(ClipState.Error, T("Capture could not start: ") + ex.Message);
+        }
         finally
         {
             _gate.Release();
         }
     }
+
+    /// <summary>The settings the capture process was started with, to tell whether a restart is needed.</summary>
+    private string? _runningSignature;
+
+    private static string CaptureSignature(ClipSettings c) => string.Join("|",
+        c.Fps, c.Height, c.BitrateMbps, c.AudioBitrateKbps, c.Codec, c.HardwareEncoder, c.Screen,
+        c.Audio1, c.Audio2, c.Camera, c.CameraCorner, c.CameraSize, c.SeparateTracks);
 
     private async Task StartCoreAsync()
     {
@@ -437,7 +456,11 @@ public sealed class ClipService : IDisposable
         Log.Warn($"Capture ffmpeg exited after {ranFor.TotalSeconds:0} s: {tail}");
         _janitor?.Dispose();
         _janitor = null;
+        var dead = _process;
         _process = null;
+        try { dead?.Dispose(); } catch { /* already gone */ }
+        // The restart starts its own audio helper; this one would otherwise be left running.
+        StopSystemAudio();
 
         // A camera that can't be opened (in use, no permission) must not stop clipping: go on without it.
         if (_cameraUsed && ranFor < TimeSpan.FromSeconds(30) && Cfg.Enabled)
@@ -446,18 +469,7 @@ public sealed class ClipService : IDisposable
             CameraNote = T(OperatingSystem.IsMacOS()
                 ? "The camera could not be opened, so clips are recorded without it. Check that no other app is using it and that Savefile may use it (System Settings › Privacy & Security › Camera)."
                 : "The camera could not be opened, so clips are recorded without it. Check that no other app is using it.");
-            _ = Task.Run(async () =>
-            {
-                await _gate.WaitAsync();
-                try
-                {
-                    if (generation == _generation && Cfg.Enabled) await StartCoreAsync();
-                }
-                finally
-                {
-                    _gate.Release();
-                }
-            });
+            _ = Task.Run(() => RestartAsync(generation));
             Set(ClipState.Starting, null);
             return;
         }
@@ -466,22 +478,34 @@ public sealed class ClipService : IDisposable
         if (ranFor > TimeSpan.FromSeconds(30) && _restarts < 3 && Cfg.Enabled)
         {
             _restarts++;
-            _ = Task.Delay(TimeSpan.FromSeconds(5)).ContinueWith(async _ =>
+            _ = Task.Run(async () =>
             {
-                await _gate.WaitAsync();
-                try
-                {
-                    if (generation == _generation && Cfg.Enabled) await StartCoreAsync();
-                }
-                finally
-                {
-                    _gate.Release();
-                }
+                await Task.Delay(TimeSpan.FromSeconds(5));
+                await RestartAsync(generation);
             });
             Set(ClipState.Starting, null);
             return;
         }
         Set(ClipState.Error, tail.Length > 0 ? T("Capture stopped: ") + Shorten(tail) : T("Capture stopped unexpectedly."));
+    }
+
+    /// <summary>Starts capture again after it quit by itself; a failure shows as an error instead of "Starting" forever.</summary>
+    private async Task RestartAsync(int generation)
+    {
+        await _gate.WaitAsync();
+        try
+        {
+            if (generation == _generation && Cfg.Enabled) await StartCoreAsync();
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Restarting capture failed", ex);
+            Set(ClipState.Error, T("Capture stopped unexpectedly."));
+        }
+        finally
+        {
+            _gate.Release();
+        }
     }
 
     private Process? _audioHelper;
@@ -587,7 +611,10 @@ public sealed class ClipService : IDisposable
             var folder = Cfg.ResolvedFolder;
             Directory.CreateDirectory(folder);
             var prefix = SafeName(label ?? "Clip");
-            var output = Path.Combine(folder, $"{prefix} {DateTime.Now:yyyy-MM-dd HH-mm-ss}.mp4");
+            var stamp = $"{prefix} {DateTime.Now:yyyy-MM-dd HH-mm-ss}";
+            var output = Path.Combine(folder, stamp + ".mp4");
+            // Two saves in the same second (a double press, or two hotkeys) both keep their clip.
+            for (var n = 2; File.Exists(output); n++) output = Path.Combine(folder, $"{stamp} ({n}).mp4");
             var list = Path.Combine(AppPaths.ClipBufferDir, "save.txt");
             await File.WriteAllLinesAsync(list, segments.Select(s => $"file '{s.Replace("'", "'\\''")}'"));
 

@@ -2,7 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Cnema.ViewModels;
 
-public enum NavKind { All, Favorites, Folder, Tag, Collection }
+public enum NavKind { All, Favorites, Folder, Tag, Collection, Person }
 
 /// <summary>One row in the sidebar: a built-in view, a library folder, or a tag.</summary>
 public sealed partial class FolderViewModel : ObservableObject
@@ -21,9 +21,12 @@ public sealed partial class FolderViewModel : ObservableObject
         NavKind.Favorites => T("Videos you starred"),
         NavKind.Tag => F("Videos tagged \"{0}\"", Tag),
         NavKind.Collection => F("Your collection \"{0}\"", Name),
+        NavKind.Person => F("Clips with {0}", Name),
         _ => Path!,
     };
     public bool IsAll => Kind == NavKind.All;
+    /// <summary>First letter for a friend's round badge in the sidebar.</summary>
+    public string Initial => _name.Length > 0 ? char.ToUpper(_name[0], System.Globalization.CultureInfo.CurrentCulture).ToString() : "?";
     public bool IsRemovable => Kind == NavKind.Folder;
     /// <summary>The collection behind a Collection row.</summary>
     public Cnema.Models.VideoCollection? Collection { get; }
@@ -42,7 +45,7 @@ public sealed partial class FolderViewModel : ObservableObject
         _name = kind switch
         {
             NavKind.All or NavKind.Favorites => "",
-            NavKind.Tag or NavKind.Collection => value!,
+            NavKind.Tag or NavKind.Collection or NavKind.Person => value!,
             _ => System.IO.Path.GetFileName(value!.TrimEnd('/', '\\')) is { Length: > 0 } n ? n : value!,
         };
     }
@@ -60,6 +63,7 @@ public sealed partial class FolderViewModel : ObservableObject
         NavKind.All => true,
         NavKind.Favorites => v.Entry.Favorite,
         NavKind.Tag => v.Entry.Tags.Contains(Tag!, StringComparer.OrdinalIgnoreCase),
+        NavKind.Person => v.Entry.People.Contains(_name, StringComparer.OrdinalIgnoreCase),
         NavKind.Collection => Collection!.Paths.Contains(v.Entry.Path, StringComparer.OrdinalIgnoreCase),
         _ => Contains(v.Entry.Path),
     };

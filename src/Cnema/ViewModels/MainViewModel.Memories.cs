@@ -166,4 +166,113 @@ public sealed partial class MainViewModel
             ? F("{0} since {1}", count, first.ToString("MMMM yyyy", System.Globalization.CultureInfo.CurrentCulture))
             : count;
     }
+
+    // ---------- year in clips ----------
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(IsShowingRecap))] private RecapViewModel? _recap;
+    partial void OnRecapChanged(RecapViewModel? oldValue, RecapViewModel? newValue) => oldValue?.Release();
+    public bool IsShowingRecap => Recap is not null;
+    public bool ShowRecap => Features.Recap;
+    public bool ShowRecapMontage => Features.Montage;
+
+    [RelayCommand]
+    private void OpenRecap() => Recap = new RecapViewModel(_items.Values.ToList(), Features.People);
+
+    [RelayCommand] private void CloseRecap() => Recap = null;
+
+    [RelayCommand]
+    private async Task WatchRecapClipAsync(VideoItemViewModel? item)
+    {
+        if (item is null) return;
+        Recap = null;
+        await OpenAsync(item);
+    }
+
+    [RelayCommand]
+    private void MakeRecapMontage()
+    {
+        if (Recap is not { } r) return;
+        var videos = r.HighlightVideos();
+        var label = F("{0} highlights", r.SelectedYear);
+        Recap = null;
+        OpenMontageWith(videos, label);
+    }
+
+    // ---------- playing with ----------
+    /// <summary>Friends to tag on the next saves, per path, until the library picks the file up.</summary>
+    private readonly Dictionary<string, List<string>> _pendingPeople = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>The "Playing with" line in the clipping box shows while clipping is on.</summary>
+    public bool ShowPlayingWith => Features.People && IsClipEnabled;
+    public bool HasSquad => Features.People && _settings.Current.PlayingWith.Count > 0;
+    public string PlayingWithLabel => HasSquad
+        ? F("Playing with {0}", JoinNames(_settings.Current.PlayingWith))
+        : T("Playing with someone? Tag them on every save");
+    [ObservableProperty] private string _squadText = "";
+    public List<string> SquadSuggestions => AllPeople.Take(8).ToList();
+
+    private static string JoinNames(IReadOnlyList<string> names) => names.Count switch
+    {
+        0 => "",
+        1 => names[0],
+        2 => F("{0} and {1}", names[0], names[1]),
+        3 => F("{0}, {1} and {2}", names[0], names[1], names[2]),
+        _ => F("{0}, {1} and {2} more", names[0], names[1], names.Count - 2),
+    };
+
+    private void QueueSquad(string path)
+    {
+        if (!HasSquad) return;
+        _pendingPeople[path] = _settings.Current.PlayingWith.ToList();
+        // The folder watcher may already have added the file; tag it now in that case.
+        if (_items.TryGetValue(path, out var existing)) Upsert(existing.Entry);
+    }
+
+    /// <summary>Fills the box when the flyout opens.</summary>
+    [RelayCommand]
+    private void EditSquad()
+    {
+        SquadText = string.Join(", ", _settings.Current.PlayingWith);
+        OnPropertyChanged(nameof(SquadSuggestions));
+    }
+
+    [RelayCommand]
+    private void AddToSquad(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return;
+        var names = SquadText.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(n => n.Trim()).Where(n => n.Length > 0).ToList();
+        if (!names.Contains(name, StringComparer.OrdinalIgnoreCase)) names.Add(name);
+        SquadText = string.Join(", ", names);
+    }
+
+    [RelayCommand]
+    private void SaveSquad()
+    {
+        var known = AllPeople;
+        _settings.Current.PlayingWith = SquadText
+            .Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Select(n => n.Trim().TrimStart('@').Trim())
+            .Where(n => n.Length is > 0 and <= 40)
+            .Select(n => known.FirstOrDefault(p => string.Equals(p, n, StringComparison.OrdinalIgnoreCase)) ?? n)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(12)
+            .ToList();
+        _settings.Save();
+        RaiseSquad();
+    }
+
+    [RelayCommand]
+    private void ClearSquad()
+    {
+        SquadText = "";
+        _settings.Current.PlayingWith.Clear();
+        _settings.Save();
+        RaiseSquad();
+    }
+
+    private void RaiseSquad()
+    {
+        OnPropertyChanged(nameof(HasSquad));
+        OnPropertyChanged(nameof(PlayingWithLabel));
+        OnPropertyChanged(nameof(ShowPlayingWith));
+    }
 }

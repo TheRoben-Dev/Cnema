@@ -24,7 +24,15 @@ public static class EditStore
     private static string FilePath => Path.Combine(AppPaths.DataDir, "edits.json");
     private static Dictionary<string, SavedEdit>? _edits;
 
-    private static Dictionary<string, SavedEdit> Edits => _edits ??= JsonStore.Load<Dictionary<string, SavedEdit>>(FilePath);
+    private static Dictionary<string, SavedEdit> Edits => _edits ??= LoadEdits();
+
+    // Paths are compared ignoring case; System.Text.Json would hand back a case-sensitive dictionary.
+    private static Dictionary<string, SavedEdit> LoadEdits()
+    {
+        var edits = new Dictionary<string, SavedEdit>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (k, v) in JsonStore.Load<Dictionary<string, SavedEdit>>(FilePath)) edits.TryAdd(k, v);
+        return edits;
+    }
 
     public static SavedEdit? Get(string path) => Edits.TryGetValue(path, out var e) ? e : null;
 

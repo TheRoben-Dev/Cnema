@@ -14,7 +14,20 @@ public sealed class LibraryService : IDisposable
         ".mpg", ".mpeg", ".3gp", ".ogv", ".vob", ".divx", ".f4v",
     };
 
-    private readonly LibraryCacheFile _cache = JsonStore.Load<LibraryCacheFile>(AppPaths.LibraryFile);
+    private readonly LibraryCacheFile _cache = LoadCache();
+
+    // System.Text.Json fills a plain (case-sensitive) dictionary; paths are compared ignoring case.
+    private static LibraryCacheFile LoadCache()
+    {
+        var file = JsonStore.Load<LibraryCacheFile>(AppPaths.LibraryFile);
+        var entries = new Dictionary<string, VideoEntry>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (k, v) in file.Entries) entries.TryAdd(k, v);
+        file.Entries = entries;
+        return file;
+    }
+
+    /// <summary>Raised when a scan matched a file renamed or moved outside the app (old path, new path).</summary>
+    public event Action<string, string>? EntryMoved;
     private readonly object _cacheLock = new();
     private readonly List<FileSystemWatcher> _watchers = new();
     private Timer? _debounce;
@@ -29,6 +42,9 @@ public sealed class LibraryService : IDisposable
     {
         get { lock (_cacheLock) return _cache.Entries.Values.ToList(); }
     }
+
+    private static bool IsUnder(string file, string folder) =>
+        file.StartsWith(folder.TrimEnd('/', '\\') + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>Lists all video files under the folders (fast, filesystem only).</summary>
     public static List<FileInfo> Enumerate(IEnumerable<string> folders)
@@ -95,6 +111,8 @@ public sealed class LibraryService : IDisposable
                 if (matches.Count != 1) continue; // ambiguous or none: don't guess
                 e.CopyUserDataFrom(matches[0]);
                 orphans.Remove(matches[0]);
+                // Remembered edits and collections follow the file too.
+                EntryMoved?.Invoke(matches[0].Path, e.Path);
             }
         }
         foreach (var e in result.Except(work)) onEntryReady(e);
@@ -114,11 +132,14 @@ public sealed class LibraryService : IDisposable
             progress?.Report((Interlocked.Increment(ref done), work.Count));
         });
 
-        // Drop cache rows for files that no longer exist under any folder.
+        // Drop cache rows for files that no longer exist. A folder that is missing right now (an
+        // external drive or a share that isn't mounted yet) keeps its rows, so tags, favourites,
+        // friends and notes are still there when it comes back.
         lock (_cacheLock)
         {
             var live = new HashSet<string>(result.Select(r => r.Path), StringComparer.OrdinalIgnoreCase);
-            foreach (var stale in _cache.Entries.Keys.Where(k => !live.Contains(k)).ToList())
+            var offline = folders.Where(f => !Directory.Exists(f)).ToList();
+            foreach (var stale in _cache.Entries.Keys.Where(k => !live.Contains(k) && !offline.Any(f => IsUnder(k, f))).ToList())
                 _cache.Entries.Remove(stale);
         }
         SaveCache();

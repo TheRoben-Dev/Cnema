@@ -17,6 +17,9 @@ public static class JsonStore
         catch (Exception ex)
         {
             Log.Warn($"Could not read {path}: {ex.Message}");
+            // Keep the damaged file instead of overwriting it with defaults at the next save.
+            try { File.Move(path, $"{path}.corrupt-{DateTime.Now:yyyyMMdd-HHmmss}", overwrite: true); }
+            catch { /* best effort */ }
         }
         return new T();
     }
@@ -28,7 +31,12 @@ public static class JsonStore
     public static void Save<T>(string path, T value)
     {
         var tmp = path + ".tmp";
-        File.WriteAllText(tmp, JsonSerializer.Serialize(value, Options));
+        // Flushed to the disk before the rename, so a power cut can't leave an empty file behind.
+        using (var fs = new FileStream(tmp, FileMode.Create, FileAccess.Write, FileShare.None))
+        {
+            JsonSerializer.Serialize(fs, value, Options);
+            fs.Flush(flushToDisk: true);
+        }
         File.Move(tmp, path, overwrite: true);
     }
 }

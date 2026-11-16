@@ -33,16 +33,19 @@ public sealed partial class MainViewModel
         foreach (var v in _items.Values) v.RefreshAll();
         if (!Features.Collections && SelectedCollection is not null) SelectedFolder = Folders.FirstOrDefault();
         if (!Features.Unwatched) FilterUnwatched = false;
+        if (!Features.People && SelectedFriend is not null) SelectedFolder = Folders.FirstOrDefault();
+        RebuildTags();
         RefreshMemories();
         OnPropertyChanged(nameof(HeaderCount));
         foreach (var name in new[]
                  {
                      nameof(ShowClipping), nameof(ShowSessionButton), nameof(ShowController), nameof(ShowCollections),
                      nameof(ShowCleanUp), nameof(ShowStats), nameof(ShowTools), nameof(ShowUnwatchedFilter),
-                     nameof(ShowMiniPlayerButton), nameof(ShowRecorders), nameof(ShowNotes), nameof(ShowMontage), nameof(ShowPeople),
+                     nameof(ShowMiniPlayerButton), nameof(ShowRecorders), nameof(ShowNotes), nameof(ShowMontage), nameof(ShowPeople), nameof(ShowRecap), nameof(ShowRecapMontage), nameof(ShowPlayingWith), nameof(HasSquad), nameof(PlayingWithLabel),
                  })
             OnPropertyChanged(name);
         AppearanceChanged?.Invoke();
+        BackgroundStateChanged?.Invoke(); // the tray hides Clipping / Sessions when they are switched off
     }
 
     // ---------- keyboard shortcut sheet ----------

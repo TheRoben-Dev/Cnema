@@ -28,6 +28,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     public ObservableCollection<FolderViewModel> Folders { get; } = new();
     public ObservableCollection<FolderViewModel> Tags { get; } = new();
+    /// <summary>Everyone tagged under "Who was there", as sidebar rows (Settings, Features, Memories).</summary>
+    public ObservableCollection<FolderViewModel> Friends { get; } = new();
+    public bool HasFriends => Features.People && Friends.Count > 0;
+    [ObservableProperty] private FolderViewModel? _selectedFriend;
     public PlayerViewModel Player { get; }
     /// <summary>Exports running in the background, one at a time (Settings, Features, Export queue).</summary>
     public ExportQueueViewModel Exports { get; } = new();
@@ -301,7 +305,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     /// <summary>The cursor is on the player's tools rather than driving playback.</summary>
     [ObservableProperty] private bool _padInPlayerTools;
     partial void OnPadInPlayerToolsChanged(bool value) => OnPropertyChanged(nameof(PadHints));
-    private bool IsInPadDialog => IsShowingRecorders || IsMakingMontage || IsCleaningUp || IsShowingStats ||
+    private bool IsInPadDialog => IsShowingRecorders || IsMakingMontage || IsCleaningUp || IsShowingStats || IsShowingRecap ||
                                   IsShowingShortcuts || IsConfirmingDelete || IsShowingWhatsNew;
 
     /// <summary>What the pad buttons do right now; shown along the bottom in Controller mode.</summary>
@@ -341,11 +345,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     /// <summary>LB / RB: step through the sidebar (folders, then tags) without moving focus there.</summary>
     public void CycleNav(int delta)
     {
-        var all = Folders.Concat(Collections).Concat(Tags).ToList();
+        var all = Folders.Concat(Collections).Concat(HasFriends ? Friends : Enumerable.Empty<FolderViewModel>()).Concat(Tags).ToList();
         if (all.Count == 0) return;
         var index = ActiveNav is null ? 0 : all.IndexOf(ActiveNav);
         var next = all[((index + delta) % all.Count + all.Count) % all.Count];
         if (next.Kind == NavKind.Tag) SelectedTag = next;
+        else if (next.Kind == NavKind.Person) SelectedFriend = next;
         else if (next.Kind == NavKind.Collection) SelectedCollection = next;
         else SelectedFolder = next;
     }
@@ -378,6 +383,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         if (_savingSession) return;
         if (!IsSession)
         {
+            if (!Features.Sessions) return;
             var game = _settings.Current.Clip.TagWithGame ? PlatformShell.FrontmostAppName() : null;
             if (Clips.StartSession(game))
                 ShowToast(F("Session recording started. {0} adds a bookmark.", _settings.Current.Clip.HotkeyText));
@@ -398,6 +404,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private void OnSessionSaved(string path, IReadOnlyList<long> bookmarks)
     {
         _pendingBookmarks[path] = bookmarks;
+        QueueSquad(path);
         var name = Path.GetFileNameWithoutExtension(path);
         var tag = name.EndsWith(" session", StringComparison.Ordinal) ? null : SessionGame(name);
         if (tag is not null) _pendingTags[path] = tag;
@@ -524,8 +531,14 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     public bool HasNoFolders => _settings.Current.Folders.Count == 0;
     public bool HasNoResults => !HasNoFolders && Videos.Count == 0 && !IsScanning;
-    private FolderViewModel? ActiveNav => SelectedTag ?? SelectedCollection ?? SelectedFolder;
-    public string HeaderTitle => ActiveNav is { Kind: NavKind.Tag } t ? "#" + t.Name : ActiveNav?.Name ?? T("All videos");
+    private FolderViewModel? ActiveNav => SelectedTag ?? SelectedFriend ?? SelectedCollection ?? SelectedFolder;
+    public string HeaderTitle => ActiveNav switch
+    {
+        { Kind: NavKind.Tag } t => "#" + t.Name,
+        { Kind: NavKind.Person } p => F("With {0}", p.Name),
+        { } n => n.Name,
+        null => T("All videos"),
+    };
     public string HeaderCount => FriendlyCount();
 
     public MainViewModel(SettingsStore settings, LibraryService library, ClipService clips)
@@ -536,7 +549,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         PropertyChanged += (_, e) =>
         {
             if (e.PropertyName is nameof(IsPlayerOpen) or nameof(Editor) or nameof(SettingsEditor) or nameof(IsClipRecording)
-                or nameof(IsShowingRecorders) or nameof(Montage) or nameof(IsCleaningUp) or nameof(IsShowingStats)
+                or nameof(IsShowingRecorders) or nameof(Montage) or nameof(IsCleaningUp) or nameof(IsShowingStats) or nameof(IsShowingRecap)
                 or nameof(IsShowingShortcuts) or nameof(IsConfirmingDelete) or nameof(IsShowingWhatsNew)
                 or nameof(ShortcutSheet) or nameof(Cleanup) or nameof(Stats) or nameof(Recorders) or nameof(WhatsNew)
                 or nameof(PendingDelete) or nameof(PendingBulkDelete))
@@ -559,6 +572,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
         _library.FoldersChanged += () => Dispatcher.UIThread.Post(() => _ = RescanAsync());
         _library.GameTagger = GameTagFor;
+        // A file renamed or moved outside the app keeps its collections and remembered edits.
+        _library.EntryMoved += (from, to) => Dispatcher.UIThread.Post(() =>
+        {
+            CollectionPathChanged(from, to);
+            EditStore.Move(from, to);
+        });
         RebuildFolders();
         Loc.Changed += OnLanguageChanged;
         _setupLanguage = SetupLanguages.FirstOrDefault(l => l.Code == Loc.Current);
@@ -617,7 +636,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         if (PickFolder is null) return;
         var path = await PickFolder();
         if (string.IsNullOrWhiteSpace(path)) return;
-        path = Path.GetFullPath(path).TrimEnd('/', '\\');
+        path = NormalizeFolder(path);
         if (path.Length == 0) path = "/";
         if (_settings.Current.Folders.Any(f => string.Equals(f, path, StringComparison.OrdinalIgnoreCase))) return;
         _settings.Current.Folders.Add(path);
@@ -692,6 +711,13 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             e.Bookmarks = marks.ToList();
             _library.SaveCache();
         }
+        if (_pendingPeople.Remove(e.Path, out var squad))
+        {
+            foreach (var name in squad)
+                if (!e.People.Contains(name, StringComparer.OrdinalIgnoreCase)) e.People.Add(name);
+            _items[e.Path].RefreshAll();
+            _library.SaveCache();
+        }
         if (_pendingTags.Remove(e.Path, out var game))
         {
             // A clip just saved from this game: tag it so the sidebar groups clips per game.
@@ -711,6 +737,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     partial void OnSelectedFolderChanged(FolderViewModel? value) => NavChanged(value);
     partial void OnSelectedTagChanged(FolderViewModel? value) => NavChanged(value);
+    partial void OnSelectedFriendChanged(FolderViewModel? value) => NavChanged(value);
     partial void OnSelectedCollectionChanged(FolderViewModel? value)
     {
         OnPropertyChanged(nameof(IsInCollectionView));
@@ -723,7 +750,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         if (value is null)
         {
             // A list let go of its selection; unless another list holds one, fall back to All videos.
-            if (SelectedFolder is null && SelectedTag is null && SelectedCollection is null && Folders.Count > 0)
+            if (SelectedFolder is null && SelectedTag is null && SelectedFriend is null && SelectedCollection is null && Folders.Count > 0)
                 SelectedFolder = Folders[0];
             return;
         }
@@ -731,8 +758,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         try
         {
             if (value.Kind != NavKind.Tag) SelectedTag = null;
+            if (value.Kind != NavKind.Person) SelectedFriend = null;
             if (value.Kind != NavKind.Collection) SelectedCollection = null;
-            if (value.Kind is NavKind.Tag or NavKind.Collection) SelectedFolder = null;
+            if (value.Kind is NavKind.Tag or NavKind.Collection or NavKind.Person) SelectedFolder = null;
         }
         finally { _navSwitching = false; }
         RefreshView();
@@ -806,31 +834,43 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     /// <summary>Keeps the sidebar tag list in sync with the tags actually in use.</summary>
     private void RebuildTags()
     {
-        var counts = _items.Values.SelectMany(v => v.Entry.Tags)
-            .GroupBy(t => t, StringComparer.OrdinalIgnoreCase)
-            .OrderBy(g => g.Key, StringComparer.CurrentCultureIgnoreCase)
-            .Select(g => (Name: g.First(), Count: g.Count())).ToList();
+        RebuildNamedRows(Tags, NavKind.Tag, v => v.Entry.Tags, () => SelectedTag, x => SelectedTag = x, byCount: false);
+        OnPropertyChanged(nameof(HasTags));
+        // Friends: most often tagged first, so the people you play with most sit on top.
+        RebuildNamedRows(Friends, NavKind.Person, v => Features.People ? v.Entry.People : Enumerable.Empty<string>(),
+            () => SelectedFriend, x => SelectedFriend = x, byCount: true);
+        OnPropertyChanged(nameof(HasFriends));
+    }
 
-        var same = counts.Count == Tags.Count && counts.Zip(Tags).All(p => p.First.Name == p.Second.Name);
+    /// <summary>Keeps a sidebar list (tags or friends) in sync with the names actually in use.</summary>
+    private void RebuildNamedRows(ObservableCollection<FolderViewModel> rows, NavKind kind, Func<VideoItemViewModel, IEnumerable<string>> names,
+        Func<FolderViewModel?> getSelected, Action<FolderViewModel?> setSelected, bool byCount)
+    {
+        var groups = _items.Values.SelectMany(names).GroupBy(t => t, StringComparer.OrdinalIgnoreCase);
+        var ordered = byCount
+            ? groups.OrderByDescending(g => g.Count()).ThenBy(g => g.Key, StringComparer.CurrentCultureIgnoreCase)
+            : groups.OrderBy(g => g.Key, StringComparer.CurrentCultureIgnoreCase);
+        var counts = ordered.Select(g => (Name: g.First(), Count: g.Count())).ToList();
+
+        var same = counts.Count == rows.Count && counts.Zip(rows).All(p => p.First.Name == p.Second.Name);
         if (same)
         {
-            foreach (var (c, vm) in counts.Zip(Tags)) vm.Count = c.Count;
+            foreach (var (c, vm) in counts.Zip(rows)) vm.Count = c.Count;
             return;
         }
         // Clearing the list makes the ListBox null its selection; hold the handlers off while we swap.
-        var selected = SelectedTag?.Name;
+        var selected = getSelected()?.Name;
         _rebuildingTags = true;
         try
         {
-            Tags.Clear();
-            foreach (var c in counts) Tags.Add(new FolderViewModel(NavKind.Tag, c.Name) { Count = c.Count });
-            SelectedTag = selected is null ? null
-                : Tags.FirstOrDefault(t => string.Equals(t.Name, selected, StringComparison.OrdinalIgnoreCase));
+            rows.Clear();
+            foreach (var c in counts) rows.Add(new FolderViewModel(kind, c.Name) { Count = c.Count });
+            setSelected(selected is null ? null
+                : rows.FirstOrDefault(t => string.Equals(t.Name, selected, StringComparison.OrdinalIgnoreCase)));
         }
         finally { _rebuildingTags = false; }
-        OnPropertyChanged(nameof(HasTags));
-        // The selected tag no longer exists (its last video was untagged): fall back to All videos.
-        if (selected is not null && SelectedTag is null) SelectedFolder = Folders[0];
+        // The selected row no longer exists (its last video was untagged): fall back to All videos.
+        if (selected is not null && getSelected() is null && Folders.Count > 0) SelectedFolder = Folders[0];
     }
 
     private IEnumerable<string> AllTags => Tags.Select(t => t.Name);
@@ -888,6 +928,13 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         item.RefreshAll();
         Editor = null;
         RefreshView();
+    }
+
+    /// <summary>Full path without a trailing separator, except for a drive or the root ("D:\\" stays, not "D:").</summary>
+    private static string NormalizeFolder(string path)
+    {
+        var full = Path.GetFullPath(path);
+        return Path.GetPathRoot(full) == full ? full : full.TrimEnd('/', '\\');
     }
 
     private static bool Under(string file, string folder) => new FolderViewModel(folder).Contains(file);
@@ -977,7 +1024,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     {
         foreach (var name in new[]
                  {
-                     nameof(IsClipEnabled), nameof(IsClipRecording), nameof(IsClipStarting), nameof(IsClipError),
+                     nameof(IsClipEnabled), nameof(ShowPlayingWith), nameof(IsClipRecording), nameof(IsClipStarting), nameof(IsClipError),
                      nameof(ClipTitle), nameof(ClipDetail), nameof(HasClipDetail), nameof(SaveClipLabel),
                      nameof(StaysInBackground), nameof(IsSession), nameof(SessionLabel), nameof(CanToggleSession), nameof(ShowSessionButton),
                  })
@@ -1046,6 +1093,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private void OnClipSaved(string path, int seconds)
     {
         if (_settings.Current.Clip.Sound) PlatformShell.PlayConfirmSound();
+        QueueSquad(path);
         ShowToast(SavedToastText(path));
         if (_settings.Current.Clip.Notify)
             PlatformShell.Notify(T("Clip saved"), F("Last {0} · {1}", LengthText(seconds), Path.GetFileName(path)));
@@ -1072,6 +1120,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private async Task ToggleClippingAsync()
     {
+        // Switched off under Settings, Features: the tray must not turn it back on behind the hidden sidebar box.
+        if (!Features.Clipping && !_settings.Current.Clip.Enabled) return;
         _settings.Current.Clip.Enabled = !_settings.Current.Clip.Enabled;
         _settings.Save();
         await ApplyClipSettingsAsync();
@@ -1107,7 +1157,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private async Task SaveSettingsAsync()
     {
         if (SettingsEditor is not { } editor) return;
-        if (editor.WriteTo(_settings.Current) is { } problem)
+        // Written into a copy first: if anything is refused, the live settings stay untouched
+        // (they would otherwise be saved half-changed by the next unrelated save).
+        var draft = System.Text.Json.JsonSerializer.Deserialize<AppSettings>(System.Text.Json.JsonSerializer.Serialize(_settings.Current))!;
+        if (editor.WriteTo(draft) is { } problem)
         {
             editor.Error = problem;
             return;
@@ -1118,7 +1171,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             editor.Error = autostartProblem;
             return;
         }
-        _settings.Save();
+        _settings.ReplaceWith(draft); // saves
         SettingsEditor = null;
         OnPropertyChanged(nameof(IsControllerMode));
         ControllerModeChanged?.Invoke();
