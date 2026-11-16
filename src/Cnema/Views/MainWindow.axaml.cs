@@ -451,6 +451,8 @@ public partial class MainWindow : Window
     {
         var p = vm.Player;
         if (e.Key == Key.Escape) { vm.CloseMiniPlayerCommand.Execute(null); return true; }
+        if (e.KeyModifiers == KeyModifiers.None && e.Key is Key.Delete or Key.Back) { vm.DeletePlayingCommand.Execute(null); return true; }
+        if (e.KeyModifiers == KeyModifiers.None && e.Key == Key.I) { vm.EditPlayingCommand.Execute(null); return true; }
         switch (Shortcuts.Match(e, Shortcuts.Player))
         {
             case "play": p.TogglePlayCommand.Execute(null); return true;
@@ -665,6 +667,11 @@ public partial class MainWindow : Window
             }
             WakeTheatreChrome();
             e.Handled = true;
+            return;
+        }
+        if (vm.IsShowingBin)
+        {
+            if (e.Key == Key.Escape) { vm.CloseBinCommand.Execute(null); e.Handled = true; }
             return;
         }
         if (vm.IsWrappedGiftOpen)

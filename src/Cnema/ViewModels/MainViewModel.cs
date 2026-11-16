@@ -298,8 +298,14 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         if (PendingDelete is not { } item) return;
         try
         {
-            _library.Delete(item.Entry);
-            _items.Remove(item.Entry.Path);
+            if (ReferenceEquals(Player.Current, item))
+            {
+                // Let go of the file before it moves.
+                Player.Close();
+                IsMiniPlayerOpen = false;
+                IsPlayerOpen = false;
+            }
+            RemoveVideo(item);
             PendingDelete = null;
             RefreshView();
             ShowToast(F("Moved to the {0}: {1}", TrashName, item.Title));
@@ -565,6 +571,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         IsSetupOpen = _settings.IsFirstRun || Environment.GetEnvironmentVariable("CNEMA_SETUP") == "1";
         _ = RecoverThenApplyClipsAsync();
         _ = Task.Run(TrimDragCopies);
+        StartBin();
         _ = CheckForUpdatesAsync();
         LoadWrappedSongs();
         StartWrappedSeason();

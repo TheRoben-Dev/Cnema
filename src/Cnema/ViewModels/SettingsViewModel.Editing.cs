@@ -21,6 +21,7 @@ public sealed partial class SettingsViewModel
     [ObservableProperty] private bool _featureDragOut;
     [ObservableProperty] private bool _featureDragDiscord;
     [ObservableProperty] private bool _featureDiscordNitro;
+    [ObservableProperty] private bool _featureBin;
     [ObservableProperty] private bool _featureRecorders;
     [ObservableProperty] private bool _featureZoomPan;
     [ObservableProperty] private bool _featureBlur;
@@ -84,6 +85,7 @@ public sealed partial class SettingsViewModel
         FeatureDragOut = f.DragOut;
         FeatureDragDiscord = f.DragDiscord;
         FeatureDiscordNitro = f.DiscordNitro;
+        FeatureBin = f.Bin;
         FeatureRecorders = f.Recorders;
         FeatureZoomPan = f.ZoomPan;
         FeatureBlur = f.Blur;

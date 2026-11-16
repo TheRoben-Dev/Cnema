@@ -22,6 +22,7 @@ public static class StorageService
         foreach (var f in files)
         {
             if (!Extensions.Contains(Path.GetExtension(f), StringComparer.OrdinalIgnoreCase)) continue;
+            if (BinService.IsBinPath(f)) continue; // the bin deletes its own after 24 hours
             // Things you made from your clips are kept: montages, and exports ("Clip [Discord].mp4").
             if (f.StartsWith(montages, StringComparison.OrdinalIgnoreCase) || IsExport(f)) continue;
             FileInfo? info = null;

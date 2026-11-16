@@ -238,6 +238,15 @@
               </DataTemplate>
             </ListBox.ItemTemplate>
           </ListBox>
+              <!-- Savefile's bin: shows while something is in it -->
+              <Button x:Name="BinNav" Classes="ghost" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="10,8" Margin="0,2,0,0"
+                      IsVisible="{Binding ShowBinNav}" Command="{Binding OpenBinCommand}" svc:Tr.Tip="Deleted videos wait here for 24 hours">
+                <Grid ColumnDefinitions="Auto,*,Auto">
+                  <PathIcon Width="15" Height="15" Margin="0,0,10,0" Foreground="{DynamicResource TextDim}" Data="{StaticResource IcDelete}" />
+                  <TextBlock Grid.Column="1" svc:Tr.Text="Bin" FontSize="13" VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="2" Classes="dim" Text="{Binding BinCountText}" FontSize="11" VerticalAlignment="Center" />
+                </Grid>
+              </Button>
               <StackPanel IsVisible="{Binding ShowCollections}">
                 <Grid ColumnDefinitions="*,Auto" Margin="10,22,0,4">
                   <TextBlock Classes="label" svc:Tr.Text="COLLECTIONS" VerticalAlignment="Center" />
@@ -926,6 +935,15 @@
                         Command="{Binding #Root.((vm:MainViewModel)DataContext).NextClipCommand}">
                   <PathIcon Data="{StaticResource IcChevronRight}" Width="18" Height="18" />
                 </Button>
+                <!-- Name, tags and friends of this video, and Delete (to the bin), without leaving the player -->
+                <Button Classes="ghost" Focusable="False" Padding="6" svc:Tr.Tip="Name, tags and friends (I)"
+                        Command="{Binding #Root.((vm:MainViewModel)DataContext).EditPlayingCommand}">
+                  <PathIcon Data="{StaticResource IcLabel}" Width="16" Height="16" />
+                </Button>
+                <Button Classes="ghost" Focusable="False" Padding="6" Margin="0,0,8,0" svc:Tr.Tip="Delete (Del): to the bin for 24 hours, then the next video plays"
+                        Command="{Binding #Root.((vm:MainViewModel)DataContext).DeletePlayingCommand}">
+                  <PathIcon Data="{StaticResource IcDelete}" Width="16" Height="16" />
+                </Button>
                 <Button Classes="accent" Focusable="False" VerticalAlignment="Center"
                         svc:Tr.Tip="Open in the editor: trim, export and share"
                         Command="{Binding #Root.((vm:MainViewModel)DataContext).ExpandMiniPlayerCommand}">
@@ -1127,6 +1145,46 @@
     </Border>
 
     <!-- ======================= DELETE CONFIRMATION ======================= -->
+    <!-- ======================= THE BIN ======================= -->
+    <Border x:Name="BinScrim" Background="{DynamicResource Scrim}" IsVisible="{Binding IsShowingBin}">
+      <Border Width="560" MaxHeight="640" Margin="0,40" VerticalAlignment="Center" HorizontalAlignment="Center" Background="{DynamicResource Bg1}"
+              BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="16" BoxShadow="{DynamicResource DialogShadow}">
+        <DockPanel Margin="24,22,24,20">
+          <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,12">
+            <StackPanel Spacing="3">
+              <TextBlock svc:Tr.Text="Bin" FontSize="19" FontWeight="Bold" />
+              <TextBlock Classes="dim" FontSize="12" TextWrapping="Wrap" svc:Tr.Text="Each video waits here for 24 hours from when you deleted it, then it's deleted for good. Put it back to keep it, with its favourite, tags and friends." />
+            </StackPanel>
+            <Button Grid.Column="1" Classes="ghost" Padding="6" VerticalAlignment="Top" svc:Tr.Tip="Close (Esc)" Command="{Binding CloseBinCommand}">
+              <PathIcon Data="{StaticResource IcClose}" Width="13" Height="13" />
+            </Button>
+          </Grid>
+          <ScrollViewer>
+            <ItemsControl ItemsSource="{Binding BinRows}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:BinRowViewModel">
+                  <Border Background="{DynamicResource Bg2}" CornerRadius="10" Padding="12,9" Margin="0,0,0,6">
+                    <Grid ColumnDefinitions="*,Auto,Auto">
+                      <StackPanel Spacing="2" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Folder}" />
+                        <TextBlock Classes="dim" Text="{Binding Left}" FontSize="11" />
+                      </StackPanel>
+                      <Button Grid.Column="1" Classes="soft" Margin="10,0,6,0" VerticalAlignment="Center" svc:Tr.Content="Put back"
+                              Command="{Binding #Root.((vm:MainViewModel)DataContext).RestoreFromBinCommand}" CommandParameter="{Binding}" />
+                      <Button Grid.Column="2" Classes="ghost" Padding="6" VerticalAlignment="Center" svc:Tr.Tip="Delete for good now"
+                              Command="{Binding #Root.((vm:MainViewModel)DataContext).DeleteFromBinNowCommand}" CommandParameter="{Binding}">
+                        <PathIcon Data="{StaticResource IcDelete}" Width="14" Height="14" Foreground="{DynamicResource TextDim}" />
+                      </Button>
+                    </Grid>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </DockPanel>
+      </Border>
+    </Border>
+
     <Border x:Name="DeleteScrim" Background="{DynamicResource Scrim}" IsVisible="{Binding IsConfirmingDelete}">
       <Border Width="420" VerticalAlignment="Center" HorizontalAlignment="Center" Background="{DynamicResource Bg1}"
               BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="16" Padding="22" BoxShadow="{DynamicResource DialogShadow}">
@@ -2475,6 +2533,14 @@
                         <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Copies can be up to 50 MB, so they keep more quality." />
                       </StackPanel>
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureDiscordNitro}" />
+                    </Grid>
+                    <Border Classes="sep" />
+                    <Grid Classes="row" ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="2">
+                        <TextBlock svc:Tr.Text="Savefile bin" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="A deleted video waits in the bin for 24 hours, so you can put it back, then it's deleted for good. Each video has its own 24 hours. Off: deleted videos go to the system Trash." />
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureBin}" />
                     </Grid>
                     <Border Classes="sep" />
                     <Grid Classes="row" ColumnDefinitions="*,Auto">
