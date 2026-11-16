@@ -93,8 +93,6 @@ public partial class MainWindow : Window
         Classes.Set("noglow", !vm.Features.HoverGlow);
     }
 
-    private Control? Focused => FocusManager?.GetFocusedElement() as Control;
-
     private void OnQuitClick(object? sender, RoutedEventArgs e) => (Application.Current as App)?.Quit();
 
     /// <summary>

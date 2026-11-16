@@ -27,7 +27,6 @@ public sealed class WrappedMotionCard : Control
 
     private readonly WrappedCard _card;
     private readonly WrappedPalette _p;
-    private readonly double _length;
     private readonly double[] _beats;
     private readonly double[] _downbeats;
     private double _t;
@@ -36,7 +35,6 @@ public sealed class WrappedMotionCard : Control
     {
         _card = card;
         _p = palette;
-        _length = length;
         _beats = beats.ToArray();
         _downbeats = downbeats.ToArray();
         Width = W;

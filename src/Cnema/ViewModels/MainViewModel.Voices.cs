@@ -246,7 +246,9 @@ public sealed partial class MainViewModel
     private async Task OpenVoiceGameAsync()
     {
         if (!VoiceModelReady) return;
-        var rounds = await Task.Run(BuildVoiceRounds);
+        // A copy of the library: the passes change it on this thread while the rounds are put together on another.
+        var items = _items.Values.ToList();
+        var rounds = await Task.Run(() => BuildVoiceRounds(items));
         var friends = _voices.Current.Known.Where(kv => kv.Value.Count > 0)
             .Select(kv => new VoiceFriend(kv.Key == VoiceStore.MeKey ? T("You") : kv.Key, kv.Value.Count))
             .OrderByDescending(f => f.Count).ToList();
@@ -277,10 +279,10 @@ public sealed partial class MainViewModel
     /// Up to eight voices to ask about: the unnamed voices of all videos grouped by who they sound like, the ones
     /// heard most first, each with Mochi's best guesses (friends with a similar voice, or friends tagged in those clips).
     /// </summary>
-    private List<VoiceRound> BuildVoiceRounds()
+    private List<VoiceRound> BuildVoiceRounds(List<VideoItemViewModel> items)
     {
         _roundPrints.Clear();
-        var heard = _items.Values
+        var heard = items
             .Where(v => v.Entry.Voices is { Speakers.Count: > 0 })
             .SelectMany(v => v.Entry.Voices!.Speakers.Where(s => s.Ms >= 2500 && s.Lines.Count > 0 && s.Vec.Length > 0).Select(s => new HeardVoice(v, s)))
             .Where(h => !_voices.IsIgnored(h.Speaker.Vec) && !(_voices.Match(h.Speaker.Vec).FirstOrDefault() is { Name: not null } m && m.Score >= KnowAt + 0.1f))
@@ -335,7 +337,7 @@ public sealed partial class MainViewModel
         try
         {
             if (ToolLocator.Ffmpeg is not { } ffmpeg) return Array.Empty<double>();
-            var samples = SpeechService.ReadAudioAsync(ffmpeg, path, TimeSpan.FromMilliseconds(from), 1, CancellationToken.None).GetAwaiter().GetResult();
+            var samples = SpeechService.ReadAudioAsync(ffmpeg, path, TimeSpan.FromMilliseconds(from), 1, CancellationToken.None, TimeSpan.FromMilliseconds(to - from + 100)).GetAwaiter().GetResult();
             var n = (int)Math.Min(samples.Length, (to - from) * 16);
             if (n < 48) return Array.Empty<double>();
             var step = n / 48;
@@ -376,7 +378,7 @@ public sealed partial class MainViewModel
         // Friends added by voice because of this answer come off again.
         if (a.Kind == VoiceAnswerKind.Friend)
             foreach (var item in _items.Values)
-                if (item.Entry.Voices is { } v && v.Added.Remove(a.Name!) && item.Entry.People.RemoveAll(p => string.Equals(p, a.Name, StringComparison.OrdinalIgnoreCase)) > 0)
+                if (item.Entry.Voices is { } v && v.Added.RemoveAll(n => string.Equals(n, a.Name, StringComparison.OrdinalIgnoreCase)) > 0 && item.Entry.People.RemoveAll(p => string.Equals(p, a.Name, StringComparison.OrdinalIgnoreCase)) > 0)
                 {
                     FillInVoices(item);
                     item.RefreshAll();

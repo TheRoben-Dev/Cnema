@@ -101,7 +101,7 @@ public sealed partial class SpeechService : IDisposable
     }
 
     /// <summary>A stretch of the sound as 16 kHz mono floats, all tracks mixed.</summary>
-    internal static async Task<float[]> ReadAudioAsync(string ffmpeg, string path, TimeSpan at, int tracks, CancellationToken ct)
+    internal static async Task<float[]> ReadAudioAsync(string ffmpeg, string path, TimeSpan at, int tracks, CancellationToken ct, TimeSpan? length = null)
     {
         var psi = new ProcessStartInfo(ffmpeg)
         {
@@ -111,7 +111,7 @@ public sealed partial class SpeechService : IDisposable
             CreateNoWindow = true,
         };
         foreach (var a in new[] { "-hide_banner", "-nostdin", "-loglevel", "error", "-ss", at.TotalSeconds.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture),
-                     "-t", Chunk.TotalSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture), "-i", path, "-vn", "-sn", "-dn" })
+                     "-t", (length ?? Chunk).TotalSeconds.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture), "-i", path, "-vn", "-sn", "-dn" })
             psi.ArgumentList.Add(a);
         if (tracks > 1)
         {
