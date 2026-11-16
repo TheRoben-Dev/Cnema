@@ -496,6 +496,7 @@ public partial class MainWindow : Window
         vm.PickFolder = PickFolderAsync;
         vm.PickFile = PickMediaFileAsync;
         vm.PickAudio = PickAudioFileAsync;
+        vm.CaptureRecap = CaptureRecap;
         vm.Player.PickAudio = PickAudioFileAsync;
         vm.Player.PickSavePath = PickSavePathAsync;
         // A new caption gets the cursor in its text box, ready to type.
@@ -1104,6 +1105,41 @@ public partial class MainWindow : Window
             case "punchIn": p.PunchInCommand.Execute(null); break;
             case "blur": p.AddBlurCommand.Execute(null); break;
             default: e.Handled = false; break;
+        }
+    }
+
+    /// <summary>Draws Year in clips (with a small Savefile header) into a PNG, twice the screen size.</summary>
+    private bool CaptureRecap(string path)
+    {
+        var content = this.FindControl<StackPanel>("RecapContent");
+        var header = this.FindControl<StackPanel>("RecapImageHeader");
+        if (content is null || header is null) return false;
+        var background = this.FindResource("Bg1") as IBrush ?? Brushes.Black;
+        header.IsVisible = true;
+        try
+        {
+            content.UpdateLayout();
+            const double scale = 2, pad = 32;
+            var size = content.Bounds.Size;
+            var dpi = new Vector(96 * scale, 96 * scale);
+            using var inner = new Avalonia.Media.Imaging.RenderTargetBitmap(
+                new PixelSize((int)Math.Ceiling(size.Width * scale), (int)Math.Ceiling(size.Height * scale)), dpi);
+            inner.Render(content);
+            // The page on the dialog's background with a margin all round, so it reads as a card when shared.
+            using var page = new Avalonia.Media.Imaging.RenderTargetBitmap(
+                new PixelSize((int)Math.Ceiling((size.Width + pad * 2) * scale), (int)Math.Ceiling((size.Height + pad * 2) * scale)), dpi);
+            using (var ctx = page.CreateDrawingContext())
+            {
+                ctx.FillRectangle(background, new Rect(0, 0, size.Width + pad * 2, size.Height + pad * 2));
+                // The source rectangle is in the bitmap's pixels.
+                ctx.DrawImage(inner, new Rect(inner.PixelSize.ToSize(1)), new Rect(pad, pad, size.Width, size.Height));
+            }
+            page.Save(path);
+            return true;
+        }
+        finally
+        {
+            header.IsVisible = false;
         }
     }
 }

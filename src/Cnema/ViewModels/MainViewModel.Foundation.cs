@@ -42,7 +42,7 @@ public sealed partial class MainViewModel
                  {
                      nameof(ShowClipping), nameof(ShowSessionButton), nameof(ShowController), nameof(ShowCollections),
                      nameof(ShowCleanUp), nameof(ShowStats), nameof(ShowTools), nameof(ShowUnwatchedFilter),
-                     nameof(ShowMiniPlayerButton), nameof(ShowRecorders), nameof(ShowNotes), nameof(ShowMontage), nameof(ShowPeople), nameof(ShowRecap), nameof(ShowRecapMontage), nameof(ShowPlayingWith), nameof(HasSquad), nameof(PlayingWithLabel), nameof(ShowPlayAll), nameof(CanPlayAll),
+                     nameof(ShowMiniPlayerButton), nameof(ShowRecorders), nameof(ShowNotes), nameof(ShowMontage), nameof(ShowPeople), nameof(ShowRecap), nameof(ShowRecapMontage), nameof(ShowPlayingWith), nameof(HasSquad), nameof(PlayingWithLabel), nameof(ShowPlayAll), nameof(CanPlayAll), nameof(ShowFriendMontage),
                  })
             OnPropertyChanged(name);
         AppearanceChanged?.Invoke();
