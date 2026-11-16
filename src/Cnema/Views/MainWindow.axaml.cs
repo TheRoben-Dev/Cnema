@@ -132,6 +132,7 @@ public partial class MainWindow : Window
         vm.CaptureRecap = CaptureRecap;
         vm.Player.PickAudio = PickAudioFileAsync;
         vm.Player.PickSavePath = PickSavePathAsync;
+        HookQuickPlayer(vm);
         // A new caption gets the cursor in its text box, ready to type.
         vm.Player.CaptionAdded += caption => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
         {
@@ -449,12 +450,13 @@ public partial class MainWindow : Window
     /// The quick player listens to a few player keys while the library has the keyboard: play/pause,
     /// previous / next video, seeking, mute and speed. Arrow keys up/down stay with the library lists. Esc closes it.
     /// </summary>
-    private static bool HandleMiniPlayerKey(MainViewModel vm, KeyEventArgs e)
+    private bool HandleMiniPlayerKey(MainViewModel vm, KeyEventArgs e)
     {
         var p = vm.Player;
         if (e.Key == Key.Escape) { vm.CloseMiniPlayerCommand.Execute(null); return true; }
         if (e.KeyModifiers == KeyModifiers.None && e.Key is Key.Delete or Key.Back) { vm.DeletePlayingCommand.Execute(null); return true; }
         if (e.KeyModifiers == KeyModifiers.None && e.Key == Key.I) { vm.EditPlayingCommand.Execute(null); return true; }
+        if (e.KeyModifiers == KeyModifiers.None && e.Key == Key.F) { ToggleQuickFavorite(); return true; }
         switch (Shortcuts.Match(e, Shortcuts.Player))
         {
             case "play": p.TogglePlayCommand.Execute(null); return true;

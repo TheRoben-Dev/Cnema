@@ -522,7 +522,7 @@ public sealed partial class SettingsViewModel : ObservableObject
             Rewatch = FeatureRewatch, OnThisDay = FeatureOnThisDay, People = FeaturePeople, Milestones = FeatureMilestones, Recap = FeatureRecap, PlayAll = FeaturePlayAll, Backup = FeatureBackup, SeveralFolders = FeatureSeveralFolders,
             Highlights = FeatureHighlights, SmartTitles = FeatureSmartTitles, AutoTitles = FeatureAutoTitles && FeatureSmartTitles,
             Speech = FeatureSpeech, Visual = FeatureVisual, Mascot = FeatureMascot, MakeRoom = FeatureMakeRoom, RewatchReminders = FeatureRewatchReminders, Badges = FeatureBadges, Playtime = FeaturePlaytime, MochiSaves = FeatureMochiSaves, MochiEmpty = FeatureMochiEmpty, MochiBadges = FeatureMochiBadges, MochiSeasonal = FeatureMochiSeasonal, MochiSleepy = FeatureMochiSleepy, MochiFollow = FeatureMochiFollow, MochiPoke = FeatureMochiPoke, MochiBackup = FeatureMochiBackup, MochiHelper = FeatureMochiHelper,
-            Splash = FeatureSplash, Laughs = FeatureLaughs, Wrapped = FeatureWrapped,
+            Splash = FeatureSplash, Laughs = FeatureLaughs, Voices = FeatureVoices, Wrapped = FeatureWrapped,
             SmartThumbs = FeatureSmartThumbs, TrimSuggestions = FeatureTrimSuggestions,
         };
         WriteEditing(settings);

@@ -35,6 +35,8 @@ public sealed class VideoEntry
     public VisualInfo? Visual { get; set; }
     /// <summary>Laughter and hype (cheering, shouting); null until it has been listened to.</summary>
     public SoundInfo? Sound { get; set; }
+    /// <summary>The voices heard in it, grouped by who's speaking; null until it has been listened to.</summary>
+    public VoiceInfo? Voices { get; set; }
 
     [System.Text.Json.Serialization.JsonIgnore]
     public string FileName => System.IO.Path.GetFileName(Path);
@@ -64,6 +66,7 @@ public sealed class VideoEntry
         Speech ??= other.Speech;
         Visual ??= other.Visual;
         Sound ??= other.Sound;
+        Voices ??= other.Voices;
     }
 }
 
@@ -87,6 +90,32 @@ public sealed class SmartInfo
     /// <summary>Dead air at the end to trim away, starting here (ms); 0 when there's none.</summary>
     public long TrimEndMs { get; set; }
     [System.Text.Json.Serialization.JsonIgnore] public bool HasTrimSuggestion => TrimStartMs > 0 || TrimEndMs > 0;
+}
+
+/// <summary>The different voices in a video: each one's voiceprint and where it talks (from the transcript's lines).</summary>
+public sealed class VoiceInfo
+{
+    public int Version { get; set; }
+    public List<VoiceSpeaker> Speakers { get; set; } = new();
+    /// <summary>Friends who were added to Who was there because their voice was recognised.</summary>
+    public List<string> Added { get; set; } = new();
+}
+
+public sealed class VoiceSpeaker
+{
+    /// <summary>The average voiceprint (256 numbers, length 1), as base64 floats to keep the library file small.</summary>
+    public string Print { get; set; } = "";
+    /// <summary>How long this voice talks in the video, in milliseconds.</summary>
+    public long Ms { get; set; }
+    /// <summary>Where it talks: start and end (ms) of its longest lines, at most a dozen.</summary>
+    public List<long[]> Lines { get; set; } = new();
+    /// <summary>The best line to play back for "Who's that?".</summary>
+    public string Quote { get; set; } = "";
+
+    [System.Text.Json.Serialization.JsonIgnore] private float[]? _vec;
+    [System.Text.Json.Serialization.JsonIgnore]
+    public float[] Vec => _vec ??= Print.Length == 0 ? Array.Empty<float>() : System.Runtime.InteropServices.MemoryMarshal.Cast<byte, float>(Convert.FromBase64String(Print)).ToArray();
+    public static string Pack(float[] v) => Convert.ToBase64String(System.Runtime.InteropServices.MemoryMarshal.AsBytes(v.AsSpan()));
 }
 
 /// <summary>Where people laugh and where it gets loud with excitement, heard on this computer by the sound model.</summary>

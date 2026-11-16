@@ -14,7 +14,7 @@ public sealed partial class SpeechService : IDisposable
     /// <summary>Bumped when the way speech is written down changes; older results are redone.</summary>
     public const int Version = 1;
     private const int Rate = 16_000;
-    private static readonly TimeSpan Chunk = TimeSpan.FromMinutes(5);
+    internal static readonly TimeSpan Chunk = TimeSpan.FromMinutes(5);
 
     private readonly WhisperFactory _factory;
 

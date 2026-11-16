@@ -954,12 +954,13 @@
     <!-- ======================= QUICK PLAYER ======================= -->
     <!-- Plain playback over the library, almost window-sized; Edit opens the same video in the full editor.
          (Called the mini player in code: it started out as a small corner player.) -->
-    <Panel IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).IsMiniPlayerOpen}">
+    <Panel x:Name="MiniArea" IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).IsMiniPlayerOpen}">
       <Border x:Name="MiniScrim" Background="{DynamicResource ScrimLight}" />
-      <Border x:Name="MiniPlayer" Classes="miniplayer" Margin="48,56,48,40"
+      <!-- Sized in code to the video's shape (MainWindow.QuickPlayer.cs), so there are no black bars -->
+      <Border x:Name="MiniPlayer" Classes="miniplayer" Margin="48,56,48,40" HorizontalAlignment="Center" VerticalAlignment="Center"
               DataContext="{Binding Player}" x:DataType="vm:PlayerViewModel">
         <DockPanel>
-          <StackPanel DockPanel.Dock="Bottom" Margin="14,2,14,12" Spacing="2">
+          <StackPanel x:Name="MiniBar" DockPanel.Dock="Bottom" Margin="14,2,14,12" Spacing="2">
             <c:TrimTimeline Duration="{Binding Duration}" Position="{Binding Position}"
                             InPoint="{Binding InPoint}" OutPoint="{Binding OutPoint}"
                             SeekCommand="{Binding SeekCommand}" Accent="{DynamicResource Accent}" RangeBrush="{DynamicResource Highlight}"
@@ -1016,6 +1017,19 @@
                 <Button Classes="ghost" Focusable="False" Padding="6" Margin="0,0,8,0" svc:Tr.Tip="Next video (→)"
                         Command="{Binding #Root.((vm:MainViewModel)DataContext).NextClipCommand}">
                   <PathIcon Data="{StaticResource IcChevronRight}" Width="18" Height="18" />
+                </Button>
+                <!-- Favourite: the star fills, and a glow bursts out of it when it's turned on -->
+                <Button Classes="ghost" Focusable="False" Padding="6" svc:Tr.Tip="Favourite (F)" Click="OnQuickFavorite">
+                  <Panel Width="16" Height="16">
+                    <Ellipse x:Name="QuickFavRing" Width="16" Height="16" Opacity="0" IsHitTestVisible="False"
+                             Stroke="#FFD166" StrokeThickness="2" RenderTransform="scale(1)" />
+                    <Panel x:Name="QuickFavStar" RenderTransform="scale(1)">
+                      <PathIcon Data="{StaticResource IcStarOutline}" Width="16" Height="16" IsVisible="{Binding !IsFavorite}" />
+                      <Border IsVisible="{Binding IsFavorite}" CornerRadius="8" BoxShadow="0 0 10 1 #66FFD166">
+                        <PathIcon Data="{StaticResource IcStar}" Width="16" Height="16" Foreground="#FFD166" />
+                      </Border>
+                    </Panel>
+                  </Panel>
                 </Button>
                 <!-- Name, tags and friends of this video, and Delete (to the bin), without leaving the player -->
                 <Button Classes="ghost" Focusable="False" Padding="6" svc:Tr.Tip="Name, tags and friends (I)"

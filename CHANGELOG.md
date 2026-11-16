@@ -2,6 +2,10 @@
 
 What changed in each Savefile (formerly Cnema) release. The app shows the entries you have not seen yet after it updates.
 
+## 0.40.1
+- The Quick player now takes the shape of the video: an ultrawide clip gets a wide, short player and a phone clip a narrow one, so there are no black bars beside the picture. It resizes smoothly when the next clip has another shape (instantly with Reduced motion on).
+- A favourite star in the Quick player, next to tags and delete. It glows when you turn it on and stays filled while the clip is a favourite. Press F to do the same.
+
 ## 0.40.0
 - Wrapped: the funny bits now come with their setup. Each laugh starts at what led to it (the line someone said, never mid-sentence) and the laugh plays out before the cut. Quick cuts never chop a laugh in half any more, and Best laughs is a run of full moments instead of two-second flashes.
 - Wrapped plays smoothly: clips recorded at 60 fps played at half speed during the slow zooms, and the music could drop out for most of a second after a loud clip. Both are fixed.

@@ -54,6 +54,7 @@ public sealed partial class SettingsViewModel
     [ObservableProperty] private bool _featureMochiBackup;
     [ObservableProperty] private bool _featureMochiHelper;
     [ObservableProperty] private bool _featureLaughs;
+    [ObservableProperty] private bool _featureVoices;
     [ObservableProperty] private bool _featureWrapped;
     [ObservableProperty] private bool _featureSmartThumbs;
     [ObservableProperty] private bool _featureTrimSuggestions;
@@ -133,6 +134,7 @@ public sealed partial class SettingsViewModel
         FeatureMochiBackup = f.MochiBackup;
         FeatureMochiHelper = f.MochiHelper;
         FeatureLaughs = f.Laughs;
+        FeatureVoices = f.Voices;
         FeatureWrapped = f.Wrapped;
         FeatureSmartThumbs = f.SmartThumbs;
         FeatureTrimSuggestions = f.TrimSuggestions;
