@@ -41,7 +41,7 @@ Savefile updates itself after that.
   clip lengths, webcam overlay, session recording with bookmarks, separate game and mic tracks,
   per-game profiles and storage limits.
 - **Make it yours:** everything optional can be switched off under **Settings, Features**. Dark and light mode,
-  rebindable shortcuts (press **?**), accessibility options, controller mode, portable mode and settings backup.
+  rebindable shortcuts (press **?**), accessibility options, portable mode and settings backup.
 - **Languages:** English and Swedish, following the system language by default. Translations are flat JSON
   files in `src/Cnema/Assets/Lang/` (`"English": "translation"`); `scripts/check-translations.py` lists gaps.
 

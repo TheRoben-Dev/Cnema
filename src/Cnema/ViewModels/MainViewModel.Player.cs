@@ -9,8 +9,8 @@ public sealed partial class MainViewModel
 {
     [ObservableProperty] private bool _isMiniPlayerOpen;
 
-    /// <summary>Videos open in the mini player first. Controller mode always uses the full player.</summary>
-    private bool UseMiniPlayer => Features.MiniPlayer && !IsControllerMode;
+    /// <summary>Videos open in the mini player first.</summary>
+    private bool UseMiniPlayer => Features.MiniPlayer;
     public bool ShowMiniPlayerButton => UseMiniPlayer;
 
     /// <summary>Edit: the same video, same spot, in the full player with the trim tools.</summary>

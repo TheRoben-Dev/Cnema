@@ -83,26 +83,6 @@
 
   <LayoutTransformControl x:Name="Scaler">
   <DockPanel>
-    <!-- ======================= CONTROLLER LEGEND ======================= -->
-    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Bg1}" BorderBrush="{DynamicResource Line}" BorderThickness="0,1,0,0"
-            Padding="22,9" IsVisible="{Binding IsControllerMode}">
-      <ItemsControl ItemsSource="{Binding PadHints}" HorizontalAlignment="Right">
-        <ItemsControl.ItemsPanel>
-          <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="20" /></ItemsPanelTemplate>
-        </ItemsControl.ItemsPanel>
-        <ItemsControl.ItemTemplate>
-          <DataTemplate x:DataType="vm:PadHint">
-            <StackPanel Orientation="Horizontal" Spacing="7">
-              <Border Classes="padkey" Classes.a="{Binding IsA}" Classes.b="{Binding IsB}" Classes.x="{Binding IsX}" Classes.y="{Binding IsY}">
-                <TextBlock Text="{Binding Glyph}" />
-              </Border>
-              <TextBlock Text="{Binding Label}" FontSize="12" VerticalAlignment="Center" Foreground="{DynamicResource TextDim}" />
-            </StackPanel>
-          </DataTemplate>
-        </ItemsControl.ItemTemplate>
-      </ItemsControl>
-    </Border>
-
   <Panel x:Name="RootPanel">
     <!-- ======================= LIBRARY ======================= -->
     <Grid ColumnDefinitions="248,*" IsVisible="{Binding !IsPlayerOpen}">
@@ -1563,7 +1543,6 @@
                 <StackPanel Margin="14,8" Spacing="2">
                   <CheckBox IsChecked="{Binding SetupClipping}" svc:Tr.Content="Background clipping: save past moments with a hotkey" />
                   <CheckBox IsChecked="{Binding SetupSessions}" IsEnabled="{Binding SetupClipping}" svc:Tr.Content="Session recording: record a whole session as one video" />
-                  <CheckBox IsChecked="{Binding SetupController}" svc:Tr.Content="Controller support, for handhelds and TVs" />
                   <CheckBox IsChecked="{Binding SetupHoverPreview}" svc:Tr.Content="Hover preview: skim a video by moving the pointer over it" />
                   <CheckBox IsChecked="{Binding SetupLoudMarkers}" svc:Tr.Content="Loud moment markers on the timeline" />
                   <CheckBox IsChecked="{Binding SetupHoverGlow}" svc:Tr.Content="Hover glow around videos" />
@@ -1682,37 +1661,6 @@
                 </StackPanel>
               </Border>
 
-              <TextBlock Classes="label" svc:Tr.Text="CONTROLLER" Margin="0,8,0,0" IsVisible="{Binding FeatureController}" />
-              <Border Classes="group" IsVisible="{Binding FeatureController}">
-                <StackPanel>
-                  <Grid Classes="row" ColumnDefinitions="*,Auto">
-                    <StackPanel Spacing="2">
-                      <TextBlock svc:Tr.Text="Controller mode" />
-                      <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap"
-                                 svc:Tr.Text="Bigger layout and full gamepad navigation, for handhelds and TVs." />
-                      <TextBlock FontSize="11" TextWrapping="Wrap" Foreground="{DynamicResource Highlight}"
-                                 Text="{Binding #Root.((vm:MainViewModel)DataContext).PadStatus}"
-                                 IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).IsControllerMode}" />
-                    </StackPanel>
-                    <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding ControllerMode}" />
-                  </Grid>
-                  <Border Classes="sep" />
-                  <Grid Classes="row" ColumnDefinitions="*,Auto">
-                    <TextBlock svc:Tr.Text="Open full screen in Controller mode" />
-                    <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding ControllerFullscreen}" />
-                  </Grid>
-                  <Border Classes="sep" />
-                  <Grid Classes="row" ColumnDefinitions="*,Auto">
-                    <StackPanel Spacing="2">
-                      <TextBlock svc:Tr.Text="Simple editor in Controller mode" />
-                      <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap"
-                                 svc:Tr.Text="Only trimming, parts and export, so everything can be reached with the controller. Turn off for every tool." />
-                    </StackPanel>
-                    <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding ControllerSimpleEditor}" />
-                  </Grid>
-                </StackPanel>
-              </Border>
-
               <TextBlock Classes="label" svc:Tr.Text="KEYBOARD" Margin="0,8,0,0" />
               <Border Classes="group">
                 <Grid Classes="row" ColumnDefinitions="*,Auto">
@@ -1796,14 +1744,6 @@
                         <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="If Savefile or your computer stops in the middle of a session, what was recorded is saved the next time Savefile starts." />
                       </StackPanel>
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureRecoverSessions}" />
-                    </Grid>
-                    <Border Classes="sep" />
-                    <Grid Classes="row" ColumnDefinitions="*,Auto">
-                      <StackPanel Spacing="2">
-                        <TextBlock svc:Tr.Text="Controller support" />
-                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Controller mode, for handhelds and TVs." />
-                      </StackPanel>
-                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureController}" />
                     </Grid>
                     <Border Classes="sep" />
                     <Grid Classes="row" ColumnDefinitions="*,Auto">
@@ -3142,13 +3082,13 @@
             </StackPanel>
 
             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right" VerticalAlignment="Center">
-              <Button Classes="ghost" Classes.on="{Binding LoopRange}" Command="{Binding AbLoopCommand}" ToolTip.Tip="{Binding AbTip}" MinWidth="54" IsVisible="{Binding IsFullEditor}">
+              <Button Classes="ghost" Classes.on="{Binding LoopRange}" Command="{Binding AbLoopCommand}" ToolTip.Tip="{Binding AbTip}" MinWidth="54">
                 <StackPanel Orientation="Horizontal" Spacing="5">
                   <PathIcon Data="{StaticResource IcLoop}" Width="13" Height="13" />
                   <TextBlock Text="{Binding AbText}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
                 </StackPanel>
               </Button>
-              <Button Classes="ghost" Classes.on="{Binding IsRateChanged}" svc:Tr.Tip="Playback speed (Shift+, slower, Shift+. faster)" MinWidth="52" IsVisible="{Binding IsFullEditor}">
+              <Button Classes="ghost" Classes.on="{Binding IsRateChanged}" svc:Tr.Tip="Playback speed (Shift+, slower, Shift+. faster)" MinWidth="52">
                 <TextBlock Text="{Binding RateText}" FontSize="13" FontWeight="SemiBold" />
                 <Button.Flyout>
                   <Flyout Placement="TopEdgeAlignedRight">
@@ -3233,7 +3173,7 @@
                   <TextBlock Classes="hint" Text="N" />
                 </StackPanel>
               </Button>
-              <Border Classes="toolsep" IsVisible="{Binding IsFullEditor}" />
+              <Border Classes="toolsep" />
               <Button Classes="tool" Command="{Binding AddCaptionCommand}" svc:Tr.Tip="Add a caption at the playhead (C)" IsVisible="{Binding ShowCaptionsTool}">
                 <StackPanel Orientation="Horizontal" Spacing="6">
                   <PathIcon Data="{StaticResource IcText}" />

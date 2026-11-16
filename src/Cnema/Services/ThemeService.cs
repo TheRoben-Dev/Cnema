@@ -151,7 +151,7 @@ public static class ThemeService
         r["ScrimLight"] = new SolidColorBrush(C(s.Light ? "#2A2140" : "#050609"), s.Light ? 0.35 : 0.60);
         r["CardGlow"] = new BoxShadows(new BoxShadow { Blur = 22, Color = Color.FromArgb((byte)(s.Light ? 0x40 : 0x4D), accent.R, accent.G, accent.B) });
         r["DialogShadow"] = new BoxShadows(new BoxShadow { OffsetY = 18, Blur = 60, Color = s.Light ? Color.FromArgb(0x38, 0x2A, 0x21, 0x40) : Color.FromArgb(0x80, 0, 0, 0) });
-        // Keyboard / controller focus: the same accent glow as a hovered card, a little tighter and stronger.
+        // Keyboard focus: the same accent glow as a hovered card, a little tighter and stronger.
         r["FocusGlow"] = new BoxShadows(new BoxShadow { Blur = 14, Spread = 1, Color = Color.FromArgb(0x73, accent.R, accent.G, accent.B) });
         r["FocusRing"] = new SolidColorBrush(Mix(accent, s.Light ? Colors.Black : Colors.White, 0.12));
         // Badges and small buttons sit on thumbnails and video, so they stay dark in light mode too.

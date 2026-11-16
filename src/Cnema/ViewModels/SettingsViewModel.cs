@@ -5,15 +5,6 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace Cnema.ViewModels;
 
-/// <summary>One entry of the Controller mode button legend. Kind picks the face-button colour.</summary>
-public sealed record PadHint(string Glyph, string Label, string Kind)
-{
-    public bool IsA => Kind == "a";
-    public bool IsB => Kind == "b";
-    public bool IsX => Kind == "x";
-    public bool IsY => Kind == "y";
-}
-
 /// <summary>One entry of the language picker; Code "" follows the system.</summary>
 public sealed record LanguageOption(string Code, string Name)
 {
@@ -190,10 +181,6 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     [ObservableProperty] private bool _launchAtLogin;
     [ObservableProperty] private bool _keepInBackground;
-    [ObservableProperty] private bool _controllerMode;
-    [ObservableProperty] private bool _controllerFullscreen;
-    [ObservableProperty] private bool _controllerSimpleEditor;
-    [ObservableProperty] private string _controllerStatus = "";
     [ObservableProperty] private bool _clipEnabled;
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(Footprint))] private Choice _length;
     [ObservableProperty] private Choice _resolution;
@@ -260,13 +247,12 @@ public sealed partial class SettingsViewModel : ObservableObject
     public bool IsAccessibilityPage => Page == 4;
     public bool ShowClippingSettings => IsClippingPage && FeatureClipping;
     public bool ShowClippingOffNotice => IsClippingPage && !FeatureClipping;
-    /// <summary>LB / RB on a controller, Ctrl+Tab on a keyboard.</summary>
+    /// <summary>Ctrl+Tab / Ctrl+Shift+Tab.</summary>
     public void CyclePage(int delta) => Page = ((Page + delta) % PageNames.Length + PageNames.Length) % PageNames.Length;
 
     // ---------- features ----------
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(ShowClippingSettings), nameof(ShowClippingOffNotice))] private bool _featureClipping;
     [ObservableProperty] private bool _featureSessions;
-    [ObservableProperty] private bool _featureController;
     [ObservableProperty] private bool _featureHoverPreview;
     [ObservableProperty] private bool _featureLoudMarkers;
     [ObservableProperty] private bool _featureHoverGlow;
@@ -349,9 +335,6 @@ public sealed partial class SettingsViewModel : ObservableObject
         var c = settings.Clip;
         _launchAtLogin = AutostartService.IsEnabled;
         _keepInBackground = settings.KeepInBackground;
-        _controllerMode = settings.ControllerMode;
-        _controllerFullscreen = settings.ControllerFullscreen;
-        _controllerSimpleEditor = settings.ControllerSimpleEditor;
         _clipEnabled = c.Enabled;
         _length = Nearest(Lengths, c.Seconds);
         _resolution = Resolutions.FirstOrDefault(r => r.Value == c.Height) ?? Resolutions[0];
@@ -372,7 +355,6 @@ public sealed partial class SettingsViewModel : ObservableObject
         var f = settings.Features;
         _featureClipping = f.Clipping;
         _featureSessions = f.Sessions;
-        _featureController = f.Controller;
         _featureHoverPreview = f.HoverPreview;
         _featureLoudMarkers = f.LoudMarkers;
         _featureHoverGlow = f.HoverGlow;
@@ -504,9 +486,6 @@ public sealed partial class SettingsViewModel : ObservableObject
         }
         var c = settings.Clip;
         settings.KeepInBackground = KeepInBackground;
-        settings.ControllerMode = ControllerMode;
-        settings.ControllerFullscreen = ControllerFullscreen;
-        settings.ControllerSimpleEditor = ControllerSimpleEditor;
         c.Enabled = ClipEnabled;
         c.Seconds = Length.Value;
         c.Height = Resolution.Value;
@@ -531,7 +510,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         settings.Language = Language.Code;
         settings.Features = new FeatureSettings
         {
-            Clipping = FeatureClipping, Sessions = FeatureSessions, Controller = FeatureController,
+            Clipping = FeatureClipping, Sessions = FeatureSessions,
             HoverPreview = FeatureHoverPreview, LoudMarkers = FeatureLoudMarkers, HoverGlow = FeatureHoverGlow,
             Collections = FeatureCollections, Unwatched = FeatureUnwatched, CleanUp = FeatureCleanUp, Stats = FeatureStats,
             MiniPlayer = FeatureMiniPlayer, Chapters = FeatureChapters,
@@ -545,7 +524,6 @@ public sealed partial class SettingsViewModel : ObservableObject
         WriteEditing(settings);
         // Switching a module off switches off what it was doing, not only its buttons.
         if (!FeatureClipping) c.Enabled = false;
-        if (!FeatureController) settings.ControllerMode = false;
         settings.Accessibility = new AccessibilitySettings
         {
             UiScale = UiScale.Value / 100.0, HighContrast = HighContrast, ReducedMotion = ReducedMotion,

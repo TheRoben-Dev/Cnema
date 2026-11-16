@@ -28,12 +28,6 @@ public sealed class AppSettings
     /// <summary>The version that ran last time; a newer running version shows "What's new".</summary>
     public string? LastRunVersion { get; set; }
 
-    /// <summary>Bigger layout, gamepad navigation and on-screen button hints (handhelds, TV PCs).</summary>
-    public bool ControllerMode { get; set; }
-    /// <summary>In Controller mode, open full screen like a console app.</summary>
-    public bool ControllerFullscreen { get; set; } = true;
-    /// <summary>In Controller mode the editor shows only trim, parts and export.</summary>
-    public bool ControllerSimpleEditor { get; set; } = true;
 
     /// <summary>Which optional parts of Cnema are switched on (Settings, Features).</summary>
     public FeatureSettings Features { get; set; } = new();
@@ -91,7 +85,6 @@ public sealed class FeatureSettings
 {
     public bool Clipping { get; set; } = true;
     public bool Sessions { get; set; } = true;
-    public bool Controller { get; set; } = true;
     public bool HoverPreview { get; set; } = true;
     public bool LoudMarkers { get; set; } = true;
     public bool HoverGlow { get; set; } = true;

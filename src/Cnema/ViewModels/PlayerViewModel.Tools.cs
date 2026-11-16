@@ -25,34 +25,12 @@ public sealed partial class PlayerViewModel
     /// <summary>"Remove all captions and speed changes", under the pages it clears.</summary>
     public bool ShowClearEffects => HasClearableEffects && (IsCaptionsPage || IsSpeedPage || IsZoomPage || IsBlurPage);
 
-    /// <summary>
-    /// Controller mode's simple editor: trim, parts, markers and export only. The advanced tools are hidden
-    /// (anything already made with them still exports), so every button can be reached with the D-pad.
-    /// </summary>
-    public bool IsSimpleEditor
-    {
-        get => _isSimpleEditor;
-        set
-        {
-            if (_isSimpleEditor == value) return;
-            _isSimpleEditor = value;
-            foreach (var name in new[]
-                     {
-                         nameof(IsSimpleEditor), nameof(IsFullEditor), nameof(ShowCaptionsTool), nameof(ShowSpeedTool),
-                         nameof(ShowZoomTool), nameof(ShowBlurTool), nameof(ShowSoundTool), nameof(ShowBrandTool),
-                     })
-                OnPropertyChanged(name);
-            RefreshToolPages();
-        }
-    }
-    private bool _isSimpleEditor;
-    public bool IsFullEditor => !IsSimpleEditor;
-    public bool ShowCaptionsTool => ShowCaptionTools && !IsSimpleEditor;
-    public bool ShowSpeedTool => ShowSpeedTools && !IsSimpleEditor;
-    public bool ShowZoomTool => ShowZoomTools && !IsSimpleEditor;
-    public bool ShowBlurTool => ShowBlurTools && !IsSimpleEditor;
-    public bool ShowSoundTool => ShowSoundPage && !IsSimpleEditor;
-    public bool ShowBrandTool => ShowBranding && !IsSimpleEditor;
+    public bool ShowCaptionsTool => ShowCaptionTools;
+    public bool ShowSpeedTool => ShowSpeedTools;
+    public bool ShowZoomTool => ShowZoomTools;
+    public bool ShowBlurTool => ShowBlurTools;
+    public bool ShowSoundTool => ShowSoundPage;
+    public bool ShowBrandTool => ShowBranding;
 
     /// <summary>The Sound page also holds the audio track switches, so it shows for either.</summary>
     public bool ShowSoundPage => ShowAudioTools || HasAudioTracks || ShowMusicTools;
@@ -88,7 +66,6 @@ public sealed partial class PlayerViewModel
     private bool IsAvailable(ToolPage page) => page switch
     {
         ToolPage.Trim or ToolPage.Share => true,
-        _ when IsSimpleEditor => false,
         ToolPage.Captions => ShowCaptionTools,
         ToolPage.Speed => ShowSpeedTools,
         ToolPage.Sound => ShowSoundPage,
