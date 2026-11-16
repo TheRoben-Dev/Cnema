@@ -358,7 +358,6 @@ public static class WrappedService
             var g = new List<string>();
             var n = 0;
             // The shot itself.
-            string cur;
             string? audioIn = null;
             if (shot.Kind == WrappedShotKind.Card)
             {

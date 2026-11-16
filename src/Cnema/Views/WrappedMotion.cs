@@ -329,13 +329,14 @@ public static class WrappedMotion
         var stdin = proc.StandardInput.BaseStream;
         try
         {
-            (Control Page, WrappedMotionCard Card, BlobMascot? Blob) built = default;
+            Control? page = null;
+            WrappedMotionCard? canvas = null;
+            BlobMascot? blobControl = null;
             RenderTargetBitmap? bitmap = null;
             var stride = width * 4;
-            var buffer = new byte[stride * height];
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
-                built = Build(card, seconds, beats, downbeats);
+                (page, canvas, blobControl) = Build(card, seconds, beats, downbeats);
                 bitmap = new RenderTargetBitmap(new PixelSize(width, height), new Vector(96 * width / WrappedMotionCard.W, 96 * height / WrappedMotionCard.H));
             });
             var cheered = 0;
@@ -350,8 +351,8 @@ public static class WrappedMotion
                     for (var i = 0; i < batch; i++)
                     {
                         var t = (first + i) / (double)fps;
-                        built.Card.Time = t;
-                        if (built.Blob is { } blob)
+                        canvas!.Time = t;
+                        if (blobControl is { } blob)
                         {
                             // The blob drops in, then hops on downbeats.
                             var enter = Math.Clamp((t - 0.6) / 0.6, 0, 1);
@@ -363,7 +364,7 @@ public static class WrappedMotion
                             }
                             blob.DriveTo(t);
                         }
-                        bitmap!.Render(built.Page);
+                        bitmap!.Render(page!);
                         var data = new byte[stride * height];
                         unsafe
                         {
@@ -380,7 +381,6 @@ public static class WrappedMotion
             bitmap?.Dispose();
             if (proc.ExitCode != 0 || !File.Exists(output))
                 throw new InvalidOperationException(Loc.F("Couldn't draw the {0} card: {1}", card.Kind, (await errors).Trim()));
-            _ = buffer;
         }
         catch
         {
