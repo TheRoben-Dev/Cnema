@@ -353,6 +353,13 @@
                     <TextBlock svc:Tr.Text="Stats" FontSize="13" VerticalAlignment="Center" />
                   </StackPanel>
                 </Button>
+                <Button x:Name="ShrinkButton" Classes="navbutton" IsVisible="{Binding ShowShrink}" Command="{Binding OpenShrinkCommand}"
+                        svc:Tr.Tip="Win back space from big videos you don't watch, without losing quality">
+                  <StackPanel Orientation="Horizontal" Spacing="10">
+                    <PathIcon Data="{StaticResource IcCompress}" Width="15" Height="15" Foreground="{DynamicResource TextDim}" />
+                    <TextBlock svc:Tr.Text="Make room" FontSize="13" VerticalAlignment="Center" />
+                  </StackPanel>
+                </Button>
                 <Button x:Name="SmartRenameButton" Classes="navbutton" IsVisible="{Binding ShowSmartTitles}" Command="{Binding OpenSmartRenameCommand}"
                         svc:Tr.Tip="Better names for your clips, from the game, who was there and when">
                   <StackPanel Orientation="Horizontal" Spacing="10">
@@ -1475,6 +1482,73 @@
                       <TextBlock Grid.Column="1" Classes="dim" Text="{Binding OldTitle}" FontSize="12" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTip.Tip="{Binding Item.Entry.Path}" />
                       <TextBlock Grid.Column="2" Classes="dim" Text="→" Margin="10,0" VerticalAlignment="Center" />
                       <TextBox Grid.Column="3" Text="{Binding NewTitle}" CornerRadius="8" FontSize="12" />
+                    </Grid>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </DockPanel>
+      </Border>
+    </Border>
+
+    <!-- ======================= MAKE ROOM ======================= -->
+    <Border x:Name="ShrinkScrim" Background="{DynamicResource Scrim}" IsVisible="{Binding IsShowingShrink}">
+      <Border Width="720" MaxHeight="760" Margin="0,40" VerticalAlignment="Center" HorizontalAlignment="Center" Background="{DynamicResource Bg1}"
+              BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="16" BoxShadow="{DynamicResource DialogShadow}"
+              DataContext="{Binding Shrink}" x:DataType="vm:ShrinkViewModel">
+        <DockPanel>
+          <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="24,22,24,6">
+            <TextBlock svc:Tr.Text="Make room" FontSize="17" FontWeight="Bold" VerticalAlignment="Center" />
+            <Button Grid.Column="1" Classes="ghost" Padding="6" svc:Tr.Tip="Close (stops after the video it's on)" Command="{Binding #Root.((vm:MainViewModel)DataContext).CloseShrinkCommand}">
+              <PathIcon Data="{StaticResource IcClose}" Width="13" Height="13" />
+            </Button>
+          </Grid>
+          <TextBlock DockPanel.Dock="Top" Classes="dim" FontSize="12" TextWrapping="Wrap" Margin="24,0,24,10" Text="{Binding Intro}" />
+          <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="24,0,24,8" IsVisible="{Binding HasRows}" IsEnabled="{Binding IsIdle}">
+            <Button Classes="ghost" Padding="8,3" FontSize="12" svc:Tr.Content="Tick all" Command="{Binding #Root.((vm:MainViewModel)DataContext).ShrinkCheckAllCommand}" />
+            <Button Classes="ghost" Padding="8,3" FontSize="12" svc:Tr.Content="Tick none" Command="{Binding #Root.((vm:MainViewModel)DataContext).ShrinkCheckNoneCommand}" />
+          </StackPanel>
+          <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Line}" BorderThickness="0,1,0,0" Padding="24,12" IsVisible="{Binding HasRows}">
+            <StackPanel Spacing="8">
+              <TextBlock Classes="dim" Text="{Binding Total}" FontSize="12" TextWrapping="Wrap" />
+              <!-- the confirmation, before anything is touched -->
+              <Border Background="{DynamicResource AccentSoft}" CornerRadius="10" Padding="12,10" IsVisible="{Binding IsConfirming}">
+                <StackPanel Spacing="8">
+                  <TextBlock FontSize="12" TextWrapping="Wrap"
+                             svc:Tr.Text="Each ticked video is encoded again on this computer, quietly in the background (a big one can take a few minutes). When a new copy is checked and clearly smaller, it takes the original's place, keeping its name, date, favourite, tags, friends and notes. The original goes to the bin for 24 hours." />
+                  <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                    <Button Classes="soft" svc:Tr.Content="Not now" Command="{Binding #Root.((vm:MainViewModel)DataContext).CancelShrinkAskCommand}" />
+                    <Button Classes="soft" svc:Tr.Content="Try one first" Command="{Binding #Root.((vm:MainViewModel)DataContext).ShrinkOneCommand}" />
+                    <Button Classes="accent" svc:Tr.Content="Make them smaller" Command="{Binding #Root.((vm:MainViewModel)DataContext).ShrinkAllCommand}" />
+                  </StackPanel>
+                </StackPanel>
+              </Border>
+              <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding !IsConfirming}">
+                <TextBlock Text="{Binding Status}" FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,12,0" />
+                <Button Grid.Column="1" Classes="accent" svc:Tr.Content="Make room…" IsEnabled="{Binding IsIdle}"
+                        Command="{Binding #Root.((vm:MainViewModel)DataContext).AskShrinkCommand}" />
+              </Grid>
+            </StackPanel>
+          </Border>
+          <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <ItemsControl ItemsSource="{Binding Rows}" Margin="24,0,24,16">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><VirtualizingStackPanel /></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:ShrinkRow">
+                  <Border Classes="cleanrow">
+                    <Grid ColumnDefinitions="Auto,*,Auto">
+                      <CheckBox IsChecked="{Binding IsChecked}" VerticalAlignment="Center" MinWidth="0" Margin="0,0,8,0"
+                                IsEnabled="{Binding #Root.((vm:MainViewModel)DataContext).Shrink.IsIdle}" />
+                      <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Name}" FontSize="13" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Item.Entry.Path}" />
+                        <TextBlock Classes="dim" Text="{Binding Detail}" FontSize="11" />
+                        <ProgressBar Minimum="0" Maximum="1" Value="{Binding Progress}" Height="3" MinHeight="3" CornerRadius="2" IsVisible="{Binding IsWorking}" />
+                      </StackPanel>
+                      <TextBlock Grid.Column="2" Text="{Binding State}" FontSize="12" Foreground="{DynamicResource Highlight}" VerticalAlignment="Center"
+                                 MaxWidth="240" TextWrapping="Wrap" TextAlignment="Right" Margin="10,0,0,0" />
                     </Grid>
                   </Border>
                 </DataTemplate>
@@ -2619,6 +2693,14 @@
                         <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Find duplicates and broken, empty or very short files." />
                       </StackPanel>
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureCleanUp}" />
+                    </Grid>
+                    <Border Classes="sep" />
+                    <Grid Classes="row" ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="2">
+                        <TextBlock svc:Tr.Text="Make room" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Under Tools: big videos you haven't watched in months, encoded again as HEVC so they look the same in about half the space. You pick which, and the originals wait in the bin for 24 hours." />
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureMakeRoom}" />
                     </Grid>
                     <Border Classes="sep" />
                     <Grid Classes="row" ColumnDefinitions="*,Auto">

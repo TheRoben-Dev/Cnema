@@ -40,6 +40,7 @@ public sealed partial class SettingsViewModel
     [ObservableProperty] private bool _featureSpeech;
     [ObservableProperty] private bool _featureVisual;
     [ObservableProperty] private bool _featureMascot;
+    [ObservableProperty] private bool _featureMakeRoom;
     [ObservableProperty] private bool _featureRewatchReminders;
     [ObservableProperty] private bool _featureBadges;
     [ObservableProperty] private bool _featurePlaytime;
@@ -118,6 +119,7 @@ public sealed partial class SettingsViewModel
         FeatureSpeech = f.Speech;
         FeatureVisual = f.Visual;
         FeatureMascot = f.Mascot;
+        FeatureMakeRoom = f.MakeRoom;
         FeatureRewatchReminders = f.RewatchReminders;
         FeatureBadges = f.Badges;
         FeaturePlaytime = f.Playtime;
