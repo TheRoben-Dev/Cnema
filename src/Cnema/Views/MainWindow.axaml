@@ -2202,6 +2202,14 @@
                     <Border Classes="sep" />
                     <Grid Classes="row" ColumnDefinitions="*,Auto">
                       <StackPanel Spacing="2">
+                        <TextBlock svc:Tr.Text="Loading screen" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="The logo, the blob and what's being got ready while Savefile starts, including waking up the smart models you switched on. Click it to skip. Never shown when Savefile starts at login." />
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureSplash}" />
+                    </Grid>
+                    <Border Classes="sep" />
+                    <Grid Classes="row" ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="2">
                         <TextBlock svc:Tr.Text="Collections" />
                         <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Group videos from any folders, like playlists." />
                       </StackPanel>

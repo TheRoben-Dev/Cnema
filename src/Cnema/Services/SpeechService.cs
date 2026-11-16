@@ -51,6 +51,19 @@ public sealed partial class SpeechService : IDisposable
         catch (Exception ex) { Console.Error.WriteLine(ex.Message); return null; }
     }
 
+    /// <summary>
+    /// Gets the speech model ready for the loading screen: loads the native library and reads the model file
+    /// once, so the first video it listens to doesn't wait on the disk. Holds no memory afterwards.
+    /// </summary>
+    public static void Warm(string modelPath)
+    {
+        RuntimeCheck();
+        if (!File.Exists(modelPath)) return;
+        using var f = new FileStream(modelPath, FileMode.Open, FileAccess.Read, FileShare.Read, 1 << 20, FileOptions.SequentialScan);
+        var buffer = new byte[1 << 20];
+        while (f.Read(buffer, 0, buffer.Length) > 0) { }
+    }
+
     /// <summary>Threads for the model: some, never all; this is background work.</summary>
     private static int Threads => Math.Clamp(Environment.ProcessorCount / 2, 1, 4);
 
