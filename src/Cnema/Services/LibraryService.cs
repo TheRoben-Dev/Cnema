@@ -93,7 +93,7 @@ public sealed class LibraryService : IDisposable
                     continue;
                 }
                 var e = new VideoEntry { Path = f.FullName, Size = f.Length, ModifiedUtc = mtime };
-                if (hit is not null) e.CopyUserDataFrom(hit);
+                if (hit is not null) { e.CopyUserDataFrom(hit); e.CopyAnalysisFrom(hit); }
                 else if (GameTagger?.Invoke(f.FullName) is { } game) e.Tags.Add(game);
                 result.Add(e);
                 work.Add(e);
@@ -112,6 +112,7 @@ public sealed class LibraryService : IDisposable
                 var matches = orphans.Where(o => o.Size == e.Size && o.ModifiedUtc == e.ModifiedUtc).ToList();
                 if (matches.Count != 1) continue; // ambiguous or none: don't guess
                 e.CopyUserDataFrom(matches[0]);
+                e.CopyAnalysisFrom(matches[0]);
                 orphans.Remove(matches[0]);
                 // Remembered edits and collections follow the file too.
                 EntryMoved?.Invoke(matches[0].Path, e.Path);

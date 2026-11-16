@@ -1,0 +1,43 @@
+name: Models
+
+# Mirrors the optional smart-feature models to the "models" release of the public releases
+# repository, where the app downloads them from. Each file is checked against the SHA-256 the
+# app expects (src/Cnema/Services/ModelStore.cs), so the mirror can only ever hold those exact files.
+# Run by hand when a model is added or changed.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+      PUBLIC_REPO: TheRoben-Dev/Cnema-releases
+    steps:
+      - name: Download and check
+        run: |
+          set -euo pipefail
+          mkdir models && cd models
+          # file  sha256  source
+          while read -r file sha url; do
+            curl -fsSL --retry 3 -o "$file" "$url"
+            echo "$sha  $file" | sha256sum -c -
+          done <<'LIST'
+          ggml-base-q5_1.bin 422f1ae452ade6f30a004d7e5c6a43195e4433bc370bf23fac9cc591f01a8898 https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base-q5_1.bin
+          LIST
+          ls -la
+      - name: Publish
+        run: |
+          set -euo pipefail
+          if [ -z "$GH_TOKEN" ]; then echo "::error::RELEASES_TOKEN is not set"; exit 1; fi
+          cd models
+          # A pre-release, so the app's update check (latest release) never sees it.
+          if ! gh release view models --repo "$PUBLIC_REPO" >/dev/null 2>&1; then
+            gh release create models --repo "$PUBLIC_REPO" --prerelease --latest=false \
+              --title "Optional models" \
+              --notes "Models for Savefile's optional smart features (voice search and captions). Savefile downloads them itself when you switch a feature on in Settings and checks each one's SHA-256. Whisper models: MIT licence, from ggerganov/whisper.cpp."
+          fi
+          gh release upload models ./* --repo "$PUBLIC_REPO" --clobber

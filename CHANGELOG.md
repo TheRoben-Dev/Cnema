@@ -2,6 +2,12 @@
 
 What changed in each Savefile (formerly Cnema) release. The app shows the entries you have not seen yet after it updates.
 
+## 0.31.0
+- Voice search: Savefile can write down what's said in your videos (voice chat included, even on its own audio track), on this computer and only when it isn't busy. Search for something someone said, like "behind you", and the video comes up with the words on its card; open it and it starts right where they're said.
+- Captions while you watch: the new CC button in the player (or V) shows what's said as captions.
+- Captions for exports: in the editor, Captions, Add captions from what's said turns every line in the part you export into a caption you can still edit.
+- It needs a speech model, a one-time download of 57 MB. Switch on Settings, Features, Smart, Voice search and captions, then Download the speech model. After that nothing leaves your computer, and Remove the model frees the space again (the words already found stay searchable).
+
 ## 0.30.0
 - Best moments: Savefile now listens to and watches your videos, on this computer and only when it isn't busy, to find what stands out: sudden loud moments (shouts, gunfire, a crowd) and a lot going on on screen. It waits while you play. The moments that stand out most get a sparkle on their card, Sort by Best moments puts them first, and Worth a rewatch, Year in clips and Auto montage pick them (montages cut around the best few seconds it found). Nothing is downloaded and nothing leaves your computer.
 - Smart titles: names from the game, who was there and when, like "Late-night Valorant with Alex and Sam · 16 Nov". Edit has a new sparkle button that suggests one. Savefile never makes up what happened in a clip.

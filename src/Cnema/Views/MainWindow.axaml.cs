@@ -427,6 +427,7 @@ public partial class MainWindow : Window
             case "back1": p.SeekCommand.Execute(p.Position - 1000); return true;
             case "fwd1": p.SeekCommand.Execute(p.Position + 1000); return true;
             case "mute": p.ToggleMuteCommand.Execute(null); return true;
+            case "spoken" when vm.ShowSpeech: p.ToggleSpokenCommand.Execute(null); return true;
             case "speedUp": p.SpeedUpCommand.Execute(null); return true;
             case "speedDown": p.SpeedDownCommand.Execute(null); return true;
             default: return false;
@@ -707,6 +708,7 @@ public partial class MainWindow : Window
             case "volUp": p.Volume = Math.Min(125, p.Volume + 5); break;
             case "volDown": p.Volume = Math.Max(0, p.Volume - 5); break;
             case "mute": p.ToggleMuteCommand.Execute(null); break;
+            case "spoken" when vm.ShowSpeech: p.ToggleSpokenCommand.Execute(null); break;
             case "jumpIn": p.JumpToInCommand.Execute(null); break;
             case "jumpOut": p.JumpToOutCommand.Execute(null); break;
             case "setIn": p.SetInCommand.Execute(null); break;

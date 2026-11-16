@@ -36,6 +36,7 @@ public static class Shortcuts
         new("volUp", Player, "Volume up", "Up"),
         new("volDown", Player, "Volume down", "Down"),
         new("mute", Player, "Mute", "M"),
+        new("spoken", Player, "Show what's said as captions", "V"),
         new("fullscreen", Player, "Full screen", "F"),
         new("setIn", Player, "Mark the start of a selection", "I"),
         new("setOut", Player, "Mark the end of a selection", "O"),
@@ -69,7 +70,7 @@ public static class Shortcuts
         ("General", "Quit Savefile", Mod + "+Q"),
         ("General", "Close a dialog or the player", "Esc"),
         ("General", "Select all (while selecting)", Mod + "+A"),
-        ("General", "Quick player: play/pause, previous / next video, seek, mute, close", "Space ← → Shift+← → M Esc"),
+        ("General", "Quick player: play/pause, previous / next video, seek, mute, captions, close", "Space ← → Shift+← → M V Esc"),
     };
 
     private static string Mod => OperatingSystem.IsMacOS() ? "⌘" : "Ctrl";

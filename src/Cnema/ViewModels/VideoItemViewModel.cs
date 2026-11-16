@@ -79,6 +79,12 @@ public sealed partial class VideoItemViewModel : ObservableObject
     public static double HighlightThreshold { get; set; } = double.MaxValue;
     public bool IsHighlight => Entry.Smart is { } s && s.Excitement >= HighlightThreshold;
     public void RefreshHighlight() => OnPropertyChanged(nameof(IsHighlight));
+
+    /// <summary>While searching: the words that matched what's said in the video, shown on the card.</summary>
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(HasSaid))] private string? _said;
+    /// <summary>Where those words are said (ms), so opening the video starts there.</summary>
+    public long SaidAtMs { get; set; } = -1;
+    public bool HasSaid => Said is not null;
     public bool IsBackedUp => BackedUp?.Invoke(Entry) == true;
     public void RefreshBackup() => OnPropertyChanged(nameof(IsBackedUp));
     public bool HasPeople => PeopleEnabled && Entry.People.Count > 0;

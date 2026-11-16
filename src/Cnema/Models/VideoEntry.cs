@@ -29,6 +29,8 @@ public sealed class VideoEntry
     public string? Title { get; set; }
     /// <summary>What the smart features worked out about the video; null until it has been looked at.</summary>
     public SmartInfo? Smart { get; set; }
+    /// <summary>What's said in the video (voice search and captions); null until it has been listened to.</summary>
+    public SpeechInfo? Speech { get; set; }
 
     [System.Text.Json.Serialization.JsonIgnore]
     public string FileName => System.IO.Path.GetFileName(Path);
@@ -46,6 +48,17 @@ public sealed class VideoEntry
         People = other.People.ToList();
         Title = other.Title;
     }
+
+    /// <summary>
+    /// What the smart features found, for the same file under another name (same size and date):
+    /// listening again would cost minutes for nothing.
+    /// </summary>
+    public void CopyAnalysisFrom(VideoEntry other)
+    {
+        if (other.Size != Size || other.ModifiedUtc != ModifiedUtc) return;
+        Smart ??= other.Smart;
+        Speech ??= other.Speech;
+    }
 }
 
 /// <summary>Found by looking at (and listening to) a video, on this computer. Redone when the file changes.</summary>
@@ -61,6 +74,23 @@ public sealed class SmartInfo
     public int Spikes { get; set; }
     /// <summary>How much the picture changes, 0 to 1.</summary>
     public double Motion { get; set; }
+}
+
+/// <summary>The words spoken in a video, written down on this computer by the speech model.</summary>
+public sealed class SpeechInfo
+{
+    public int Version { get; set; }
+    /// <summary>Two-letter code of the language heard most ("en"), or null when nobody spoke.</summary>
+    public string? Language { get; set; }
+    public List<SpeechLine> Lines { get; set; } = new();
+}
+
+/// <summary>One line of speech; times in milliseconds from the start of the video.</summary>
+public sealed class SpeechLine
+{
+    public long Start { get; set; }
+    public long End { get; set; }
+    public string Text { get; set; } = "";
 }
 
 public sealed class LibraryCacheFile

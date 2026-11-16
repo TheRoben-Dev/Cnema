@@ -14,6 +14,8 @@ public sealed class AppSettings
     public int Volume { get; set; } = 80;
     /// <summary>The player clock shows the frame (m:ss f12) instead of tenths of a second.</summary>
     public bool ShowFrames { get; set; }
+    /// <summary>The player shows what's said as captions (voice search must be on).</summary>
+    public bool SpokenCaptions { get; set; }
 
     /// <summary>Stay alive in the tray / menu bar when the window is closed.</summary>
     public bool KeepInBackground { get; set; }
@@ -192,6 +194,8 @@ public sealed class FeatureSettings
     public bool SmartTitles { get; set; } = true;
     /// <summary>New clips with a recorder's made-up name get a smart title by themselves.</summary>
     public bool AutoTitles { get; set; }
+    /// <summary>Voice search and captions: what's said in videos is written down by a speech model (a one-time download).</summary>
+    public bool Speech { get; set; }
     /// <summary>
     /// Watch several folders. Off: the library is one folder, the one clips are saved to.
     /// Null in settings from before this existed: on when more than one folder was already added.

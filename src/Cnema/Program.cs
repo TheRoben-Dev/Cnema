@@ -47,7 +47,9 @@ internal static class Program
             if (OperatingSystem.IsWindows())
                 Console.WriteLine($"ddagrab: {CaptureProbe.HasDdagrabAsync(capture).GetAwaiter().GetResult()}");
         }
-        var ok = vlc is not null && ToolLocator.Ffmpeg is not null && playback.StartsWith("OK");
+        var speech = SpeechService.RuntimeCheck();
+        Console.WriteLine($"speech: {speech ?? "MISSING"}");
+        var ok = vlc is not null && ToolLocator.Ffmpeg is not null && playback.StartsWith("OK") && speech is not null;
         Console.WriteLine(ok ? "selftest OK" : "selftest FAILED");
         return ok ? 0 : 1;
     }

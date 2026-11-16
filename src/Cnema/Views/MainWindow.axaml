@@ -696,7 +696,14 @@
                         </Grid>
                         <!-- Always takes its row, empty or not: the grid sizes every card like the first one, so
                              cards line up and a tagged card is never cut off -->
-                        <ItemsControl ItemsSource="{Binding Tags}" Margin="0,3,0,0" Height="20" ClipToBounds="True">
+                        <Panel Margin="0,3,0,0" Height="20">
+                        <Border Classes="said" IsVisible="{Binding HasSaid}" HorizontalAlignment="Left" ToolTip.Tip="{Binding Said}">
+                          <StackPanel Orientation="Horizontal" Spacing="5">
+                            <PathIcon Data="{StaticResource IcCaptions}" Width="12" Height="12" Foreground="{DynamicResource Highlight}" />
+                            <TextBlock Text="{Binding Said, StringFormat='“{0}”'}" FontSize="11" FontStyle="Italic" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                          </StackPanel>
+                        </Border>
+                        <ItemsControl ItemsSource="{Binding Tags}" Height="20" ClipToBounds="True" IsVisible="{Binding !HasSaid}">
                           <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
                           </ItemsControl.ItemsPanel>
@@ -706,6 +713,7 @@
                             </DataTemplate>
                           </ItemsControl.ItemTemplate>
                         </ItemsControl>
+                        </Panel>
                       </StackPanel>
                     </StackPanel>
                   </Button>
@@ -844,6 +852,11 @@
                 </StackPanel>
               </StackPanel>
               <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+                <Button Classes="ghost" Classes.on="{Binding ShowSpoken}" Focusable="False" Padding="6" Margin="0,0,4,0"
+                        IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).ShowSpeech}"
+                        svc:Tr.Tip="Captions: show what's said (V)" Command="{Binding ToggleSpokenCommand}">
+                  <PathIcon Data="{StaticResource IcCaptions}" Width="16" Height="16" />
+                </Button>
                 <Button Classes="ghost" Classes.on="{Binding #Root.((vm:MainViewModel)DataContext).PlayAll}" Focusable="False" Padding="6" Margin="0,0,4,0"
                         IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).ShowPlayAll}"
                         svc:Tr.Tip="Play all: go on to the next video when this one ends"
@@ -873,6 +886,9 @@
           <Panel Background="Black">
             <c:VideoSurface x:Name="MiniSurface" Frames="{Binding Frames}"
                           SourceWidth="{Binding VideoWidth}" SourceHeight="{Binding VideoHeight}" />
+            <Border Classes="spoken" IsVisible="{Binding SpokenLine, Converter={x:Static ObjectConverters.IsNotNull}}" Margin="48,0,48,22">
+              <TextBlock Text="{Binding SpokenLine}" FontSize="17" />
+            </Border>
             <Border x:Name="MiniHit" Background="Transparent" svc:Tr.Tip="Click to play or pause, double-click to edit" ToolTip.ShowDelay="1200" />
             <Border IsVisible="{Binding Toast, Converter={x:Static ObjectConverters.IsNotNull}}" IsHitTestVisible="False"
                     HorizontalAlignment="Center" VerticalAlignment="Top" Margin="48,16,48,0"
@@ -2323,6 +2339,33 @@
                       </StackPanel>
                       <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureAutoTitles}" />
                     </Grid>
+                    <Border Classes="sep" />
+                    <Grid Classes="row" ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="2">
+                        <TextBlock svc:Tr.Text="Voice search and captions" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Savefile writes down what's said in your videos, on this computer and only when it's not busy. Search finds the words and opens the video where they're said, the player can show them as captions, and the editor turns them into captions for an export." />
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureSpeech}" />
+                    </Grid>
+                    <StackPanel Spacing="8" Margin="14,0,14,14" IsVisible="{Binding FeatureSpeech}">
+                      <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="{Binding #Root.((vm:MainViewModel)DataContext).SpeechModelText}"
+                                 Classes.err="{Binding #Root.((vm:MainViewModel)DataContext).SpeechModelError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                      <ProgressBar Minimum="0" Maximum="1" Value="{Binding #Root.((vm:MainViewModel)DataContext).SpeechDownloadProgress}" Height="4" MinHeight="4" CornerRadius="2"
+                                   IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).IsDownloadingSpeech}" />
+                      <TextBlock Classes="dim" FontSize="11" Foreground="{DynamicResource Highlight}" Text="{Binding #Root.((vm:MainViewModel)DataContext).SpeechActivity}"
+                                 IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).SpeechActivity, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                      <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Classes="accent" Command="{Binding #Root.((vm:MainViewModel)DataContext).DownloadSpeechModelCommand}" IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).CanDownloadSpeech}">
+                          <StackPanel Orientation="Horizontal" Spacing="6">
+                            <PathIcon Data="{StaticResource IcImport}" Width="12" Height="12" Foreground="{DynamicResource OnAccent}" />
+                            <TextBlock svc:Tr.Text="Download the speech model" />
+                          </StackPanel>
+                        </Button>
+                        <Button Classes="soft" svc:Tr.Content="Cancel" Command="{Binding #Root.((vm:MainViewModel)DataContext).CancelSpeechDownloadCommand}" IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).IsDownloadingSpeech}" />
+                        <Button Classes="soft" svc:Tr.Content="Remove the model" Command="{Binding #Root.((vm:MainViewModel)DataContext).RemoveSpeechModelCommand}" IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).SpeechModelReady}"
+                                svc:Tr.Tip="Frees the space. The words already found stay searchable." />
+                      </StackPanel>
+                    </StackPanel>
                   </StackPanel>
                 </Border>
                 <TextBlock Classes="label" svc:Tr.Text="EDITING AND EXPORT" Margin="0,8,0,0" />
@@ -2895,6 +2938,9 @@
                           View="{Binding PreviewView}" Blurs="{Binding PreviewBlurs}" />
         <c:EffectsOverlay Captions="{Binding PreviewCaptions}" Watermark="{Binding PreviewWatermark}"
                           VideoWidth="{Binding VideoWidth}" VideoHeight="{Binding VideoHeight}" />
+        <Border Classes="spoken" IsVisible="{Binding SpokenLine, Converter={x:Static ObjectConverters.IsNotNull}}" Margin="48,0,48,22">
+          <TextBlock Text="{Binding SpokenLine}" FontSize="17" />
+        </Border>
         <Border Background="Transparent" x:Name="SurfaceHit" />
         <c:FrameEditor x:Name="FrameEdit" Regions="{Binding FrameRegions}" VideoWidth="{Binding VideoWidth}" VideoHeight="{Binding VideoHeight}" />
         <Border Classes="speedbadge" IsVisible="{Binding SpeedPreviewText, Converter={x:Static ObjectConverters.IsNotNull}}"
@@ -3097,6 +3143,13 @@
                     <PathIcon Data="{StaticResource IcAdd}" Width="12" Height="12" />
                     <TextBlock svc:Tr.Text="Add a caption at the playhead" FontSize="12" />
                     <TextBlock Classes="hint" Text="C" />
+                  </StackPanel>
+                </Button>
+                <Button Classes="soft" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Command="{Binding CaptionsFromSpeechCommand}"
+                        IsVisible="{Binding HasSpeech}" svc:Tr.Tip="Every line said in the part you export becomes a caption you can edit">
+                  <StackPanel Orientation="Horizontal" Spacing="8">
+                    <PathIcon Data="{StaticResource IcCaptions}" Width="13" Height="13" />
+                    <TextBlock svc:Tr.Text="Add captions from what's said" FontSize="12" />
                   </StackPanel>
                 </Button>
                 <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Margin="4,0" IsVisible="{Binding !Captions.Count}"
@@ -3535,6 +3588,10 @@
                     </StackPanel>
                   </Flyout>
                 </Button.Flyout>
+              </Button>
+              <Button Classes="ghost" Classes.on="{Binding ShowSpoken}" Command="{Binding ToggleSpokenCommand}" svc:Tr.Tip="Captions: show what's said (V)"
+                      IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).ShowSpeech}">
+                <PathIcon Data="{StaticResource IcCaptions}" />
               </Button>
               <Button Classes="ghost" Command="{Binding ToggleMuteCommand}" svc:Tr.Tip="Mute (M)">
                 <Panel>
