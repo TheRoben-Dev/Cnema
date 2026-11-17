@@ -230,14 +230,16 @@ public sealed class BlobMascot : Control
         InvalidateVisual();
     }
 
+    private TopLevel? _top;
+
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
         // The frame loop stops while the blob is hidden or scrolled off; this looks in now and then to restart it.
         _wake = new DispatcherTimer(TimeSpan.FromSeconds(1), DispatcherPriority.Background, (_, _) => Kick());
         _wake.Start();
-        if (TopLevel.GetTopLevel(this) is { } top)
-            top.AddHandler(PointerMovedEvent, OnWindowPointerMoved, RoutingStrategies.Tunnel, handledEventsToo: true);
+        _top = TopLevel.GetTopLevel(this);
+        _top?.AddHandler(PointerMovedEvent, OnWindowPointerMoved, RoutingStrategies.Tunnel, handledEventsToo: true);
         ClipToBounds = ActualMood == MochiMood.Peek;
         Kick();
     }
@@ -245,7 +247,9 @@ public sealed class BlobMascot : Control
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnDetachedFromVisualTree(e);
-        if (TopLevel.GetTopLevel(this) is { } top) top.RemoveHandler(PointerMovedEvent, OnWindowPointerMoved);
+        // The window it was added to: once detached, the blob can't look its top level up any more.
+        _top?.RemoveHandler(PointerMovedEvent, OnWindowPointerMoved);
+        _top = null;
         _wake?.Stop();
         _wake = null;
         _running = false;
