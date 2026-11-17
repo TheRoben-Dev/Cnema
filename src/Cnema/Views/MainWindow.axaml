@@ -464,9 +464,10 @@
         <!-- Toolbar -->
         <Grid x:Name="Toolbar" DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto,Auto" Margin="28,0,28,0"
               Height="72" Background="Transparent">
-          <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="2" IsHitTestVisible="False">
-            <TextBlock Text="{Binding HeaderTitle}" FontSize="22" FontWeight="Bold" />
-            <TextBlock Classes="dim" Text="{Binding HeaderCount}" FontSize="12" />
+          <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="2" Margin="0,0,14,0" ClipToBounds="True" Background="Transparent"
+                      ToolTip.Tip="{Binding HeaderTitle}">
+            <TextBlock Text="{Binding HeaderTitle}" FontSize="22" FontWeight="Bold" TextTrimming="CharacterEllipsis" />
+            <TextBlock Classes="dim" Text="{Binding HeaderCount}" FontSize="12" TextTrimming="CharacterEllipsis" />
           </StackPanel>
           <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
           <Button Classes="soft" VerticalAlignment="Center" Margin="0,0,10,0" Padding="12,8"
@@ -490,7 +491,7 @@
                   svc:Tr.Tip="Your best moments together in one video">
             <StackPanel Orientation="Horizontal" Spacing="7">
               <PathIcon Data="{StaticResource IcFilm}" Width="14" Height="14" />
-              <TextBlock svc:Tr.Text="Make a montage" FontSize="13" />
+              <TextBlock x:Name="FriendMontageLabel" svc:Tr.Text="Make a montage" FontSize="13" />
             </StackPanel>
           </Button>
           <Button x:Name="FriendWrappedButton" Classes="soft" VerticalAlignment="Center" Margin="0,0,10,0" Padding="12,8"
@@ -498,7 +499,7 @@
                   svc:Tr.Tip="A shorter Wrapped of only your clips together this year, cut to your Wrapped songs">
             <StackPanel Orientation="Horizontal" Spacing="7">
               <PathIcon Data="{StaticResource IcFilm}" Width="14" Height="14" />
-              <TextBlock Text="{Binding FriendWrappedLabel}" FontSize="13" />
+              <TextBlock x:Name="FriendWrappedText" Text="{Binding FriendWrappedLabel}" FontSize="13" />
             </StackPanel>
           </Button>
           <Button Classes="soft" VerticalAlignment="Center" Margin="0,0,10,0" Padding="12,8"
