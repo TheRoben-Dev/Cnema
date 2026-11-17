@@ -44,7 +44,7 @@ public static partial class SmartAnalyzer
         // whole video on one core: minutes per clip on a Mac. The Mac's own video decoder does that part
         // nearly for free, and a picture pass that still runs long is cut off: the sound alone still finds the moments.
         using var budget = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        budget.CancelAfter(TimeSpan.FromSeconds(30) + TimeSpan.FromMilliseconds(Math.Max(0, durationMs) / 4));
+        BackgroundHold.CancelAfterActive(budget, TimeSpan.FromSeconds(30) + TimeSpan.FromMilliseconds(Math.Max(0, durationMs) / 4));
         try
         {
             var args = new List<string> { "-hide_banner", "-nostats", "-v", "info", "-threads", "1", "-skip_frame", "nokey" };

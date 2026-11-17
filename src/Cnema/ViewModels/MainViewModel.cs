@@ -519,6 +519,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         Clips.SessionSaved += (path, marks) => Dispatcher.UIThread.Post(() => OnSessionSaved(path, marks));
         Player = new PlayerViewModel(settings);
         Player.Exported += path => { _ = RescanAsync(); };
+        // Background work (indexing, Wrapped, Make room) freezes while a video plays, so playback never stutters or crackles.
+        Player.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is nameof(PlayerViewModel.IsPlaying) or nameof(PlayerViewModel.Current))
+                BackgroundHold.Set(Player.IsPlaying && Player.Current is not null);
+        };
         Exports.Finished += OnExportFinished;
         _sortIndex = Math.Clamp(settings.Current.SortIndex, 0, SortModes.Length - 1);
 
@@ -1352,6 +1358,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         Clips.Dispose();
         _scanCts?.Cancel();
         Player.Dispose();
+        BackgroundHold.Set(false); // never leave a frozen ffmpeg behind
         _voiceCts?.Cancel();
         _voicePlayer?.Dispose();
         _library.SaveCache();

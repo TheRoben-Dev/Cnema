@@ -203,7 +203,7 @@ public sealed partial class MainViewModel
                     SmartInfo? info;
                     var watch = System.Diagnostics.Stopwatch.StartNew();
                     using var limit = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                    limit.CancelAfter(ItemLimit(item.Entry.DurationMs));
+                    BackgroundHold.CancelAfterActive(limit, ItemLimit(item.Entry.DurationMs));
                     try
                     {
                         info = await SmartAnalyzer.AnalyzeAsync(item.Entry.Path, item.Entry.DurationMs, limit.Token);

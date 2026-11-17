@@ -2,6 +2,9 @@
 
 What changed in each Savefile (formerly Cnema) release. The app shows the entries you have not seen yet after it updates.
 
+## 0.46.2
+- Fixed crackling and little static pops when playing videos while Savefile was looking through your clips in the background. That background work now freezes while a video plays and carries on where it left off when you pause or close it, and time spent frozen never counts against it, so no clip gets skipped for taking too long.
+
 ## 0.46.1
 - Savefile has its own save sounds now: seven short retro chiptune jingles made for Savefile (Save crystal, Power-up, Checkpoint, Victory fanfare, Quest complete, Loot drop and Coin chain). Pick one in Settings › Clipping; choosing one plays it, and Hear it plays it again.
 - The save sound plays from Savefile itself, so it works even when the computer's sound scheme is silent (on Windows it used to follow the system's sounds, so a PC set to "No Sounds" stayed quiet). Only the volume matters now.
