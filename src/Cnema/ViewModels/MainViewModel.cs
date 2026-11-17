@@ -111,6 +111,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     [RelayCommand] private void CloseWhatsNew() => WhatsNew = null;
 
+    /// <summary>Settings, Clipping: plays the save sound once, to check it is heard.</summary>
+    [RelayCommand] private void HearSaveSound() => PlatformShell.PlayConfirmSound();
+
     /// <summary>The whole changelog, from the button in Settings.</summary>
     [RelayCommand]
     private void ShowChangelog()

@@ -130,20 +130,83 @@ public static class PlatformShell
     [DllImport("winmm.dll", CharSet = CharSet.Unicode)]
     private static extern bool PlaySound(string? sound, IntPtr module, uint flags);
 
-    /// <summary>A short system sound, audible over a game, to confirm a clip was saved.</summary>
+    private const uint SndAsync = 0x0001, SndNoDefault = 0x0002, SndAlias = 0x00010000, SndFilename = 0x00020000;
+
+    /// <summary>Savefile's own chime (scripts/make-save-sound.py), shipped next to the app.</summary>
+    public static string SaveSoundPath => Path.Combine(AppContext.BaseDirectory, "sounds", "save.wav");
+
+    /// <summary>
+    /// Savefile's own short chime, audible over a game, to confirm a clip was saved. It plays the bundled file
+    /// directly, so the OS sound scheme ("No Sounds" on Windows, alert sounds off on macOS) can't silence it;
+    /// only the volume does. Never blocks and never throws.
+    /// </summary>
     public static void PlayConfirmSound()
     {
         try
         {
-            if (OperatingSystem.IsMacOS()) Start("afplay", "/System/Library/Sounds/Glass.aiff");
-            else if (OperatingSystem.IsWindows()) PlaySound("SystemAsterisk", IntPtr.Zero, 0x00010000 | 0x0001 | 0x0002); // alias, async, no default
-            else
+            var file = SaveSoundPath;
+            if (!File.Exists(file))
             {
-                const string sound = "/usr/share/sounds/freedesktop/stereo/complete.oga";
-                if (File.Exists(sound)) Start("paplay", sound);
+                Log.Warn($"Save sound missing at {file}; using the system sound");
+                PlaySystemSound();
+                return;
             }
+            if (OperatingSystem.IsWindows())
+            {
+                if (!PlaySound(file, IntPtr.Zero, SndFilename | SndAsync | SndNoDefault))
+                    Log.Warn("Couldn't play the save sound (no audio device?)");
+            }
+            else if (OperatingSystem.IsMacOS()) Start("afplay", file);
+            else PlayOnLinux(file);
         }
-        catch { /* a nicety */ }
+        catch (Exception ex) { Log.Warn($"Couldn't play the save sound: {ex.Message}"); }
+    }
+
+    /// <summary>
+    /// Selftest: the bundled chime is there and is a WAV the players accept. On Windows it is also played once
+    /// through PlaySound by file name (synchronously); a CI runner without an audio device reports that, which is
+    /// fine, but a missing or broken file fails the check.
+    /// </summary>
+    public static string SaveSoundCheck()
+    {
+        var file = SaveSoundPath;
+        if (!File.Exists(file)) return $"MISSING ({file})";
+        var head = new byte[12];
+        using (var f = File.OpenRead(file)) f.ReadExactly(head);
+        if (System.Text.Encoding.ASCII.GetString(head, 0, 4) != "RIFF" || System.Text.Encoding.ASCII.GetString(head, 8, 4) != "WAVE")
+            return "BROKEN (not a WAV file)";
+        var size = new FileInfo(file).Length;
+        if (!OperatingSystem.IsWindows()) return $"OK ({size / 1024} KB)";
+        var played = PlaySound(file, IntPtr.Zero, SndFilename | SndNoDefault);
+        return $"OK ({size / 1024} KB, PlaySound: {(played ? "played" : "no audio device")})";
+    }
+
+    /// <summary>PulseAudio, then PipeWire, then plain ALSA: the first player that exists wins.</summary>
+    private static void PlayOnLinux(string file)
+    {
+        foreach (var player in new[] { "paplay", "pw-play", "aplay" })
+        {
+            try
+            {
+                if (player == "aplay") Start(player, "-q", file);
+                else Start(player, file);
+                return;
+            }
+            catch (System.ComponentModel.Win32Exception) { /* not installed: try the next one */ }
+        }
+        Log.Warn("No sound player found (paplay, pw-play or aplay) for the save sound");
+    }
+
+    /// <summary>The old OS sound, only for a build that lost the bundled file.</summary>
+    private static void PlaySystemSound()
+    {
+        if (OperatingSystem.IsMacOS()) Start("afplay", "/System/Library/Sounds/Glass.aiff");
+        else if (OperatingSystem.IsWindows()) PlaySound("SystemAsterisk", IntPtr.Zero, SndAlias | SndAsync | SndNoDefault);
+        else
+        {
+            const string sound = "/usr/share/sounds/freedesktop/stereo/complete.oga";
+            if (File.Exists(sound)) PlayOnLinux(sound);
+        }
     }
 
     // ---------------------------------------------------------------- App Nap
