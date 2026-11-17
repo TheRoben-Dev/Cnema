@@ -57,7 +57,9 @@ function Test-Mode([string] $mode) {
     # the same mode, then the app is started again (in the tray).
     Stop-Savefile
     $out = Join-Path $env:RUNNER_TEMP "update-$mode.txt"
-    $u = Start-Process "$dir\Cnema.exe" -ArgumentList '--selftest-update', $Setup -Wait -PassThru -NoNewWindow -RedirectStandardOutput $out
+    # Not -Wait: that waits for every process started from it, and the relaunched app keeps running in the tray.
+    $u = Start-Process "$dir\Cnema.exe" -ArgumentList '--selftest-update', $Setup -PassThru -NoNewWindow -RedirectStandardOutput $out
+    $u.WaitForExit()
     Get-Content $out | Write-Host
     Check ($u.ExitCode -eq 0) "update handed over to the installer (exit $($u.ExitCode))"
     $wantMode = if ($mode -eq 'ALLUSERS') { 'True' } else { 'False' }
@@ -73,7 +75,7 @@ function Test-Mode([string] $mode) {
 
     # Uninstall: the uninstaller closes the running app, copies itself to temp and returns early, so wait for it.
     Stop-Savefile
-    Start-Process "$dir\unins000.exe" -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART' -Wait
+    (Start-Process "$dir\unins000.exe" -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART' -PassThru).WaitForExit()
     Check (Wait-Until { -not (Test-Path "$dir\Cnema.exe") } 120) "app removed"
     Check (Wait-Until { -not (Test-Path $menu) } 30) "Start menu shortcut removed"
     Check (-not (Test-Path $desk)) "desktop shortcut removed"
