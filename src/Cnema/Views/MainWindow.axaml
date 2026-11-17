@@ -3668,10 +3668,15 @@
                   <Grid Classes="row" ColumnDefinitions="*,Auto">
                     <TextBlock svc:Tr.Text="Play a sound when a clip is saved" VerticalAlignment="Center" />
                     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                      <Button Classes="soft" svc:Tr.Content="Hear it" IsVisible="{Binding Sound}"
-                              Command="{Binding #Root.((vm:MainViewModel)DataContext).HearSaveSoundCommand}" />
+                      <Button Classes="soft" svc:Tr.Content="Hear it" IsVisible="{Binding Sound}" Command="{Binding HearSaveSoundCommand}" />
                       <ToggleSwitch Classes="bare" IsChecked="{Binding Sound}" />
                     </StackPanel>
+                  </Grid>
+                  <Grid Classes="row" ColumnDefinitions="*,Auto" IsVisible="{Binding Sound}">
+                    <TextBlock svc:Tr.Text="Save sound" VerticalAlignment="Center" />
+                    <ComboBox Grid.Column="1" Classes="field" MinWidth="200" ItemsSource="{x:Static vm:SettingsViewModel.SaveSounds}" SelectedIndex="{Binding SoundStyle}">
+                      <ComboBox.ItemTemplate><DataTemplate x:DataType="vm:LocalizedText"><TextBlock Text="{Binding Text}" /></DataTemplate></ComboBox.ItemTemplate>
+                    </ComboBox>
                   </Grid>
                   <Border Classes="sep" />
                   <Grid Classes="row" ColumnDefinitions="*,Auto">

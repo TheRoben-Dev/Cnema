@@ -3,7 +3,9 @@
 What changed in each Savefile (formerly Cnema) release. The app shows the entries you have not seen yet after it updates.
 
 ## 0.46.1
-- Savefile has its own save sound now: a short retro chiptune jingle made for Savefile. It plays from the app itself, so it works even when the computer's sound scheme is silent (on Windows the old sound followed the system's sound scheme, so a PC set to "No Sounds" stayed quiet). Only the volume matters now. Settings › Clipping has a Hear it button next to the switch to check it.
+- Savefile has its own save sounds now: seven short retro chiptune jingles made for Savefile (Save crystal, Power-up, Checkpoint, Victory fanfare, Quest complete, Loot drop and Coin chain). Pick one in Settings › Clipping; choosing one plays it, and Hear it plays it again.
+- The save sound plays from Savefile itself, so it works even when the computer's sound scheme is silent (on Windows it used to follow the system's sounds, so a PC set to "No Sounds" stayed quiet). Only the volume matters now.
+- On a Mac recording System audio, the save sound no longer ends up in your next clip when you save two in a row.
 
 ## 0.46.0
 - Windows: Savefile now has a proper installer. Choose to install it for just you (no administrator needed) or for everyone on the PC (in Program Files). It adds Savefile to the Start menu and the desktop, and you can uninstall it from Settings › Apps like any other app (your videos, settings and library stay). An installed Savefile updates itself with the next installer and keeps your choice; installed for everyone, it asks for an administrator once per update, so it waits for you to click the update instead of updating at login.

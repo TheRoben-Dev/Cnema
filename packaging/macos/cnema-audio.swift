@@ -5,6 +5,10 @@
 // ffmpeg's avfoundation input only sees microphones; ScreenCaptureKit (macOS 13+) is Apple's
 // supported way to record system audio. It runs under the Screen Recording permission Cnema
 // already needs for clipping, and records nothing from Cnema itself.
+//
+// It also takes "play <file>" lines on stdin and plays that file itself: ScreenCaptureKit leaves this
+// process's own audio out (excludesCurrentProcessAudio), so Savefile's save sound is heard but never
+// lands in the next clip.
 import AVFoundation
 import CoreMedia
 import Foundation
@@ -99,6 +103,29 @@ final class AudioSink: NSObject, SCStreamOutput, SCStreamDelegate {
 }
 
 var keepAlive: [AnyObject] = []
+
+/// "play <path>" on stdin: plays the file from this process, which the capture leaves out.
+final class Player {
+    private var current: AVAudioPlayer?
+    func listen() {
+        let thread = Thread {
+            while let line = readLine(strippingNewline: true) {
+                guard line.hasPrefix("play ") else { continue }
+                let path = String(line.dropFirst(5))
+                DispatchQueue.main.async { self.play(path) }
+            }
+        }
+        thread.start()
+    }
+    private func play(_ path: String) {
+        guard let p = try? AVAudioPlayer(contentsOf: URL(fileURLWithPath: path)) else { return }
+        current?.stop()
+        current = p
+        p.play()
+    }
+}
+let player = Player()
+player.listen()
 
 Task {
     do {

@@ -204,6 +204,12 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private string _audio2 = NoAudio;
     [ObservableProperty] private bool _notify;
     [ObservableProperty] private bool _sound;
+    /// <summary>Index into SaveSounds.</summary>
+    [ObservableProperty] private int _soundStyle;
+    public static LocalizedText[] SaveSounds { get; } = LocalizedText.List(PlatformShell.SaveSounds.Select(s => s.Name).ToArray());
+    /// <summary>Plays the picked sound, so it can be heard before saving; picking another one plays it too.</summary>
+    [RelayCommand] private void HearSaveSound() => PlatformShell.PlayConfirmSound(PlatformShell.SaveSounds[Math.Clamp(SoundStyle, 0, PlatformShell.SaveSounds.Length - 1)].Id);
+    partial void OnSoundStyleChanged(int value) => HearSaveSound();
     [ObservableProperty] private bool _tagWithGame;
     [ObservableProperty] private bool _checkForUpdates;
     [ObservableProperty] private bool _autoUpdate;
@@ -350,6 +356,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         _screenIndex = Math.Max(0, c.Screen);
         _notify = c.Notify;
         _sound = c.Sound;
+        _soundStyle = Math.Max(0, Array.FindIndex(PlatformShell.SaveSounds, s => s.Id == c.SoundStyle));
         _tagWithGame = c.TagWithGame;
         _checkForUpdates = settings.CheckForUpdates;
         _autoUpdate = settings.AutoUpdate;
@@ -506,6 +513,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         c.CameraSize = CameraSize.Value;
         c.Notify = Notify;
         c.Sound = Sound;
+        c.SoundStyle = PlatformShell.SaveSounds[Math.Clamp(SoundStyle, 0, PlatformShell.SaveSounds.Length - 1)].Id;
         c.TagWithGame = TagWithGame;
         settings.CheckForUpdates = CheckForUpdates;
         settings.AutoUpdate = AutoUpdate;

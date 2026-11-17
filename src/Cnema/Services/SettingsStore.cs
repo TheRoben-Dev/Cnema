@@ -359,6 +359,8 @@ public sealed class ClipSettings
     public string? Folder { get; set; }
     public bool Notify { get; set; } = true;
     public bool Sound { get; set; } = true;
+    /// <summary>Which save sound plays: an id from PlatformShell.SaveSounds (sounds/save-&lt;id&gt;.wav).</summary>
+    public string SoundStyle { get; set; } = PlatformShell.DefaultSaveSound;
     /// <summary>Name and tag each clip after the app that was in front when it was saved.</summary>
     public bool TagWithGame { get; set; } = true;
     /// <summary>With two audio devices: keep them as two tracks instead of mixing them into one.</summary>

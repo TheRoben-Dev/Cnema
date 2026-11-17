@@ -111,9 +111,6 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     [RelayCommand] private void CloseWhatsNew() => WhatsNew = null;
 
-    /// <summary>Settings, Clipping: plays the save sound once, to check it is heard.</summary>
-    [RelayCommand] private void HearSaveSound() => PlatformShell.PlayConfirmSound();
-
     /// <summary>The whole changelog, from the button in Settings.</summary>
     [RelayCommand]
     private void ShowChangelog()
@@ -376,7 +373,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         var name = Path.GetFileNameWithoutExtension(path);
         var tag = name.EndsWith(" session", StringComparison.Ordinal) ? null : SessionGame(name);
         if (tag is not null) _pendingTags[path] = tag;
-        if (_settings.Current.Clip.Sound) PlatformShell.PlayConfirmSound();
+        if (_settings.Current.Clip.Sound) PlatformShell.PlayConfirmSound(_settings.Current.Clip.SoundStyle);
         var marks = bookmarks.Count == 0 ? "" : ", " + P(bookmarks.Count, "{0} bookmark", "{0} bookmarks");
         ShowToast(F("Session saved{0}: {1}", marks, name));
         if (_settings.Current.Clip.Notify) PlatformShell.Notify(T("Session saved"), Path.GetFileName(path));
@@ -1173,7 +1170,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         if (Clips.AddBookmark() is { } at)
         {
             // During a session the hotkey marks the moment instead of cutting a separate clip.
-            if (_settings.Current.Clip.Sound) PlatformShell.PlayConfirmSound();
+            if (_settings.Current.Clip.Sound) PlatformShell.PlayConfirmSound(_settings.Current.Clip.SoundStyle);
             ShowToast(F("Bookmark added at {0}", Controls.TrimTimeline.FormatTime(at.TotalMilliseconds)));
             return;
         }
@@ -1191,7 +1188,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     private void OnClipSaved(string path, int seconds)
     {
-        if (_settings.Current.Clip.Sound) PlatformShell.PlayConfirmSound();
+        if (_settings.Current.Clip.Sound) PlatformShell.PlayConfirmSound(_settings.Current.Clip.SoundStyle);
         QueueSquad(path);
         QueueAutoBackup();
         var (savedText, milestone) = SavedToastText(path);
