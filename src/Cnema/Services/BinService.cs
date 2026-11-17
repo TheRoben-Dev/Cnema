@@ -100,11 +100,10 @@ public sealed class BinService
         var gone = 0;
         foreach (var item in due)
         {
-            var root = Path.GetPathRoot(item.BinPath);
             if (!File.Exists(item.BinPath))
             {
                 // Removed by hand: forget it. On a drive that isn't plugged in: wait for it.
-                if (root is { Length: > 0 } && !Directory.Exists(root)) continue;
+                if (DriveMissing(item.BinPath)) continue;
                 lock (_lock) _bin.Items.RemoveAll(i => i.Id == item.Id);
                 gone++;
                 continue;
@@ -114,6 +113,25 @@ public sealed class BinService
         }
         if (gone > 0) { Save(); Log.Info($"Bin: {gone} video(s) deleted for good after 24 hours"); }
         return gone;
+    }
+
+    /// <summary>
+    /// The drive the file is on isn't plugged in. A drive letter on Windows; on a Mac or Linux an external drive
+    /// is a folder under /Volumes, /media, /run/media or /mnt, whose root ("/") is always there.
+    /// </summary>
+    internal static bool DriveMissing(string path)
+    {
+        if (OperatingSystem.IsWindows())
+            return Path.GetPathRoot(path) is { Length: > 0 } root && !Directory.Exists(root);
+        var parts = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        var depth = parts.Length switch
+        {
+            > 1 when parts[0] is "Volumes" or "mnt" => 2,
+            > 2 when parts[0] == "media" => 3,
+            > 3 when parts[0] == "run" && parts[1] == "media" => 4,
+            _ => 0,
+        };
+        return depth > 0 && !Directory.Exists("/" + string.Join('/', parts.Take(depth)));
     }
 
     private void Save()

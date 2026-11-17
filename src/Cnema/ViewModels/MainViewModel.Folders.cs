@@ -185,8 +185,8 @@ public sealed partial class MainViewModel
         }
 
         // Another drive: the videos are copied, so there must be room for them.
-        var targetRoot = Path.GetPathRoot(Path.GetFullPath(target)) ?? "";
-        var crossing = moves.Where(x => !string.Equals(Path.GetPathRoot(x.Entry.Path), targetRoot, StringComparison.OrdinalIgnoreCase)).Sum(x => x.Entry.Size);
+        var targetRoot = AppPaths.VolumeOf(target);
+        var crossing = moves.Where(x => !string.Equals(AppPaths.VolumeOf(x.Entry.Path), targetRoot, StringComparison.OrdinalIgnoreCase)).Sum(x => x.Entry.Size);
         try
         {
             var free = new DriveInfo(targetRoot).AvailableFreeSpace;

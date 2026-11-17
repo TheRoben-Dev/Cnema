@@ -3,6 +3,28 @@ namespace Cnema.Services;
 /// <summary>Per-OS locations for settings, the library cache and thumbnails.</summary>
 public static class AppPaths
 {
+    /// <summary>
+    /// The drive a path is on (its mount point): a drive letter on Windows; on a Mac or Linux the deepest mounted
+    /// folder above it (/Volumes/Games), not "/", which every path there starts with.
+    /// </summary>
+    public static string VolumeOf(string path)
+    {
+        var full = Path.GetFullPath(path);
+        if (OperatingSystem.IsWindows()) return Path.GetPathRoot(full) ?? full;
+        try
+        {
+            var best = "/";
+            foreach (var d in DriveInfo.GetDrives())
+            {
+                var root = d.RootDirectory.FullName.TrimEnd('/');
+                if (root.Length > best.TrimEnd('/').Length && (full == root || full.StartsWith(root + "/", StringComparison.Ordinal)))
+                    best = root;
+            }
+            return best;
+        }
+        catch { return "/"; }
+    }
+
     public static string DataDir { get; } = ResolveDataDir();
     public static string ThumbDir { get; } = Ensure(Path.Combine(DataDir, "thumbs"));
     public static string SettingsFile => Path.Combine(DataDir, "settings.json");

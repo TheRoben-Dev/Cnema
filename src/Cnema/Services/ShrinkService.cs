@@ -57,7 +57,7 @@ public static class ShrinkService
         var src = e.Path;
         var info = new FileInfo(src);
         if (!info.Exists) throw new FileNotFoundException(T("The file isn't there any more."), src);
-        var drive = new DriveInfo(Path.GetPathRoot(Path.GetFullPath(src))!);
+        var drive = new DriveInfo(AppPaths.VolumeOf(src));
         if (drive.AvailableFreeSpace < info.Length + 512L * 1024 * 1024)
             throw new IOException(T("Not enough free space on that drive to make the smaller copy."));
         var before = await MediaProbe.InfoAsync(src, ct) ?? throw new InvalidOperationException(T("Couldn't read the video."));

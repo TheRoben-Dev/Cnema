@@ -2,6 +2,12 @@
 
 What changed in each Savefile (formerly Cnema) release. The app shows the entries you have not seen yet after it updates.
 
+## 0.45.1
+- External drives on a Mac or Linux are recognised as their own drive. Make room checked free space on the startup disk instead of the drive the video is on, and merging folders didn't notice that videos from another drive need room to be copied.
+- A video in the Bin on an external drive that isn't plugged in now waits for the drive instead of being forgotten, so it's still deleted for good when the drive comes back.
+- The Bin count updates as soon as videos expire, instead of up to 30 seconds later.
+- Mochi no longer keeps watching the pointer after it leaves the screen, which could slowly add up while using the app.
+
 ## 0.45.0
 - Text on screen: Savefile can read kill feeds, scoreboards and banners. Search finds what was on screen (a name from the kill feed, "ace"), smart titles name the banner ("Victory Royale · Fortnite", "Ace · Valorant"), and a clip with no game yet gets one when the game's own words give it away (SPIKE PLANTED means Valorant, VICTORY ROYALE means Fortnite). Turn it on in Settings › Smart features; it needs a one-time 10 MB download, reads Swedish letters too, and everything happens on this computer.
 
