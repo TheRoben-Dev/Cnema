@@ -259,9 +259,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             $"Smart: moments={Features.Highlights} {all.Count(e => e.Smart is { Version: SmartAnalyzer.Version })}/{all.Count}" +
             $" | speech={Features.Speech} model={SpeechModelReady} {all.Count(e => e.Speech is { Version: SpeechService.Version })}/{all.Count} with words {all.Count(e => e.Speech is { Lines.Count: > 0 })}" +
             $" | visual={Features.Visual} model={VisualModelReady} {all.Count(e => e.Visual is { Version: VisualService.Version })}/{all.Count} with frames {all.Count(e => e.Visual is { Vectors.Length: > 0 })}" +
-            $" | sound={Features.Laughs} model={SoundModelReady} {all.Count(e => e.Sound is { Version: SoundService.Version })}/{all.Count}",
-            $"Smart now: moments=[{SmartActivity}] speech=[{SpeechActivity}] visual=[{VisualActivity}] sound=[{SoundActivity}] wait=[{WaitReason}]",
-            $"Smart errors: speech={SpeechModelError ?? "-"} visual={VisualModelError ?? "-"} sound={SoundModelError ?? "-"} failed={(failed.Length == 0 ? "-" : failed)}");
+            $" | sound={Features.Laughs} model={SoundModelReady} {all.Count(e => e.Sound is { Version: SoundService.Version })}/{all.Count}" +
+            $" | screen={Features.ScreenText} model={ScreenModelReady} {all.Count(e => e.Screen is { Version: ScreenService.Version })}/{all.Count} with text {all.Count(e => e.Screen is { Lines.Count: > 0 })}",
+            $"Smart now: moments=[{SmartActivity}] speech=[{SpeechActivity}] visual=[{VisualActivity}] sound=[{SoundActivity}] screen=[{ScreenActivity}] wait=[{WaitReason}]",
+            $"Smart errors: speech={SpeechModelError ?? "-"} visual={VisualModelError ?? "-"} sound={SoundModelError ?? "-"} screen={ScreenModelError ?? "-"} failed={(failed.Length == 0 ? "-" : failed)}");
     }
 
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(IsConfirmingDelete), nameof(DeletePrompt))] private VideoItemViewModel? _pendingDelete;
@@ -566,6 +567,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         PlayerViewModel.TrimSuggestions = Features.TrimSuggestions;
         ThumbnailService.SmartThumbs = Features.SmartThumbs;
         SmartCrop.Enabled = Features.SmartCrop;
+        ScreenWords.Enabled = Features.ScreenText;
         Chapters.Enabled = Features.Chapters;
         Player.Queue = Features.ExportQueue ? Exports : null;
         RebuildCollections();
@@ -791,6 +793,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             var notes = Features.Notes;
             var people = Features.People;
             var said = Features.Speech;
+            var screen = Features.ScreenText;
             q = q.Where(v => terms.All(t => t.StartsWith('#')
                 ? t.Length > 1 && v.Entry.Tags.Any(tag => TextMatch.Has(tag, t[1..]))
                 : t.StartsWith('@')
@@ -801,7 +804,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                   (notes && v.Entry.Note is { } n && TextMatch.Has(n, t)) ||
                   (people && v.Entry.People.Any(p => TextMatch.Has(p, t))) ||
                   MatchesWhen(v.Entry, t) ||
-                  (said && SaidMatches(v.Entry, t))));
+                  (said && SaidMatches(v.Entry, t)) ||
+                  (screen && ScreenMatches(v.Entry, t))));
         }
         q = ApplyFilters(q);
         q = SortIndex switch

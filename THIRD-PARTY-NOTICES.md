@@ -39,6 +39,13 @@ its own licence. None of them are modified.
   licence, Copyright (c) 2021 Haochen), exported to ONNX by Qualcomm AI Hub (`yamnet.onnx`, `yamnet.data`). Run with
   ONNX Runtime, shared with visual search.
 
+## Text on screen (downloaded only when switched on)
+
+- PaddleOCR (https://github.com/PaddlePaddle/PaddleOCR, Apache License 2.0): the PP-OCRv3 text detection model and the
+  PP-OCRv5 Latin-script mobile recognition model with its character list, as converted to ONNX in
+  https://huggingface.co/monkt/paddleocr-onnx (Apache License 2.0) (`ppocr-v3-det.onnx`, `ppocr-v5-latin-rec.onnx`,
+  `ppocr-v5-latin-dict.txt`). Run with ONNX Runtime, shared with visual search.
+
 ## Clean up my voice
 
 - `rnnoise/voice.rnnn`: the "beguiling-drafter" RNNoise model (recording, voice) from

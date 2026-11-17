@@ -46,6 +46,8 @@ Savefile updates itself after that.
   and let Clean up spot copies saved twice (optional 169 MB visual model; runs on your computer).
 - **Laughter and hype:** the videos where everyone lost it come first in Worth a rewatch, and search finds
   "laughing" or "hype" (optional 15 MB sound model).
+- **Text on screen:** reads kill feeds, scoreboards and banners, so search finds a name from the kill feed, titles say
+  "Victory Royale" or "Ace", and a clip with no game gets one when the HUD gives it away (optional 10 MB text reader).
 - **Friend picks:** pick a friend above Worth a rewatch for the best of your clips together, presented by Mochi.
 - **Who's talking:** tells your friends' voices apart and fills in Who was there. Mochi learns the voices in
   "Who's that?", a short listening game (optional 26 MB voice model; needs Voice search).

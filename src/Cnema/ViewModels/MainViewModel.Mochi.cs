@@ -202,15 +202,18 @@ public sealed partial class MainViewModel
     public string? SpeechHelp => ShowMochiHelper ? HelpFor(SpeechModelError) : null;
     public string? VisualHelp => ShowMochiHelper ? HelpFor(VisualModelError) : null;
     public string? SoundHelp => ShowMochiHelper ? HelpFor(SoundModelError) : null;
+    public string? ScreenHelp => ShowMochiHelper ? HelpFor(ScreenModelError) : null;
 
     partial void OnSpeechModelErrorChanged(string? value) => OnPropertyChanged(nameof(SpeechHelp));
     partial void OnVisualModelErrorChanged(string? value) => OnPropertyChanged(nameof(VisualHelp));
     partial void OnSoundModelErrorChanged(string? value) => OnPropertyChanged(nameof(SoundHelp));
+    partial void OnScreenModelErrorChanged(string? value) => OnPropertyChanged(nameof(ScreenHelp));
 
     private void RaiseMochiHelp()
     {
         OnPropertyChanged(nameof(SpeechHelp));
         OnPropertyChanged(nameof(VisualHelp));
         OnPropertyChanged(nameof(SoundHelp));
+        OnPropertyChanged(nameof(ScreenHelp));
     }
 }

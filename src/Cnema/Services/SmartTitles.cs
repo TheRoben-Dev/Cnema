@@ -79,12 +79,17 @@ public static partial class SmartTitles
             if (hype.Any(h => h.At >= l.Start - 500 && h.At <= l.End + 1500)) score += 1;
             if (pick is null || score > pick.Value.Score) pick = (l, text, score, setup);
         }
+        // A banner the game put on screen (VICTORY ROYALE, ACE): a big one beats a quote, unless the quote set off a laugh.
+        var banner = ScreenWords.Event(e.Screen);
+        var funny = pick is { Score: >= 1.5, Setup: true } && laughs.Count * 0.48 >= BigLaugh;
+        if (banner is { Rank: >= 7 } big && !funny) return big.Headline;
         if (pick is { Score: >= 1.5 } q)
         {
-            if (q.Setup && laughs.Count * 0.48 >= BigLaugh) return F("Laughing at “{0}”", q.Text);
+            if (funny) return F("Laughing at “{0}”", q.Text);
             if (Speaker(e, q.Line, voiceName) is { } who) return F("{0}: “{1}”", who, q.Text);
             return F("“{0}”", q.Text);
         }
+        if (banner is { } b) return b.Headline;
         if (laughs.Count * 0.48 >= BigLaugh) return T("Cracking up");
         if (hype.Count * 0.48 >= LoudMoment && e.Smart is not { Excitement: < 0.3 }) return T("Everyone yelling");
         return null;

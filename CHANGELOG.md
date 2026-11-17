@@ -2,6 +2,9 @@
 
 What changed in each Savefile (formerly Cnema) release. The app shows the entries you have not seen yet after it updates.
 
+## 0.45.0
+- Text on screen: Savefile can read kill feeds, scoreboards and banners. Search finds what was on screen (a name from the kill feed, "ace"), smart titles name the banner ("Victory Royale · Fortnite", "Ace · Valorant"), and a clip with no game yet gets one when the game's own words give it away (SPIKE PLANTED means Valorant, VICTORY ROYALE means Fortnite). Turn it on in Settings › Smart features; it needs a one-time 10 MB download, reads Swedish letters too, and everything happens on this computer.
+
 ## 0.44.0
 - Smart crop: a vertical (9:16) export follows the action instead of always cutting out the middle. Savefile looks at a small copy of the part you export, ignores a HUD that never moves and camera turns that move everything, and glides the slice to where things happen. When nothing stands out (looking around in a shooter, say) it stays in the middle like before. It works with effects and cuts too, and you can turn it off in Settings › Smart features.
 - Fixes: "Who's that?" no longer trips over the library changing while it picks snippets, the snippet levels read only the snippet instead of the whole clip, and undoing a friend the game added works whatever the name's capitals.

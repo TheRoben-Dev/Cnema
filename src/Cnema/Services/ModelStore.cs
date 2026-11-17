@@ -82,13 +82,28 @@ public static class ModelStore
         OnnxRuntime,
     };
 
+    /// <summary>
+    /// PaddleOCR (Apache-2.0), as ONNX (monkt/paddleocr-onnx): the PP-OCRv3 text finder and the PP-OCRv5 Latin-script
+    /// reader with its character list, for reading kill feeds, scoreboards and banners. Shares the ONNX Runtime library.
+    /// </summary>
+    public static IReadOnlyList<ModelInfo> Screen { get; } = new[]
+    {
+        new ModelInfo("screen", "ppocr-v3-det.onnx", 2_429_873, "ee40e80071ba3a320d4efda75f3e22047a7d049e9bf7bcaaf9daea23fc21b935",
+            "https://huggingface.co/monkt/paddleocr-onnx/resolve/main/detection/v3/det.onnx"),
+        new ModelInfo("screen", "ppocr-v5-latin-rec.onnx", 7_862_832, "614ffc2d6d3902d360fad7f1b0dd455ee45e877069d14c4e51a99dc4ef144409",
+            "https://huggingface.co/monkt/paddleocr-onnx/resolve/main/languages/latin/rec.onnx"),
+        new ModelInfo("screen", "ppocr-v5-latin-dict.txt", 1_634, "3c0a8a79b612653c25f765271714f71281e4e955962c153e272b7b8c1d2b13ff",
+            "https://huggingface.co/monkt/paddleocr-onnx/resolve/main/languages/latin/dict.txt"),
+        OnnxRuntime,
+    };
+
     public static long BytesOf(IEnumerable<ModelInfo> pack) => pack.Sum(m => m.Bytes);
     public static bool IsInstalled(IEnumerable<ModelInfo> pack) => pack.All(IsInstalled);
     /// <summary>Removes a pack, keeping files another installed pack still uses (ONNX Runtime).</summary>
     public static void Remove(IEnumerable<ModelInfo> pack)
     {
         var list = pack.ToList();
-        var shared = new[] { Visual, Sound, Voice }.Where(p => !ReferenceEquals(p, pack) && IsInstalled(p)).SelectMany(p => p).ToHashSet();
+        var shared = new[] { Visual, Sound, Voice, Screen }.Where(p => !ReferenceEquals(p, pack) && IsInstalled(p)).SelectMany(p => p).ToHashSet();
         foreach (var m in list.Where(m => !shared.Contains(m))) Remove(m);
     }
 

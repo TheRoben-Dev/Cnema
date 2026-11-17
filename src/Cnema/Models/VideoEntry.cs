@@ -39,6 +39,8 @@ public sealed class VideoEntry
     public SoundInfo? Sound { get; set; }
     /// <summary>The voices heard in it, grouped by who's speaking; null until it has been listened to.</summary>
     public VoiceInfo? Voices { get; set; }
+    /// <summary>Text read off the screen (kill feeds, scoreboards, banners); null until it has been read.</summary>
+    public ScreenInfo? Screen { get; set; }
 
     [System.Text.Json.Serialization.JsonIgnore]
     public string FileName => System.IO.Path.GetFileName(Path);
@@ -240,4 +242,18 @@ public sealed class VideoCollection
 public sealed class CollectionsFile
 {
     public List<VideoCollection> Collections { get; set; } = new();
+}
+
+/// <summary>Text read off the screen in a few frames of the video, on this computer.</summary>
+public sealed class ScreenInfo
+{
+    public int Version { get; set; }
+    public List<ScreenLine> Lines { get; set; } = new();
+}
+
+public sealed class ScreenLine
+{
+    /// <summary>The frame it was read in (ms).</summary>
+    public long At { get; set; }
+    public string Text { get; set; } = "";
 }

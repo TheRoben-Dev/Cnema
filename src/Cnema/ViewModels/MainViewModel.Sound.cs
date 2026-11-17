@@ -132,8 +132,10 @@ public sealed partial class MainViewModel
                     }
                     finally { _workGate.Release(); pace.Add(item.Entry.FileName, waited, watch.Elapsed); }
                     if (_items.TryGetValue(item.Entry.Path, out var still) && ReferenceEquals(still, item))
+                    {
                         item.Entry.Sound = info ?? new SoundInfo { Version = SoundService.Version };
                         Retitle(item);
+                    }
                     if (++done % 10 == 0) { _library.SaveCache(); OnPropertyChanged(nameof(SoundModelText)); OnCostsChanged(); }
                     await Task.Delay(100, ct);
                 }
