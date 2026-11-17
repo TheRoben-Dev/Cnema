@@ -59,7 +59,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <AvaloniaResource Include="Assets/**" Exclude="Assets/Lang/**;Assets/rnnoise/**" />
+    <AvaloniaResource Include="Assets/**" Exclude="Assets/Lang/**;Assets/rnnoise/**;Assets/Sounds/**" />
+    <!-- Savefile's own save sounds: plain files next to the app, so every OS can play it by path -->
+    <None Include="Assets/Sounds/*.wav" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Link="sounds/%(Filename)%(Extension)" />
     <!-- RNNoise model for Clean up my voice: a plain file next to the app, since ffmpeg reads it by path -->
     <None Include="Assets/rnnoise/voice.rnnn" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Link="rnnoise/voice.rnnn" />
     <EmbeddedResource Include="../../CHANGELOG.md" LogicalName="Cnema.CHANGELOG.md" />

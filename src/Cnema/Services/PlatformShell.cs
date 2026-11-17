@@ -130,20 +130,113 @@ public static class PlatformShell
     [DllImport("winmm.dll", CharSet = CharSet.Unicode)]
     private static extern bool PlaySound(string? sound, IntPtr module, uint flags);
 
-    /// <summary>A short system sound, audible over a game, to confirm a clip was saved.</summary>
-    public static void PlayConfirmSound()
+    private const uint SndAsync = 0x0001, SndNoDefault = 0x0002, SndAlias = 0x00010000, SndFilename = 0x00020000;
+
+    /// <summary>
+    /// Savefile's own save sounds (scripts/make-save-sound.py), shipped next to the app as sounds/save-&lt;id&gt;.wav.
+    /// In the order Settings lists them; the English names are translated through Loc.
+    /// </summary>
+    public static readonly (string Id, string Name)[] SaveSounds =
+    {
+        ("crystal", "Save crystal"), ("powerup", "Power-up"), ("checkpoint", "Checkpoint"), ("fanfare", "Victory fanfare"),
+        ("quest", "Quest complete"), ("loot", "Loot drop"), ("coins", "Coin chain"),
+    };
+
+    public const string DefaultSaveSound = "crystal";
+
+    public static string SaveSoundPath(string? id)
+    {
+        var known = SaveSounds.Any(s => s.Id == id) ? id! : DefaultSaveSound;
+        return Path.Combine(AppContext.BaseDirectory, "sounds", $"save-{known}.wav");
+    }
+
+    /// <summary>
+    /// Set by the clipping service while it records the Mac's system audio: plays a file through the capture
+    /// helper, whose own sound ScreenCaptureKit leaves out, so the save sound never ends up in the next clip.
+    /// Returns false when the helper can't take it (then the sound plays the normal way).
+    /// </summary>
+    public static Func<string, bool>? PlayUnrecorded { get; set; }
+
+    /// <summary>
+    /// Savefile's own short jingle, audible over a game, to confirm a clip was saved. It plays the bundled file
+    /// directly, so the OS sound scheme ("No Sounds" on Windows, alert sounds off on macOS) can't silence it;
+    /// only the volume does. Never blocks and never throws.
+    /// </summary>
+    public static void PlayConfirmSound(string? id = null)
     {
         try
         {
-            if (OperatingSystem.IsMacOS()) Start("afplay", "/System/Library/Sounds/Glass.aiff");
-            else if (OperatingSystem.IsWindows()) PlaySound("SystemAsterisk", IntPtr.Zero, 0x00010000 | 0x0001 | 0x0002); // alias, async, no default
-            else
+            var file = SaveSoundPath(id);
+            if (!File.Exists(file))
             {
-                const string sound = "/usr/share/sounds/freedesktop/stereo/complete.oga";
-                if (File.Exists(sound)) Start("paplay", sound);
+                Log.Warn($"Save sound missing at {file}; using the system sound");
+                PlaySystemSound();
+                return;
             }
+            if (OperatingSystem.IsWindows())
+            {
+                if (!PlaySound(file, IntPtr.Zero, SndFilename | SndAsync | SndNoDefault))
+                    Log.Warn("Couldn't play the save sound (no audio device?)");
+            }
+            else if (OperatingSystem.IsMacOS())
+            {
+                if (PlayUnrecorded?.Invoke(file) != true) Start("afplay", file);
+            }
+            else PlayOnLinux(file);
         }
-        catch { /* a nicety */ }
+        catch (Exception ex) { Log.Warn($"Couldn't play the save sound: {ex.Message}"); }
+    }
+
+    /// <summary>
+    /// Selftest: every bundled sound is there and is a WAV the players accept. On Windows the default one is
+    /// also played once through PlaySound by file name (synchronously); a CI runner without an audio device
+    /// reports that, which is fine, but a missing or broken file fails the check.
+    /// </summary>
+    public static string SaveSoundCheck()
+    {
+        long total = 0;
+        foreach (var (id, _) in SaveSounds)
+        {
+            var file = SaveSoundPath(id);
+            if (!File.Exists(file)) return $"MISSING ({file})";
+            var head = new byte[12];
+            using (var f = File.OpenRead(file)) f.ReadExactly(head);
+            if (System.Text.Encoding.ASCII.GetString(head, 0, 4) != "RIFF" || System.Text.Encoding.ASCII.GetString(head, 8, 4) != "WAVE")
+                return $"BROKEN ({id} is not a WAV file)";
+            total += new FileInfo(file).Length;
+        }
+        var summary = $"{SaveSounds.Length} sounds, {total / 1024} KB";
+        if (!OperatingSystem.IsWindows()) return $"OK ({summary})";
+        var played = PlaySound(SaveSoundPath(DefaultSaveSound), IntPtr.Zero, SndFilename | SndNoDefault);
+        return $"OK ({summary}, PlaySound: {(played ? "played" : "no audio device")})";
+    }
+
+    /// <summary>PulseAudio, then PipeWire, then plain ALSA: the first player that exists wins.</summary>
+    private static void PlayOnLinux(string file)
+    {
+        foreach (var player in new[] { "paplay", "pw-play", "aplay" })
+        {
+            try
+            {
+                if (player == "aplay") Start(player, "-q", file);
+                else Start(player, file);
+                return;
+            }
+            catch (System.ComponentModel.Win32Exception) { /* not installed: try the next one */ }
+        }
+        Log.Warn("No sound player found (paplay, pw-play or aplay) for the save sound");
+    }
+
+    /// <summary>The old OS sound, only for a build that lost the bundled file.</summary>
+    private static void PlaySystemSound()
+    {
+        if (OperatingSystem.IsMacOS()) Start("afplay", "/System/Library/Sounds/Glass.aiff");
+        else if (OperatingSystem.IsWindows()) PlaySound("SystemAsterisk", IntPtr.Zero, SndAlias | SndAsync | SndNoDefault);
+        else
+        {
+            const string sound = "/usr/share/sounds/freedesktop/stereo/complete.oga";
+            if (File.Exists(sound)) PlayOnLinux(sound);
+        }
     }
 
     // ---------------------------------------------------------------- App Nap

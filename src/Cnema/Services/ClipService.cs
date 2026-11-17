@@ -538,10 +538,14 @@ public sealed class ClipService : IDisposable
         {
             using (var mk = Process.Start(new ProcessStartInfo("mkfifo", $"\"{SystemAudioFifo}\"") { UseShellExecute = false }))
                 mk?.WaitForExit(3000);
-            var psi = new ProcessStartInfo(helper) { UseShellExecute = false, CreateNoWindow = true, RedirectStandardError = true };
+            var psi = new ProcessStartInfo(helper)
+                { UseShellExecute = false, CreateNoWindow = true, RedirectStandardError = true, RedirectStandardInput = true };
             psi.ArgumentList.Add(SystemAudioFifo);
-            _audioHelper = Process.Start(psi);
-            _audioHelper?.BeginErrorReadLine();
+            var proc = Process.Start(psi);
+            _audioHelper = proc;
+            proc?.BeginErrorReadLine();
+            // The helper plays the save sound itself, so the system audio it records leaves that sound out.
+            if (proc is not null) PlatformShell.PlayUnrecorded = file => PlayThroughHelper(proc, file);
             return true;
         }
         catch (Exception ex)
@@ -551,8 +555,21 @@ public sealed class ClipService : IDisposable
         }
     }
 
+    private static bool PlayThroughHelper(Process helper, string file)
+    {
+        try
+        {
+            if (helper.HasExited || file.Contains('\n')) return false;
+            helper.StandardInput.WriteLine("play " + file);
+            helper.StandardInput.Flush();
+            return true;
+        }
+        catch { return false; } // helper went away: play it the normal way
+    }
+
     private void StopSystemAudio()
     {
+        PlatformShell.PlayUnrecorded = null;
         var helper = _audioHelper;
         _audioHelper = null;
         if (helper is null) return;

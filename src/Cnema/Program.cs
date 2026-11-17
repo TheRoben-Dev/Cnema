@@ -51,7 +51,10 @@ internal static class Program
         }
         var speech = SpeechService.RuntimeCheck();
         Console.WriteLine($"speech: {speech ?? "MISSING"}");
-        var ok = vlc is not null && ToolLocator.Ffmpeg is not null && playback.StartsWith("OK") && speech is not null;
+        var sound = PlatformShell.SaveSoundCheck();
+        Console.WriteLine($"save sound: {sound}");
+        var ok = vlc is not null && ToolLocator.Ffmpeg is not null && playback.StartsWith("OK") && speech is not null
+                 && sound.StartsWith("OK");
         Console.WriteLine(ok ? "selftest OK" : "selftest FAILED");
         return ok ? 0 : 1;
     }
