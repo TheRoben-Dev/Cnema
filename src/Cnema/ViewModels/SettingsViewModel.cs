@@ -274,9 +274,13 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     // ---------- portable mode ----------
     public bool IsPortable => AppPaths.IsPortable;
+    /// <summary>Portable mode belongs to the zip download; an installed copy keeps its data in the user's folder.</summary>
+    public bool CanMakePortable => !AppPaths.IsPortable && !UpdateService.IsInstalled;
     public string PortableStatus => AppPaths.IsPortable
         ? T("On: settings, library and thumbnails are kept in \"Savefile Data\" next to the app. Delete or rename that folder to turn it off.")
-        : T("Keep settings, library and thumbnails next to the app, for running Savefile from a USB stick.");
+        : UpdateService.IsInstalled
+            ? T("For running Savefile from a USB stick, use the zip download instead of the installer. This copy is installed, so it keeps its data in your user folder.")
+            : T("Keep settings, library and thumbnails next to the app, for running Savefile from a USB stick.");
     [ObservableProperty] private string? _portableMessage;
 
     [RelayCommand]

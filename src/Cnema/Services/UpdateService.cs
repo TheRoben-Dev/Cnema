@@ -26,11 +26,38 @@ public static class UpdateService
         Assembly.GetExecutingAssembly().GetName().Version is { } v ? new Version(v.Major, v.Minor, Math.Max(0, v.Build)) : new Version(0, 0, 0);
     public static string CurrentText => Current.ToString(3);
 
-    /// <summary>The end of this platform's file name in a release, e.g. "macos-apple-silicon.zip".</summary>
+    /// <summary>
+    /// The end of this platform's file name in a release, e.g. "macos-apple-silicon.zip". A copy put there by the
+    /// Windows installer updates with the next installer, so its shortcuts, uninstaller and Apps entry stay right.
+    /// </summary>
     public static string AssetSuffix =>
         OperatingSystem.IsMacOS() ? (RuntimeInformation.ProcessArchitecture == Architecture.Arm64 ? "macos-apple-silicon.zip" : "macos-intel.zip")
-        : OperatingSystem.IsWindows() ? "windows-x64.zip"
+        : OperatingSystem.IsWindows() ? (IsInstalled ? "windows-x64-setup.exe" : "windows-x64.zip")
         : "linux-x64.tar.gz";
+
+    /// <summary>The installer's AppId: the key of Savefile's entry under Apps (the "_is1" suffix is Inno Setup's).</summary>
+    private const string UninstallKey = @"Software\Microsoft\Windows\CurrentVersion\Uninstall\{7E6B1C3A-5D2F-4E8B-9A41-2C5D7F1E0B93}_is1";
+
+    /// <summary>Installed by the Windows installer (its uninstaller sits next to the app), not unzipped.</summary>
+    public static bool IsInstalled =>
+        OperatingSystem.IsWindows() && InstallRoot is { } root && File.Exists(Path.Combine(root, "unins000.exe"));
+
+    /// <summary>Installed for everyone on this PC (in Program Files), so updating asks for an administrator once.</summary>
+    public static bool IsAllUsersInstall
+    {
+        get
+        {
+            if (!OperatingSystem.IsWindows() || !IsInstalled || InstallRoot is not { } root) return false;
+            try
+            {
+                using var key = Microsoft.Win32.RegistryKey.OpenBaseKey(Microsoft.Win32.RegistryHive.LocalMachine, Microsoft.Win32.RegistryView.Registry64)
+                    .OpenSubKey(UninstallKey);
+                return key?.GetValue("InstallLocation") is string where &&
+                       string.Equals(where.TrimEnd('\\', '/'), root.TrimEnd('\\', '/'), StringComparison.OrdinalIgnoreCase);
+            }
+            catch { return false; }
+        }
+    }
 
     private static HttpClient NewClient(TimeSpan timeout)
     {
@@ -129,6 +156,8 @@ public static class UpdateService
     public static string? WhyNoSelfUpdate()
     {
         if (InstallRoot is not { } root) return T("this copy was not installed from a release build");
+        // The installer does the work (and asks for an administrator itself when Savefile is installed for everyone).
+        if (IsInstalled) return null;
         // A quarantined app on macOS runs from a read-only, randomised copy of itself.
         if (root.Contains("/AppTranslocation/", StringComparison.Ordinal))
             return T("macOS is running Savefile from a temporary location; move Cnema.app to Applications and open it from there");
@@ -157,7 +186,8 @@ public static class UpdateService
         if (info.AssetUrl is null) throw new InvalidOperationException(T("This release has no build for this system."));
         try { if (Directory.Exists(StageDir)) Directory.Delete(StageDir, true); } catch { /* reused below */ }
         Directory.CreateDirectory(StageDir);
-        var archive = Path.Combine(StageDir, "download" + (AssetSuffix.EndsWith(".zip") ? ".zip" : ".tar.gz"));
+        var installer = info.AssetUrl.EndsWith(".exe", StringComparison.OrdinalIgnoreCase);
+        var archive = Path.Combine(StageDir, installer ? "Savefile-setup.exe" : "download" + (AssetSuffix.EndsWith(".zip") ? ".zip" : ".tar.gz"));
 
         using (var http = NewClient(TimeSpan.FromMinutes(30)))
         using (var response = await http.GetAsync(info.AssetUrl, HttpCompletionOption.ResponseHeadersRead, ct))
@@ -187,6 +217,8 @@ public static class UpdateService
             if (!actual.Equals(expected, StringComparison.OrdinalIgnoreCase))
                 throw new InvalidOperationException(T("The download does not match the checksum GitHub published for it."));
         }
+
+        if (installer) return archive;
 
         var unpacked = Path.Combine(StageDir, "new");
         Directory.CreateDirectory(unpacked);
@@ -223,6 +255,11 @@ public static class UpdateService
         var root = InstallRoot ?? throw new InvalidOperationException("Not an installed build.");
         var pid = Environment.ProcessId;
         Log.Info($"Installing update from {newApp} over {root}");
+        if (OperatingSystem.IsWindows() && newApp.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+        {
+            RunInstaller(newApp, root, pid, background);
+            return;
+        }
         // The new build may be packaged as Savefile instead of Cnema; start whichever it ships.
         var exeName = new[] { "Savefile", "Cnema" }.FirstOrDefault(n =>
             File.Exists(Path.Combine(newApp, OperatingSystem.IsWindows() ? n + ".exe" : n))) ?? "Cnema";
@@ -299,5 +336,63 @@ public static class UpdateService
             psi.ArgumentList.Add(script);
         }
         Process.Start(psi)?.Dispose(); // it runs on by itself; only our handle goes
+    }
+
+    /// <summary>Where the installer writes what it did during an update (kept for diagnostics).</summary>
+    public static string InstallerLog => Path.Combine(AppPaths.DataDir, "update-setup.log");
+
+    /// <summary>
+    /// Waits for this process to exit, runs the new installer silently in the same mode (just me, or everyone,
+    /// which shows Windows' administrator prompt once) and starts Savefile again from where it is installed.
+    /// </summary>
+    private static void RunInstaller(string setup, string root, int pid, bool background)
+    {
+        var script = Path.Combine(StageDir, "apply.cmd");
+        File.WriteAllText(script, string.Join("\r\n", new[]
+        {
+            "@echo off",
+            "set N=0",
+            ":wait",
+            $"tasklist /FI \"PID eq {pid}\" 2>nul | find \" {pid} \" >nul || goto ready",
+            "set /a N+=1",
+            "if %N% GEQ 180 goto launch",
+            "timeout /t 1 /nobreak >nul",
+            "goto wait",
+            ":ready",
+            // /wait also covers the administrator case: the first installer waits for its elevated copy.
+            "start \"\" /wait \"%SF_SETUP%\" /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP- /NOCANCEL %SF_MODE% \"/LOG=%SF_LOG%\"",
+            ":launch",
+            "start \"\" \"%SF_DEST%\\Cnema.exe\" %SF_ARGS%",
+            "rmdir /S /Q \"%SF_STAGE%\"",
+            "",
+        }));
+        var psi = new ProcessStartInfo("cmd.exe") { UseShellExecute = false, CreateNoWindow = true };
+        psi.ArgumentList.Add("/c");
+        psi.ArgumentList.Add(script);
+        psi.Environment["SF_SETUP"] = setup;
+        psi.Environment["SF_MODE"] = IsAllUsersInstall ? "/ALLUSERS" : "/CURRENTUSER";
+        psi.Environment["SF_LOG"] = InstallerLog;
+        psi.Environment["SF_DEST"] = root;
+        psi.Environment["SF_ARGS"] = background ? "--background" : "";
+        psi.Environment["SF_STAGE"] = Path.GetDirectoryName(setup)!;
+        psi.WorkingDirectory = Path.GetTempPath();
+        Process.Start(psi)?.Dispose();
+    }
+
+    /// <summary>
+    /// CI check of the installer update path: copies <paramref name="setup"/> to where a downloaded update goes and
+    /// hands over to it exactly like "Install and restart", then exits.
+    /// </summary>
+    public static int SelfTestInstallerUpdate(string setup)
+    {
+        Console.WriteLine($"installed: {IsInstalled}, for everyone: {IsAllUsersInstall}, update file: *{AssetSuffix}, self-update: {WhyNoSelfUpdate() ?? "yes"}");
+        if (!IsInstalled || WhyNoSelfUpdate() is not null) return 1;
+        try { if (Directory.Exists(StageDir)) Directory.Delete(StageDir, true); } catch { /* reused */ }
+        Directory.CreateDirectory(StageDir);
+        var staged = Path.Combine(StageDir, "Savefile-setup.exe");
+        File.Copy(setup, staged, true);
+        try { File.Delete(InstallerLog); } catch { /* fresh log below */ }
+        ApplyAndRestart(staged, background: true);
+        return 0;
     }
 }

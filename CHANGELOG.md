@@ -2,6 +2,10 @@
 
 What changed in each Savefile (formerly Cnema) release. The app shows the entries you have not seen yet after it updates.
 
+## 0.46.0
+- Windows: Savefile now has a proper installer. Choose to install it for just you (no administrator needed) or for everyone on the PC (in Program Files). It adds Savefile to the Start menu and the desktop, and you can uninstall it from Settings › Apps like any other app (your videos, settings and library stay). An installed Savefile updates itself with the next installer and keeps your choice; installed for everyone, it asks for an administrator once per update, so it waits for you to click the update instead of updating at login.
+- The zip download stays as the portable version, for running Savefile without installing it (from a USB stick, for example). If you unzipped Savefile before, it keeps updating itself as it did; to switch, run the installer and delete the old folder (your settings and library carry over).
+
 ## 0.45.2
 - On a friend's page in a smaller window, the page title no longer slides under the Play all, montage and Wrapped buttons. The montage and Wrapped buttons show only their icons until there's room (hover them for what they do), and a title that still doesn't fit ends in "…".
 

@@ -38,7 +38,7 @@ jobs:
         run: |
           awk -v v="${TAG#v}" '$0 == "## " v {on=1; next} /^## / {on=0} on' CHANGELOG.md > notes.md
           [ -s notes.md ] || echo "Savefile $TAG." > notes.md
-          printf '\n**Installing:** macOS: unzip, move Cnema.app to Applications, then right-click and Open the first time (the app file keeps its old name for now so updates keep working; it shows as Savefile). Windows: unzip and run Cnema.exe. Linux: needs libvlc5, vlc-plugin-base and ffmpeg from your distribution. Savefile (formerly Cnema) installs later versions by itself.\n' >> notes.md
+          printf '\n**Installing:** macOS: unzip, move Cnema.app to Applications, then right-click and Open the first time (the app file keeps its old name for now so updates keep working; it shows as Savefile). Windows: run the Savefile setup (choose just you or everyone on the PC; Windows SmartScreen may warn the first time because the installer is not signed: click More info, then Run anyway), or take the zip to run it without installing (portable, e.g. from a USB stick). Linux: needs libvlc5, vlc-plugin-base and ffmpeg from your distribution. Savefile (formerly Cnema) installs later versions by itself.\n' >> notes.md
           cat notes.md
       - uses: softprops/action-gh-release@v2
         with:
@@ -49,6 +49,7 @@ jobs:
           files: |
             Savefile-*.zip
             Savefile-*.tar.gz
+            Savefile-*-setup.exe
       # The source repository is private, so its releases are invisible to the app's update check
       # and to anyone downloading. The same builds are published to a public, releases-only repository.
       # Needs the secret RELEASES_TOKEN: a fine-grained token with Contents read/write on that repo only.
@@ -61,6 +62,6 @@ jobs:
             echo "::warning::RELEASES_TOKEN is not set; skipped publishing to $PUBLIC_REPO"
             exit 0
           fi
-          gh release create "$TAG" Savefile-*.zip Savefile-*.tar.gz --repo "$PUBLIC_REPO" \
+          gh release create "$TAG" Savefile-*.zip Savefile-*.tar.gz Savefile-*-setup.exe --repo "$PUBLIC_REPO" \
             --title "Savefile $TAG" \
             --notes-file notes.md

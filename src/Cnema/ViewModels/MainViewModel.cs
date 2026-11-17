@@ -152,9 +152,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         await Task.Delay(TimeSpan.FromSeconds(4)); // let startup finish first
         await CheckForUpdatesCoreAsync(announce: true);
         // At launch a newer version is installed straight away. Each version is tried once: if the
-        // install did not take, the card stays and the next launch does not loop.
+        // install did not take, the card stays and the next launch does not loop. A copy installed for everyone
+        // would greet the user with an administrator prompt at login, so it waits for a click on the card.
         if (_settings.Current.AutoUpdate && Update is { AssetUrl: not null } found &&
-            UpdateService.WhyNoSelfUpdate() is null && !Clips.IsSession &&
+            UpdateService.WhyNoSelfUpdate() is null && !Clips.IsSession && !UpdateService.IsAllUsersInstall &&
             _settings.Current.LastUpdateAttempt != found.Version.ToString(3))
         {
             _settings.Current.LastUpdateAttempt = found.Version.ToString(3);

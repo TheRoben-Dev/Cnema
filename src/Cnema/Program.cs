@@ -10,6 +10,7 @@ internal static class Program
     {
         if (args.Contains("--selftest")) return SelfTest();
         if (Array.IndexOf(args, "--selftest-models") is var mi and >= 0) return ModelSelfTest(args.Skip(mi + 1).FirstOrDefault());
+        if (Array.IndexOf(args, "--selftest-update") is var ui and >= 0 && ui + 1 < args.Length) return UpdateService.SelfTestInstallerUpdate(args[ui + 1]);
         Log.HookUnhandled();
         Log.Info($"Cnema {UpdateService.CurrentText} starting on {System.Runtime.InteropServices.RuntimeInformation.OSDescription}");
         // Cnema can live in the tray: a second launch just brings the running copy forward.
