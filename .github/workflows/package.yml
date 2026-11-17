@@ -66,10 +66,28 @@ jobs:
             [ -s "$RUNNER_TEMP/speech.aiff" ] && speech="$RUNNER_TEMP/speech.aiff"
           fi
           "$D/Cnema" --selftest-models "$speech"
+      # The Windows installer: the same app folder as the zip, installed for just me or for everyone.
+      - name: Build the Windows installer
+        if: matrix.rid == 'win-x64'
+        shell: pwsh
+        run: |
+          $iscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress | Out-Null }
+          $v = $env:RAW_VERSION.TrimStart('v')
+          $num = ($v -split '-')[0]
+          & $iscc /Q "/DAppVersion=$v" "/DNumVersion=$num" "/DSourceDir=$PWD\dist\Cnema" "/DOutputDir=$PWD\dist" installer\savefile.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Get-Item dist\Savefile-*-setup.exe | Format-Table Name, Length
+      - name: Test the Windows installer (install, update and uninstall, for just me and for everyone)
+        if: matrix.rid == 'win-x64'
+        shell: pwsh
+        timeout-minutes: 20
+        run: installer\test-installer.ps1 (Get-Item dist\Savefile-*-setup.exe).FullName $env:RAW_VERSION.TrimStart('v')
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.rid }}
           path: |
             dist/Savefile-*.zip
             dist/Savefile-*.tar.gz
+            dist/Savefile-*-setup.exe
           if-no-files-found: error

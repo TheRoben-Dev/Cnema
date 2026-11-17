@@ -2762,7 +2762,7 @@
                                  IsVisible="{Binding PortableMessage, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     </StackPanel>
                     <Panel Grid.Column="1">
-                      <Button Classes="soft" svc:Tr.Content="Make portable" Command="{Binding MakePortableCommand}" IsVisible="{Binding !IsPortable}" />
+                      <Button Classes="soft" svc:Tr.Content="Make portable" Command="{Binding MakePortableCommand}" IsVisible="{Binding CanMakePortable}" />
                       <Button Classes="soft" svc:Tr.Content="Show folder" Command="{Binding ShowPortableFolderCommand}" IsVisible="{Binding IsPortable}" />
                     </Panel>
                   </Grid>

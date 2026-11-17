@@ -23,7 +23,7 @@ Savefile updates itself after that.
 **First launch:** the builds aren't signed.
 
 - **macOS:** right-click Cnema.app and choose **Open** (or run `xattr -dr com.apple.quarantine /Applications/Cnema.app`).
-- **Windows:** if SmartScreen shows "Windows protected your PC", click **More info**, then **Run anyway**.
+- **Windows:** run `Savefile-…-windows-x64-setup.exe` and choose to install for just you (no administrator needed) or for everyone on the PC (Program Files). It adds Start menu and desktop shortcuts and an entry in Apps to uninstall it. The setup isn't signed, so if SmartScreen shows "Windows protected your PC", click **More info**, then **Run anyway**. The `windows-x64.zip` is the portable version: unzip it anywhere (a USB stick works) and run `Cnema.exe`.
 - **Linux:** install libVLC from your distro first, e.g. `sudo apt install libvlc5 vlc-plugin-base`.
 
 ## Features
