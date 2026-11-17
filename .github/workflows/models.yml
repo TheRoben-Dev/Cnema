@@ -32,6 +32,9 @@ jobs:
           clip-vit-b32-text-q8.onnx 73baab855d406190da9faa498cfedf65f15cf309f4cc7385b7b032e6d08e5c3a https://huggingface.co/Xenova/clip-vit-base-patch32/resolve/main/onnx/text_model_quantized.onnx
           clip-vocab.json 5047b556ce86ccaf6aa22b3ffccfc52d391ea4accdab9c2f2407da5b742d4363 https://huggingface.co/Xenova/clip-vit-base-patch32/resolve/main/vocab.json
           clip-merges.txt 9fd691f7c8039210e0fced15865466c65820d09b63988b0174bfe25de299051a https://huggingface.co/Xenova/clip-vit-base-patch32/resolve/main/merges.txt
+          ppocr-v3-det.onnx ee40e80071ba3a320d4efda75f3e22047a7d049e9bf7bcaaf9daea23fc21b935 https://huggingface.co/monkt/paddleocr-onnx/resolve/main/detection/v3/det.onnx
+          ppocr-v5-latin-rec.onnx 614ffc2d6d3902d360fad7f1b0dd455ee45e877069d14c4e51a99dc4ef144409 https://huggingface.co/monkt/paddleocr-onnx/resolve/main/languages/latin/rec.onnx
+          ppocr-v5-latin-dict.txt 3c0a8a79b612653c25f765271714f71281e4e955962c153e272b7b8c1d2b13ff https://huggingface.co/monkt/paddleocr-onnx/resolve/main/languages/latin/dict.txt
           wespeaker-resnet34-lm.onnx 7bb2f06e9df17cdf1ef14ee8a15ab08ed28e8d0ef5054ee135741560df2ec068 https://huggingface.co/Wespeaker/wespeaker-voxceleb-resnet34-LM/resolve/main/voxceleb_resnet34_LM.onnx
           LIST
           # ONNX Runtime for visual search, per platform, out of the official NuGet package.

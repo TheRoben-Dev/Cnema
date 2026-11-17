@@ -81,7 +81,7 @@ internal static class Program
         Console.WriteLine($"models: {ModelStore.Dir}");
         Check("download", () =>
         {
-            foreach (var pack in new IReadOnlyList<ModelInfo>[] { new[] { ModelStore.Speech }, ModelStore.Visual, ModelStore.Sound })
+            foreach (var pack in new IReadOnlyList<ModelInfo>[] { new[] { ModelStore.Speech }, ModelStore.Visual, ModelStore.Sound, ModelStore.Screen })
                 ModelStore.DownloadAsync(pack, null, CancellationToken.None).GetAwaiter().GetResult();
             return "OK";
         });
@@ -123,6 +123,12 @@ internal static class Program
             using var sound = SoundService.Load();
             var info = sound.ListenAsync(video, entry.DurationMs, CancellationToken.None).GetAwaiter().GetResult();
             return $"OK ({info.Laugh.Count} laugh, {info.Hype.Count} hype moments)";
+        });
+        Check("screen", () =>
+        {
+            using var screen = ScreenService.Load();
+            var info = screen.ReadAsync(video, entry.DurationMs, -1, CancellationToken.None).GetAwaiter().GetResult();
+            return $"OK ({info.Lines.Count} lines: \"{string.Join(" | ", info.Lines.Select(l => l.Text))}\")";
         });
         try { File.Delete(video); } catch { /* temp */ }
         Console.WriteLine(ok ? "model selftest OK" : "model selftest FAILED");

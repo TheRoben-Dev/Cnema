@@ -16,7 +16,7 @@ public sealed partial class MainViewModel
     /// <summary>Goes up when the best moments pass finds a really good one: the blob hops.</summary>
     [ObservableProperty] private int _indexCheer;
 
-    public bool IsIndexing => SmartActivity.Length > 0 || SpeechActivity.Length > 0 || VisualActivity.Length > 0 || SoundActivity.Length > 0 || VoiceActivity.Length > 0;
+    public bool IsIndexing => SmartActivity.Length > 0 || SpeechActivity.Length > 0 || VisualActivity.Length > 0 || SoundActivity.Length > 0 || VoiceActivity.Length > 0 || ScreenActivity.Length > 0;
     public bool ShowIndexing => IsIndexing && IndexTotal > 0 && IndexDone < IndexTotal;
     public double IndexProgress => IndexTotal == 0 ? 0 : (double)IndexDone / IndexTotal;
     public string IndexTitle =>
@@ -32,12 +32,14 @@ public sealed partial class MainViewModel
     public bool HasVisualActivity => VisualActivity.Length > 0;
     public bool HasSoundActivity => SoundActivity.Length > 0;
     public bool HasVoiceActivity => VoiceActivity.Length > 0;
+    public bool HasScreenActivity => ScreenActivity.Length > 0;
 
     partial void OnSmartActivityChanged(string value) => RaiseIndexing();
     partial void OnSpeechActivityChanged(string value) => RaiseIndexing();
     partial void OnVisualActivityChanged(string value) => RaiseIndexing();
     partial void OnSoundActivityChanged(string value) => RaiseIndexing();
     partial void OnVoiceActivityChanged(string value) => RaiseIndexing();
+    partial void OnScreenActivityChanged(string value) => RaiseIndexing();
     partial void OnIndexDoneChanged(int value) => RaiseIndexCounts();
     partial void OnIndexTotalChanged(int value) => RaiseIndexCounts();
 
@@ -56,6 +58,7 @@ public sealed partial class MainViewModel
         OnPropertyChanged(nameof(HasVisualActivity));
         OnPropertyChanged(nameof(HasSoundActivity));
         OnPropertyChanged(nameof(HasVoiceActivity));
+        OnPropertyChanged(nameof(HasScreenActivity));
         if (IsIndexing)
         {
             // Counting is a quick look over the library, a few times a minute at most.
@@ -92,7 +95,8 @@ public sealed partial class MainViewModel
                 && (!(Features.Speech && SpeechModelReady) || e.Speech is { Version: SpeechService.Version })
                 && (!(Features.Visual && VisualModelReady) || e.Visual is { Version: VisualService.Version })
                 && (!(Features.Laughs && SoundModelReady) || e.Sound is { Version: SoundService.Version })
-                && (!(Features.Voices && Features.Speech && VoiceModelReady) || !NeedsVoices(e)))
+                && (!(Features.Voices && Features.Speech && VoiceModelReady) || !NeedsVoices(e))
+                && (!(Features.ScreenText && ScreenModelReady) || e.Screen is { Version: ScreenService.Version }))
                 done++;
         }
         IndexTotal = total;

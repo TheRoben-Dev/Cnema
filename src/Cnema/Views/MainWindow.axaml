@@ -149,6 +149,10 @@
                         <TextBlock svc:Tr.Text="Who's talking" FontSize="12" FontWeight="SemiBold" />
                         <TextBlock Classes="dim" Text="{Binding VoiceActivity}" FontSize="11" TextWrapping="Wrap" />
                       </StackPanel>
+                      <StackPanel Spacing="1" IsVisible="{Binding HasScreenActivity}">
+                        <TextBlock svc:Tr.Text="Text on screen" FontSize="12" FontWeight="SemiBold" />
+                        <TextBlock Classes="dim" Text="{Binding ScreenActivity}" FontSize="11" TextWrapping="Wrap" />
+                      </StackPanel>
                     </StackPanel>
                     <Button Classes="soft" HorizontalAlignment="Left" Content="{Binding IndexPauseText}" Command="{Binding ToggleIndexPauseCommand}" />
                   </StackPanel>
@@ -3305,6 +3309,42 @@
                         <Button Classes="soft" svc:Tr.Content="Cancel" Command="{Binding #Root.((vm:MainViewModel)DataContext).CancelSoundDownloadCommand}" IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).IsDownloadingSound}" />
                         <Button Classes="soft" svc:Tr.Content="Remove the model" Command="{Binding #Root.((vm:MainViewModel)DataContext).RemoveSoundModelCommand}" IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).SoundModelReady}"
                                 svc:Tr.Tip="Frees the space. What was already heard stays." />
+                      </StackPanel>
+                    </StackPanel>
+<Border Classes="sep" />
+                    <Grid Classes="row" ColumnDefinitions="*,Auto">
+                      <StackPanel Spacing="2">
+                        <TextBlock svc:Tr.Text="Text on screen" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Savefile reads kill feeds, scoreboards and banners in a few frames of each video, on this computer and only when it's not busy. Search finds the words (a name from the kill feed, &quot;ace&quot;), smart titles name the banner (Victory Royale, Ace), and a clip with no game yet gets one when the game's own words give it away." />
+                        <Grid ColumnDefinitions="Auto,*" Margin="0,4,0,0">
+                          <PathIcon Data="{StaticResource IcSpeed}" Width="11" Height="11" Margin="0,2,6,0" VerticalAlignment="Top" Foreground="{DynamicResource TextDim}" />
+                          <TextBlock Grid.Column="1" Classes="dim cost" FontSize="11" TextWrapping="Wrap" Text="{Binding #Root.((vm:MainViewModel)DataContext).ScreenCostText}" />
+                        </Grid>
+                      </StackPanel>
+                      <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureScreenText}" />
+                    </Grid>
+                    <StackPanel Spacing="8" Margin="14,0,14,14" IsVisible="{Binding FeatureScreenText}">
+                      <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="{Binding #Root.((vm:MainViewModel)DataContext).ScreenModelText}"
+                                 Classes.err="{Binding #Root.((vm:MainViewModel)DataContext).ScreenModelError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                      <Grid ColumnDefinitions="Auto,*" IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).ScreenHelp, Converter={x:Static ObjectConverters.IsNotNull}}">
+                        <c:BlobMascot Width="36" Height="32" Mood="Puzzled" Still="{Binding #Root.((vm:MainViewModel)DataContext).ReducedMotion}" MaxFps="24" />
+                        <TextBlock Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Center" FontSize="11" TextWrapping="Wrap"
+                                   Text="{Binding #Root.((vm:MainViewModel)DataContext).ScreenHelp}" />
+                      </Grid>
+                      <ProgressBar Minimum="0" Maximum="1" Value="{Binding #Root.((vm:MainViewModel)DataContext).ScreenDownloadProgress}" Height="4" MinHeight="4" CornerRadius="2"
+                                   IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).IsDownloadingScreen}" />
+                      <TextBlock Classes="dim" FontSize="11" Foreground="{DynamicResource Highlight}" Text="{Binding #Root.((vm:MainViewModel)DataContext).ScreenActivity}"
+                                 IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).ScreenActivity, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                      <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Classes="accent" Command="{Binding #Root.((vm:MainViewModel)DataContext).DownloadScreenModelCommand}" IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).CanDownloadScreen}">
+                          <StackPanel Orientation="Horizontal" Spacing="6">
+                            <PathIcon Data="{StaticResource IcImport}" Width="12" Height="12" Foreground="{DynamicResource OnAccent}" />
+                            <TextBlock svc:Tr.Text="Download the text reader" />
+                          </StackPanel>
+                        </Button>
+                        <Button Classes="soft" svc:Tr.Content="Cancel" Command="{Binding #Root.((vm:MainViewModel)DataContext).CancelScreenDownloadCommand}" IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).IsDownloadingScreen}" />
+                        <Button Classes="soft" svc:Tr.Content="Remove the model" Command="{Binding #Root.((vm:MainViewModel)DataContext).RemoveScreenModelCommand}" IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).ScreenModelReady}"
+                                svc:Tr.Tip="Frees the space. What was already read stays." />
                       </StackPanel>
                     </StackPanel>
                     <Border Classes="sep" />

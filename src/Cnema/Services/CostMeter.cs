@@ -17,6 +17,8 @@ public static class CostMeter
     public const string Sound = "sound";
     /// <summary>Who's talking: a voiceprint per line Voice search wrote down.</summary>
     public const string Voices = "voices";
+    /// <summary>Text on screen: a handful of frames read per video.</summary>
+    public const string Screen = "screen";
     /// <summary>The year's video, per minute of video made (not per minute of clips).</summary>
     public const string Wrapped = "wrapped";
 
@@ -32,6 +34,7 @@ public static class CostMeter
         new(SpeechSwedish, 66, 2.5, "half your CPU cores (at most 4) at low priority", 900),
         new(Visual, 0, 3.5, "half your CPU cores (at most 4) at low priority, a few seconds per video", 250),
         new(Sound, 0.8, 0.5, "one or two CPU cores at low priority, no GPU", 40),
+        new(Screen, 0, 4, "two CPU cores at low priority, a few seconds per video", 150),
         new(Voices, 0.6, 0.5, "two CPU cores at low priority, a moment per line said", 120),
         new(Wrapped, 60, 5, "half your CPU cores (at most 4) at low priority, no GPU", 300),
     };

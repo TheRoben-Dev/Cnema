@@ -10,6 +10,7 @@ public sealed partial class MainViewModel
     public string VisualCostText => CostText(CostMeter.Visual, v => v.Entry.Visual is { Version: VisualService.Version }, Features.Visual, ModelStore.BytesOf(ModelStore.Visual));
     public string SoundCostText => CostText(CostMeter.Sound, v => v.Entry.Sound is { Version: SoundService.Version }, Features.Laughs, SoundDownloadBytes);
     public string VoicesCostText => CostText(CostMeter.Voices, v => v.Entry.Speech is not { Lines.Count: > 0 } || v.Entry.Voices is { Version: VoiceService.Version }, Features.Voices, VoiceDownloadBytes);
+    public string ScreenCostText => CostText(CostMeter.Screen, v => v.Entry.Screen is { Version: ScreenService.Version }, Features.ScreenText, ScreenDownloadBytes);
     public string TitlesCostText => T("Costs next to nothing: titles come from what Savefile already knows, with no download and no background work.");
 
     private DateTime _costsSaved = DateTime.MinValue;
@@ -22,6 +23,7 @@ public sealed partial class MainViewModel
         OnPropertyChanged(nameof(VisualCostText));
         OnPropertyChanged(nameof(SoundCostText));
         OnPropertyChanged(nameof(VoicesCostText));
+        OnPropertyChanged(nameof(ScreenCostText));
         if (DateTime.UtcNow - _costsSaved > TimeSpan.FromSeconds(30))
         {
             _costsSaved = DateTime.UtcNow;
