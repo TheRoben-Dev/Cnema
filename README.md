@@ -9,7 +9,10 @@ caption and send to the group chat. No account, no cloud. Built on the VLC engin
 Savefile was called **Cnema** up to v0.22. The repository, the release mirror and the app file
 (`Cnema.app`, `Cnema.exe`) keep the old name for now so existing installs keep updating themselves.
 
-![Library](docs/library.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/savefile-hero-dark.png">
+  <img alt="Savefile: Mochi the blob next to the Savefile library, with smart search, best moments, friends and Wrapped" src="docs/savefile-hero-light.png">
+</picture>
 
 ## Download
 
@@ -66,7 +69,42 @@ Savefile updates itself after that.
 
 See [CHANGELOG.md](CHANGELOG.md) for what's new in each version.
 
-![Light mode](docs/color-schemes.png)
+## A look around
+
+**Quick player:** videos open over the library, with who was there and a gold favourite star.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screens/quick-player-dark.png">
+  <img alt="The Quick player playing a clip over the library" src="docs/screens/quick-player-light.png">
+</picture>
+
+**Editor:** trim, captions, speed, zoom, blur, sound, branding and export, one tool rail.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screens/editor-dark.png">
+  <img alt="The editor with a selection and a caption" src="docs/screens/editor-light.png">
+</picture>
+
+**Share:** one click to fit Discord, go vertical for Shorts and TikTok, or make a GIF.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screens/share-dark.png">
+  <img alt="The editor's Export and share page with Discord, vertical and GIF presets" src="docs/screens/share-light.png">
+</picture>
+
+**Friends:** every clip with someone, a montage of your best moments together and a Wrapped of just the two of you.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screens/friend-dark.png">
+  <img alt="A friend's page with Play all, Make a montage and Wrapped with Elin" src="docs/screens/friend-light.png">
+</picture>
+
+**Year in clips:** a look back at the year, with a montage and a picture to share.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screens/recap-dark.png">
+  <img alt="Year in clips: moments kept, month by month, who was there and what you played" src="docs/screens/recap-light.png">
+</picture>
 
 ## Build from source
 

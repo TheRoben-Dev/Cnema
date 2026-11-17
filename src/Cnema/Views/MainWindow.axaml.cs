@@ -19,6 +19,13 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         ApplyTitleBarInsets();
+        // A narrow window keeps the page title readable: the friend page's montage and Wrapped buttons drop their words (the icon and tooltip stay).
+        MainPane.SizeChanged += (_, e) =>
+        {
+            var roomy = e.NewSize.Width >= 1320;
+            FriendMontageLabel.IsVisible = roomy;
+            FriendWrappedText.IsVisible = roomy;
+        };
         SetUpDragOut();
         FrameEdit.RegionChanged += (tag, area) => Vm?.Player.MoveFrameRegion(tag, area);
         FrameEdit.RegionPicked += tag => Vm?.Player.PickFrameRegion(tag);

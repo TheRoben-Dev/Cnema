@@ -2,6 +2,9 @@
 
 What changed in each Savefile (formerly Cnema) release. The app shows the entries you have not seen yet after it updates.
 
+## 0.45.2
+- On a friend's page in a smaller window, the page title no longer slides under the Play all, montage and Wrapped buttons. The montage and Wrapped buttons show only their icons until there's room (hover them for what they do), and a title that still doesn't fit ends in "…".
+
 ## 0.45.1
 - External drives on a Mac or Linux are recognised as their own drive. Make room checked free space on the startup disk instead of the drive the video is on, and merging folders didn't notice that videos from another drive need room to be copied.
 - A video in the Bin on an external drive that isn't plugged in now waits for the drive instead of being forgotten, so it's still deleted for good when the drive comes back.
