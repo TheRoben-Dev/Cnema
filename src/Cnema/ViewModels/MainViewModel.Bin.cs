@@ -55,7 +55,11 @@ public sealed partial class MainViewModel
 
     private void ExpireBin() => _ = Task.Run(() =>
     {
-        try { _bin.Expire(); }
+        try
+        {
+            // The count and the Bin page follow once the expired videos are really gone.
+            if (_bin.Expire() > 0) Avalonia.Threading.Dispatcher.UIThread.Post(RaiseBin);
+        }
         catch (Exception ex) { Log.Warn($"Bin: {ex.Message}"); }
     });
 
