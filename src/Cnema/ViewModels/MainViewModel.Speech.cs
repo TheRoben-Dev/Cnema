@@ -153,7 +153,7 @@ public sealed partial class MainViewModel
                     }
                     var waited = await TakeTurnAsync(s => SpeechActivity = s, working, "Speech", ct);
                     using var limit = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                    limit.CancelAfter(ItemLimit(item.Entry.DurationMs));
+                    BackgroundHold.CancelAfterActive(limit, ItemLimit(item.Entry.DurationMs));
                     var watch = System.Diagnostics.Stopwatch.StartNew();
                     SpeechInfo? info;
                     try

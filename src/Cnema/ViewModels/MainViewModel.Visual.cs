@@ -133,7 +133,7 @@ public sealed partial class MainViewModel
                     if (model is null) return;
                     var waited = await TakeTurnAsync(s => VisualActivity = s, working, "Visual", ct);
                     using var limit = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                    limit.CancelAfter(ItemLimit(item.Entry.DurationMs));
+                    BackgroundHold.CancelAfterActive(limit, ItemLimit(item.Entry.DurationMs));
                     var watch = System.Diagnostics.Stopwatch.StartNew();
                     VisualInfo? info;
                     try

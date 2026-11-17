@@ -76,7 +76,9 @@ public sealed partial class MainViewModel
     }
 
     /// <summary>Gaming (a game profile is on), recording a session or exporting: wait, so the game gets the computer.</summary>
-    private bool SmartShouldWait => IsIndexPaused || Clips.ActiveGame is not null || Clips.IsSession || Exports.IsBusy || Player.IsExporting || IsScanning;
+    // A video playing in Savefile counts too: indexing decodes video with the same hardware decoder and
+    // competes for the CPU, which on macOS can starve libVLC's audio and make playback crackle.
+    private bool SmartShouldWait => IsIndexPaused || Clips.ActiveGame is not null || Clips.IsSession || Exports.IsBusy || Player.IsExporting || IsScanning || Player.IsPlaying;
 
     /// <summary>What the smart features are waiting for, said in Settings.</summary>
     private string WaitReason =>
@@ -86,6 +88,7 @@ public sealed partial class MainViewModel
         : IsMakingWrapped ? T("Waiting while your Wrapped is made. It carries on by itself after.")
         : Exports.IsBusy || Player.IsExporting ? T("Paused until the export is done.")
         : IsScanning ? T("Paused while the library is scanned.")
+        : Player.IsPlaying ? T("Paused while a video plays.")
         : "";
 
     /// <summary>
@@ -106,7 +109,7 @@ public sealed partial class MainViewModel
             if (!logged && DateTime.UtcNow - since > TimeSpan.FromMinutes(2))
             {
                 logged = true;
-                Log.Info($"{feature} paused: game={Clips.ActiveGame is not null} session={Clips.IsSession} export={Exports.IsBusy || Player.IsExporting} scan={IsScanning}");
+                Log.Info($"{feature} paused: playing={Player.IsPlaying} game={Clips.ActiveGame is not null} session={Clips.IsSession} export={Exports.IsBusy || Player.IsExporting} scan={IsScanning}");
             }
             await Task.Delay(5000, ct);
         }
@@ -200,7 +203,7 @@ public sealed partial class MainViewModel
                     SmartInfo? info;
                     var watch = System.Diagnostics.Stopwatch.StartNew();
                     using var limit = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                    limit.CancelAfter(ItemLimit(item.Entry.DurationMs));
+                    BackgroundHold.CancelAfterActive(limit, ItemLimit(item.Entry.DurationMs));
                     try
                     {
                         info = await SmartAnalyzer.AnalyzeAsync(item.Entry.Path, item.Entry.DurationMs, limit.Token);

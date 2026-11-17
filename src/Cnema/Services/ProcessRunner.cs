@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace Cnema.Services;
@@ -14,6 +15,7 @@ public static class ProcessRunner
         // throttled disk reads), so ffmpeg barely moved while anything else was busy. Below normal still gives way.
         try { p.PriorityClass = OperatingSystem.IsWindows() ? ProcessPriorityClass.Idle : ProcessPriorityClass.BelowNormal; }
         catch { /* gone already, or not allowed: runs at normal priority */ }
+        BackgroundHold.Track(p);
     }
 
     public static async Task<ProcessResult> RunAsync(
@@ -60,5 +62,96 @@ public static class ProcessRunner
             throw;
         }
         return new ProcessResult(p.ExitCode, stdout.ToString(), stderr.ToString());
+    }
+}
+
+/// <summary>
+/// Freezes the background work's processes (the smart features' ffmpeg runs) while a video plays in
+/// Savefile, and lets them carry on after. Lower priority alone wasn't enough: on macOS indexing shares the
+/// hardware video decoder with libVLC and made playback crackle. Time limits on that work count only the
+/// time it was allowed to run (<see cref="CancelAfterActive"/>), so a long watch never makes a video "too slow".
+/// macOS and Linux only (SIGSTOP / SIGCONT); on Windows the work just runs at idle priority.
+/// </summary>
+public static class BackgroundHold
+{
+    private static readonly object Sync = new();
+    private static readonly HashSet<Process> Running = new();
+    private static bool _held;
+    private static readonly Stopwatch Clock = Stopwatch.StartNew();
+    private static TimeSpan _heldBefore, _heldSince;
+
+    [DllImport("libc", EntryPoint = "kill", SetLastError = true)]
+    private static extern int Kill(int pid, int sig);
+
+    private static bool Supported => OperatingSystem.IsMacOS() || OperatingSystem.IsLinux();
+    private static int SigStop => OperatingSystem.IsMacOS() ? 17 : 19;
+    private static int SigCont => OperatingSystem.IsMacOS() ? 19 : 18;
+
+    public static bool IsHeld { get { lock (Sync) return _held; } }
+
+    /// <summary>All the time background work has been held so far, including a hold that is still on.</summary>
+    public static TimeSpan HeldTotal
+    {
+        get { lock (Sync) return _heldBefore + (_held ? Clock.Elapsed - _heldSince : TimeSpan.Zero); }
+    }
+
+    internal static void Track(Process p)
+    {
+        if (!Supported) return;
+        lock (Sync)
+        {
+            try { if (p.HasExited) return; } catch { return; }
+            Running.Add(p);
+            p.EnableRaisingEvents = true;
+            p.Exited += (_, _) => { lock (Sync) Running.Remove(p); };
+            if (_held) Signal(p, SigStop);
+        }
+    }
+
+    /// <summary>Holds (true) or releases (false) every background process, now and any that start meanwhile.</summary>
+    public static void Set(bool hold)
+    {
+        if (!Supported) return;
+        lock (Sync)
+        {
+            if (hold == _held) return;
+            _held = hold;
+            if (hold) _heldSince = Clock.Elapsed;
+            else _heldBefore += Clock.Elapsed - _heldSince;
+            foreach (var p in Running.ToList()) Signal(p, hold ? SigStop : SigCont);
+        }
+    }
+
+    private static void Signal(Process p, int sig)
+    {
+        try
+        {
+            if (p.HasExited) { Running.Remove(p); return; }
+            Kill(p.Id, sig);
+        }
+        catch { Running.Remove(p); /* gone already */ }
+    }
+
+    /// <summary>Like CancelAfter, but time spent held doesn't count.</summary>
+    public static void CancelAfterActive(CancellationTokenSource cts, TimeSpan limit) => _ = RunLimitAsync(cts, limit);
+
+    private static async Task RunLimitAsync(CancellationTokenSource cts, TimeSpan limit)
+    {
+        CancellationToken token;
+        try { token = cts.Token; } catch (ObjectDisposedException) { return; }
+        var start = Clock.Elapsed;
+        var heldAtStart = HeldTotal;
+        while (!token.IsCancellationRequested)
+        {
+            var active = Clock.Elapsed - start - (HeldTotal - heldAtStart);
+            if (active >= limit)
+            {
+                try { cts.Cancel(); } catch (ObjectDisposedException) { /* the work finished meanwhile */ }
+                return;
+            }
+            try { await Task.Delay(limit - active, token).ConfigureAwait(false); }
+            catch (OperationCanceledException) { return; }
+            catch (ObjectDisposedException) { return; }
+        }
     }
 }

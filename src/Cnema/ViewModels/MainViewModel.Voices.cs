@@ -129,7 +129,7 @@ public sealed partial class MainViewModel
                     }
                     var waited = await TakeTurnAsync(s => VoiceActivity = s, F("Telling voices apart: {0} to go.", (todo.Count - i).ToString("N0")), "Voices", ct);
                     using var limit = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                    limit.CancelAfter(ItemLimit(item.Entry.DurationMs));
+                    BackgroundHold.CancelAfterActive(limit, ItemLimit(item.Entry.DurationMs));
                     var watch = System.Diagnostics.Stopwatch.StartNew();
                     VoiceInfo? info;
                     try
