@@ -1850,5 +1850,6 @@
   "Capture kept stopping, even after Savefile tried again a few times.": "Inspelningen slutade gång på gång, även efter att Savefile försökt igen några gånger.",
   "Switch clipping off and on to try again.": "Stäng av och slå på klippning igen för att försöka på nytt.",
   "This is too long to fit in {0} MB. Trim it to {1} or shorter first.": "Den är för lång för att få plats på {0} MB. Korta den till {1} eller kortare först.",
-  "Too long for a {0} MB copy, so the original goes instead. Trim it to {1} or shorter to share it there.": "För lång för en kopia på {0} MB, så originalet skickas i stället. Korta den till {1} eller kortare för att dela den där."
+  "Too long for a {0} MB copy, so the original goes instead. Trim it to {1} or shorter to share it there.": "För lång för en kopia på {0} MB, så originalet skickas i stället. Korta den till {1} eller kortare för att dela den där.",
+  "The Wrapped you were making couldn't be picked up again, so please make it again.": "Wrapped som höll på att göras kunde inte fortsätta, så gör den igen."
 }

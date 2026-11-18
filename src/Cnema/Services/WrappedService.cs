@@ -467,7 +467,13 @@ public static class WrappedService
             if (shot.Caption is { Length: > 0 } caption)
             {
                 var capPath = Path.Combine(work, $"cap{i:000}.png");
-                if (!File.Exists(capPath)) await drawCaption(caption, capPath, ct);
+                if (!File.Exists(capPath))
+                {
+                    // Drawn aside and moved in, so a quit halfway never leaves half a picture for the resume to trip on.
+                    var drawing = Path.Combine(work, $"cap{i:000}.drawing.png");
+                    await drawCaption(caption, drawing, ct);
+                    File.Move(drawing, capPath, overwrite: true);
+                }
                 args.AddRange(new[] { "-loop", "1", "-framerate", Fps.ToString(Inv), "-t", d, "-i", capPath });
                 var outAt = S(Math.Max(0.4, len - 0.45));
                 g.Add($"[{n}:v:0]format=rgba,fade=t=in:st=0.15:d=0.3:alpha=1,fade=t=out:st={outAt}:d=0.3:alpha=1[cap]");
