@@ -50,7 +50,9 @@ public sealed partial class MainViewModel
     private async Task SayNowAsync(string line)
     {
         MascotLineShown = false;
+        var turn = ++_mascotTurn;
         await Task.Delay(ReducedMotion ? 0 : 200);
+        if (turn != _mascotTurn) return; // a newer line took over while this one faded
         MascotLine = line;
         MascotLineShown = true;
         MascotCheer++;

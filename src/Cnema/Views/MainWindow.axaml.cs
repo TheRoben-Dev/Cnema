@@ -582,20 +582,31 @@ public partial class MainWindow : Window
     }
 
     /// <summary>One step is most of a screenful, so the next cards slide in with a little of the last ones kept.</summary>
+    private int _shelfGlide;
+    private bool _shelfGliding;
+    private double _shelfTarget;
+
     private async void ScrollShelf(int direction)
     {
         var max = Math.Max(0, ShelfScroll.Extent.Width - ShelfScroll.Viewport.Width);
         var from = ShelfScroll.Offset.X;
-        var to = Math.Clamp(from + direction * ShelfScroll.Viewport.Width * 0.8, 0, max);
+        // A click while the last glide is still moving continues from where that one was heading,
+        // so quick clicks add up instead of two glides tugging the shelf back and forth.
+        var basis = _shelfGliding ? _shelfTarget : from;
+        var to = _shelfTarget = Math.Clamp(basis + direction * ShelfScroll.Viewport.Width * 0.8, 0, max);
         if (Vm?.ReducedMotion == true) { ShelfScroll.Offset = ShelfScroll.Offset.WithX(to); return; }
+        var glide = ++_shelfGlide;
+        _shelfGliding = true;
         const int steps = 14;
         for (var i = 1; i <= steps; i++)
         {
+            if (glide != _shelfGlide) return;
             var t = (double)i / steps;
             var ease = 1 - Math.Pow(1 - t, 3);
             ShelfScroll.Offset = ShelfScroll.Offset.WithX(from + (to - from) * ease);
             await Task.Delay(16);
         }
+        if (glide == _shelfGlide) _shelfGliding = false;
     }
 
     // ---------- the Wrapped theatre ----------

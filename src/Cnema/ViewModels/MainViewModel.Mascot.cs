@@ -71,9 +71,11 @@ public sealed partial class MainViewModel
             next = _mascotLines[_mascotIndex];
         }
         next ??= DrawChatter() ?? (_mascotLines.Count > 0 ? _mascotLines[_mascotIndex = (_mascotIndex + 1) % _mascotLines.Count] : null);
-        if (next is null || next == MascotLine) { MascotCheer++; return; }
+        if (next is null || next == MascotLine) { MascotLineShown = true; MascotCheer++; return; }
         MascotLineShown = false;
+        var turn = _mascotTurn;
         await Task.Delay(ReducedMotion ? 0 : 250);
+        if (turn != _mascotTurn) return; // a newer line (a click on Mochi) took over while this one faded
         MascotLine = next;
         MascotLineShown = true;
         MascotCheer++;
