@@ -15,8 +15,35 @@ public sealed class SingleInstance : IDisposable
     /// <summary>Raised on a background thread when another launch asked this one to show itself.</summary>
     public event Action? ShowRequested;
 
+    private static Mutex? _mutex;
+
     /// <summary>True if an already-running Cnema was found and told to show its window.</summary>
     public static bool SignalExisting()
+    {
+        if (TrySignal()) return true;
+        if (!OperatingSystem.IsWindows()) return false;
+        // The pipe can miss a running copy (between two connections, or its listener broke), and on Windows
+        // that left two copies running side by side (an installed one next to an older unzipped one), both
+        // fighting over the capture. The mutex can't miss: it lives exactly as long as the copy holding it.
+        try
+        {
+            _mutex = new Mutex(true, "cnema-" + Environment.UserName, out var created);
+            if (created) return false;
+            // An update relaunch can start before the old copy has quite quit: give it a moment.
+            try { if (_mutex.WaitOne(TimeSpan.FromSeconds(10))) return false; }
+            catch (AbandonedMutexException) { return false; } // the old copy died: it's ours now
+            Log.Info("Another Savefile copy is already running; asked it to show itself");
+            TrySignal();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Log.Warn($"Single-instance check failed: {ex.Message}");
+            return false;
+        }
+    }
+
+    private static bool TrySignal()
     {
         try
         {

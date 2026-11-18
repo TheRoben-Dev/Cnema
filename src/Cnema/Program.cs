@@ -10,12 +10,43 @@ internal static class Program
     {
         if (args.Contains("--selftest")) return SelfTest();
         if (Array.IndexOf(args, "--selftest-models") is var mi and >= 0) return ModelSelfTest(args.Skip(mi + 1).FirstOrDefault());
+        if (args.Contains("--selftest-capture")) return CaptureSelfTest(args.Contains("--break-ddagrab"));
         if (Array.IndexOf(args, "--selftest-update") is var ui and >= 0 && ui + 1 < args.Length) return UpdateService.SelfTestInstallerUpdate(args[ui + 1]);
         Log.HookUnhandled();
         Log.Info($"Cnema {UpdateService.CurrentText} starting on {System.Runtime.InteropServices.RuntimeInformation.OSDescription}");
         // Cnema can live in the tray: a second launch just brings the running copy forward.
         if (SingleInstance.SignalExisting()) return 0;
         return BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+    }
+
+    /// <summary>
+    /// Headless check of clipping on the CI runner: starts the rolling capture with settings any machine can
+    /// run (software encoder, 720p30, no audio) and waits until segments arrive. With --break-ddagrab, Desktop
+    /// Duplication is made to fail so the automatic switch to GDI capture is exercised too.
+    /// </summary>
+    private static int CaptureSelfTest(bool breakDdagrab)
+    {
+        var settings = new SettingsStore();
+        var clip = settings.Current.Clip;
+        clip.Enabled = true;
+        clip.HardwareEncoder = false;
+        clip.Fps = 30;
+        clip.Height = 720;
+        clip.Audio1 = clip.Audio2 = clip.Camera = null;
+        clip.Profiles.Clear();
+        ClipService.BreakDdagrabForTest = breakDdagrab;
+        using var clips = new ClipService(settings);
+        clips.ApplyAsync().GetAwaiter().GetResult();
+        var until = DateTime.UtcNow.AddSeconds(90);
+        while (DateTime.UtcNow < until && clips.State is not (ClipState.Recording or ClipState.Error or ClipState.Off))
+            Thread.Sleep(500);
+        Console.WriteLine($"capture: state={clips.State} mode={clips.CaptureMode} encoder={clips.Encoder}");
+        if (clips.CaptureNote is { } note) Console.WriteLine($"note: {note}");
+        if (clips.Error is { } error) Console.WriteLine($"error: {error}");
+        if (clips.ErrorDetail is { } detail) Console.WriteLine($"ffmpeg: {detail}");
+        var ok = clips.State == ClipState.Recording && (!breakDdagrab || !OperatingSystem.IsWindows() || clips.CaptureMode == "gdigrab");
+        Console.WriteLine(ok ? "capture selftest OK" : "capture selftest FAILED");
+        return ok ? 0 : 1;
     }
 
     public static AppBuilder BuildAvaloniaApp() =>

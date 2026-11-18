@@ -1841,5 +1841,12 @@
   "Flawless": "Felfritt",
   "Victory": "Seger",
   "Double kill": "Double kill",
-  "First blood": "First blood"
+  "First blood": "First blood",
+  "Windows' fast screen capture kept stopping, so Savefile switched to its compatible capture. Games in exclusive fullscreen may record black there: borderless or windowed works best.": "Windows snabba skärminspelning slutade gång på gång, så Savefile bytte till sin kompatibla inspelning. Spel i exklusiv helskärm kan bli svarta där: kantlöst fönster eller fönsterläge fungerar bäst.",
+  "The drive with the replay buffer is full. Free up some space.": "Enheten med repris-bufferten är full. Frigör lite utrymme.",
+  "The graphics card's video encoder wouldn't start. Update the graphics driver, or pick another encoder under Settings › Clipping.": "Grafikkortets videokodare ville inte starta. Uppdatera grafikdrivrutinen, eller välj en annan kodare under Inställningar › Klippning.",
+  "Windows kept taking the screen away from Savefile. That can happen when a game switches between fullscreen and windowed, the display or HDR changes, or the PC locks. Savefile tried again a few times.": "Windows tog gång på gång skärmen ifrån Savefile. Det kan hända när ett spel växlar mellan helskärm och fönster, när skärmen eller HDR ändras, eller när datorn låses. Savefile försökte igen några gånger.",
+  "A sound device couldn't be opened. Check that it's plugged in, or pick another one under Settings › Clipping.": "En ljudenhet kunde inte öppnas. Kontrollera att den är ansluten, eller välj en annan under Inställningar › Klippning.",
+  "Capture kept stopping, even after Savefile tried again a few times.": "Inspelningen slutade gång på gång, även efter att Savefile försökt igen några gånger.",
+  "Switch clipping off and on to try again.": "Stäng av och slå på klippning igen för att försöka på nytt."
 }

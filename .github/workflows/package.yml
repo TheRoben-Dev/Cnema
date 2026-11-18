@@ -66,6 +66,16 @@ jobs:
             [ -s "$RUNNER_TEMP/speech.aiff" ] && speech="$RUNNER_TEMP/speech.aiff"
           fi
           "$D/Cnema" --selftest-models "$speech"
+      # Clipping on a real Windows desktop: the rolling capture starts, and when Desktop Duplication fails
+      # Savefile switches to GDI capture by itself. Informational: a runner's desktop isn't a gaming PC.
+      - name: Self-test clipping (Windows capture and its GDI fallback)
+        if: matrix.rid == 'win-x64'
+        continue-on-error: true
+        shell: bash
+        timeout-minutes: 6
+        run: |
+          dist/Cnema/Cnema --selftest-capture
+          dist/Cnema/Cnema --selftest-capture --break-ddagrab
       # The Windows installer: the same app folder as the zip, installed for just me or for everyone.
       - name: Build the Windows installer
         if: matrix.rid == 'win-x64'
