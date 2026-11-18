@@ -137,7 +137,11 @@ public sealed partial class MainViewModel
                     var model = _visual ?? await LoadModelAsync("Visual", VisualModel, ct);
                     if (model is null) return;
                     var waited = await TakeTurnAsync(s => VisualActivity = s, working, "Visual", ct);
-                    using var limit = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                    // A video starting to play stops this one: the model runs inside Savefile, where holding the
+                    // background ffmpeg doesn't reach it, and it would compete with playback. It's done again after.
+                    var held = BackgroundHold.WhenHeld;
+                    var interrupted = false;
+                    using var limit = CancellationTokenSource.CreateLinkedTokenSource(ct, held);
                     BackgroundHold.CancelAfterActive(limit, ItemLimit(item.Entry.DurationMs));
                     var watch = System.Diagnostics.Stopwatch.StartNew();
                     VisualInfo? info;
@@ -149,6 +153,7 @@ public sealed partial class MainViewModel
                         CostMeter.Record(CostMeter.Visual, watch.Elapsed.TotalSeconds, length);
                     }
                     catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+                    catch (OperationCanceledException) when (held.IsCancellationRequested) { interrupted = true; info = null; }
                     catch (Exception ex)
                     {
                         Log.Warn($"Visual for {item.Entry.FileName}: {SkipReason(ex, item.Entry.DurationMs)}");
@@ -156,6 +161,7 @@ public sealed partial class MainViewModel
                         info = null;
                     }
                     finally { _workGate.Release(); pace.Add(item.Entry.FileName, waited, watch.Elapsed); }
+                    if (interrupted) { tried.Remove(item); continue; }
                     if (_items.TryGetValue(item.Entry.Path, out var still) && ReferenceEquals(still, item))
                         item.Entry.Visual = info ?? new VisualInfo { Version = VisualService.Version };
                     if (++done % 10 == 0) { _library.SaveCache(); OnPropertyChanged(nameof(VisualModelText)); OnCostsChanged(); }

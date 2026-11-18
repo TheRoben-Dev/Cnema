@@ -157,7 +157,11 @@ public sealed partial class MainViewModel
                         speech = await LoadModelAsync("Speech", () => SpeechService.Load(ModelStore.PathOf(ModelStore.Speech)), ct);
                     }
                     var waited = await TakeTurnAsync(s => SpeechActivity = s, working, "Speech", ct);
-                    using var limit = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                    // A video starting to play stops this one: the model runs inside Savefile, where holding the
+                    // background ffmpeg doesn't reach it, and it would compete with playback. It's done again after.
+                    var held = BackgroundHold.WhenHeld;
+                    var interrupted = false;
+                    using var limit = CancellationTokenSource.CreateLinkedTokenSource(ct, held);
                     BackgroundHold.CancelAfterActive(limit, ItemLimit(item.Entry.DurationMs));
                     var watch = System.Diagnostics.Stopwatch.StartNew();
                     SpeechInfo? info;
@@ -170,6 +174,7 @@ public sealed partial class MainViewModel
                         if (info.Language is not null || watch.Elapsed.TotalSeconds >= 1) CostMeter.Record(SpeechCostKey, watch.Elapsed.TotalSeconds, length);
                     }
                     catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+                    catch (OperationCanceledException) when (held.IsCancellationRequested) { interrupted = true; info = null; }
                     catch (Exception ex)
                     {
                         Log.Warn($"Speech for {item.Entry.FileName}: {SkipReason(ex, item.Entry.DurationMs)}");
@@ -177,6 +182,7 @@ public sealed partial class MainViewModel
                         info = null;
                     }
                     finally { _workGate.Release(); pace.Add(item.Entry.FileName, waited, watch.Elapsed); }
+                    if (interrupted) { tried.Remove(item); continue; }
                     if (_items.TryGetValue(item.Entry.Path, out var still) && ReferenceEquals(still, item))
                     {
                         item.Entry.Speech = info ?? new SpeechInfo { Version = SpeechService.Version };

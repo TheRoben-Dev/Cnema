@@ -325,6 +325,7 @@ public sealed class BlobMascot : Control
     {
         if (!_inView) return;
         if (_running || Still || _manual is not null || !IsEffectivelyVisible || TopLevel.GetTopLevel(this) is not { } top) { InvalidateVisual(); return; }
+        if (!Shown(top)) return; // the wake timer starts it again once the window is back
         _running = true;
         _last = -1;
         top.RequestAnimationFrame(Frame);
@@ -333,7 +334,7 @@ public sealed class BlobMascot : Control
     private void Frame(TimeSpan _)
     {
         if (Still || !IsEffectivelyVisible || TopLevel.GetTopLevel(this) is not { } top) { _running = false; InvalidateVisual(); return; }
-        if (!_inView) { _running = false; return; }
+        if (!_inView || !Shown(top)) { _running = false; return; }
         var now = Now;
         // The small ones run for hours: a lower frame rate there is plenty and costs little.
         if (_lastDraw >= 0 && now - _lastDraw < 1 / Math.Max(10, MaxFps) - 0.002) { top.RequestAnimationFrame(Frame); return; }
@@ -343,6 +344,12 @@ public sealed class BlobMascot : Control
         InvalidateVisual();
         top.RequestAnimationFrame(Frame);
     }
+
+    /// <summary>
+    /// The window is on screen: not hidden to the tray or minimised. Savefile can sit in the tray for a whole
+    /// gaming session, and a blob animating in a hidden window would keep the CPU busy all that time.
+    /// </summary>
+    private static bool Shown(TopLevel top) => top is not Window w || (w.IsVisible && w.WindowState != WindowState.Minimized);
 
     /// <summary>A push on the edge around one angle, which then runs round the ring as a ripple.</summary>
     private void Ripple(double at, double strength)

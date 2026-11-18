@@ -134,7 +134,11 @@ public sealed partial class MainViewModel
                         model = await LoadModelAsync("Voices", VoiceService.Load, ct);
                     }
                     var waited = await TakeTurnAsync(s => VoiceActivity = s, F("Telling voices apart: {0} to go.", (todo.Count - i).ToString("N0")), "Voices", ct);
-                    using var limit = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                    // A video starting to play stops this one: the model runs inside Savefile, where holding the
+                    // background ffmpeg doesn't reach it, and it would compete with playback. It's done again after.
+                    var held = BackgroundHold.WhenHeld;
+                    var interrupted = false;
+                    using var limit = CancellationTokenSource.CreateLinkedTokenSource(ct, held);
                     BackgroundHold.CancelAfterActive(limit, ItemLimit(item.Entry.DurationMs));
                     var watch = System.Diagnostics.Stopwatch.StartNew();
                     VoiceInfo? info;
@@ -145,6 +149,7 @@ public sealed partial class MainViewModel
                         if (watch.Elapsed.TotalSeconds >= 0.5) CostMeter.Record(CostMeter.Voices, watch.Elapsed.TotalSeconds, entry.DurationMs);
                     }
                     catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+                    catch (OperationCanceledException) when (held.IsCancellationRequested) { interrupted = true; info = null; }
                     catch (Exception ex)
                     {
                         Log.Warn($"Voices for {item.Entry.FileName}: {SkipReason(ex, item.Entry.DurationMs)}");
@@ -152,6 +157,7 @@ public sealed partial class MainViewModel
                         info = null;
                     }
                     finally { _workGate.Release(); pace.Add(item.Entry.FileName, waited, watch.Elapsed); }
+                    if (interrupted) { tried.Remove(item); continue; }
                     if (_items.TryGetValue(item.Entry.Path, out var still) && ReferenceEquals(still, item))
                     {
                         // Keep who was added by voice before, so a friend taken off by hand stays off.
