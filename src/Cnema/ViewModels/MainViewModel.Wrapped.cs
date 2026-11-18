@@ -255,8 +255,20 @@ public sealed partial class MainViewModel
                 WrappedSaved saved;
                 if (script is null)
                 {
-                    saved = System.Text.Json.JsonSerializer.Deserialize<WrappedSaved>(await File.ReadAllTextAsync(planFile, ct))
-                            ?? throw new InvalidOperationException("The saved plan is unreadable.");
+                    WrappedSaved? read = null;
+                    try { read = System.Text.Json.JsonSerializer.Deserialize<WrappedSaved>(await File.ReadAllTextAsync(planFile, ct)); }
+                    catch (System.Text.Json.JsonException) { /* below */ }
+                    if (read is null)
+                    {
+                        // Cut short while it was being written: trying again at every launch would only fail again.
+                        Dispatcher.UIThread.Post(() =>
+                        {
+                            if (_settings.Current.Wrapped.Job?.Work == job.Work) { _settings.Current.Wrapped.Job = null; _settings.Save(); }
+                        });
+                        try { Directory.Delete(job.Work, true); } catch { /* left for the next clean-up */ }
+                        throw new InvalidOperationException(T("The Wrapped you were making couldn't be picked up again, so please make it again."));
+                    }
+                    saved = read;
                 }
                 else
                 {
@@ -268,7 +280,9 @@ public sealed partial class MainViewModel
                     }
                     var plan = await Task.Run(() => WrappedDirector.Plan(script.Acts, script.Cards.Select(c => c.MinSeconds).ToList(), analysed), ct);
                     saved = new WrappedSaved(plan, script.Cards.ToList());
-                    await File.WriteAllTextAsync(planFile, System.Text.Json.JsonSerializer.Serialize(saved), ct);
+                    // Written aside first, so quitting halfway never leaves half a plan to pick up.
+                    await File.WriteAllTextAsync(planFile + ".tmp", System.Text.Json.JsonSerializer.Serialize(saved), ct);
+                    File.Move(planFile + ".tmp", planFile, overwrite: true);
                 }
                 Log.Info($"Wrapped {year}: {saved.Plan.Seconds:0.0} s, {saved.Plan.Shots.Count} shots, {saved.Plan.Moments} moments, {saved.Plan.Songs.Count} songs");
                 var inner = new Progress<double>(p =>

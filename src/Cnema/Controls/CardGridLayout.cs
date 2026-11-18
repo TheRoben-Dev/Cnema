@@ -149,3 +149,23 @@ public sealed class AspectPanel : Panel
         return new Size(finalSize.Width, rect.Height);
     }
 }
+
+/// <summary>
+/// The root of a library card. The grid hands a card back with its DataContext cleared and later gives it the next
+/// video, which would update every binding on the card twice (to nothing, then to the new video). Here a cleared
+/// DataContext keeps the last video until the next one comes, so each reuse costs one update instead of two.
+/// </summary>
+public sealed class CardHost : Decorator
+{
+    static CardHost() =>
+        DataContextProperty.OverrideMetadata<CardHost>(new StyledPropertyMetadata<object?>(
+            coerce: (o, value) => value ?? ((CardHost)o)._last));
+
+    private object? _last;
+
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        if (change.Property == DataContextProperty) _last = change.NewValue;
+    }
+}

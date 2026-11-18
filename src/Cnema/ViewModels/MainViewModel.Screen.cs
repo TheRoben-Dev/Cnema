@@ -76,7 +76,12 @@ public sealed partial class MainViewModel
     private void StartScreenPass()
     {
         if (!Features.ScreenText || !ScreenModelReady || ToolLocator.Ffmpeg is null) return;
-        if (_screenRun is { IsCompleted: false }) return;
+        if (_screenRun is { IsCompleted: false } running)
+        {
+            // Switched off and on again before the last run had stopped: start again once it has.
+            if (_screenCts is { IsCancellationRequested: true }) RestartAfter(running, StartScreenPass);
+            return;
+        }
         _screenCts = new CancellationTokenSource();
         _screenRun = RunScreenPassAsync(_screenCts.Token);
     }
@@ -114,7 +119,11 @@ public sealed partial class MainViewModel
                         model = await LoadModelAsync("Screen", ScreenService.Load, ct);
                     }
                     var waited = await TakeTurnAsync(s => ScreenActivity = s, working, "Screen", ct);
-                    using var limit = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                    // A video starting to play stops this one: the model runs inside Savefile, where holding the
+                    // background ffmpeg doesn't reach it, and it would compete with playback. It's done again after.
+                    var held = BackgroundHold.WhenHeld;
+                    var interrupted = false;
+                    using var limit = CancellationTokenSource.CreateLinkedTokenSource(ct, held);
                     BackgroundHold.CancelAfterActive(limit, ItemLimit(item.Entry.DurationMs));
                     var watch = System.Diagnostics.Stopwatch.StartNew();
                     ScreenInfo? info;
@@ -127,6 +136,7 @@ public sealed partial class MainViewModel
                         if (watch.Elapsed.TotalSeconds >= 0.5) CostMeter.Record(CostMeter.Screen, watch.Elapsed.TotalSeconds, length);
                     }
                     catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+                    catch (OperationCanceledException) when (held.IsCancellationRequested) { interrupted = true; info = null; }
                     catch (Exception ex)
                     {
                         Log.Warn($"Screen text for {item.Entry.FileName}: {SkipReason(ex, item.Entry.DurationMs)}");
@@ -134,6 +144,7 @@ public sealed partial class MainViewModel
                         info = null;
                     }
                     finally { _workGate.Release(); pace.Add(item.Entry.FileName, waited, watch.Elapsed); }
+                    if (interrupted) { tried.Remove(item); continue; }
                     if (_items.TryGetValue(item.Entry.Path, out var still) && ReferenceEquals(still, item))
                     {
                         item.Entry.Screen = info ?? new ScreenInfo { Version = ScreenService.Version };

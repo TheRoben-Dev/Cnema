@@ -23,7 +23,10 @@ public static class HighlightService
         if (Cache.TryGetValue(key, out var cached)) return cached;
         if (ToolLocator.Ffmpeg is not { } ffmpeg) return Array.Empty<double>();
 
-        var levels = await Task.Run(() => ReadLevels(ffmpeg, path, ct), ct);
+        // This reads the whole file while the video starts playing: give the player its first seconds, and
+        // let it have the CPU and the disk first after that.
+        await Task.Delay(1500, ct);
+        var levels = await Task.Run(() => ReadLevels(ffmpeg, path, ct, gentle: true), ct);
         var found = Pick(levels);
         Cache[key] = found;
         return found;
@@ -49,7 +52,9 @@ public static class HighlightService
     }
 
     /// <summary>RMS level in dB for every half second of audio.</summary>
-    internal static List<double> ReadLevels(string ffmpeg, string path, CancellationToken ct, bool background = false)
+    /// <param name="background">Indexing work: lowest priority, frozen while a video plays.</param>
+    /// <param name="gentle">Below normal priority, but never frozen (the player's own markers).</param>
+    internal static List<double> ReadLevels(string ffmpeg, string path, CancellationToken ct, bool background = false, bool gentle = false)
     {
         var levels = new List<double>();
         var psi = new ProcessStartInfo(ffmpeg)
@@ -62,6 +67,8 @@ public static class HighlightService
         using var p = Process.Start(psi);
         if (p is null) return levels;
         if (background) ProcessRunner.Lower(p);
+        else if (gentle)
+            try { p.PriorityClass = ProcessPriorityClass.BelowNormal; } catch { /* gone already */ }
         p.ErrorDataReceived += (_, _) => { };
         p.BeginErrorReadLine();
         try

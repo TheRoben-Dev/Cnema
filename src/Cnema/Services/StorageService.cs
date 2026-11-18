@@ -50,7 +50,11 @@ public static class StorageService
     {
         var picked = new List<FileInfo>();
         if (c.KeepDays <= 0 && c.MaxFolderGb <= 0) return picked;
-        var all = Clips(c.ResolvedFolder).OrderBy(f => f.LastWriteTimeUtc).ToList();
+        // An archive folder picked inside the clips folder: what's archived stays archived (and doesn't count).
+        var archived = c.CleanupArchive ? c.ResolvedArchiveFolder.TrimEnd('/', '\\') + Path.DirectorySeparatorChar : null;
+        var all = Clips(c.ResolvedFolder)
+            .Where(f => archived is null || !f.FullName.StartsWith(archived, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(f => f.LastWriteTimeUtc).ToList();
         var total = all.Sum(f => f.Length);
         var cap = c.MaxFolderGb > 0 ? c.MaxFolderGb * (1L << 30) : long.MaxValue;
         var cutoff = c.KeepDays > 0 ? nowUtc.AddDays(-c.KeepDays) : DateTime.MinValue;

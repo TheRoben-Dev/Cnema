@@ -33,6 +33,9 @@ case "$RID" in
         cp "/c/Windows/System32/$dll" "$out/" || { echo "$dll not found on the build machine" >&2; exit 1; }
       done
       scripts/strip-vlc.sh "$out/libvlc"
+      # libVLC's plugin cache, made after stripping (it lists every plugin by date and size). Without it libVLC opens
+      # all of its plugins on every start, which took 20 s on a Windows PC. The app writes one itself if this fails.
+      "$out/Cnema.exe" --vlc-cache || echo "libVLC plugin cache not written here; the app will write it on first start"
       (cd dist && 7z a -bso0 "Savefile-v$VERSION-windows-x64.zip" Cnema)
     else
       cp src/Cnema/Assets/cnema.png "$out/cnema.png"

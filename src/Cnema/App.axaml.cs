@@ -80,6 +80,7 @@ public partial class App : Application
     private Task Start(IClassicDesktopStyleApplicationLifetime desktop, SettingsStore settings, bool startHidden)
     {
         VlcBootstrap.Initialize();
+        VlcBootstrap.RefreshCacheInBackground();
         AutostartService.RefreshIfEnabled();
 
         Shortcuts.Load(settings.Current.Shortcuts);

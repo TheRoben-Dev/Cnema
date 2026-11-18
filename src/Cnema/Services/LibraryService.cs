@@ -61,7 +61,11 @@ public sealed class LibraryService : IDisposable
             foreach (var path in Directory.EnumerateFiles(folder, "*", opts))
             {
                 if (!VideoExtensions.Contains(Path.GetExtension(path))) continue;
-                if (Path.GetFileName(path).StartsWith("._")) continue; // macOS resource forks on exFAT
+                var name = Path.GetFileName(path);
+                if (name.StartsWith("._", StringComparison.Ordinal)) continue; // macOS resource forks on exFAT
+                // Savefile's own work in progress (Make room's smaller copy). A leading dot hides it on a Mac
+                // and Linux, but not on Windows, where a scan would list it half-written.
+                if (name.StartsWith(".savefile-", StringComparison.OrdinalIgnoreCase)) continue;
                 if (BinService.IsBinPath(path)) continue; // deleted, waiting out its 24 hours
                 files.Add(new FileInfo(path));
             }
@@ -132,8 +136,15 @@ public sealed class LibraryService : IDisposable
             CancellationToken = ct,
         }, async (e, token) =>
         {
-            await MediaProbe.ProbeAsync(e, token);
-            e.ThumbPath = await ThumbnailService.EnsureAsync(e, token);
+            // One file that can't be read (locked, half-written, ffmpeg refused to start) must never stop the
+            // whole scan: it stays in the library without details and the next scan tries it again.
+            try
+            {
+                await MediaProbe.ProbeAsync(e, token);
+                e.ThumbPath = await ThumbnailService.EnsureAsync(e, token);
+            }
+            catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
+            catch (Exception ex) { Log.Warn($"Scan: {e.FileName}: {ex.Message}"); }
             var save = false;
             lock (_cacheLock)
             {
@@ -245,9 +256,49 @@ public sealed class LibraryService : IDisposable
 
     private readonly HashSet<string> _adopted = new(StringComparer.OrdinalIgnoreCase);
 
+    private int _saveQueued;
+    private readonly object _writeLock = new();
+
+    /// <summary>
+    /// Writes library.json soon, off the calling thread. With smart data the file runs to many megabytes, and it
+    /// used to be written in full, on the UI thread, after every edit and every few indexed videos (a visible
+    /// hitch each time). Saves asked for close together now make one write.
+    /// </summary>
     public void SaveCache()
     {
-        lock (_cacheLock) JsonStore.Save(AppPaths.LibraryFile, _cache);
+        if (Interlocked.Exchange(ref _saveQueued, 1) == 1) return;
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(750).ConfigureAwait(false);
+            try { FlushCache(); }
+            catch (Exception ex) { Log.Warn($"Could not save the library: {ex.Message}"); }
+        });
+    }
+
+    /// <summary>Writes library.json now (at quit, or from the delayed save).</summary>
+    public void FlushCache()
+    {
+        lock (_writeLock)
+        {
+            Interlocked.Exchange(ref _saveQueued, 0);
+            for (var attempt = 1; ; attempt++)
+            {
+                // The rows are copied under the lock; the videos themselves may be edited on the UI thread while
+                // they're written out, which a list being changed at that very moment can trip over: try again.
+                LibraryCacheFile snapshot;
+                lock (_cacheLock)
+                    snapshot = new LibraryCacheFile { Entries = new Dictionary<string, VideoEntry>(_cache.Entries, StringComparer.OrdinalIgnoreCase) };
+                try
+                {
+                    JsonStore.Save(AppPaths.LibraryFile, snapshot, compact: true);
+                    return;
+                }
+                catch (InvalidOperationException) when (attempt < 5)
+                {
+                    Thread.Sleep(20 * attempt);
+                }
+            }
+        }
     }
 
     public void Watch(IEnumerable<string> folders)
@@ -258,10 +309,13 @@ public sealed class LibraryService : IDisposable
         {
             try
             {
-                var w = new FileSystemWatcher(folder) { IncludeSubdirectories = true, EnableRaisingEvents = true };
+                var w = new FileSystemWatcher(folder) { IncludeSubdirectories = true, InternalBufferSize = 64 * 1024 };
                 w.Created += OnFsEvent;
                 w.Deleted += OnFsEvent;
                 w.Renamed += OnFsEvent;
+                // A big copy can overflow the watcher (Windows drops events then); look through the folder instead.
+                w.Error += (_, err) => { Log.Warn($"Watching {folder}: {err.GetException().Message}"); Settle(); };
+                w.EnableRaisingEvents = true;
                 _watchers.Add(w);
             }
             catch (Exception ex)
@@ -273,17 +327,41 @@ public sealed class LibraryService : IDisposable
 
     private void OnFsEvent(object sender, FileSystemEventArgs e)
     {
-        if (!VideoExtensions.Contains(Path.GetExtension(e.FullPath)) &&
-            !(e is RenamedEventArgs r && VideoExtensions.Contains(Path.GetExtension(r.OldFullPath))))
-            return;
-        // Debounce: copies/exports fire many events; wait for things to settle.
-        _debounce?.Dispose();
-        _debounce = new Timer(_ => FoldersChanged?.Invoke(), null, TimeSpan.FromSeconds(2), Timeout.InfiniteTimeSpan);
+        if (!Matters(e.FullPath) && !(e is RenamedEventArgs r && Matters(r.OldFullPath))) return;
+        Settle();
+    }
+
+    /// <summary>A video, or a folder that might hold some (moved, renamed or deleted along with its clips).</summary>
+    private static bool Matters(string path)
+    {
+        var name = Path.GetFileName(path);
+        if (name.StartsWith('.')) return false; // the Bin, ._ files, hidden folders
+        var ext = Path.GetExtension(name);
+        return VideoExtensions.Contains(ext) || (ext.Length == 0 && !File.Exists(path));
+    }
+
+    private readonly object _debounceLock = new();
+    private bool _disposed;
+
+    /// <summary>Copies and exports fire many events: look again once things have been quiet for two seconds.</summary>
+    private void Settle()
+    {
+        lock (_debounceLock)
+        {
+            if (_disposed) return;
+            _debounce ??= new Timer(_ => FoldersChanged?.Invoke());
+            _debounce.Change(TimeSpan.FromSeconds(2), Timeout.InfiniteTimeSpan);
+        }
     }
 
     public void Dispose()
     {
         foreach (var w in _watchers) w.Dispose();
-        _debounce?.Dispose();
+        lock (_debounceLock)
+        {
+            _disposed = true;
+            _debounce?.Dispose();
+            _debounce = null;
+        }
     }
 }

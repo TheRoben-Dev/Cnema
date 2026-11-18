@@ -72,7 +72,12 @@ public sealed partial class MainViewModel
     private void StartSoundPass()
     {
         if (!Features.Laughs || !SoundModelReady || ToolLocator.Ffmpeg is null) return;
-        if (_soundRun is { IsCompleted: false }) return;
+        if (_soundRun is { IsCompleted: false } running)
+        {
+            // Switched off and on again before the last run had stopped: start again once it has.
+            if (_soundCts is { IsCancellationRequested: true }) RestartAfter(running, StartSoundPass);
+            return;
+        }
         _soundCts = new CancellationTokenSource();
         _soundRun = RunSoundPassAsync(_soundCts.Token);
     }
@@ -112,7 +117,11 @@ public sealed partial class MainViewModel
                         model = await LoadModelAsync("Sound", SoundService.Load, ct);
                     }
                     var waited = await TakeTurnAsync(s => SoundActivity = s, working, "Sound", ct);
-                    using var limit = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                    // A video starting to play stops this one: the model runs inside Savefile, where holding the
+                    // background ffmpeg doesn't reach it, and it would compete with playback. It's done again after.
+                    var held = BackgroundHold.WhenHeld;
+                    var interrupted = false;
+                    using var limit = CancellationTokenSource.CreateLinkedTokenSource(ct, held);
                     BackgroundHold.CancelAfterActive(limit, ItemLimit(item.Entry.DurationMs));
                     var watch = System.Diagnostics.Stopwatch.StartNew();
                     SoundInfo? info;
@@ -124,6 +133,7 @@ public sealed partial class MainViewModel
                         if (watch.Elapsed.TotalSeconds >= 0.5) CostMeter.Record(CostMeter.Sound, watch.Elapsed.TotalSeconds, length);
                     }
                     catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+                    catch (OperationCanceledException) when (held.IsCancellationRequested) { interrupted = true; info = null; }
                     catch (Exception ex)
                     {
                         Log.Warn($"Laughs for {item.Entry.FileName}: {SkipReason(ex, item.Entry.DurationMs)}");
@@ -131,6 +141,7 @@ public sealed partial class MainViewModel
                         info = null;
                     }
                     finally { _workGate.Release(); pace.Add(item.Entry.FileName, waited, watch.Elapsed); }
+                    if (interrupted) { tried.Remove(item); continue; }
                     if (_items.TryGetValue(item.Entry.Path, out var still) && ReferenceEquals(still, item))
                     {
                         item.Entry.Sound = info ?? new SoundInfo { Version = SoundService.Version };

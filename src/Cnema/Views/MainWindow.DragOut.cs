@@ -71,6 +71,12 @@ public partial class MainWindow
                     {
                         foreach (var p in missing) await main.MakeDragCopyAsync(p, null, CancellationToken.None);
                     }
+                    catch (TrimService.TooLongException)
+                    {
+                        // Hours of session at the lowest bitrate would still be too big: no point encoding it.
+                        main.ShowToast(F("Too long for a {0} MB copy, so the original goes instead. Trim it to {1} or shorter to share it there.",
+                            mb, TrimService.LongestText(main.DragLimitBytes)));
+                    }
                     catch (Exception ex)
                     {
                         Log.Warn("Couldn't make the Discord-sized copy: " + ex.Message);

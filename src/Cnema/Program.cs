@@ -9,6 +9,7 @@ internal static class Program
     public static int Main(string[] args)
     {
         if (args.Contains("--selftest")) return SelfTest();
+        if (args.Contains(VlcBootstrap.CacheFlag)) return VlcBootstrap.WriteCache();
         if (Array.IndexOf(args, "--selftest-models") is var mi and >= 0) return ModelSelfTest(args.Skip(mi + 1).FirstOrDefault());
         if (args.Contains("--selftest-capture")) return CaptureSelfTest(args.Contains("--break-ddagrab"));
         if (Array.IndexOf(args, "--selftest-update") is var ui and >= 0 && ui + 1 < args.Length) return UpdateService.SelfTestInstallerUpdate(args[ui + 1]);
@@ -64,7 +65,7 @@ internal static class Program
     {
         VlcBootstrap.Initialize();
         var vlc = VlcBootstrap.LibVLC;
-        Console.WriteLine($"libVLC:  {(vlc is null ? "MISSING - " + VlcBootstrap.Error : vlc.Version)}");
+        Console.WriteLine($"libVLC:  {(vlc is null ? "MISSING - " + VlcBootstrap.Error : vlc.Version)} (started in {VlcBootstrap.StartMs} ms{(VlcBootstrap.PluginDir is { } pd ? File.Exists(Path.Combine(pd, "plugins.dat")) ? ", plugin cache" : ", NO plugin cache" : "")})");
         Console.WriteLine($"ffmpeg:  {ToolLocator.Ffmpeg ?? "MISSING"}");
         var playback = vlc is null || ToolLocator.Ffmpeg is null ? "skipped" : PlaybackTest(vlc, ToolLocator.Ffmpeg);
         Console.WriteLine($"playback: {playback}");

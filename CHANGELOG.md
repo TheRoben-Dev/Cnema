@@ -2,6 +2,22 @@
 
 What changed in each Savefile (formerly Cnema) release. The app shows the entries you have not seen yet after it updates.
 
+## 0.47.0
+- Faster everywhere, with nothing changed in how it looks. Scrolling a big library is smoother: cards that scroll into view take about half the work they did, thumbnails you just scrolled past stay ready when you scroll back, and hover previews wait until you stop scrolling instead of starting for every card that slides under the pointer.
+- Savefile starts about twice as fast: the app now comes ready-compiled for your computer instead of preparing itself at every start.
+- The video player starts much faster, above all on Windows, where it could take 20 seconds: it no longer opens all of its plugins at every start. If your copy has to make that list itself, the first start after an update is as before and every one after it is quick.
+- Saving your library (tags, favourites, what the smart features found) happens in the background now, so it never makes the window stutter, even with a big library.
+- Opening a video in the Quick player is snappier: the scan for loud moments on its timeline waits until the video is playing.
+- Mochi takes a break while scrolled out of sight.
+- Closing Settings is instant: it no longer restyles the whole window when nothing about the theme or language changed.
+- Playing a video now also pauses the smart features (voice search, visual search, laughter, text on screen, who's talking) instead of only the background ffmpeg work, so playback stays smooth while your library is being looked through. The video they were on is done again afterwards. Mochi rests too while the window is minimised or hidden.
+- Dragging a long clip into Discord: a clip too long to fit in 10 MB (or 50 MB with Nitro) at watchable quality now sends the original and tells you how short to trim it, instead of a blurry copy that could still end up over the limit. A copy that comes out a little too big is redone once so it fits.
+- The library notices a whole folder of clips moved in or out of your clips folder, and catches up when a big copy floods the folder with changes faster than it can follow.
+- A broken or half-copied video no longer stops the library scan, and macOS "._" files on external drives and Make room's work files no longer show up as videos.
+- Smart features switched off and on again quickly now really start again, a rescan picks up text on screen too, and Make room leaves your archive folder alone when it sits inside the clips folder.
+- A Wrapped that was being made when Savefile quit always picks up where it stopped, even if it quit at the worst moment.
+- Smaller fixes: the shelf arrows add up when clicked quickly instead of tugging against each other, Mochi never swaps a line for an older one, thumbnails made at the same moment no longer clash, and "Who's that?" snippets play without holding up the window.
+
 ## 0.46.3
 - Windows: clipping now recovers by itself when Windows takes the screen away from it, which happens when a game switches between fullscreen and windowed, the display or HDR changes, or the PC locks. It used to stop with an error after a second or two ("Generic error in an external library"); now it starts again on its own, and if Windows' fast screen capture keeps failing, Savefile switches to its compatible capture so clipping keeps going (games in exclusive fullscreen may record black there, so borderless windowed works best). Switching clipping off and on tries the fast capture again.
 - When clipping really can't run, the card explains why in plain words (the screen, the graphics card's encoder, a sound device or a full drive) instead of showing ffmpeg's error lines. The full details are still in Copy diagnostics.

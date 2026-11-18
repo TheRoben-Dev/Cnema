@@ -89,6 +89,14 @@ public static class BackgroundHold
 
     public static bool IsHeld { get { lock (Sync) return _held; } }
 
+    private static CancellationTokenSource _heldCts = new();
+
+    /// <summary>
+    /// Cancelled when the next hold starts. Work that runs inside Savefile (the speech and other models), which
+    /// freezing ffmpeg doesn't reach, links to it and stops when a video starts playing, to be done again later.
+    /// </summary>
+    public static CancellationToken WhenHeld { get { lock (Sync) return _heldCts.Token; } }
+
     /// <summary>All the time background work has been held so far, including a hold that is still on.</summary>
     public static TimeSpan HeldTotal
     {
@@ -111,15 +119,18 @@ public static class BackgroundHold
     /// <summary>Holds (true) or releases (false) every background process, now and any that start meanwhile.</summary>
     public static void Set(bool hold)
     {
-        if (!Supported) return;
+        CancellationTokenSource? stop = null;
         lock (Sync)
         {
             if (hold == _held) return;
             _held = hold;
-            if (hold) _heldSince = Clock.Elapsed;
-            else _heldBefore += Clock.Elapsed - _heldSince;
-            foreach (var p in Running.ToList()) Signal(p, hold ? SigStop : SigCont);
+            if (hold) { _heldSince = Clock.Elapsed; stop = _heldCts; }
+            else { _heldBefore += Clock.Elapsed - _heldSince; _heldCts = new CancellationTokenSource(); }
+            // Freezing processes is for macOS and Linux; on Windows the work runs at idle priority instead.
+            if (Supported) foreach (var p in Running.ToList()) Signal(p, hold ? SigStop : SigCont);
         }
+        // Outside the lock: cancelling runs the work's own callbacks.
+        try { stop?.Cancel(); } catch (AggregateException ex) { Log.Warn($"Background hold: {ex.InnerException?.Message}"); }
     }
 
     private static void Signal(Process p, int sig)
