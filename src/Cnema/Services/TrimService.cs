@@ -35,6 +35,21 @@ public static class TrimService
         _ => ("gif", ".gif", "GIF"),
     };
 
+    private const int MinVideoKbps = 80;
+
+    /// <summary>The longest video (ms) that still fits in <paramref name="capBytes"/> at the lowest bitrates.</summary>
+    internal static long LongestFor(long capBytes) => (long)(capBytes * 8 * 0.94 / (MinVideoKbps + 64) / 1000 * 1000);
+
+    /// <summary>That longest length as "8:40".</summary>
+    internal static string LongestText(long capBytes) =>
+        TimeSpan.FromSeconds(LongestFor(capBytes) / 1000).ToString(@"m\:ss", CultureInfo.InvariantCulture);
+
+    /// <summary>A share preset can't fit a video this long into its size.</summary>
+    public sealed class TooLongException(string message) : InvalidOperationException(message);
+
+    /// <summary>Whether a video this long can be made to fit in <paramref name="capBytes"/>.</summary>
+    internal static bool FitsIn(long capBytes, long durationMs) => durationMs <= LongestFor(capBytes);
+
     /// <summary>Picks resolution, frame rate and bitrates so <paramref name="durationMs"/> fits in the cap.</summary>
     internal static (int Height, int Fps, int VideoKbps, int AudioKbps) PlanForSize(long capBytes, long durationMs)
     {
@@ -42,7 +57,7 @@ public static class TrimService
         // 6% headroom for the container and for the encoder missing its target slightly.
         var totalKbps = capBytes * 8 * 0.94 / seconds / 1000;
         var audio = totalKbps > 1500 ? 128 : totalKbps > 500 ? 96 : 64;
-        var video = (int)Math.Clamp(totalKbps - audio, 80, 12000);
+        var video = (int)Math.Clamp(totalKbps - audio, MinVideoKbps, 12000);
         var (height, fps) = video switch
         {
             >= 5000 => (1080, 60),
@@ -155,23 +170,35 @@ public static class TrimService
             default:
                 var cap = (preset == SharePreset.Discord10 ? 10L : 50L) * 1000 * 1000;
                 var (height, fps, video, audioKbps) = PlanForSize(cap, durationMs);
+                // Below this the picture is mush and it still wouldn't fit: say so instead of making a file Discord refuses.
+                if (!FitsIn(cap, durationMs))
+                    throw new TooLongException(F("This is too long to fit in {0} MB. Trim it to {1} or shorter first.",
+                        cap / 1_000_000, LongestText(cap)));
                 var log = Path.Combine(Path.GetTempPath(), $"cnema-pass-{Environment.ProcessId}-{Environment.TickCount64}");
-                var common = new[]
+                string[] Common(int kbps) => new[]
                 {
                     "-map", "0:v:0",
                     "-vf", $"scale=-2:'min({height},ih)',fps='min({fps},source_fps)'",
                     "-c:v", "libx264", "-preset", "medium", "-pix_fmt", "yuv420p",
-                    "-b:v", $"{video}k", "-maxrate", $"{video * 3 / 2}k", "-bufsize", $"{video * 2}k",
+                    "-b:v", $"{kbps}k", "-maxrate", $"{kbps * 3 / 2}k", "-bufsize", $"{kbps * 2}k",
                     "-passlogfile", log,
                 };
                 try
                 {
                     // Two passes: the only way to land on a file size instead of a quality level.
-                    await Run(common.Concat(new[] { "-pass", "1", "-an", "-f", "null", "-y", OperatingSystem.IsWindows() ? "NUL" : "/dev/null" }), 0, 0.45);
-                    await Run(common.Concat(new[] { "-pass", "2" }).Concat(AudioMap()).Concat(new[]
+                    await Run(Common(video).Concat(new[] { "-pass", "1", "-an", "-f", "null", "-y", OperatingSystem.IsWindows() ? "NUL" : "/dev/null" }), 0, 0.45);
+                    for (var attempt = 0; ; attempt++)
                     {
-                        "-c:a", "aac", "-b:a", $"{audioKbps}k", "-ac", "2", "-movflags", "+faststart", "-y", temp,
-                    }), 0.45, 0.55);
+                        await Run(Common(video).Concat(new[] { "-pass", "2" }).Concat(AudioMap()).Concat(new[]
+                        {
+                            "-c:a", "aac", "-b:a", $"{audioKbps}k", "-ac", "2", "-movflags", "+faststart", "-y", temp,
+                        }), 0.45, 0.55);
+                        var size = new FileInfo(temp).Length;
+                        if (size <= cap || attempt == 1 || video <= MinVideoKbps) break;
+                        // The encoder overshot (a short, very busy clip can): once more, a little lower.
+                        Log.Info($"Share: {size / 1000} kB is over {cap / 1000} kB, encoding again at a lower bitrate");
+                        video = Math.Max(MinVideoKbps, (int)(video * (cap * 0.95 / size)));
+                    }
                 }
                 finally
                 {
