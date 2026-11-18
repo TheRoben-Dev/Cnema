@@ -240,6 +240,7 @@ public sealed class BlobMascot : Control
         _wake.Start();
         _top = TopLevel.GetTopLevel(this);
         _top?.AddHandler(PointerMovedEvent, OnWindowPointerMoved, RoutingStrategies.Tunnel, handledEventsToo: true);
+        EffectiveViewportChanged += OnViewportChanged;
         ClipToBounds = ActualMood == MochiMood.Peek;
         Kick();
     }
@@ -249,6 +250,8 @@ public sealed class BlobMascot : Control
         base.OnDetachedFromVisualTree(e);
         // The window it was added to: once detached, the blob can't look its top level up any more.
         _top?.RemoveHandler(PointerMovedEvent, OnWindowPointerMoved);
+        EffectiveViewportChanged -= OnViewportChanged;
+        _inView = true;
         _top = null;
         _wake?.Stop();
         _wake = null;
@@ -305,8 +308,22 @@ public sealed class BlobMascot : Control
         }
     }
 
+    // False while scrolled out of sight (the library's shelf when the grid is scrolled down): no frames are drawn then.
+    private bool _inView = true;
+
+    private void OnViewportChanged(object? sender, Avalonia.Layout.EffectiveViewportChangedEventArgs e)
+    {
+        var v = e.EffectiveViewport;
+        // Scrolled out of a clipping parent, the viewport comes back empty.
+        var inView = v.Width > 0 && v.Height > 0 && v.Intersects(new Rect(Bounds.Size).Inflate(8));
+        if (inView == _inView) return;
+        _inView = inView;
+        if (inView) Kick();
+    }
+
     private void Kick()
     {
+        if (!_inView) return;
         if (_running || Still || _manual is not null || !IsEffectivelyVisible || TopLevel.GetTopLevel(this) is not { } top) { InvalidateVisual(); return; }
         _running = true;
         _last = -1;
@@ -316,6 +333,7 @@ public sealed class BlobMascot : Control
     private void Frame(TimeSpan _)
     {
         if (Still || !IsEffectivelyVisible || TopLevel.GetTopLevel(this) is not { } top) { _running = false; InvalidateVisual(); return; }
+        if (!_inView) { _running = false; return; }
         var now = Now;
         // The small ones run for hours: a lower frame rate there is plenty and costs little.
         if (_lastDraw >= 0 && now - _lastDraw < 1 / Math.Max(10, MaxFps) - 0.002) { top.RequestAnimationFrame(Frame); return; }

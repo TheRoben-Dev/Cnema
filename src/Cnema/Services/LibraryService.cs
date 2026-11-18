@@ -245,9 +245,49 @@ public sealed class LibraryService : IDisposable
 
     private readonly HashSet<string> _adopted = new(StringComparer.OrdinalIgnoreCase);
 
+    private int _saveQueued;
+    private readonly object _writeLock = new();
+
+    /// <summary>
+    /// Writes library.json soon, off the calling thread. With smart data the file runs to many megabytes, and it
+    /// used to be written in full, on the UI thread, after every edit and every few indexed videos (a visible
+    /// hitch each time). Saves asked for close together now make one write.
+    /// </summary>
     public void SaveCache()
     {
-        lock (_cacheLock) JsonStore.Save(AppPaths.LibraryFile, _cache);
+        if (Interlocked.Exchange(ref _saveQueued, 1) == 1) return;
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(750).ConfigureAwait(false);
+            try { FlushCache(); }
+            catch (Exception ex) { Log.Warn($"Could not save the library: {ex.Message}"); }
+        });
+    }
+
+    /// <summary>Writes library.json now (at quit, or from the delayed save).</summary>
+    public void FlushCache()
+    {
+        lock (_writeLock)
+        {
+            Interlocked.Exchange(ref _saveQueued, 0);
+            for (var attempt = 1; ; attempt++)
+            {
+                // The rows are copied under the lock; the videos themselves may be edited on the UI thread while
+                // they're written out, which a list being changed at that very moment can trip over: try again.
+                LibraryCacheFile snapshot;
+                lock (_cacheLock)
+                    snapshot = new LibraryCacheFile { Entries = new Dictionary<string, VideoEntry>(_cache.Entries, StringComparer.OrdinalIgnoreCase) };
+                try
+                {
+                    JsonStore.Save(AppPaths.LibraryFile, snapshot, compact: true);
+                    return;
+                }
+                catch (InvalidOperationException) when (attempt < 5)
+                {
+                    Thread.Sleep(20 * attempt);
+                }
+            }
+        }
     }
 
     public void Watch(IEnumerable<string> folders)

@@ -30,6 +30,7 @@ public partial class MainWindow : Window
         FrameEdit.RegionChanged += (tag, area) => Vm?.Player.MoveFrameRegion(tag, area);
         FrameEdit.RegionPicked += tag => Vm?.Player.PickFrameRegion(tag);
 
+        GridScroller.ScrollChanged += (_, e) => { if (e.OffsetDelta.Y != 0) VideoItemViewModel.NoteScrolled(); };
         VideoGrid.ElementPrepared += (_, e) => (e.Element.DataContext as VideoItemViewModel)?.AcquireThumbnail();
         VideoGrid.ElementClearing += (_, e) =>
         {

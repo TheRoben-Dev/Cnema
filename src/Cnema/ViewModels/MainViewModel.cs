@@ -1361,7 +1361,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         BackgroundHold.Set(false); // never leave a frozen ffmpeg behind
         _voiceCts?.Cancel();
         _voicePlayer?.Dispose();
-        _library.SaveCache();
+        _library.FlushCache();
         _library.Dispose();
     }
 }

@@ -6,13 +6,19 @@ namespace Cnema.Services;
 public static class JsonStore
 {
     private static readonly JsonSerializerOptions Options = new() { WriteIndented = true };
+    // For the big files only the app reads (the library): no indenting, a good deal smaller and quicker to write.
+    private static readonly JsonSerializerOptions Compact = new();
 
     public static T Load<T>(string path) where T : new()
     {
         try
         {
             if (File.Exists(path))
-                return JsonSerializer.Deserialize<T>(File.ReadAllText(path), Options) ?? new T();
+            {
+                // Straight from the file's bytes: no copy of a many-megabyte file as one big string first.
+                using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 1 << 16);
+                return JsonSerializer.Deserialize<T>(fs, Options) ?? new T();
+            }
         }
         catch (Exception ex)
         {
@@ -28,13 +34,13 @@ public static class JsonStore
     public static T Read<T>(string path) where T : class =>
         JsonSerializer.Deserialize<T>(File.ReadAllText(path), Options) ?? throw new InvalidDataException("The file is empty.");
 
-    public static void Save<T>(string path, T value)
+    public static void Save<T>(string path, T value, bool compact = false)
     {
         var tmp = path + ".tmp";
         // Flushed to the disk before the rename, so a power cut can't leave an empty file behind.
-        using (var fs = new FileStream(tmp, FileMode.Create, FileAccess.Write, FileShare.None))
+        using (var fs = new FileStream(tmp, FileMode.Create, FileAccess.Write, FileShare.None, 1 << 16))
         {
-            JsonSerializer.Serialize(fs, value, Options);
+            JsonSerializer.Serialize(fs, value, compact ? Compact : Options);
             fs.Flush(flushToDisk: true);
         }
         File.Move(tmp, path, overwrite: true);

@@ -47,6 +47,8 @@ SetupIconFile=..\src\Cnema\Assets\cnema.ico
 UninstallDisplayIcon={app}\Cnema.exe
 UninstallDisplayName=Savefile
 Compression=lzma2/max
+; Exact file dates (not shifted by the time zone): libVLC's plugin cache matches its plugins by date and size.
+TimeStampsInUTC=yes
 SolidCompression=yes
 WizardStyle=modern
 ; A running Savefile is closed for the install and the uninstall (it lives in the tray, so it's easy to forget).

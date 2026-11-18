@@ -50,6 +50,14 @@ if command -v codesign >/dev/null 2>&1; then
     fi
   done < <(find "$APP/Contents/MacOS" -type f -print0)
   echo "Signed bundle contents ($failed file(s) could not be signed)"
+  # libVLC's plugin cache: after signing, which changes the plugin files (the cache lists them by date and size).
+  # Without it libVLC opens every plugin on each start. Only on a Mac that can run this build; otherwise the app
+  # writes the cache itself on its first start.
+  if "$APP/Contents/MacOS/Cnema" --vlc-cache; then
+    find "$APP/Contents/MacOS/libvlc" -name plugins.dat -exec codesign --force --sign - {} \;
+  else
+    echo "libVLC plugin cache not written on this machine"
+  fi
   codesign --force --sign - "$APP"
   codesign --verify --deep --strict "$APP" && echo "Signature OK"
 fi

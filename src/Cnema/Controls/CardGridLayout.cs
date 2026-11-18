@@ -149,3 +149,19 @@ public sealed class AspectPanel : Panel
         return new Size(finalSize.Width, rect.Height);
     }
 }
+
+/// <summary>
+/// The root of a library card. The grid hands a card back with its DataContext cleared and later gives it the next
+/// video, which would update every binding on the card twice (to nothing, then to the new video). The card inside keeps
+/// its last video until the next one comes, so each reuse costs one update instead of two.
+/// </summary>
+public sealed class CardHost : Decorator
+{
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        if (change.Property == DataContextProperty || change.Property == ChildProperty)
+            if (Child is { } child && DataContext is { } data && !ReferenceEquals(child.DataContext, data))
+                child.DataContext = data;
+    }
+}

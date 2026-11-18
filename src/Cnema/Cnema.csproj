@@ -45,6 +45,18 @@
   </ItemGroup>
 
   <!--
+    Release builds (published for one platform) are compiled ahead of time, so the app starts without waiting for
+    the JIT: about half the start-up time. Libraries only used later (backup, speech, models) stay as they are
+    to keep the download small; they're compiled when first used, as before.
+  -->
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' != ''">
+    <PublishReadyToRun>true</PublishReadyToRun>
+  </PropertyGroup>
+  <ItemGroup>
+    <PublishReadyToRunExclude Include="AWSSDK.Core.dll;AWSSDK.S3.dll;AWSSDK.Extensions.Numerics.dll;Renci.SshNet.dll;BouncyCastle.Cryptography.dll;Microsoft.ML.OnnxRuntime.dll;Whisper.net.dll;System.IO.Hashing.dll" />
+  </ItemGroup>
+
+  <!--
     Native libVLC per platform (see Services/VlcBootstrap.cs):
       macOS   -> bundled from NuGet into libvlc/osx-<arch>/ (falls back to an installed VLC.app).
       Windows -> bundled from NuGet into libvlc/win-<arch>/.

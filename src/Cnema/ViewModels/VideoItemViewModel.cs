@@ -150,6 +150,7 @@ public sealed partial class VideoItemViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(HasCustomThumbnail));
         if (_thumbRefs > 0) _ = LoadThumbnailCoreAsync();
+        else DropThumbnail();
     }
 
     public void Update(VideoEntry e)
@@ -157,7 +158,9 @@ public sealed partial class VideoItemViewModel : ObservableObject
         var thumbChanged = e.ThumbPath != Entry.ThumbPath;
         Entry = e;
         OnPropertyChanged(string.Empty);
-        if (thumbChanged && _thumbRefs > 0) _ = LoadThumbnailCoreAsync();
+        if (!thumbChanged) return;
+        if (_thumbRefs > 0) _ = LoadThumbnailCoreAsync();
+        else DropThumbnail();
     }
 
     public void RefreshProgress()
@@ -166,17 +169,38 @@ public sealed partial class VideoItemViewModel : ObservableObject
         OnPropertyChanged(nameof(HasProgress));
     }
 
+    // Thumbnails of cards that just scrolled out of view stay decoded for a while (the most recent ones only), so
+    // scrolling back shows them at once instead of decoding them again. UI thread only.
+    private const int KeepDecoded = 72;
+    private static readonly LinkedList<VideoItemViewModel> s_kept = new();
+    private LinkedListNode<VideoItemViewModel>? _kept;
+
     /// <summary>Called when the card scrolls into view (virtualized grid).</summary>
     public void AcquireThumbnail()
     {
-        if (++_thumbRefs == 1 && Thumbnail is null) _ = LoadThumbnailCoreAsync();
+        if (++_thumbRefs != 1) return;
+        if (_kept is not null) { s_kept.Remove(_kept); _kept = null; }
+        if (Thumbnail is null) _ = LoadThumbnailCoreAsync();
     }
 
-    /// <summary>Called when the card leaves the view; frees decoded pixels.</summary>
+    /// <summary>Called when the card leaves the view; the decoded pixels are freed once enough newer ones are kept.</summary>
     public void ReleaseThumbnail()
     {
         if (--_thumbRefs > 0) return;
         _thumbRefs = 0;
+        if (Thumbnail is null || _kept is not null) return;
+        _kept = s_kept.AddLast(this);
+        while (s_kept.Count > KeepDecoded && s_kept.First is { } oldest)
+        {
+            s_kept.RemoveFirst();
+            oldest.Value._kept = null;
+            oldest.Value.DropThumbnail();
+        }
+    }
+
+    private void DropThumbnail()
+    {
+        if (_kept is not null) { s_kept.Remove(_kept); _kept = null; }
         var old = Thumbnail;
         Thumbnail = null;
         old?.Dispose();
@@ -185,18 +209,18 @@ public sealed partial class VideoItemViewModel : ObservableObject
     private async Task LoadThumbnailCoreAsync()
     {
         var path = Entry.ThumbPath;
-        if (path is null || !File.Exists(path)) return;
+        if (path is null) return;
         try
         {
             var bmp = await Task.Run(() =>
             {
                 // Scrolled past before its turn came: don't decode a picture nobody will see.
-                if (Volatile.Read(ref _thumbRefs) == 0) return null;
+                if (Volatile.Read(ref _thumbRefs) == 0 || !File.Exists(path)) return null;
                 using var fs = File.OpenRead(path);
                 return Bitmap.DecodeToWidth(fs, 400);
             });
             if (bmp is null) return;
-            if (_thumbRefs > 0 && Entry.ThumbPath == path) { Thumbnail?.Dispose(); Thumbnail = bmp; }
+            if (_thumbRefs > 0 && Entry.ThumbPath == path) { var old = Thumbnail; Thumbnail = bmp; old?.Dispose(); }
             else bmp.Dispose();
         }
         catch { /* corrupt thumbnail; card shows placeholder */ }
@@ -214,6 +238,11 @@ public sealed partial class VideoItemViewModel : ObservableObject
     /// <summary>The "Hover preview" feature; off, cards keep their still thumbnail.</summary>
     public static bool HoverPreview { get; set; } = true;
 
+    private static long s_scrolledAt;
+
+    /// <summary>The library grid scrolled just now (hover previews wait until it settles).</summary>
+    public static void NoteScrolled() => Volatile.Write(ref s_scrolledAt, Environment.TickCount64);
+
     public async void BeginScrub()
     {
         if (_strip is not null || !HoverPreview) return;
@@ -221,6 +250,13 @@ public sealed partial class VideoItemViewModel : ObservableObject
         try
         {
             await Task.Delay(220);
+            // Cards slide under a resting pointer while the library scrolls: wait until it has settled, so
+            // scrolling doesn't start a filmstrip (an ffmpeg run) for every card it passes.
+            for (long quiet; (quiet = Environment.TickCount64 - Volatile.Read(ref s_scrolledAt)) < 220;)
+            {
+                if (token != _scrubToken) return;
+                await Task.Delay((int)(220 - quiet) + 10);
+            }
             if (token != _scrubToken) return;
             var path = await Services.ThumbnailService.EnsureStripAsync(Entry, CancellationToken.None);
             if (path is null || token != _scrubToken) return;

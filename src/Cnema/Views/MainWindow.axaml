@@ -750,6 +750,7 @@
               </ItemsRepeater.Layout>
               <ItemsRepeater.ItemTemplate>
                 <DataTemplate x:DataType="vm:VideoItemViewModel">
+                  <c:CardHost>
                   <Button Classes="card" Padding="8" VerticalAlignment="Top"
                           Command="{Binding #Root.((vm:MainViewModel)DataContext).OpenCommand}"
                           CommandParameter="{Binding}">
@@ -876,6 +877,7 @@
                       </StackPanel>
                     </StackPanel>
                   </Button>
+                  </c:CardHost>
                 </DataTemplate>
               </ItemsRepeater.ItemTemplate>
             </ItemsRepeater>
