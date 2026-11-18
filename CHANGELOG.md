@@ -10,6 +10,11 @@ What changed in each Savefile (formerly Cnema) release. The app shows the entrie
 - Opening a video in the Quick player is snappier: the scan for loud moments on its timeline waits until the video is playing.
 - Mochi takes a break while scrolled out of sight.
 
+## 0.46.3
+- Windows: clipping now recovers by itself when Windows takes the screen away from it, which happens when a game switches between fullscreen and windowed, the display or HDR changes, or the PC locks. It used to stop with an error after a second or two ("Generic error in an external library"); now it starts again on its own, and if Windows' fast screen capture keeps failing, Savefile switches to its compatible capture so clipping keeps going (games in exclusive fullscreen may record black there, so borderless windowed works best). Switching clipping off and on tries the fast capture again.
+- When clipping really can't run, the card explains why in plain words (the screen, the graphics card's encoder, a sound device or a full drive) instead of showing ffmpeg's error lines. The full details are still in Copy diagnostics.
+- Windows: opening Savefile while another copy is already running (say, an installed one and an older unzipped one) brings the running copy forward instead of starting a second one that fights it over clipping.
+
 ## 0.46.2
 - Fixed crackling and little static pops when playing videos while Savefile was looking through your clips in the background. That background work now freezes while a video plays and carries on where it left off when you pause or close it, and time spent frozen never counts against it, so no clip gets skipped for taking too long.
 

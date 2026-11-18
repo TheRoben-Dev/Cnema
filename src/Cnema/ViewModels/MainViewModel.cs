@@ -240,7 +240,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             $"Encoders: {codecs}",
             $"System audio helper: {(CaptureProbe.SystemAudioHelper is null ? "no" : "yes")}",
             $"Library: {_items.Count} videos in {_settings.Current.Folders.Count} folders",
-            $"Clipping: enabled={clip.Enabled} state={Clips.State} encoder={Clips.Encoder ?? "-"} error={Clips.Error ?? "-"}",
+            $"Clipping: enabled={clip.Enabled} state={Clips.State} mode={Clips.CaptureMode ?? "-"} encoder={Clips.Encoder ?? "-"} error={Clips.Error ?? "-"} detail={Clips.ErrorDetail ?? "-"}",
             $"Clip settings: {clip.Seconds}s {clip.Fps}fps height={clip.Height} {clip.BitrateMbps}Mbps codec={clip.Codec} hw={clip.HardwareEncoder} audio1={(clip.Audio1 is null ? "-" : "set")} audio2={(clip.Audio2 is null ? "-" : "set")} hotkey={clip.HotkeyText} hotkeyRefused={_hotkeyRefused} extraHotkeys={clip.ExtraHotkeys.Count} extraRefused={_refusedExtras.Count}",
             SmartDiagnostics(),
             "",
@@ -458,11 +458,13 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         ClipState.Recording => _hotkeyRefused || _refusedExtras.Count > 0
             ? F(RefusedHotkeys.Count == 1 ? "{0} is taken by another app. Pick a different one in settings." : "{0} are taken by another app. Pick different ones in settings.",
                 string.Join(T(" and "), RefusedHotkeys))
-            : Clips.CameraNote is { } note ? $"{HotkeySummary}. {note}" : HotkeySummary,
+            : ClipNotes is { Length: > 0 } notes ? $"{HotkeySummary}. {notes}" : HotkeySummary,
         ClipState.Error => Clips.Error ?? "",
         ClipState.Starting => "",
         _ => T("Record in the background and save moments after they happen."),
     };
+    private string ClipNotes => string.Join(" ", new[] { Clips.CaptureNote, Clips.CameraNote }.Where(n => !string.IsNullOrEmpty(n)));
+
     /// <summary>Raised when tray-relevant state changed (clipping on/off, background mode).</summary>
     public event Action? BackgroundStateChanged;
 
