@@ -309,10 +309,13 @@ public sealed class LibraryService : IDisposable
         {
             try
             {
-                var w = new FileSystemWatcher(folder) { IncludeSubdirectories = true, EnableRaisingEvents = true };
+                var w = new FileSystemWatcher(folder) { IncludeSubdirectories = true, InternalBufferSize = 64 * 1024 };
                 w.Created += OnFsEvent;
                 w.Deleted += OnFsEvent;
                 w.Renamed += OnFsEvent;
+                // A big copy can overflow the watcher (Windows drops events then); look through the folder instead.
+                w.Error += (_, err) => { Log.Warn($"Watching {folder}: {err.GetException().Message}"); Settle(); };
+                w.EnableRaisingEvents = true;
                 _watchers.Add(w);
             }
             catch (Exception ex)
@@ -324,17 +327,41 @@ public sealed class LibraryService : IDisposable
 
     private void OnFsEvent(object sender, FileSystemEventArgs e)
     {
-        if (!VideoExtensions.Contains(Path.GetExtension(e.FullPath)) &&
-            !(e is RenamedEventArgs r && VideoExtensions.Contains(Path.GetExtension(r.OldFullPath))))
-            return;
-        // Debounce: copies/exports fire many events; wait for things to settle.
-        _debounce?.Dispose();
-        _debounce = new Timer(_ => FoldersChanged?.Invoke(), null, TimeSpan.FromSeconds(2), Timeout.InfiniteTimeSpan);
+        if (!Matters(e.FullPath) && !(e is RenamedEventArgs r && Matters(r.OldFullPath))) return;
+        Settle();
+    }
+
+    /// <summary>A video, or a folder that might hold some (moved, renamed or deleted along with its clips).</summary>
+    private static bool Matters(string path)
+    {
+        var name = Path.GetFileName(path);
+        if (name.StartsWith('.')) return false; // the Bin, ._ files, hidden folders
+        var ext = Path.GetExtension(name);
+        return VideoExtensions.Contains(ext) || (ext.Length == 0 && !File.Exists(path));
+    }
+
+    private readonly object _debounceLock = new();
+    private bool _disposed;
+
+    /// <summary>Copies and exports fire many events: look again once things have been quiet for two seconds.</summary>
+    private void Settle()
+    {
+        lock (_debounceLock)
+        {
+            if (_disposed) return;
+            _debounce ??= new Timer(_ => FoldersChanged?.Invoke());
+            _debounce.Change(TimeSpan.FromSeconds(2), Timeout.InfiniteTimeSpan);
+        }
     }
 
     public void Dispose()
     {
         foreach (var w in _watchers) w.Dispose();
-        _debounce?.Dispose();
+        lock (_debounceLock)
+        {
+            _disposed = true;
+            _debounce?.Dispose();
+            _debounce = null;
+        }
     }
 }
