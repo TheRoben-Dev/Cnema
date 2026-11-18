@@ -108,6 +108,9 @@ public static class ThemeService
     /// High contrast keeps the scheme's accent but puts it on pure black with white text and
     /// clearly visible lines.
     /// </summary>
+    /// <summary>The colours last put into the app's resources.</summary>
+    private static object? _applied;
+
     public static void Apply(string? id, bool highContrast = false)
     {
         if (Application.Current is not { } app) return;
@@ -132,6 +135,10 @@ public static class ThemeService
                 Bg0 = "#000000", Bg1 = "#000000", Bg2 = "#121212", Bg3 = "#242424", Line = "#9A9A9A",
                 Text = "#FFFFFF", TextDim = "#E0E0E0",
             };
+        // Nothing changed (closing Settings without a preview, saving unrelated settings): leave the brushes be.
+        // Swapping them all re-styles every control in the window, a visible hitch with a big library.
+        if (Equals(s, _applied)) return;
+        _applied = s;
         var r = app.Resources;
         static Color C(string hex) => Color.Parse(hex);
         static SolidColorBrush B(string hex, double opacity = 1) => new(Color.Parse(hex), opacity);

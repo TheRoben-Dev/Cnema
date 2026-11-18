@@ -52,10 +52,14 @@ public static class Loc
     }
 
     /// <summary>Switches language. "" or null follows the system; unknown codes fall back to English.</summary>
+    private static string? _loadedFor;
+
     public static void Apply(string? code)
     {
         var resolved = string.IsNullOrEmpty(code) ? SystemLanguage : code;
         if (!Languages.Any(l => l.Code == resolved)) resolved = "en";
+        if (resolved == _loadedFor) return; // already in use (closing Settings without a change)
+        _loadedFor = resolved;
         _strings = resolved == "en" ? new() : LoadFile(resolved);
         ApplyDates(resolved);
         var changed = resolved != Current;

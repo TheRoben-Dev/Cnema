@@ -61,7 +61,11 @@ public sealed class LibraryService : IDisposable
             foreach (var path in Directory.EnumerateFiles(folder, "*", opts))
             {
                 if (!VideoExtensions.Contains(Path.GetExtension(path))) continue;
-                if (Path.GetFileName(path).StartsWith("._")) continue; // macOS resource forks on exFAT
+                var name = Path.GetFileName(path);
+                if (name.StartsWith("._", StringComparison.Ordinal)) continue; // macOS resource forks on exFAT
+                // Savefile's own work in progress (Make room's smaller copy). A leading dot hides it on a Mac
+                // and Linux, but not on Windows, where a scan would list it half-written.
+                if (name.StartsWith(".savefile-", StringComparison.OrdinalIgnoreCase)) continue;
                 if (BinService.IsBinPath(path)) continue; // deleted, waiting out its 24 hours
                 files.Add(new FileInfo(path));
             }
