@@ -96,7 +96,12 @@ public sealed partial class MainViewModel
     private void StartVisualPass()
     {
         if (!Features.Visual || !VisualModelReady || ToolLocator.Ffmpeg is null) return;
-        if (_visualRun is { IsCompleted: false }) return;
+        if (_visualRun is { IsCompleted: false } running)
+        {
+            // Switched off and on again before the last run had stopped: start again once it has.
+            if (_visualCts is { IsCancellationRequested: true }) RestartAfter(running, StartVisualPass);
+            return;
+        }
         _visualCts = new CancellationTokenSource();
         _visualRun = RunVisualPassAsync(_visualCts.Token);
     }

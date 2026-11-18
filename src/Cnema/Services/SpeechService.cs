@@ -101,7 +101,7 @@ public sealed partial class SpeechService : IDisposable
     }
 
     /// <summary>A stretch of the sound as 16 kHz mono floats, all tracks mixed.</summary>
-    internal static async Task<float[]> ReadAudioAsync(string ffmpeg, string path, TimeSpan at, int tracks, CancellationToken ct, TimeSpan? length = null)
+    internal static async Task<float[]> ReadAudioAsync(string ffmpeg, string path, TimeSpan at, int tracks, CancellationToken ct, TimeSpan? length = null, bool background = true)
     {
         var psi = new ProcessStartInfo(ffmpeg)
         {
@@ -123,7 +123,7 @@ public sealed partial class SpeechService : IDisposable
         foreach (var a in new[] { "-ac", "1", "-ar", Rate.ToString(), "-f", "f32le", "pipe:1" }) psi.ArgumentList.Add(a);
 
         using var p = Process.Start(psi) ?? throw new InvalidOperationException("ffmpeg didn't start");
-        ProcessRunner.Lower(p);
+        if (background) ProcessRunner.Lower(p); // indexing; someone waiting on it (the voice game) runs at once
         var errTask = p.StandardError.ReadToEndAsync(ct);
         using var ms = new MemoryStream();
         try

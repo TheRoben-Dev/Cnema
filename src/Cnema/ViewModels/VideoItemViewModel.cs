@@ -232,6 +232,7 @@ public sealed partial class VideoItemViewModel : ObservableObject
     public bool HasScrub => ScrubFrame is not null;
     private Bitmap? _strip;
     private int _scrubToken;
+    private CancellationTokenSource? _scrubCts;
     private int _scrubIndex = -1;
 
     /// <summary>Pointer came onto the card: after a short pause, load (or make) the filmstrip.</summary>
@@ -247,6 +248,8 @@ public sealed partial class VideoItemViewModel : ObservableObject
     {
         if (_strip is not null || !HoverPreview) return;
         var token = ++_scrubToken;
+        _scrubCts?.Cancel();
+        var cts = _scrubCts = new CancellationTokenSource();
         try
         {
             await Task.Delay(220);
@@ -258,7 +261,7 @@ public sealed partial class VideoItemViewModel : ObservableObject
                 await Task.Delay((int)(220 - quiet) + 10);
             }
             if (token != _scrubToken) return;
-            var path = await Services.ThumbnailService.EnsureStripAsync(Entry, CancellationToken.None);
+            var path = await Services.ThumbnailService.EnsureStripAsync(Entry, cts.Token);
             if (path is null || token != _scrubToken) return;
             var bmp = await Task.Run(() => new Bitmap(path));
             if (token != _scrubToken) { bmp.Dispose(); return; }
@@ -289,6 +292,8 @@ public sealed partial class VideoItemViewModel : ObservableObject
     public void EndScrub()
     {
         _scrubToken++;
+        _scrubCts?.Cancel();
+        _scrubCts = null;
         _scrubIndex = -1;
         ScrubFrame = null;
         _strip?.Dispose();

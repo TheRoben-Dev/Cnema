@@ -1,3 +1,4 @@
+using Avalonia.Threading;
 using Cnema.Models;
 using Cnema.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -82,7 +83,12 @@ public sealed partial class MainViewModel
     private void StartVoicePass()
     {
         if (!Features.Voices || !Features.Speech || !VoiceModelReady || ToolLocator.Ffmpeg is null) return;
-        if (_voiceRun is { IsCompleted: false }) return;
+        if (_voiceRun is { IsCompleted: false } running)
+        {
+            // Switched off and on again before the last run had stopped: start again once it has.
+            if (_voiceCts is { IsCancellationRequested: true }) RestartAfter(running, StartVoicePass);
+            return;
+        }
         _voiceCts = new CancellationTokenSource();
         _voiceRun = RunVoicePassAsync(_voiceCts.Token);
     }
@@ -337,7 +343,7 @@ public sealed partial class MainViewModel
         try
         {
             if (ToolLocator.Ffmpeg is not { } ffmpeg) return Array.Empty<double>();
-            var samples = SpeechService.ReadAudioAsync(ffmpeg, path, TimeSpan.FromMilliseconds(from), 1, CancellationToken.None, TimeSpan.FromMilliseconds(to - from + 100)).GetAwaiter().GetResult();
+            var samples = SpeechService.ReadAudioAsync(ffmpeg, path, TimeSpan.FromMilliseconds(from), 1, CancellationToken.None, TimeSpan.FromMilliseconds(to - from + 100), background: false).GetAwaiter().GetResult();
             var n = (int)Math.Min(samples.Length, (to - from) * 16);
             if (n < 48) return Array.Empty<double>();
             var step = n / 48;
@@ -391,25 +397,57 @@ public sealed partial class MainViewModel
     private void PlayVoiceRound(VoiceRound r)
     {
         if (VlcBootstrap.LibVLC is not { } lib || !File.Exists(r.Path)) return;
-        try
+        if (_voicePlayer is null)
         {
-            StopVoicePlayback();
-            _voicePlayer ??= new MediaPlayer(lib);
+            _voicePlayer = new MediaPlayer(lib);
+            // libVLC's own threads: never call back into it from here, just tell the UI.
+            _voicePlayer.EndReached += (_, _) => Dispatcher.UIThread.Post(VoicePlaybackEnded);
+            _voicePlayer.EncounteredError += (_, _) => Dispatcher.UIThread.Post(VoicePlaybackEnded);
+        }
+        var player = _voicePlayer;
+        _voicePlaying = true;
+        UpdateBackgroundHold(); // like any playback: indexing waits, so the snippet doesn't crackle
+        if (VoiceGame is { } g) g.IsPlaying = true;
+        VoiceOp(() =>
+        {
             using var media = new Media(lib, r.Path, FromType.FromPath);
             media.AddOption(":no-video");
             media.AddOption($":start-time={r.StartMs / 1000.0:0.###}".Replace(',', '.'));
             media.AddOption($":stop-time={r.EndMs / 1000.0 + 0.3:0.###}".Replace(',', '.'));
-            _voicePlayer.Play(media);
-            if (VoiceGame is { } g) g.IsPlaying = true;
-        }
-        catch (Exception ex) { Log.Warn($"Voice snippet: {ex.Message}"); }
+            player.Play(media);
+        });
+    }
+
+    private bool _voicePlaying;
+    private Task _voiceOps = Task.CompletedTask;
+
+    /// <summary>
+    /// The snippet player's Play and Stop, one after another off the UI thread: Stop can wait on libVLC's threads,
+    /// and a Stop must never land after the Play of the next voice.
+    /// </summary>
+    private void VoiceOp(Action op) =>
+        _voiceOps = _voiceOps.ContinueWith(_ =>
+        {
+            try { op(); }
+            catch (Exception ex) { Log.Warn($"Voice snippet: {ex.Message}"); }
+        }, CancellationToken.None, TaskContinuationOptions.None, TaskScheduler.Default);
+
+    private void VoicePlaybackEnded()
+    {
+        _voicePlaying = false;
+        UpdateBackgroundHold();
+        if (VoiceGame is { } g) g.IsPlaying = false;
     }
 
     private void StopVoicePlayback()
     {
-        try { _voicePlayer?.Stop(); } catch { /* gone */ }
-        if (VoiceGame is { } g) g.IsPlaying = false;
+        if (_voicePlayer is { } p && _voicePlaying) VoiceOp(() => p.Stop());
+        VoicePlaybackEnded();
     }
+
+    /// <summary>Background work freezes while anything plays in Savefile (a video, or a voice snippet).</summary>
+    private void UpdateBackgroundHold() =>
+        BackgroundHold.Set((Player.IsPlaying && Player.Current is not null) || _voicePlaying);
 
     /// <summary>A friend renamed or merged: their voice goes with them.</summary>
     internal void RenameVoice(string from, string to) => _voices.Rename(from, to);

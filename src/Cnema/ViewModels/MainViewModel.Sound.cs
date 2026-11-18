@@ -72,7 +72,12 @@ public sealed partial class MainViewModel
     private void StartSoundPass()
     {
         if (!Features.Laughs || !SoundModelReady || ToolLocator.Ffmpeg is null) return;
-        if (_soundRun is { IsCompleted: false }) return;
+        if (_soundRun is { IsCompleted: false } running)
+        {
+            // Switched off and on again before the last run had stopped: start again once it has.
+            if (_soundCts is { IsCancellationRequested: true }) RestartAfter(running, StartSoundPass);
+            return;
+        }
         _soundCts = new CancellationTokenSource();
         _soundRun = RunSoundPassAsync(_soundCts.Token);
     }

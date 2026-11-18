@@ -21,6 +21,25 @@ public static class MediaProbe
     public static async Task<StreamInfo?> InfoAsync(string path, CancellationToken ct)
     {
         if (ToolLocator.Ffmpeg is not { } ffmpeg) return null;
+        // Several smart features ask about the same video one after another: one ffmpeg start each was
+        // a noticeable part of indexing a short clip (more so on Windows and macOS, where starting ffmpeg is slow).
+        string? key = null;
+        try { var f = new FileInfo(path); if (f.Exists) key = $"{path}|{f.Length}|{f.LastWriteTimeUtc.Ticks}"; }
+        catch { /* not cached */ }
+        if (key is not null && InfoCache.TryGetValue(key, out var known)) return known;
+        var info = await ReadInfoAsync(ffmpeg, path, ct);
+        if (key is not null && info is not null)
+        {
+            if (InfoCache.Count >= 256) InfoCache.Clear();
+            InfoCache[key] = info;
+        }
+        return info;
+    }
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, StreamInfo> InfoCache = new(StringComparer.Ordinal);
+
+    private static async Task<StreamInfo?> ReadInfoAsync(string ffmpeg, string path, CancellationToken ct)
+    {
         var r = await ProcessRunner.RunAsync(ffmpeg, new[] { "-hide_banner", "-i", path }, ct: ct);
         var e = new VideoEntry { Path = path };
         if (!ParseFfmpegInfo(r.StdErr, e) && e.DurationMs <= 0) return null;

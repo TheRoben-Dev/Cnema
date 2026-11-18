@@ -132,8 +132,15 @@ public sealed class LibraryService : IDisposable
             CancellationToken = ct,
         }, async (e, token) =>
         {
-            await MediaProbe.ProbeAsync(e, token);
-            e.ThumbPath = await ThumbnailService.EnsureAsync(e, token);
+            // One file that can't be read (locked, half-written, ffmpeg refused to start) must never stop the
+            // whole scan: it stays in the library without details and the next scan tries it again.
+            try
+            {
+                await MediaProbe.ProbeAsync(e, token);
+                e.ThumbPath = await ThumbnailService.EnsureAsync(e, token);
+            }
+            catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
+            catch (Exception ex) { Log.Warn($"Scan: {e.FileName}: {ex.Message}"); }
             var save = false;
             lock (_cacheLock)
             {

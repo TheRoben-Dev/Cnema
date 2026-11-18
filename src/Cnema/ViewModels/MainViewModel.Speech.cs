@@ -112,7 +112,12 @@ public sealed partial class MainViewModel
     private void StartSpeechPass()
     {
         if (!Features.Speech || !SpeechModelReady || ToolLocator.Ffmpeg is null) return;
-        if (_speechRun is { IsCompleted: false }) return;
+        if (_speechRun is { IsCompleted: false } running)
+        {
+            // Switched off and on again before the last run had stopped: start again once it has.
+            if (_speechCts is { IsCancellationRequested: true }) RestartAfter(running, StartSpeechPass);
+            return;
+        }
         _speechCts = new CancellationTokenSource();
         _speechRun = RunSpeechPassAsync(_speechCts.Token);
     }

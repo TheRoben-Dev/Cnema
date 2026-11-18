@@ -32,7 +32,8 @@ public static class ThumbnailService
         if (ToolLocator.Ffmpeg is not { } ffmpeg) return null;
         // Written beside it and moved in when complete: a scan cancelled mid-write must not leave
         // a broken thumbnail that every later scan would reuse.
-        var temp = target[..^4] + ".tmp.jpg";
+        // Its own temp name: a scan and the smart-thumbnail pass can make the same thumbnail at once.
+        var temp = target[..^4] + $".{Guid.NewGuid():N}.tmp.jpg";
 
         // ~12% in avoids black intros/fade-ins; clamp for very short clips. A frame the user picked
         // is taken as it is, without the "most representative of the next 12 frames" filter.
@@ -42,21 +43,30 @@ public static class ThumbnailService
         var ss = seekSec.ToString("0.###", CultureInfo.InvariantCulture);
         var filter = picked ? $"scale={ThumbWidth}:-2" : $"thumbnail=12,scale={ThumbWidth}:-2";
 
-        foreach (var attempt in new[] { ss, "0" })
+        try
         {
-            var r = await ProcessRunner.RunAsync(ffmpeg, new[]
+            foreach (var attempt in new[] { ss, "0" })
             {
-                "-v", "error", "-ss", attempt, "-i", e.Path, "-frames:v", "1",
-                "-vf", filter, "-q:v", "4", "-y", temp,
-            }, ct: ct);
-            if (r.ExitCode == 0 && File.Exists(temp) && new FileInfo(temp).Length > 0)
-            {
-                File.Move(temp, target, overwrite: true);
-                return target;
+                var r = await ProcessRunner.RunAsync(ffmpeg, new[]
+                {
+                    "-v", "error", "-ss", attempt, "-i", e.Path, "-frames:v", "1",
+                    "-vf", filter, "-q:v", "4", "-y", temp,
+                }, ct: ct);
+                if (r.ExitCode == 0 && File.Exists(temp) && new FileInfo(temp).Length > 0)
+                {
+                    try { File.Move(temp, target, overwrite: true); }
+                    catch (IOException) when (File.Exists(target)) { /* the other one got there first */ }
+                    return target;
+                }
             }
+            return null;
         }
-        try { File.Delete(temp); } catch { /* nothing written */ }
-        return null;
+        finally { if (File.Exists(temp)) TryDelete(temp); } // also when cancelled half-way
+    }
+
+    private static void TryDelete(string path)
+    {
+        try { File.Delete(path); } catch { /* nothing written, or still in use */ }
     }
     public const int StripFrames = 10;
     private static readonly SemaphoreSlim StripGate = new(1, 1);
@@ -90,7 +100,10 @@ public static class ThumbnailService
             graph.Append(CultureInfo.InvariantCulture, $"hstack=inputs={StripFrames}[out]");
             var temp = target + ".tmp.jpg";
             args.AddRange(new[] { "-filter_complex", graph.ToString(), "-map", "[out]", "-frames:v", "1", "-q:v", "5", "-y", temp });
-            var r = await ProcessRunner.RunAsync(ffmpeg, args, ct: ct);
+            // Once started it's finished and kept, even if the pointer has left the card by then: the next
+            // hover shows it at once. Only the wait for a turn is given up (ct), so a quick sweep over many
+            // cards doesn't leave a queue of filmstrips nobody is looking at.
+            var r = await ProcessRunner.RunAsync(ffmpeg, args);
             if (r.ExitCode != 0 || !File.Exists(temp))
             {
                 try { File.Delete(temp); } catch { /* nothing written */ }

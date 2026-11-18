@@ -525,7 +525,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         Player.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName is nameof(PlayerViewModel.IsPlaying) or nameof(PlayerViewModel.Current))
-                BackgroundHold.Set(Player.IsPlaying && Player.Current is not null);
+                UpdateBackgroundHold();
         };
         Exports.Finished += OnExportFinished;
         _sortIndex = Math.Clamp(settings.Current.SortIndex, 0, SortModes.Length - 1);
@@ -683,6 +683,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 StartSpeechPass();
                 StartVisualPass();
                 StartSoundPass();
+                StartScreenPass();
                 StartVoicePass();
             }
         }
@@ -1362,6 +1363,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         Player.Dispose();
         BackgroundHold.Set(false); // never leave a frozen ffmpeg behind
         _voiceCts?.Cancel();
+        try { _voiceOps.Wait(1000); } catch { /* a snippet that failed */ }
         _voicePlayer?.Dispose();
         _library.FlushCache();
         _library.Dispose();

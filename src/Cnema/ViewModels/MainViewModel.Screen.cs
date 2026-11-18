@@ -76,7 +76,12 @@ public sealed partial class MainViewModel
     private void StartScreenPass()
     {
         if (!Features.ScreenText || !ScreenModelReady || ToolLocator.Ffmpeg is null) return;
-        if (_screenRun is { IsCompleted: false }) return;
+        if (_screenRun is { IsCompleted: false } running)
+        {
+            // Switched off and on again before the last run had stopped: start again once it has.
+            if (_screenCts is { IsCancellationRequested: true }) RestartAfter(running, StartScreenPass);
+            return;
+        }
         _screenCts = new CancellationTokenSource();
         _screenRun = RunScreenPassAsync(_screenCts.Token);
     }

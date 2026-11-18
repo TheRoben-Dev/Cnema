@@ -62,11 +62,23 @@ public sealed partial class MainViewModel
     private void StartSmartPass()
     {
         if (!Features.Highlights) return;
-        if (_smartRun is { IsCompleted: false }) return;
+        if (_smartRun is { IsCompleted: false } running)
+        {
+            // Switched off and on again before the last run had stopped: start again once it has.
+            if (_smartCts is { IsCancellationRequested: true }) RestartAfter(running, StartSmartPass);
+            return;
+        }
         if (ToolLocator.Ffmpeg is null) return;
         _smartCts = new CancellationTokenSource();
         var ct = _smartCts.Token;
         _smartRun = RunSmartPassAsync(ct);
+    }
+
+    /// <summary>Runs <paramref name="start"/> once <paramref name="running"/> (a pass being stopped) has finished.</summary>
+    private static async void RestartAfter(Task running, Action start)
+    {
+        try { await running; } catch { /* it was stopped; its own finally has tidied up */ }
+        start();
     }
 
     private void StopSmartPass()
