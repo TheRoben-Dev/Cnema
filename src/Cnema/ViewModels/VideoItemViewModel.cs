@@ -171,7 +171,7 @@ public sealed partial class VideoItemViewModel : ObservableObject
 
     // Thumbnails of cards that just scrolled out of view stay decoded for a while (the most recent ones only), so
     // scrolling back shows them at once instead of decoding them again. UI thread only.
-    private const int KeepDecoded = 72;
+    private const int KeepDecoded = 60;
     private static readonly LinkedList<VideoItemViewModel> s_kept = new();
     private LinkedListNode<VideoItemViewModel>? _kept;
 

@@ -2,6 +2,14 @@
 
 What changed in each Savefile (formerly Cnema) release. The app shows the entries you have not seen yet after it updates.
 
+## 0.47.0
+- Faster everywhere, with nothing changed in how it looks. Scrolling a big library is smoother: cards that scroll into view take about half the work they did, thumbnails you just scrolled past stay ready when you scroll back, and hover previews wait until you stop scrolling instead of starting for every card that slides under the pointer.
+- Savefile starts about twice as fast: the app now comes ready-compiled for your computer instead of preparing itself at every start.
+- The video player starts much faster, above all on Windows, where it could take 20 seconds: it no longer opens all of its plugins at every start. If your copy has to make that list itself, the first start after an update is as before and every one after it is quick.
+- Saving your library (tags, favourites, what the smart features found) happens in the background now, so it never makes the window stutter, even with a big library.
+- Opening a video in the Quick player is snappier: the scan for loud moments on its timeline waits until the video is playing.
+- Mochi takes a break while scrolled out of sight.
+
 ## 0.46.2
 - Fixed crackling and little static pops when playing videos while Savefile was looking through your clips in the background. That background work now freezes while a video plays and carries on where it left off when you pause or close it, and time spent frozen never counts against it, so no clip gets skipped for taking too long.
 
