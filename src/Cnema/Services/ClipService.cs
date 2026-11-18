@@ -32,6 +32,18 @@ public sealed class ClipService : IDisposable
     private bool _cameraUsed;
     /// <summary>Why the picked camera isn't in the clips, or null when it is (or none is picked).</summary>
     public string? CameraNote { get; private set; }
+    /// <summary>Windows: Desktop Duplication (ddagrab) kept failing, so capture uses GDI until settings change.</summary>
+    private bool _gdiFallback;
+    /// <summary>The running (or last) capture used Desktop Duplication.</summary>
+    private bool _usedDdagrab;
+    /// <summary>Why capture switched to the compatible (GDI) mode, or null when it didn't.</summary>
+    public string? CaptureNote { get; private set; }
+    /// <summary>The raw ffmpeg output behind <see cref="Error"/>, for diagnostics; the card shows only the friendly text.</summary>
+    public string? ErrorDetail { get; private set; }
+    /// <summary>Which screen capture is in use: "ddagrab", "gdigrab", "avfoundation" or "x11grab".</summary>
+    public string? CaptureMode { get; private set; }
+    /// <summary>Self-test hook: makes Desktop Duplication fail at once, to exercise the fallback.</summary>
+    internal static bool BreakDdagrabForTest;
     private DateTime _startedAt;
 
     public ClipState State { get; private set; } = ClipState.Off;
@@ -281,6 +293,8 @@ public sealed class ClipService : IDisposable
             StopCore();
             _restarts = 0;
             _withoutCamera = false;
+            _gdiFallback = false; // switching clipping off and on tries the fast capture again
+            CaptureNote = null;
             CameraNote = null;
             if (Cfg.Enabled) await StartCoreAsync();
             else Set(ClipState.Off, null);
@@ -339,7 +353,9 @@ public sealed class ClipService : IDisposable
         var codec = await CaptureProbe.PickAsync(ffmpeg, Cfg.HardwareEncoder, Cfg.Codec);
         var encoder = codec.Encoder;
         Codec = codec;
-        var ddagrab = await CaptureProbe.HasDdagrabAsync(ffmpeg);
+        var ddagrab = !_gdiFallback && await CaptureProbe.HasDdagrabAsync(ffmpeg);
+        _usedDdagrab = ddagrab;
+        CaptureMode = OperatingSystem.IsMacOS() ? "avfoundation" : OperatingSystem.IsWindows() ? (ddagrab ? "ddagrab" : "gdigrab") : "x11grab";
         var devices = OperatingSystem.IsMacOS() || !string.IsNullOrWhiteSpace(Cfg.Camera)
             ? await CaptureProbe.ListDevicesAsync()
             : null;
@@ -359,8 +375,13 @@ public sealed class ClipService : IDisposable
         _cameraUsed = !string.IsNullOrWhiteSpace(cfg.Camera) && devices?.Cameras.Contains(cfg.Camera) == true;
         if (!string.IsNullOrWhiteSpace(cfg.Camera) && !_cameraUsed)
             CameraNote = F("{0} isn't connected, so clips are recorded without the camera.", cfg.Camera);
+        // GDI captures the whole desktop; with several screens, cut out the one picked in settings.
+        var gdiArea = OperatingSystem.IsWindows() && !ddagrab ? WindowsScreens.Area(cfg.Screen) : null;
         var args = BuildArguments(cfg, encoder, ddagrab, devices, AppPaths.ClipBufferDir,
-            Environment.GetEnvironmentVariable("DISPLAY"));
+            Environment.GetEnvironmentVariable("DISPLAY"), gdiArea);
+        if (ddagrab && BreakDdagrabForTest)
+            for (var i = 0; i < args.Count; i++)
+                if (args[i].StartsWith("ddagrab=")) args[i] = System.Text.RegularExpressions.Regex.Replace(args[i], @"output_idx=\d+", "output_idx=97");
         if (!StartSystemAudio(devices)) return;
         var psi = new ProcessStartInfo(ffmpeg)
         {
@@ -371,7 +392,7 @@ public sealed class ClipService : IDisposable
         };
         foreach (var a in args) psi.ArgumentList.Add(a);
 
-        Log.Info($"Capture starting: {encoder}, {Cfg.Fps} fps, {(Cfg.Height > 0 ? Cfg.Height + "p" : "native")}, {Cfg.BitrateMbps} Mbps{(_cameraUsed ? ", with camera" : "")}");
+        Log.Info($"Capture starting: {CaptureMode}, {encoder}, {Cfg.Fps} fps, {(Cfg.Height > 0 ? Cfg.Height + "p" : "native")}, {Cfg.BitrateMbps} Mbps{(_cameraUsed ? ", with camera" : "")}{(gdiArea is { } ga ? $", area {ga}" : "")}");
         var generation = ++_generation;
         var p = new Process { StartInfo = psi, EnableRaisingEvents = true };
         lock (_log) _log.Clear();
@@ -381,7 +402,7 @@ public sealed class ClipService : IDisposable
             lock (_log)
             {
                 _log.Enqueue(e.Data);
-                while (_log.Count > 12) _log.Dequeue();
+                while (_log.Count > 20) _log.Dequeue();
             }
         };
         p.Exited += (_, _) => OnExited(generation);
@@ -460,10 +481,10 @@ public sealed class ClipService : IDisposable
     private void OnExited(int generation)
     {
         if (generation != _generation) return; // we stopped it on purpose
-        string tail;
-        lock (_log) tail = string.Join(" ", _log.Where(l => l.Trim().Length > 0).TakeLast(3)).Trim();
+        string detail;
+        lock (_log) detail = string.Join(" | ", _log.Select(l => l.Trim()).Where(l => l.Length > 0)).Trim();
         var ranFor = DateTime.UtcNow - _startedAt;
-        Log.Warn($"Capture ffmpeg exited after {ranFor.TotalSeconds:0} s: {tail}");
+        Log.Warn($"Capture ffmpeg ({CaptureMode}) exited after {ranFor.TotalSeconds:0} s: {detail}");
         _janitor?.Dispose();
         _janitor = null;
         var dead = _process;
@@ -484,21 +505,56 @@ public sealed class ClipService : IDisposable
             return;
         }
 
-        // A capture that had been healthy for a while (display sleep, device unplugged) gets retried.
-        // Three tries in a row at most; a capture that then ran fine for ten minutes earns them back.
-        if (ranFor > TimeSpan.FromMinutes(10)) _restarts = 0;
-        if (ranFor > TimeSpan.FromSeconds(30) && _restarts < 3 && Cfg.Enabled)
+        // Capture is retried by itself. Windows takes the screen away from Desktop Duplication whenever a
+        // game switches between fullscreen and windowed, the display mode or HDR changes, or the PC locks
+        // (DXGI "access lost"), and ffmpeg's ddagrab then quits with "Generic error in an external library".
+        // A capture that ran a couple of minutes is always worth another go; quick failures get a few
+        // tries, and when Desktop Duplication keeps failing at once, the slower GDI capture takes over.
+        if (ranFor > TimeSpan.FromMinutes(2)) _restarts = 0;
+        var quick = ranFor < TimeSpan.FromSeconds(30);
+        if (Cfg.Enabled && _restarts < MaxRestarts)
         {
             _restarts++;
+            if (quick && _usedDdagrab && _restarts >= 2)
+            {
+                _gdiFallback = true;
+                CaptureNote = T("Windows' fast screen capture kept stopping, so Savefile switched to its compatible capture. Games in exclusive fullscreen may record black there: borderless or windowed works best.");
+                Log.Warn("Capture: Desktop Duplication keeps failing, switching to GDI capture");
+            }
+            var delay = quick ? TimeSpan.FromSeconds(2 * _restarts) : TimeSpan.FromSeconds(3);
             _ = Task.Run(async () =>
             {
-                await Task.Delay(TimeSpan.FromSeconds(5));
+                await Task.Delay(delay);
                 await RestartAsync(generation);
             });
             Set(ClipState.Starting, null);
             return;
         }
-        Set(ClipState.Error, tail.Length > 0 ? T("Capture stopped: ") + Shorten(tail) : T("Capture stopped unexpectedly."));
+        SetError(FriendlyError(detail), detail);
+    }
+
+    private const int MaxRestarts = 4;
+
+    /// <summary>
+    /// Plain words for why capture stopped, from ffmpeg's last lines. The raw lines go to the log and the
+    /// diagnostics (<see cref="ErrorDetail"/>), never onto the card.
+    /// </summary>
+    public static string FriendlyError(string detail)
+    {
+        var d = detail.ToLowerInvariant();
+        string why;
+        if (d.Contains("no space left") || d.Contains("not enough space") || d.Contains("disk full"))
+            why = T("The drive with the replay buffer is full. Free up some space.");
+        else if (d.Contains("openencodesession") || d.Contains("no capable devices") || d.Contains("error while opening encoder")
+                 || d.Contains("nvenc") && d.Contains("fail") || d.Contains("_amf") && d.Contains("fail") || d.Contains("_qsv") && d.Contains("fail"))
+            why = T("The graphics card's video encoder wouldn't start. Update the graphics driver, or pick another encoder under Settings › Clipping.");
+        else if (d.Contains("ddagrab") || d.Contains("acquirenextframe") || d.Contains("duplicat") || d.Contains("gdigrab"))
+            why = T("Windows kept taking the screen away from Savefile. That can happen when a game switches between fullscreen and windowed, the display or HDR changes, or the PC locks. Savefile tried again a few times.");
+        else if (d.Contains("dshow") || d.Contains("audio=") || d.Contains("avfoundation") && d.Contains("audio") || d.Contains("pulse"))
+            why = T("A sound device couldn't be opened. Check that it's plugged in, or pick another one under Settings › Clipping.");
+        else
+            why = T("Capture kept stopping, even after Savefile tried again a few times.");
+        return why + " " + T("Switch clipping off and on to try again.");
     }
 
     /// <summary>Starts capture again after it quit by itself; a failure shows as an error instead of "Starting" forever.</summary>
@@ -700,7 +756,7 @@ public sealed class ClipService : IDisposable
     /// CaptureProbe found; macOS needs it for the screens and audio devices, every OS for the camera.
     /// </summary>
     public static List<string> BuildArguments(ClipSettings s, string encoder, bool ddagrab,
-        CaptureDevices? devices, string bufferDir, string? x11Display)
+        CaptureDevices? devices, string bufferDir, string? x11Display, ScreenArea? gdiArea = null)
     {
         var fps = s.Fps is 30 or 60 ? s.Fps : 60;
         var inv = CultureInfo.InvariantCulture;
@@ -732,11 +788,14 @@ public sealed class ClipService : IDisposable
             }
             else
             {
-                a.AddRange(new[]
-                {
-                    "-f", "gdigrab", "-thread_queue_size", "1024", "-framerate", fps.ToString(inv),
-                    "-draw_mouse", "1", "-i", "desktop",
-                });
+                a.AddRange(new[] { "-f", "gdigrab", "-thread_queue_size", "1024", "-framerate", fps.ToString(inv), "-draw_mouse", "1" });
+                if (gdiArea is { } area)
+                    a.AddRange(new[]
+                    {
+                        "-offset_x", area.X.ToString(inv), "-offset_y", area.Y.ToString(inv),
+                        "-video_size", $"{area.Width}x{area.Height}",
+                    });
+                a.AddRange(new[] { "-i", "desktop" });
             }
         }
         else
@@ -894,10 +953,18 @@ public sealed class ClipService : IDisposable
     {
         State = state;
         Error = error;
+        ErrorDetail = null;
         Changed?.Invoke();
     }
 
-    private static string Shorten(string s) => s.Length <= 220 ? s : s[..220] + "…";
+    private void SetError(string friendly, string detail)
+    {
+        State = ClipState.Error;
+        Error = friendly;
+        ErrorDetail = detail.Length > 0 ? detail : null;
+        Changed?.Invoke();
+    }
+
 
     public void Dispose()
     {
