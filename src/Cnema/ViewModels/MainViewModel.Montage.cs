@@ -71,8 +71,8 @@ public sealed partial class MainViewModel
 
         // Next to Cnema's own clips when the library shows them, otherwise in the first library folder.
         var clips = _settings.Current.Clip.ResolvedFolder;
-        var root = _settings.Current.Folders.Any(f => Under(Path.Combine(clips, "x"), f)) ? clips
-            : _settings.Current.Folders.FirstOrDefault() ?? clips;
+        var root = _settings.Current.UsableExportFolder()
+            ?? (_settings.Current.Folders.Any(f => Under(Path.Combine(clips, "x"), f)) ? clips : _settings.Current.Folders.FirstOrDefault() ?? clips);
         var dir = Path.Combine(root, "Montages");
         var name = (MontageSource)m.Source.Value == MontageSource.Custom && _montageCustomName is { } custom
             ? $"{string.Concat(custom.Split(Path.GetInvalidFileNameChars()))} {DateTime.Now:yyyy-MM-dd HH-mm-ss}"

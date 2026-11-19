@@ -17,6 +17,9 @@ internal static class Program
         Log.Info($"Cnema {UpdateService.CurrentText} starting on {System.Runtime.InteropServices.RuntimeInformation.OSDescription}");
         // Cnema can live in the tray: a second launch just brings the running copy forward.
         if (SingleInstance.SignalExisting()) return 0;
+        // Updates come first: a start that never reached its window last time checks before any window code runs.
+        EarlyUpdate.BeginStart();
+        if (EarlyUpdate.LastStartFailed && EarlyUpdate.Recover(args.Contains(AutostartService.BackgroundFlag))) return 0;
         return BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
     }
 

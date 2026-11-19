@@ -205,8 +205,8 @@ public sealed partial class MainViewModel
         }
         var height = clips.Select(c => c.Height).OrderBy(h => h).ElementAt(clips.Count / 2) >= 1000 ? 1080 : 720;
         var clipsDir = _settings.Current.Clip.ResolvedFolder;
-        var root = _settings.Current.Folders.Any(f => Under(Path.Combine(clipsDir, "x"), f)) ? clipsDir
-            : _settings.Current.Folders.FirstOrDefault() ?? clipsDir;
+        var root = _settings.Current.UsableExportFolder()
+            ?? (_settings.Current.Folders.Any(f => Under(Path.Combine(clipsDir, "x"), f)) ? clipsDir : _settings.Current.Folders.FirstOrDefault() ?? clipsDir);
         var dir = Path.Combine(root, "Wrapped");
         var name = friend is null ? F("Savefile Wrapped {0}", year) : F("Savefile Wrapped {0} with {1}", year, Sanitize(friend));
         var output = Path.Combine(dir, name + ".mp4");

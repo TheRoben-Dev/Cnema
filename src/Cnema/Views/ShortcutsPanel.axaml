@@ -1,0 +1,60 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Cnema.ViewModels"
+             xmlns:c="using:Cnema.Controls"
+             xmlns:svc="using:Cnema.Services"
+             x:Class="Cnema.Views.ShortcutsPanel"
+             x:DataType="vm:MainViewModel"
+             x:Name="Root">
+    <Border Width="560" MaxHeight="700" Margin="0,40" VerticalAlignment="Center" HorizontalAlignment="Center" Background="{DynamicResource Bg1}"
+            BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="16" BoxShadow="{DynamicResource DialogShadow}"
+            DataContext="{Binding ShortcutSheet}" x:DataType="vm:ShortcutsViewModel">
+      <DockPanel>
+        <StackPanel DockPanel.Dock="Top" Spacing="4" Margin="24,22,24,12">
+          <TextBlock svc:Tr.Text="Keyboard shortcuts" FontSize="17" FontWeight="Bold" />
+          <TextBlock Classes="dim" FontSize="12" TextWrapping="Wrap" svc:Tr.Text="Click a key to change it." />
+        </StackPanel>
+        <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Line}" BorderThickness="0,1,0,0" Padding="24,14">
+          <Grid ColumnDefinitions="Auto,*,Auto">
+            <Button Classes="ghost" svc:Tr.Content="Reset all" FontSize="12" Command="{Binding ResetAllCommand}" />
+            <TextBlock Grid.Column="1" Text="{Binding Message}" Foreground="{DynamicResource Highlight}" FontSize="12" TextWrapping="Wrap"
+                       VerticalAlignment="Center" Margin="12,0" />
+            <Button x:Name="ShortcutsClose" Grid.Column="2" Classes="accent" svc:Tr.Content="Done"
+                    Command="{Binding #Root.((vm:MainViewModel)DataContext).CloseShortcutsCommand}" />
+          </Grid>
+        </Border>
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <ItemsControl ItemsSource="{Binding Groups}" Margin="24,0,24,16">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:ShortcutGroup">
+                <StackPanel Spacing="6" Margin="0,0,0,14">
+                  <TextBlock Classes="label" Text="{Binding Name}" />
+                  <Border Classes="group">
+                    <ItemsControl ItemsSource="{Binding Rows}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:ShortcutRow">
+                          <Grid ColumnDefinitions="*,Auto,Auto" Margin="14,5">
+                            <TextBlock Text="{Binding Label}" FontSize="13" VerticalAlignment="Center" />
+                            <Button Grid.Column="1" Classes="keychip" Classes.capturing="{Binding IsCapturing}" Classes.custom="{Binding IsCustom}"
+                                    Content="{Binding Keys}" IsEnabled="{Binding !IsFixed}"
+                                    Command="{Binding #Root.((vm:MainViewModel)DataContext).ShortcutSheet.CaptureCommand}" CommandParameter="{Binding}" />
+                            <Button Grid.Column="2" Classes="ghost" Margin="4,0,0,0" Padding="6" svc:Tr.Tip="Back to the default key"
+                                    IsVisible="{Binding IsCustom}"
+                                    Command="{Binding #Root.((vm:MainViewModel)DataContext).ShortcutSheet.ResetCommand}" CommandParameter="{Binding}">
+                              <PathIcon Data="{StaticResource IcRefresh}" Width="12" Height="12" />
+                            </Button>
+                          </Grid>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </Border>
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </DockPanel>
+    </Border>
+</UserControl>

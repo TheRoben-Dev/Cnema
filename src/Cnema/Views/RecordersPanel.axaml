@@ -1,0 +1,69 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Cnema.ViewModels"
+             xmlns:c="using:Cnema.Controls"
+             xmlns:svc="using:Cnema.Services"
+             x:Class="Cnema.Views.RecordersPanel"
+             x:DataType="vm:MainViewModel"
+             x:Name="Root">
+    <Border Width="640" MaxHeight="720" Margin="0,40" VerticalAlignment="Center" HorizontalAlignment="Center" Background="{DynamicResource Bg1}"
+            BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="16" BoxShadow="{DynamicResource DialogShadow}"
+            DataContext="{Binding Recorders}" x:DataType="vm:RecordersViewModel">
+      <DockPanel>
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="24,22,24,6">
+          <TextBlock svc:Tr.Text="Other recorders" FontSize="17" FontWeight="Bold" VerticalAlignment="Center" />
+          <Button x:Name="RecordersClose" Grid.Column="1" Classes="ghost" Padding="6" Command="{Binding #Root.((vm:MainViewModel)DataContext).CloseRecordersCommand}">
+            <PathIcon Data="{StaticResource IcClose}" Width="13" Height="13" />
+          </Button>
+        </Grid>
+        <TextBlock DockPanel.Dock="Top" Classes="dim" FontSize="12" TextWrapping="Wrap" Margin="24,0,24,12"
+                   svc:Tr.Text="Add another app's recording folder and its videos show up here as well, and new ones appear by themselves. Nothing is moved or changed." />
+        <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Line}" BorderThickness="0,1,0,0" Padding="24,12">
+          <Grid ColumnDefinitions="*,Auto">
+            <StackPanel Spacing="2" VerticalAlignment="Center">
+              <TextBlock svc:Tr.Text="Tag by game" FontSize="13" />
+              <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="New videos get the game's name as a tag, when the recorder tells which game it was." />
+            </StackPanel>
+            <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding TagByGame}" />
+          </Grid>
+        </Border>
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <ItemsControl ItemsSource="{Binding Rows}" Margin="24,0,24,16">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:RecorderRow">
+                <Border Classes="cleanrow" Margin="0,0,0,8" Padding="14,12">
+                  <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
+                    <StackPanel Spacing="3">
+                      <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{DynamicResource Highlight}" VerticalAlignment="Center" />
+                      </StackPanel>
+                      <TextBlock Classes="dim" Classes.mono="{Binding HasPath}" Text="{Binding PathText}" FontSize="11" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Path}" />
+                      <TextBlock Classes="dim" Text="{Binding Description}" FontSize="11" TextWrapping="Wrap" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Margin="12,0,0,0"
+                                IsVisible="{Binding IsSupported}">
+                      <Button Classes="ghost" svc:Tr.Content="Change…" FontSize="12"
+                              Command="{Binding #Root.((vm:MainViewModel)DataContext).ChangeRecorderFolderCommand}" CommandParameter="{Binding}" />
+                      <Button Classes="accent" svc:Tr.Content="Add" IsVisible="{Binding CanAdd}"
+                              Command="{Binding #Root.((vm:MainViewModel)DataContext).AddRecorderCommand}" CommandParameter="{Binding}" />
+                      <Button Classes="soft" svc:Tr.Content="Remove" IsVisible="{Binding IsAdded}"
+                              Command="{Binding #Root.((vm:MainViewModel)DataContext).RemoveRecorderCommand}" CommandParameter="{Binding}" />
+                    </StackPanel>
+                    <StackPanel Grid.Row="1" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="8" Margin="0,10,0,0" IsVisible="{Binding HasPending}">
+                      <Button Classes="soft" Command="{Binding #Root.((vm:MainViewModel)DataContext).ConvertSteamClipsCommand}" IsEnabled="{Binding !IsConverting}">
+                        <TextBlock Text="{Binding PendingText}" />
+                      </Button>
+                      <ProgressBar IsIndeterminate="True" Width="80" Height="3" MinHeight="3" VerticalAlignment="Center" IsVisible="{Binding IsConverting}" />
+                    </StackPanel>
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </DockPanel>
+    </Border>
+</UserControl>

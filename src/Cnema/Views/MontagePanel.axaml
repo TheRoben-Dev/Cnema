@@ -1,0 +1,71 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Cnema.ViewModels"
+             xmlns:c="using:Cnema.Controls"
+             xmlns:svc="using:Cnema.Services"
+             x:Class="Cnema.Views.MontagePanel"
+             x:DataType="vm:MainViewModel"
+             x:Name="Root">
+    <Border Width="560" MaxHeight="720" Margin="0,40" VerticalAlignment="Center" HorizontalAlignment="Center" Background="{DynamicResource Bg1}"
+            BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="16" BoxShadow="{DynamicResource DialogShadow}"
+            DataContext="{Binding Montage}" x:DataType="vm:MontageViewModel">
+      <DockPanel>
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="24,22,24,4">
+          <TextBlock svc:Tr.Text="Auto montage" FontSize="17" FontWeight="Bold" VerticalAlignment="Center" />
+          <Button x:Name="MontageClose" Grid.Column="1" Classes="ghost" Padding="6" Command="{Binding #Root.((vm:MainViewModel)DataContext).CloseMontageCommand}">
+            <PathIcon Data="{StaticResource IcClose}" Width="13" Height="13" />
+          </Button>
+        </Grid>
+        <TextBlock DockPanel.Dock="Top" Classes="dim" FontSize="12" TextWrapping="Wrap" Margin="24,0,24,14"
+                   svc:Tr.Text="Savefile takes the loudest moment of each video, puts them one after another with a transition, and saves a new video. Your clips stay as they are." />
+        <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Line}" BorderThickness="0,1,0,0" Padding="24,14">
+          <Grid ColumnDefinitions="*,Auto,Auto">
+            <TextBlock Text="{Binding Summary}" FontSize="12" VerticalAlignment="Center" TextWrapping="Wrap" />
+            <Button Grid.Column="1" Classes="soft" Margin="8,0" svc:Tr.Content="Cancel" Command="{Binding #Root.((vm:MainViewModel)DataContext).CloseMontageCommand}" />
+            <Button Grid.Column="2" Classes="accent" IsEnabled="{Binding CanMake}" Command="{Binding #Root.((vm:MainViewModel)DataContext).MakeMontageCommand}">
+              <TextBlock svc:Tr.Text="Make montage" />
+            </Button>
+          </Grid>
+        </Border>
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <StackPanel Spacing="14" Margin="24,0,24,18">
+            <StackPanel Spacing="6">
+              <TextBlock Classes="label" svc:Tr.Text="VIDEOS" />
+              <ContentControl Content="{Binding Source}" />
+            </StackPanel>
+            <StackPanel Spacing="6">
+              <TextBlock Classes="label" svc:Tr.Text="FROM EACH VIDEO" />
+              <ContentControl Content="{Binding Length}" />
+            </StackPanel>
+            <StackPanel Spacing="6">
+              <TextBlock Classes="label" svc:Tr.Text="TRANSITION" />
+              <ContentControl Content="{Binding Transition}" />
+            </StackPanel>
+            <StackPanel Spacing="6">
+              <TextBlock Classes="label" svc:Tr.Text="ORDER" />
+              <ContentControl Content="{Binding Order}" />
+            </StackPanel>
+            <StackPanel Spacing="8">
+              <TextBlock Classes="label" svc:Tr.Text="MUSIC" />
+              <Grid ColumnDefinitions="*,Auto,Auto">
+                <TextBlock Text="{Binding MusicName}" FontSize="12" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding MusicPath}" />
+                <Button Grid.Column="1" Classes="soft" Padding="10,5" Margin="8,0,0,0" Command="{Binding #Root.((vm:MainViewModel)DataContext).PickMontageMusicCommand}">
+                  <TextBlock svc:Tr.Text="Pick a song…" FontSize="12" />
+                </Button>
+                <Button Grid.Column="2" Classes="ghost" Padding="6" Margin="4,0,0,0" IsVisible="{Binding HasMusic}" svc:Tr.Tip="No music"
+                        Click="OnClearMontageMusicClick">
+                  <PathIcon Data="{StaticResource IcDelete}" Width="13" Height="13" />
+                </Button>
+              </Grid>
+              <StackPanel Spacing="10" IsVisible="{Binding HasMusic}">
+                <ContentControl Content="{Binding MusicVolume}" />
+                <CheckBox IsChecked="{Binding MusicDuck}" FontSize="12" svc:Tr.Content="Lower it when the game is loud" />
+              </StackPanel>
+            </StackPanel>
+          </StackPanel>
+        </ScrollViewer>
+      </DockPanel>
+    </Border>
+</UserControl>

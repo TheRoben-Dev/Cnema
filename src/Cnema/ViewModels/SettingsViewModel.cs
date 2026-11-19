@@ -191,6 +191,9 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private Choice _folderCap;
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(UsesArchive))] private Choice _cleanupTarget;
     [ObservableProperty] private string _archiveFolder = "";
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(ExportFolderText), nameof(HasExportFolder))] private string? _exportFolder;
+    public bool HasExportFolder => !string.IsNullOrWhiteSpace(ExportFolder);
+    public string ExportFolderText => HasExportFolder ? ExportFolder! : T("Next to the original video");
     [ObservableProperty] private string _storageUsage = "";
     public bool UsesArchive => CleanupTarget.Value == 1;
     [ObservableProperty] private bool _hardwareEncoder;
@@ -360,6 +363,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         _tagWithGame = c.TagWithGame;
         _checkForUpdates = settings.CheckForUpdates;
         _autoUpdate = settings.AutoUpdate;
+        _exportFolder = settings.ExportFolder;
         _colorScheme = ThemeService.Find(settings.ColorScheme);
         _themeMode = ThemeService.FindMode(settings.ThemeMode);
         _language = LanguageOptions.FirstOrDefault(l => l.Code == settings.Language) ?? LanguageOptions[0];
@@ -455,6 +459,16 @@ public sealed partial class SettingsViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private async Task BrowseExportFolderAsync()
+    {
+        if (PickFolder is null) return;
+        var picked = await PickFolder();
+        if (!string.IsNullOrWhiteSpace(picked)) ExportFolder = picked;
+    }
+
+    [RelayCommand] private void ResetExportFolder() => ExportFolder = null;
+
+    [RelayCommand]
     private async Task BrowseArchiveAsync()
     {
         if (PickFolder is null) return;
@@ -517,6 +531,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         c.TagWithGame = TagWithGame;
         settings.CheckForUpdates = CheckForUpdates;
         settings.AutoUpdate = AutoUpdate;
+        settings.ExportFolder = HasExportFolder ? ExportFolder!.Trim() : null;
         settings.ColorScheme = ColorScheme.Id;
         settings.ThemeMode = ThemeMode.Id;
         settings.Language = Language.Code;

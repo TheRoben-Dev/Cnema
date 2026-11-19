@@ -149,8 +149,13 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private async Task CheckForUpdatesAsync()
     {
         if (!_settings.Current.CheckForUpdates) return;
-        await Task.Delay(TimeSpan.FromSeconds(4)); // let startup finish first
-        await CheckForUpdatesCoreAsync(announce: true);
+        // The check made first thing at start counts as this one; otherwise ask once startup has finished.
+        if (EarlyUpdate.TakeResult(out var early)) ApplyCheckResult(early, null, announce: true);
+        else
+        {
+            await Task.Delay(TimeSpan.FromSeconds(4)); // let startup finish first
+            await CheckForUpdatesCoreAsync(announce: true);
+        }
         // At launch a newer version is installed straight away. Each version is tried once: if the
         // install did not take, the card stays and the next launch does not loop. A copy installed for everyone
         // would greet the user with an administrator prompt at login, so it waits for a click on the card.
@@ -182,6 +187,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private async Task<string?> CheckForUpdatesCoreAsync(bool announce)
     {
         var (found, error) = await UpdateService.CheckDetailedAsync();
+        ApplyCheckResult(found, error, announce);
+        return error;
+    }
+
+    private void ApplyCheckResult(UpdateInfo? found, string? error, bool announce)
+    {
         if (error is null)
         {
             Update = found;
@@ -197,7 +208,6 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             PlatformShell.Notify(T("Savefile update"), F("Version {0} is available. Open Savefile to get it.", found.Version.ToString(3)));
         }
         BackgroundStateChanged?.Invoke();
-        return error;
     }
 
     /// <summary>The "Check now" button in Settings: always says what it found.</summary>
@@ -848,6 +858,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         RaiseEmpty();
         OnPropertyChanged(nameof(CanPlayAll));
         OnPropertyChanged(nameof(ShowFriendMontage));
+        OnPropertyChanged(nameof(ShowFriendVoiceGame));
         OnPropertyChanged(nameof(ShowFriendWrapped));
         OnPropertyChanged(nameof(FriendWrappedLabel));
         UpdateCounts();

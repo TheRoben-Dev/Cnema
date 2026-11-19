@@ -2,6 +2,15 @@
 
 What changed in each Savefile (formerly Cnema) release. The app shows the entries you have not seen yet after it updates.
 
+## 0.48.0
+- Savefile now checks for updates first thing when it starts, before the video player, your library or the window open. With Install updates automatically on, a new version installs right there on the loading screen (with its progress shown, and a click skips it), so even a version that can't open its window can't keep you stuck on it. Offline, or when GitHub is slow, the start isn't held up: the check gives up after a couple of seconds at most.
+- If Savefile ever fails to open its window, the next start looks for a fixed version before anything else runs and installs it.
+- Savefile opens faster: Settings, the editor's tool pages and the bigger dialogs (the Bin, backups, Year in clips, stats and the rest) are put together the first time you open them instead of at every start. Everything looks exactly as before.
+- "Who's that?", Mochi's voice game, is easy to find again. It hid until Mochi had found a voice, and often didn't notice when it had, so it looked gone. It's now in Settings › Smart features whenever Who's talking is on, and on every friend's page (next to Make a montage).
+- Choose where exports go: Settings › Editing › Exported clips go to. Exports, shares, saved frames, montages and Wrapped all go to that folder; Reset puts them back next to the original video, as before.
+- Videos copied into your clips folder, or recorded into it by another app, show up properly once they're finished. Before, a long copy could leave a video without its length or thumbnail until Savefile was restarted.
+- Your library, settings and bin no longer reset if another program (a virus scanner or a backup tool) happens to be reading the file at the very moment Savefile starts. Savefile waits a moment and reads it again.
+
 ## 0.47.1
 - Mac: fixed Savefile vanishing right after the loading screen in 0.47.0, staying stuck in the background until it was force quit. The ready-compiled build that made 0.47.0 start faster broke the main window on Apple Silicon Macs, so Macs go back to the way 0.46 started (still quick). Windows keeps the faster start.
 - If the main window ever can't open again, Savefile now quits and writes why in its log instead of lingering invisibly.

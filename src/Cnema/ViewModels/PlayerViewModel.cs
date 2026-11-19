@@ -488,7 +488,7 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
             ? $"{parts.Count} parts"
             : $"{TrimTimeline.FormatTime(start)}-{TrimTimeline.FormatTime(end)}".Replace(':', '.');
         var suggested = $"{Current.Title} [{stamp}]{TrimService.SuggestedExtension(src, mode)}";
-        var dir = Path.GetDirectoryName(src) ?? "";
+        var dir = _settings.Current.UsableExportFolder() ?? Path.GetDirectoryName(src) ?? "";
 
         var target = PickSavePath is null ? Path.Combine(dir, suggested) : await PickSavePath(suggested, dir);
         if (string.IsNullOrEmpty(target)) return;
@@ -531,7 +531,7 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
         var (suffix, ext, label) = TrimService.Describe(preset);
         label = T(label);
         var src = Current.Entry.Path;
-        var dir = Path.GetDirectoryName(src) ?? "";
+        var dir = _settings.Current.UsableExportFolder() ?? Path.GetDirectoryName(src) ?? "";
         var target = Path.Combine(dir, $"{Current.Title} [{suffix}]{ext}");
         for (var i = 2; File.Exists(target) || Queue?.IsTarget(target) == true; i++)
             target = Path.Combine(dir, $"{Current.Title} [{suffix} {i}]{ext}");

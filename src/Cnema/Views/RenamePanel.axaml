@@ -1,0 +1,59 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Cnema.ViewModels"
+             xmlns:c="using:Cnema.Controls"
+             xmlns:svc="using:Cnema.Services"
+             x:Class="Cnema.Views.RenamePanel"
+             x:DataType="vm:MainViewModel"
+             x:Name="Root">
+    <Border Width="760" MaxHeight="760" Margin="0,40" VerticalAlignment="Center" HorizontalAlignment="Center" Background="{DynamicResource Bg1}"
+            BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="16" BoxShadow="{DynamicResource DialogShadow}"
+            DataContext="{Binding Rename}" x:DataType="vm:SmartRenameViewModel">
+      <DockPanel>
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="24,22,24,6">
+          <TextBlock svc:Tr.Text="Smart rename" FontSize="17" FontWeight="Bold" VerticalAlignment="Center" />
+          <Button Grid.Column="1" Classes="ghost" Padding="6" IsEnabled="{Binding IsIdle}" Command="{Binding #Root.((vm:MainViewModel)DataContext).CloseSmartRenameCommand}">
+            <PathIcon Data="{StaticResource IcClose}" Width="13" Height="13" />
+          </Button>
+        </Grid>
+        <TextBlock DockPanel.Dock="Top" Classes="dim" FontSize="12" TextWrapping="Wrap" Margin="24,0,24,12" Text="{Binding Intro}" />
+        <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Line}" BorderThickness="0,1,0,0" Padding="24,12">
+          <StackPanel Spacing="8">
+            <CheckBox IsChecked="{Binding RenameFiles}" IsEnabled="{Binding IsIdle}" IsVisible="{Binding HasRows}">
+              <TextBlock svc:Tr.Text="Rename the files too (otherwise only the name shown in Savefile changes)" FontSize="12" />
+            </CheckBox>
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Text="{Binding Status}" FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,12,0" />
+              <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                <Button Classes="soft" svc:Tr.Content="Undo" IsVisible="{Binding CanUndo}" IsEnabled="{Binding IsIdle}"
+                        Command="{Binding #Root.((vm:MainViewModel)DataContext).UndoSmartRenameCommand}" />
+                <Button Classes="accent" svc:Tr.Content="Rename" IsEnabled="{Binding IsIdle}" IsVisible="{Binding HasRows}"
+                        Command="{Binding #Root.((vm:MainViewModel)DataContext).ApplySmartRenameCommand}" />
+              </StackPanel>
+            </Grid>
+          </StackPanel>
+        </Border>
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <ItemsControl ItemsSource="{Binding Rows}" Margin="24,0,24,16" IsEnabled="{Binding IsIdle}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate><VirtualizingStackPanel /></ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:SmartRenameRow">
+                <Border Classes="cleanrow">
+                  <Grid ColumnDefinitions="Auto,*,Auto,1.3*">
+                    <CheckBox IsChecked="{Binding IsChecked}" VerticalAlignment="Center" MinWidth="0" Margin="0,0,8,0" />
+                    <TextBlock Grid.Column="1" Classes="dim" Text="{Binding OldTitle}" FontSize="12" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTip.Tip="{Binding Item.Entry.Path}" />
+                    <TextBlock Grid.Column="2" Classes="dim" Text="→" Margin="10,0" VerticalAlignment="Center" />
+                    <TextBox Grid.Column="3" Text="{Binding NewTitle}" CornerRadius="8" FontSize="12" />
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </DockPanel>
+    </Border>
+</UserControl>

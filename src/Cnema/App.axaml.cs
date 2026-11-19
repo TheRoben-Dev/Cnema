@@ -70,10 +70,124 @@ public partial class App : Application
                     splash = null;
                 }
             }
-            if (splash is null) _ = Start(desktop, settings, startHidden);
-            else Dispatcher.UIThread.Post(() => _ = StartWithSplashAsync(desktop, settings, splash), DispatcherPriority.Background);
+            if (splash is not null) Dispatcher.UIThread.Post(() => _ = StartWithSplashAsync(desktop, settings, splash), DispatcherPriority.Background);
+            else if (WantsUpdateCheck(desktop, settings)) _ = StartAfterUpdateCheckAsync(desktop, settings, startHidden);
+            else StartPlain(desktop, settings, startHidden);
         }
         base.OnFrameworkInitializationCompleted();
+    }
+
+    /// <summary>Without the loading screen and without an update check: as before, the lifetime shows the window.</summary>
+    private void StartPlain(IClassicDesktopStyleApplicationLifetime desktop, SettingsStore settings, bool startHidden)
+    {
+        _ = Start(desktop, settings, startHidden);
+        ConfirmStarted(startHidden);
+    }
+
+    /// <summary>
+    /// Without the loading screen (it's switched off, or Savefile starts hidden at login): the update check still
+    /// goes first, then the rest starts and the window is shown by hand, since the lifetime's moment has passed.
+    /// </summary>
+    private async Task StartAfterUpdateCheckAsync(IClassicDesktopStyleApplicationLifetime desktop, SettingsStore settings, bool startHidden)
+    {
+        try
+        {
+            if (await UpdateFirstAsync(desktop, settings, startHidden, null)) return;
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Start-up update check", ex);
+        }
+        try
+        {
+            _ = Start(desktop, settings, startHidden);
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Start-up", ex);
+        }
+        if (_window is null)
+        {
+            Log.Error("Start-up: the main window could not be built; quitting");
+            IsQuitting = true;
+            desktop.Shutdown(1);
+            return;
+        }
+        if (!startHidden) ShowWindow();
+        ConfirmStarted(startHidden);
+    }
+
+    /// <summary>
+    /// Is there an update check to make before anything opens? Not when it's switched off, nor in CI's start test
+    /// unless that points the check at a test feed.
+    /// </summary>
+    private static bool WantsUpdateCheck(IClassicDesktopStyleApplicationLifetime desktop, SettingsStore settings) =>
+        settings.Current.CheckForUpdates && Environment.GetEnvironmentVariable("CNEMA_NO_EARLY_UPDATE") != "1" &&
+        (desktop.Args?.Contains(StartSelfTestFlag) != true || Environment.GetEnvironmentVariable("CNEMA_UPDATE_API") is { Length: > 0 });
+
+    /// <summary>
+    /// The first step of every start: is there a newer Savefile? When it should be installed now (Install
+    /// updates automatically, or the last start failed), it downloads with its progress on the loading screen and
+    /// Savefile restarts into it, before the player, the library or the window have opened. A click skips it.
+    /// True when Savefile is quitting for the update.
+    /// </summary>
+    private async Task<bool> UpdateFirstAsync(IClassicDesktopStyleApplicationLifetime desktop, SettingsStore settings, bool hidden, SplashWindow? splash)
+    {
+        if (!WantsUpdateCheck(desktop, settings)) return false;
+        splash?.Report(T("Checking for updates…"), 0.05);
+        // Short: an answer from GitHub takes well under a second, and offline the check fails at once.
+        var found = await EarlyUpdate.CheckAsync(TimeSpan.FromSeconds(2.5));
+        if (found is null || !EarlyUpdate.ShouldInstall(found, settings.Current, hidden)) return false;
+
+        var own = false;
+        if (splash is null && !hidden)
+        {
+            try
+            {
+                splash = new SplashWindow(settings.Current.Accessibility.ReducedMotion);
+                splash.Show();
+                own = true;
+            }
+            catch (Exception ex)
+            {
+                Log.Warn($"Loading screen: {ex.Message}");
+                splash = null;
+            }
+        }
+        var version = found.Version.ToString(3);
+        splash?.Report(F("Updating to {0}…", version), 0);
+        var progress = new Progress<double>(p => splash?.Report(F("Updating to {0}… {1:0}%", version, p * 100), p));
+        using var cts = new CancellationTokenSource();
+        if (splash is not null) _ = splash.Skipped.ContinueWith(_ => cts.Cancel(), TaskScheduler.Default);
+        var handedOver = await EarlyUpdate.InstallAsync(found, settings, hidden, progress, cts.Token);
+        if (!handedOver)
+        {
+            if (own) await splash!.FadeOutAsync();
+            else splash?.Report(T("Getting ready…"), 0.05);
+            return false;
+        }
+        splash?.Report(T("Installing, Savefile will restart"), 1);
+        IsQuitting = true;
+        desktop.Shutdown(0);
+        return true;
+    }
+
+    /// <summary>
+    /// Clears the "start in progress" marker once the window is really up, a few seconds in. Starting hidden,
+    /// a built window is enough. A start that doesn't get here makes the next one check for updates first thing.
+    /// </summary>
+    private void ConfirmStarted(bool hidden)
+    {
+        if (hidden)
+        {
+            if (_window is not null) EarlyUpdate.StartSucceeded();
+            return;
+        }
+        DispatcherTimer.RunOnce(() =>
+        {
+            if (_window is { IsVisible: true } w && w.Bounds.Width > 0 && w.Bounds.Height > 0) EarlyUpdate.StartSucceeded();
+            else Log.Warn("Start-up: the main window isn't showing after 3 s");
+        }, TimeSpan.FromSeconds(3));
     }
 
     /// <summary>Everything after settings and theme: the video player, the library, the window, the tray.</summary>
@@ -84,8 +198,11 @@ public partial class App : Application
         AutostartService.RefreshIfEnabled();
 
         Shortcuts.Load(settings.Current.Shortcuts);
+        var sw = System.Diagnostics.Stopwatch.StartNew();
         _vm = new MainViewModel(settings, new LibraryService(), new ClipService(settings));
+        var vmMs = sw.ElapsedMilliseconds;
         _window = new MainWindow { DataContext = _vm };
+        Log.Info($"Start-up: view model {vmMs} ms, window {sw.ElapsedMilliseconds - vmMs} ms");
 
         desktop.ShutdownRequested += (_, _) =>
         {
@@ -134,8 +251,18 @@ public partial class App : Application
     {
         var shown = System.Diagnostics.Stopwatch.StartNew();
         var minimum = TimeSpan.FromMilliseconds(settings.Current.Accessibility.ReducedMotion ? 500 : 1600);
+        // Updates first, before the player, the library or the window open (a click skips a download).
+        try
+        {
+            if (await UpdateFirstAsync(desktop, settings, false, splash)) return;
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Start-up update check", ex);
+        }
         var deadline = Task.Delay(TimeSpan.FromSeconds(8));
-        var skip = splash.Skipped;
+        // A click that skipped the update download doesn't skip the rest of the loading screen.
+        var skip = splash.Skipped.IsCompleted ? splash.SkippedAgain() : splash.Skipped;
         try
         {
             splash.Report(T("Starting the video player…"), 0.15);
@@ -184,7 +311,11 @@ public partial class App : Application
                 IsQuitting = true;
                 desktop.Shutdown(1);
             }
-            else if (desktop.Args?.Contains(StartSelfTestFlag) == true) _ = FinishStartSelfTestAsync(desktop);
+            else
+            {
+                ConfirmStarted(false);
+                if (desktop.Args?.Contains(StartSelfTestFlag) == true) _ = FinishStartSelfTestAsync(desktop);
+            }
         }
     }
 
