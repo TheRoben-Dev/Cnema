@@ -313,6 +313,9 @@ public sealed class LibraryService : IDisposable
                 w.Created += OnFsEvent;
                 w.Deleted += OnFsEvent;
                 w.Renamed += OnFsEvent;
+                // A video copied in or recorded by another app appears (Created) long before it's whole: without
+                // its writes, the scan two seconds in read a half-written file and nothing looked again.
+                w.Changed += OnFsEvent;
                 // A big copy can overflow the watcher (Windows drops events then); look through the folder instead.
                 w.Error += (_, err) => { Log.Warn($"Watching {folder}: {err.GetException().Message}"); Settle(); };
                 w.EnableRaisingEvents = true;
@@ -343,14 +346,27 @@ public sealed class LibraryService : IDisposable
     private readonly object _debounceLock = new();
     private bool _disposed;
 
-    /// <summary>Copies and exports fire many events: look again once things have been quiet for two seconds.</summary>
+    private DateTime? _settlingSince;
+
+    /// <summary>
+    /// Copies and exports fire many events: look again once things have been quiet for two seconds. A file that
+    /// is written to for a long time (another app recording into the folder) never goes quiet, so other changes
+    /// are looked at after 20 seconds at most.
+    /// </summary>
     private void Settle()
     {
         lock (_debounceLock)
         {
             if (_disposed) return;
-            _debounce ??= new Timer(_ => FoldersChanged?.Invoke());
-            _debounce.Change(TimeSpan.FromSeconds(2), Timeout.InfiniteTimeSpan);
+            _debounce ??= new Timer(_ =>
+            {
+                lock (_debounceLock) _settlingSince = null;
+                FoldersChanged?.Invoke();
+            });
+            var now = DateTime.UtcNow;
+            _settlingSince ??= now;
+            var wait = now - _settlingSince.Value > TimeSpan.FromSeconds(18) ? TimeSpan.Zero : TimeSpan.FromSeconds(2);
+            _debounce.Change(wait, Timeout.InfiniteTimeSpan);
         }
     }
 

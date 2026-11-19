@@ -1,0 +1,67 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Cnema.ViewModels"
+             xmlns:c="using:Cnema.Controls"
+             xmlns:svc="using:Cnema.Services"
+             x:Class="Cnema.Views.MergePanel"
+             x:DataType="vm:MainViewModel"
+             x:Name="Root">
+    <Border Width="640" MaxHeight="720" Margin="0,40" VerticalAlignment="Center" HorizontalAlignment="Center" Background="{DynamicResource Bg1}"
+            BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="16" BoxShadow="{DynamicResource DialogShadow}"
+            DataContext="{Binding Merge}" x:DataType="vm:FolderMergeViewModel">
+      <DockPanel>
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="24,22,24,6">
+          <TextBlock svc:Tr.Text="Merge folders into one" FontSize="17" FontWeight="Bold" VerticalAlignment="Center" />
+          <Button Grid.Column="1" Classes="ghost" Padding="6" IsEnabled="{Binding IsIdle}" Command="{Binding #Root.((vm:MainViewModel)DataContext).CloseMergeCommand}">
+            <PathIcon Data="{StaticResource IcClose}" Width="13" Height="13" />
+          </Button>
+        </Grid>
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="24,0,24,12">
+          <TextBlock Classes="dim" FontSize="12" TextWrapping="Wrap" Text="{Binding TargetText}" VerticalAlignment="Center" Margin="0,0,12,0" />
+          <Button Grid.Column="1" Classes="soft" svc:Tr.Content="Change…" IsEnabled="{Binding IsIdle}"
+                  Command="{Binding #Root.((vm:MainViewModel)DataContext).PickMergeTargetCommand}" />
+        </Grid>
+        <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Line}" BorderThickness="0,1,0,0" Padding="24,12">
+          <StackPanel Spacing="8">
+            <ProgressBar Minimum="0" Maximum="1" Value="{Binding Progress}" Height="4" MinHeight="4" CornerRadius="2" IsVisible="{Binding IsBusy}" />
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Text="{Binding Status}" FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,12,0" Classes.error="{Binding StatusIsError}" />
+              <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                <Button Classes="soft" svc:Tr.Content="Undo merge" IsVisible="{Binding CanUndo}" IsEnabled="{Binding IsIdle}"
+                        Command="{Binding #Root.((vm:MainViewModel)DataContext).UndoMergeCommand}" />
+                <Button Classes="accent" svc:Tr.Content="Merge" IsEnabled="{Binding IsIdle}" IsVisible="{Binding !IsDone}"
+                        Command="{Binding #Root.((vm:MainViewModel)DataContext).RunMergeCommand}" />
+                <Button Classes="accent" svc:Tr.Content="Done" IsVisible="{Binding IsDone}" IsEnabled="{Binding IsIdle}"
+                        Command="{Binding #Root.((vm:MainViewModel)DataContext).CloseMergeCommand}" />
+              </StackPanel>
+            </Grid>
+            <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap"
+                       svc:Tr.Text="Only videos move. Favourites, tags, friends, notes, collections, edits and backups go with them. Nothing is overwritten or deleted, and Undo merge puts everything back." />
+          </StackPanel>
+        </Border>
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <ItemsControl ItemsSource="{Binding Rows}" Margin="24,0,24,16" IsEnabled="{Binding IsIdle}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:MergeRow">
+                <Border Classes="cleanrow">
+                  <Grid ColumnDefinitions="Auto,*">
+                    <CheckBox IsChecked="{Binding IsChecked}" IsEnabled="{Binding CanMerge}" VerticalAlignment="Center" MinWidth="0" Margin="0,0,8,0" />
+                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                      <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Path}" />
+                        <TextBlock Grid.Column="1" Classes="dim" Text="{Binding Details}" FontSize="11" Margin="10,0,0,0" VerticalAlignment="Center" />
+                      </Grid>
+                      <TextBlock Classes="dim" Text="{Binding Path}" FontSize="11" TextTrimming="CharacterEllipsis" />
+                      <TextBlock Text="{Binding Note}" FontSize="11" Foreground="{DynamicResource Highlight}" TextWrapping="Wrap" />
+                    </StackPanel>
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </DockPanel>
+    </Border>
+</UserControl>

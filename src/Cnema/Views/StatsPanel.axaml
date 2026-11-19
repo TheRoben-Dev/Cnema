@@ -1,0 +1,138 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Cnema.ViewModels"
+             xmlns:c="using:Cnema.Controls"
+             xmlns:v="using:Cnema.Views"
+             xmlns:svc="using:Cnema.Services"
+             x:Class="Cnema.Views.StatsPanel"
+             x:DataType="vm:MainViewModel"
+             x:Name="Root">
+    <Border Width="640" MaxHeight="720" Margin="0,40" VerticalAlignment="Center" HorizontalAlignment="Center" Background="{DynamicResource Bg1}"
+            BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="16" BoxShadow="{DynamicResource DialogShadow}"
+            DataContext="{Binding Stats}" x:DataType="vm:StatsViewModel">
+      <DockPanel>
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="24,22,24,12">
+          <TextBlock svc:Tr.Text="Stats" FontSize="17" FontWeight="Bold" VerticalAlignment="Center" />
+          <Button x:Name="StatsClose" Grid.Column="1" Classes="ghost" Padding="6" Command="{Binding #Root.((vm:MainViewModel)DataContext).CloseStatsCommand}">
+            <PathIcon Data="{StaticResource IcClose}" Width="13" Height="13" />
+          </Button>
+        </Grid>
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <StackPanel Spacing="18" Margin="24,0,24,24">
+            <ItemsControl ItemsSource="{Binding Tiles}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><UniformGrid Columns="3" /></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:StatTile">
+                  <Border Classes="tile">
+                    <StackPanel Spacing="2">
+                      <TextBlock Text="{Binding Value}" FontSize="22" FontWeight="Bold" />
+                      <TextBlock Classes="dim" Text="{Binding Label}" FontSize="12" />
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <StackPanel Spacing="8">
+              <TextBlock Classes="label" svc:Tr.Text="CLIPS PER WEEK" />
+              <Border Classes="group" Padding="16,14">
+                <ItemsControl ItemsSource="{Binding Weeks}">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate><UniformGrid Rows="1" /></ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:StatBar">
+                      <StackPanel Spacing="4" VerticalAlignment="Bottom">
+                        <TextBlock Classes="dim" Text="{Binding Count}" FontSize="11" HorizontalAlignment="Center" />
+                        <Border Height="{Binding Height}" Width="26" CornerRadius="4" Background="{DynamicResource Accent}" HorizontalAlignment="Center" />
+                        <TextBlock Classes="dim" Text="{Binding Label}" FontSize="10" HorizontalAlignment="Center" />
+                      </StackPanel>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </Border>
+            </StackPanel>
+
+            <StackPanel Spacing="8" IsVisible="{Binding HasGames}">
+              <TextBlock Classes="label" svc:Tr.Text="CLIPS PER GAME" />
+              <Border Classes="group" Padding="16,12">
+                <ItemsControl ItemsSource="{Binding Games}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:StatBar">
+                      <Grid ColumnDefinitions="150,*,Auto" Margin="0,4">
+                        <TextBlock Text="{Binding Label}" FontSize="13" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                        <Border Grid.Column="1" Height="10" Width="{Binding Width}" CornerRadius="5" Background="{DynamicResource Highlight}"
+                                HorizontalAlignment="Left" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="2" Classes="dim" Text="{Binding Count}" FontSize="12" VerticalAlignment="Center" Margin="8,0,0,0" />
+                      </Grid>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </Border>
+            </StackPanel>
+
+            <!-- Badges (Settings, Features, Badges) -->
+            <StackPanel Spacing="8" IsVisible="{Binding HasBadges}">
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Classes="label" svc:Tr.Text="BADGES" />
+                <TextBlock Grid.Column="1" Classes="dim" Text="{Binding BadgeCount}" FontSize="11" />
+              </Grid>
+              <ItemsControl ItemsSource="{Binding Badges}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate><UniformGrid Columns="2" /></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:BadgeRow">
+                    <Border Classes="tile" Margin="0,0,8,8" Opacity="{Binding Faded}">
+                      <Grid ColumnDefinitions="Auto,*">
+                        <Panel Width="34" Height="34" VerticalAlignment="Top">
+                          <Ellipse Fill="#E09B1A" IsVisible="{Binding Earned}" />
+                          <Ellipse Margin="2" Fill="#FFC53D" IsVisible="{Binding Earned}" />
+                          <Ellipse Fill="{DynamicResource Bg3}" IsVisible="{Binding !Earned}" />
+                          <Path Data="M 12,2 L 14.9,8.3 L 21.8,9 L 16.6,13.6 L 18.1,20.4 L 12,16.9 L 5.9,20.4 L 7.4,13.6 L 2.2,9 L 9.1,8.3 Z"
+                                Fill="White" Width="16" Height="16" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Panel>
+                        <StackPanel Grid.Column="1" Margin="10,0,0,0" Spacing="1">
+                          <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold" />
+                          <TextBlock Classes="dim" Text="{Binding Description}" FontSize="11" TextWrapping="Wrap" />
+                          <TextBlock Classes="dim" Text="{Binding When}" FontSize="10" IsVisible="{Binding Earned}" Foreground="{DynamicResource Highlight}" />
+                        </StackPanel>
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+
+            <!-- Playtime (Settings, Features, Playtime): only what was counted here, and it says since when -->
+            <StackPanel Spacing="8" IsVisible="{Binding HasPlaytime}">
+              <TextBlock Classes="label" svc:Tr.Text="PLAYTIME" />
+              <Border Classes="group" Padding="16,12">
+                <StackPanel Spacing="6">
+                  <ItemsControl ItemsSource="{Binding Playtime}" IsVisible="{Binding HasPlaytimeBars}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:PlayBar">
+                        <Grid ColumnDefinitions="150,*,Auto" Margin="0,4">
+                          <TextBlock Text="{Binding Label}" FontSize="13" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                          <Border Grid.Column="1" Height="10" Width="{Binding Width}" CornerRadius="5" Background="{DynamicResource Highlight}"
+                                  HorizontalAlignment="Left" VerticalAlignment="Center" />
+                          <TextBlock Grid.Column="2" Classes="dim" Text="{Binding Text}" FontSize="12" VerticalAlignment="Center" Margin="8,0,0,0" />
+                        </Grid>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                  <TextBlock Classes="dim" FontSize="12" IsVisible="{Binding !HasPlaytimeBars}" TextWrapping="Wrap"
+                             svc:Tr.Text="Nothing counted yet. Play a game Savefile knows (one you've clipped, or a well-known one) and it shows up here." />
+                  <TextBlock Classes="dim" FontSize="11" Text="{Binding PlaytimeSince}" TextWrapping="Wrap" />
+                </StackPanel>
+              </Border>
+            </StackPanel>
+          </StackPanel>
+        </ScrollViewer>
+      </DockPanel>
+    </Border>
+</UserControl>

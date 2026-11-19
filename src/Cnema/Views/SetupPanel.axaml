@@ -1,0 +1,75 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Cnema.ViewModels"
+             xmlns:c="using:Cnema.Controls"
+             xmlns:svc="using:Cnema.Services"
+             x:Class="Cnema.Views.SetupPanel"
+             x:DataType="vm:MainViewModel"
+             x:Name="Root">
+    <Border Width="560" MaxHeight="720" Margin="0,40" VerticalAlignment="Center" HorizontalAlignment="Center" Background="{DynamicResource Bg1}"
+            BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="16" BoxShadow="{DynamicResource DialogShadow}">
+      <DockPanel>
+        <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Line}" BorderThickness="0,1,0,0" Padding="24,14">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" VerticalAlignment="Center"
+                       svc:Tr.Text="You can change all of this later in Settings." />
+            <Button x:Name="SetupDone" Grid.Column="1" Classes="accent" svc:Tr.Content="Start using Savefile" Command="{Binding FinishSetupCommand}" />
+          </Grid>
+        </Border>
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <StackPanel Spacing="12" Margin="24,24,24,18">
+            <StackPanel Spacing="4">
+              <TextBlock svc:Tr.Text="Welcome to Savefile" FontSize="22" FontWeight="Bold" />
+              <TextBlock Classes="dim" FontSize="13" TextWrapping="Wrap"
+                         svc:Tr.Text="A few choices to make it yours, then go make some memories. Nothing here is required." />
+            </StackPanel>
+
+            <TextBlock Classes="label" svc:Tr.Text="LANGUAGE" Margin="0,6,0,0" />
+            <ListBox Classes="swatches" ItemsSource="{Binding SetupLanguages}" SelectedItem="{Binding SetupLanguage}">
+              <ListBox.ItemsPanel>
+                <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+              </ListBox.ItemsPanel>
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:LanguageOption">
+                  <TextBlock Text="{Binding Name}" VerticalAlignment="Center" FontSize="12" />
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+
+            <TextBlock Classes="label" svc:Tr.Text="LOOK" Margin="0,6,0,0" />
+            <ListBox Classes="swatches" ItemsSource="{Binding ThemeModes}" SelectedItem="{Binding SetupMode}">
+              <ListBox.ItemsPanel>
+                <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+              </ListBox.ItemsPanel>
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="svc:ThemeModeOption">
+                  <TextBlock Text="{Binding Name}" VerticalAlignment="Center" FontSize="12" />
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+
+            <TextBlock Classes="label" svc:Tr.Text="YOUR VIDEOS" Margin="0,6,0,0" />
+            <Border Classes="group">
+              <Grid Classes="row" ColumnDefinitions="*,Auto">
+                <TextBlock Text="{Binding SetupFolders}" TextWrapping="Wrap" FontSize="12" VerticalAlignment="Center" />
+                <Button Grid.Column="1" Classes="soft" svc:Tr.Content="Add a folder…" Margin="10,0,0,0" Command="{Binding SetupAddFolderCommand}" />
+              </Grid>
+            </Border>
+
+            <TextBlock Classes="label" svc:Tr.Text="FEATURES" Margin="0,6,0,0" />
+            <Border Classes="group">
+              <StackPanel Margin="14,8" Spacing="2">
+                <CheckBox IsChecked="{Binding SetupClipping}" svc:Tr.Content="Background clipping: save past moments with a hotkey" />
+                <CheckBox IsChecked="{Binding SetupSessions}" IsEnabled="{Binding SetupClipping}" svc:Tr.Content="Session recording: record a whole session as one video" />
+                <CheckBox IsChecked="{Binding SetupHoverPreview}" svc:Tr.Content="Hover preview: skim a video by moving the pointer over it" />
+                <CheckBox IsChecked="{Binding SetupLoudMarkers}" svc:Tr.Content="Loud moment markers on the timeline" />
+                <CheckBox IsChecked="{Binding SetupHoverGlow}" svc:Tr.Content="Hover glow around videos" />
+              </StackPanel>
+            </Border>
+          </StackPanel>
+        </ScrollViewer>
+      </DockPanel>
+    </Border>
+</UserControl>

@@ -101,7 +101,7 @@ public partial class MainWindow : Window
         Classes.Set("noglow", !vm.Features.HoverGlow);
     }
 
-    private void OnQuitClick(object? sender, RoutedEventArgs e) => (Application.Current as App)?.Quit();
+    internal void OnQuitClick(object? sender, RoutedEventArgs e) => (Application.Current as App)?.Quit();
 
     /// <summary>
     /// With clipping on (or "keep running" set) the close button only hides the window: playback
@@ -163,7 +163,7 @@ public partial class MainWindow : Window
             if (e.PropertyName == nameof(MainViewModel.SettingsEditor) && vm.SettingsEditor is { } editor)
                 editor.PropertyChanged += (_, pe) =>
                 {
-                    if (pe.PropertyName == nameof(SettingsViewModel.Page)) SettingsScroll.Offset = default;
+                    if (pe.PropertyName == nameof(SettingsViewModel.Page) && SettingsLazy.Child?.FindControl<ScrollViewer>("SettingsScroll") is { } scroll) scroll.Offset = default;
                 };
             if (e.PropertyName != nameof(MainViewModel.Editor) || vm.Editor is null) return;
             // Put the cursor in the name field, ready to type over it.
@@ -257,7 +257,7 @@ public partial class MainWindow : Window
         return files.Select(f => f.TryGetLocalPath()).OfType<string>().ToList();
     }
 
-    private void OnClearMontageMusicClick(object? sender, RoutedEventArgs e)
+    internal void OnClearMontageMusicClick(object? sender, RoutedEventArgs e)
     {
         if (Vm?.Montage is { } m) m.MusicPath = null;
     }
@@ -891,8 +891,9 @@ public partial class MainWindow : Window
     /// <summary>Draws Year in clips (with a small Savefile header) into a PNG, twice the screen size.</summary>
     private bool CaptureRecap(string path)
     {
-        var content = this.FindControl<StackPanel>("RecapContent");
-        var header = this.FindControl<StackPanel>("RecapImageHeader");
+        var recap = RecapLazy.Realize();
+        var content = recap?.FindControl<StackPanel>("RecapContent");
+        var header = recap?.FindControl<StackPanel>("RecapImageHeader");
         if (content is null || header is null) return false;
         var background = this.FindResource("Bg1") as IBrush ?? Brushes.Black;
         header.IsVisible = true;

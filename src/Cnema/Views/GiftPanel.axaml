@@ -1,0 +1,70 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Cnema.ViewModels"
+             xmlns:c="using:Cnema.Controls"
+             xmlns:svc="using:Cnema.Services"
+             x:Class="Cnema.Views.GiftPanel"
+             x:DataType="vm:MainViewModel"
+             x:Name="Root">
+    <Border Width="540" MaxHeight="720" Margin="0,40" VerticalAlignment="Center" HorizontalAlignment="Center" Background="{DynamicResource Bg1}"
+            BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="16" BoxShadow="{DynamicResource DialogShadow}">
+      <ScrollViewer>
+        <StackPanel Margin="28,24,28,22" Spacing="14">
+          <Grid ColumnDefinitions="Auto,*,Auto">
+            <c:BlobMascot Width="58" Height="52" VerticalAlignment="Bottom" CheerTick="{Binding MascotCheer}" Still="{Binding ReducedMotion}" Hat="{Binding MochiHat}" />
+            <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center" Spacing="2">
+              <TextBlock Text="{Binding GiftTitle}" FontSize="21" FontWeight="Bold" />
+              <TextBlock Classes="dim" FontSize="12" svc:Tr.Text="Your year in clips, as a film." />
+            </StackPanel>
+            <Button Grid.Column="2" Classes="ghost" Padding="6" VerticalAlignment="Top" svc:Tr.Tip="Close (Esc)" Command="{Binding CloseWrappedGiftCommand}">
+              <PathIcon Data="{StaticResource IcClose}" Width="13" Height="13" />
+            </Button>
+          </Grid>
+          <TextBlock FontSize="13" TextWrapping="Wrap" LineHeight="20"
+                     svc:Tr.Text="A 5 to 10 minute video of your year, made only from your clips: your games, your people, your biggest night and the best laughs, with a card for each friend and your best moments cut to the beat of your own music." />
+          <StackPanel Spacing="6">
+            <TextBlock FontSize="12" FontWeight="Bold" svc:Tr.Text="How it works" />
+            <TextBlock Classes="dim" FontSize="12" TextWrapping="Wrap" svc:Tr.Text="1. Add two or three songs you love (MP3 or similar). Without songs, the clips keep their own sound." />
+            <TextBlock Classes="dim" FontSize="12" TextWrapping="Wrap" svc:Tr.Text="2. Savefile makes it on this computer, in the background. Nothing leaves it. If you quit, it carries on next time." />
+            <TextBlock Classes="dim" FontSize="12" TextWrapping="Wrap" svc:Tr.Text="3. When it's ready, the present next to Mochi holds it. The first time, it plays full screen." />
+          </StackPanel>
+          <Border Padding="14,12" CornerRadius="12" Background="{DynamicResource Bg2}">
+            <StackPanel Spacing="8">
+              <TextBlock Classes="dim" FontSize="12" TextWrapping="Wrap" Text="{Binding WrappedPlanText}" />
+              <ItemsControl ItemsSource="{Binding WrappedSongs}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:WrappedSongRow">
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,2">
+                      <StackPanel Spacing="1" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Name}" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Classes="dim" Text="{Binding Detail}" FontSize="11" TextTrimming="CharacterEllipsis" />
+                      </StackPanel>
+                      <Button Grid.Column="1" Classes="ghost" Padding="6" svc:Tr.Tip="Remove this song"
+                              Command="{Binding #Root.((vm:MainViewModel)DataContext).RemoveWrappedSongCommand}" CommandParameter="{Binding}">
+                        <PathIcon Data="{StaticResource IcClose}" Width="10" Height="10" />
+                      </Button>
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <Button x:Name="GiftAddSongs" Classes="soft" HorizontalAlignment="Left" Command="{Binding AddWrappedSongsCommand}" svc:Tr.Tip="Pick MP3s (or other music) for the video">
+                <StackPanel Orientation="Horizontal" Spacing="7">
+                  <PathIcon Data="{StaticResource IcAdd}" Width="12" Height="12" />
+                  <TextBlock svc:Tr.Text="Add songs" />
+                </StackPanel>
+              </Button>
+            </StackPanel>
+          </Border>
+          <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" Text="{Binding WrappedCostText}" />
+          <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+            <Button Classes="ghost" svc:Tr.Content="Not now" Command="{Binding CloseWrappedGiftCommand}" />
+            <Button x:Name="GiftMake" Classes="accent" Command="{Binding MakeWrappedFromGiftCommand}" IsEnabled="{Binding !IsMakingWrapped}">
+              <TextBlock svc:Tr.Text="Make my Wrapped" FontWeight="SemiBold" />
+            </Button>
+          </StackPanel>
+        </StackPanel>
+      </ScrollViewer>
+    </Border>
+</UserControl>

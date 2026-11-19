@@ -198,8 +198,11 @@ public partial class App : Application
         AutostartService.RefreshIfEnabled();
 
         Shortcuts.Load(settings.Current.Shortcuts);
+        var sw = System.Diagnostics.Stopwatch.StartNew();
         _vm = new MainViewModel(settings, new LibraryService(), new ClipService(settings));
+        var vmMs = sw.ElapsedMilliseconds;
         _window = new MainWindow { DataContext = _vm };
+        Log.Info($"Start-up: view model {vmMs} ms, window {sw.ElapsedMilliseconds - vmMs} ms");
 
         desktop.ShutdownRequested += (_, _) =>
         {

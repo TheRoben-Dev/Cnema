@@ -1,0 +1,241 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Cnema.ViewModels"
+             xmlns:c="using:Cnema.Controls"
+             xmlns:svc="using:Cnema.Services"
+             x:Class="Cnema.Views.RecapPanel"
+             x:DataType="vm:MainViewModel"
+             x:Name="Root">
+    <Border Width="680" MaxHeight="760" Margin="0,40" VerticalAlignment="Center" HorizontalAlignment="Center" Background="{DynamicResource Bg1}"
+            BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="16" BoxShadow="{DynamicResource DialogShadow}"
+            DataContext="{Binding Recap}" x:DataType="vm:RecapViewModel">
+      <DockPanel>
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="24,22,24,4">
+          <StackPanel Spacing="3">
+            <TextBlock Text="{Binding Title}" FontSize="22" FontWeight="Bold" />
+            <TextBlock Classes="dim" Text="{Binding Subtitle}" FontSize="12" TextWrapping="Wrap" />
+          </StackPanel>
+          <Button x:Name="RecapClose" Grid.Column="1" Classes="ghost" Padding="6" VerticalAlignment="Top"
+                  Command="{Binding #Root.((vm:MainViewModel)DataContext).CloseRecapCommand}">
+            <PathIcon Data="{StaticResource IcClose}" Width="13" Height="13" />
+          </Button>
+        </Grid>
+        <ItemsControl DockPanel.Dock="Top" ItemsSource="{Binding Year.Chips}" Margin="24,10,24,6" IsVisible="{Binding HasSeveralYears}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="6" /></ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:OptionChip">
+              <Button Classes="chip" Classes.on="{Binding IsOn}" Content="{Binding Label}" Command="{Binding PickCommand}" />
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <!-- actions -->
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" Margin="24,12,24,22">
+          <Button Classes="soft" svc:Tr.Content="Close" Command="{Binding #Root.((vm:MainViewModel)DataContext).CloseRecapCommand}" />
+          <Button x:Name="RecapImage" Classes="soft" Command="{Binding #Root.((vm:MainViewModel)DataContext).SaveRecapImageCommand}"
+                  svc:Tr.Tip="Save this page as a picture to share with your friends">
+            <StackPanel Orientation="Horizontal" Spacing="7">
+              <PathIcon Data="{StaticResource IcImage}" Width="13" Height="13" />
+              <TextBlock svc:Tr.Text="Save as picture" />
+            </StackPanel>
+          </Button>
+          <Button x:Name="RecapMontage" Classes="accent" Command="{Binding #Root.((vm:MainViewModel)DataContext).MakeRecapMontageCommand}"
+                  IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).ShowRecapMontage}"
+                  svc:Tr.Tip="Your favourites from the year (and clips with friends) in one video">
+            <StackPanel Orientation="Horizontal" Spacing="7">
+              <PathIcon Data="{StaticResource IcFilm}" Width="13" Height="13" />
+              <TextBlock svc:Tr.Text="Make a montage of the year" FontWeight="SemiBold" />
+            </StackPanel>
+          </Button>
+        </StackPanel>
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+         <StackPanel>
+          <StackPanel x:Name="RecapContent" Spacing="18" Margin="24,8,24,4">
+            <!-- only drawn into the shared picture -->
+            <StackPanel x:Name="RecapImageHeader" Spacing="3" IsVisible="False" Margin="0,8,0,0">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <Viewbox Width="15" Height="20" VerticalAlignment="Center">
+                  <Canvas Width="240" Height="324">
+                    <Path Data="M14 0H194L240 46V296A28 28 0 0 1 212 324H28A28 28 0 0 1 0 296V14A14 14 0 0 1 14 0Z" Fill="{DynamicResource Accent}" />
+                    <Path Data="M40 260h18v40h-18z M76 260h18v40h-18z M112 260h18v40h-18z M148 260h18v40h-18z M184 260h18v40h-18z" Fill="{DynamicResource Bg1}" Opacity="0.45" />
+                    <Path Data="M92 90L92 194L174 142Z" Fill="{DynamicResource Bg1}" Stroke="{DynamicResource Bg1}" StrokeThickness="24" StrokeJoin="Round" />
+                  </Canvas>
+                </Viewbox>
+                <TextBlock Text="savefile" FontWeight="Bold" FontSize="15" VerticalAlignment="Center" />
+              </StackPanel>
+              <TextBlock Text="{Binding Title}" FontSize="24" FontWeight="Bold" />
+            </StackPanel>
+            <ItemsControl ItemsSource="{Binding Tiles}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><UniformGrid Columns="4" /></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:StatTile">
+                  <Border Classes="tile">
+                    <StackPanel Spacing="2">
+                      <TextBlock Text="{Binding Value}" FontSize="22" FontWeight="Bold" Foreground="{DynamicResource Accent}" />
+                      <TextBlock Classes="dim" Text="{Binding Label}" FontSize="12" TextWrapping="Wrap" />
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <!-- moments to go back to -->
+            <Grid ColumnDefinitions="*,12,*">
+              <Button Classes="recapmoment" Command="{Binding #Root.((vm:MainViewModel)DataContext).WatchRecapClipCommand}"
+                      CommandParameter="{Binding FirstSave}" IsEnabled="{Binding FirstSave, Converter={x:Static ObjectConverters.IsNotNull}}">
+                <Grid ColumnDefinitions="96,*">
+                  <Border Width="96" Height="54" CornerRadius="8" ClipToBounds="True" Background="{DynamicResource Bg3}">
+                    <Image Source="{Binding FirstSave.Thumbnail}" Stretch="UniformToFill" />
+                  </Border>
+                  <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center" Spacing="2">
+                    <TextBlock Classes="label" svc:Tr.Text="FIRST SAVE OF THE YEAR" />
+                    <TextBlock Text="{Binding FirstSaveText}" FontSize="12" TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
+                  </StackPanel>
+                </Grid>
+              </Button>
+              <Button Grid.Column="2" Classes="recapmoment" Command="{Binding #Root.((vm:MainViewModel)DataContext).WatchRecapClipCommand}"
+                      CommandParameter="{Binding BestDay}" IsVisible="{Binding BestDay, Converter={x:Static ObjectConverters.IsNotNull}}">
+                <Grid ColumnDefinitions="96,*">
+                  <Border Width="96" Height="54" CornerRadius="8" ClipToBounds="True" Background="{DynamicResource Bg3}">
+                    <Image Source="{Binding BestDay.Thumbnail}" Stretch="UniformToFill" />
+                  </Border>
+                  <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center" Spacing="2">
+                    <TextBlock Classes="label" svc:Tr.Text="YOUR BIGGEST DAY" />
+                    <TextBlock Text="{Binding BestDayText}" FontSize="12" TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
+                  </StackPanel>
+                </Grid>
+              </Button>
+            </Grid>
+
+            <StackPanel Spacing="8">
+              <TextBlock Classes="label" svc:Tr.Text="MONTH BY MONTH" />
+              <Border Classes="group" Padding="16,14">
+                <StackPanel Spacing="10">
+                  <ItemsControl ItemsSource="{Binding Months}">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate><UniformGrid Rows="1" /></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:StatBar">
+                        <StackPanel Spacing="4" VerticalAlignment="Bottom">
+                          <TextBlock Classes="dim" Text="{Binding CountText}" FontSize="10" HorizontalAlignment="Center" />
+                          <Border Height="{Binding Height}" Width="22" CornerRadius="4" Background="{DynamicResource Accent}" HorizontalAlignment="Center" />
+                          <TextBlock Classes="dim" Text="{Binding Label}" FontSize="10" HorizontalAlignment="Center" />
+                        </StackPanel>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                  <TextBlock Text="{Binding Busiest}" FontSize="12" Classes="dim" TextWrapping="Wrap"
+                             IsVisible="{Binding Busiest, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                </StackPanel>
+              </Border>
+            </StackPanel>
+
+            <Grid ColumnDefinitions="*,12,*">
+              <StackPanel Spacing="8" IsVisible="{Binding PeopleEnabled}">
+                <TextBlock Classes="label" svc:Tr.Text="WHO WAS THERE MOST" />
+                <Border Classes="group" Padding="14,10">
+                  <Panel>
+                    <TextBlock Classes="dim" FontSize="12" TextWrapping="Wrap" IsVisible="{Binding !HasFriends}"
+                               svc:Tr.Text="Tag your friends under Rename, tag or move, and the people you played with most show up here." />
+                    <ItemsControl ItemsSource="{Binding Friends}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:RecapRow">
+                          <Grid ColumnDefinitions="Auto,*" Margin="0,4">
+                            <Border Width="26" Height="26" CornerRadius="13" Background="{DynamicResource AccentSoft}" VerticalAlignment="Center">
+                              <TextBlock Text="{Binding Initial}" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource Accent}"
+                                         HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                            <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
+                              <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                              <TextBlock Classes="dim" Text="{Binding Detail}" FontSize="11" />
+                            </StackPanel>
+                          </Grid>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </Panel>
+                </Border>
+              </StackPanel>
+              <StackPanel Grid.Column="2" Spacing="8">
+                <TextBlock Classes="label" svc:Tr.Text="WHAT YOU PLAYED" />
+                <Border Classes="group" Padding="14,10">
+                  <Panel>
+                    <TextBlock Classes="dim" FontSize="12" TextWrapping="Wrap" IsVisible="{Binding !HasGames}"
+                               svc:Tr.Text="Clips get tagged with their game when you save them, so your games show up here." />
+                    <ItemsControl ItemsSource="{Binding Games}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:RecapRow">
+                          <StackPanel Margin="0,4" Spacing="4">
+                            <Grid ColumnDefinitions="*,Auto">
+                              <TextBlock Text="{Binding Name}" FontSize="13" TextTrimming="CharacterEllipsis" />
+                              <TextBlock Grid.Column="1" Classes="dim" Text="{Binding Detail}" FontSize="11" Margin="8,0,0,0" VerticalAlignment="Center" />
+                            </Grid>
+                            <Border Height="6" Width="{Binding Width}" CornerRadius="3" Background="{DynamicResource Highlight}" HorizontalAlignment="Left" />
+                          </StackPanel>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </Panel>
+                </Border>
+              </StackPanel>
+            </Grid>
+          </StackPanel>
+          <!-- Wrapped: outside RecapContent so it stays out of "Save as picture" -->
+          <Border x:Name="RecapWrapped" Margin="24,18,24,4" Padding="16,14" CornerRadius="12" Background="{DynamicResource Bg2}"
+                  DataContext="{Binding #Root.DataContext}" x:DataType="vm:MainViewModel" IsVisible="{Binding ShowWrapped}">
+            <StackPanel Spacing="10">
+              <Grid ColumnDefinitions="Auto,*">
+                <PathIcon Data="{StaticResource IcFilm}" Width="16" Height="16" Margin="0,2,10,0" VerticalAlignment="Top" Foreground="{DynamicResource Accent}" />
+                <StackPanel Grid.Column="1" Spacing="3">
+                  <TextBlock Text="{Binding WrappedTitle}" FontSize="16" FontWeight="Bold" />
+                  <TextBlock Classes="dim" FontSize="12" TextWrapping="Wrap" svc:Tr.Text="A video of your year: your stats, then your best moments cut to the beat of your own songs. Made on this computer." />
+                  <TextBlock Classes="dim" FontSize="12" TextWrapping="Wrap" Text="{Binding WrappedPlanText}" />
+                </StackPanel>
+              </Grid>
+              <ItemsControl ItemsSource="{Binding WrappedSongs}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:WrappedSongRow">
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,2">
+                      <StackPanel Spacing="1" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Name}" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Classes="dim" Text="{Binding Detail}" FontSize="11" TextTrimming="CharacterEllipsis" />
+                      </StackPanel>
+                      <Button Grid.Column="1" Classes="ghost" Padding="6" svc:Tr.Tip="Remove this song"
+                              Command="{Binding #Root.((vm:MainViewModel)DataContext).RemoveWrappedSongCommand}" CommandParameter="{Binding}">
+                        <PathIcon Data="{StaticResource IcClose}" Width="10" Height="10" />
+                      </Button>
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <TextBlock Classes="dim" FontSize="11" Foreground="{DynamicResource Highlight}" Text="{Binding WrappedStatus}" TextWrapping="Wrap" IsVisible="{Binding IsMakingWrapped}" />
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button x:Name="WrappedAddSongs" Classes="soft" Command="{Binding AddWrappedSongsCommand}" svc:Tr.Tip="Pick MP3s (or other music) for the video">
+                  <StackPanel Orientation="Horizontal" Spacing="7">
+                    <PathIcon Data="{StaticResource IcAdd}" Width="12" Height="12" />
+                    <TextBlock svc:Tr.Text="Add songs" />
+                  </StackPanel>
+                </Button>
+                <Button x:Name="WrappedWatch" Classes="soft" Command="{Binding WatchWrappedCommand}" IsVisible="{Binding HasWrappedVideo}">
+                  <StackPanel Orientation="Horizontal" Spacing="7">
+                    <PathIcon Data="{StaticResource IcPlay}" Width="12" Height="12" />
+                    <TextBlock svc:Tr.Text="Watch" />
+                  </StackPanel>
+                </Button>
+                <Button x:Name="WrappedMake" Classes="accent" Command="{Binding MakeWrappedCommand}" IsEnabled="{Binding !IsMakingWrapped}">
+                  <TextBlock Text="{Binding MakeWrappedLabel}" FontWeight="SemiBold" />
+                </Button>
+              </StackPanel>
+            </StackPanel>
+          </Border>
+         </StackPanel>
+        </ScrollViewer>
+      </DockPanel>
+    </Border>
+</UserControl>

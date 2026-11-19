@@ -1,0 +1,55 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Cnema.ViewModels"
+             xmlns:c="using:Cnema.Controls"
+             xmlns:svc="using:Cnema.Services"
+             x:Class="Cnema.Views.BinPanel"
+             x:DataType="vm:MainViewModel"
+             x:Name="Root">
+    <Border Width="560" MaxHeight="640" Margin="0,40" VerticalAlignment="Center" HorizontalAlignment="Center" Background="{DynamicResource Bg1}"
+            BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="16" BoxShadow="{DynamicResource DialogShadow}">
+      <DockPanel Margin="24,22,24,20">
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,12">
+          <StackPanel Spacing="3">
+            <TextBlock svc:Tr.Text="Bin" FontSize="19" FontWeight="Bold" />
+            <TextBlock Classes="dim" FontSize="12" TextWrapping="Wrap" svc:Tr.Text="Each video waits here for 24 hours from when you deleted it, then it's deleted for good. Put it back to keep it, with its favourite, tags and friends." />
+          </StackPanel>
+          <Button Grid.Column="1" Classes="ghost" Padding="6" VerticalAlignment="Top" svc:Tr.Tip="Close (Esc)" Command="{Binding CloseBinCommand}">
+            <PathIcon Data="{StaticResource IcClose}" Width="13" Height="13" />
+          </Button>
+        </Grid>
+        <StackPanel DockPanel.Dock="Top" Margin="0,18,0,18" Spacing="8" HorizontalAlignment="Center" IsVisible="{Binding BinIsEmpty}">
+          <Border Width="96" Height="46" HorizontalAlignment="Center" BorderBrush="{DynamicResource Line}" BorderThickness="0,0,0,2"
+                  IsVisible="{Binding ShowMochiEmpty}">
+            <c:BlobMascot Width="96" Height="44" Mood="Peek" Hat="{Binding MochiHat}" FollowPointer="{Binding MochiFollows}"
+                          Still="{Binding ReducedMotion}" MaxFps="30" />
+          </Border>
+          <TextBlock Classes="dim" FontSize="13" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" MaxWidth="380" Text="{Binding BinEmptyText}" />
+        </StackPanel>
+        <ScrollViewer>
+          <ItemsControl ItemsSource="{Binding BinRows}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:BinRowViewModel">
+                <Border Background="{DynamicResource Bg2}" CornerRadius="10" Padding="12,9" Margin="0,0,0,6">
+                  <Grid ColumnDefinitions="*,Auto,Auto">
+                    <StackPanel Spacing="2" VerticalAlignment="Center">
+                      <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Folder}" />
+                      <TextBlock Classes="dim" Text="{Binding Left}" FontSize="11" />
+                    </StackPanel>
+                    <Button Grid.Column="1" Classes="soft" Margin="10,0,6,0" VerticalAlignment="Center" svc:Tr.Content="Put back"
+                            Command="{Binding #Root.((vm:MainViewModel)DataContext).RestoreFromBinCommand}" CommandParameter="{Binding}" />
+                    <Button Grid.Column="2" Classes="ghost" Padding="6" VerticalAlignment="Center" svc:Tr.Tip="Delete for good now"
+                            Command="{Binding #Root.((vm:MainViewModel)DataContext).DeleteFromBinNowCommand}" CommandParameter="{Binding}">
+                      <PathIcon Data="{StaticResource IcDelete}" Width="14" Height="14" Foreground="{DynamicResource TextDim}" />
+                    </Button>
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </DockPanel>
+    </Border>
+</UserControl>
