@@ -120,7 +120,9 @@ public static partial class SmartTitles
     private static string? Speaker(VideoEntry e, SpeechLine line, Func<float[], string?>? voiceName)
     {
         if (voiceName is null || e.Voices is not { } v) return null;
-        var s = v.Speakers.FirstOrDefault(sp => sp.Lines.Any(r => r.Length == 2 && r[0] <= line.Start + 200 && r[1] >= line.End - 200));
+        // The voice heard alone for most of the line (the bits kept for a voice stop short of a pause at each end).
+        var len = Math.Max(1, line.End - line.Start);
+        var s = v.Speakers.FirstOrDefault(sp => sp.Lines.Any(r => r.Length == 2 && Math.Min(r[1], line.End) - Math.Max(r[0], line.Start) >= 0.7 * len));
         return s is null || s.Vec.Length == 0 ? null : voiceName(s.Vec);
     }
 

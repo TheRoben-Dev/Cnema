@@ -301,7 +301,7 @@ public sealed partial class MainViewModel
     {
         _roundPrints.Clear();
         var heard = items
-            .Where(v => v.Entry.Voices is { Speakers.Count: > 0 })
+            .Where(v => v.Entry.Voices is { Version: VoiceService.Version, Speakers.Count: > 0 }) // older ones can mix voices; they're being redone
             .SelectMany(v => v.Entry.Voices!.Speakers.Where(s => s.Ms >= 2500 && s.Lines.Count > 0 && s.Vec.Length > 0).Select(s => new HeardVoice(v, s)))
             .Where(h => !_voices.IsIgnored(h.Speaker.Vec) && !(_voices.Match(h.Speaker.Vec).FirstOrDefault() is { Name: not null } m && m.Score >= KnowAt + 0.1f))
             .OrderByDescending(h => h.Speaker.Ms).Take(300).ToList();
@@ -314,7 +314,7 @@ public sealed partial class MainViewModel
         foreach (var g in groups)
         {
             var rep = g.OrderByDescending(h => h.Speaker.Ms).First();
-            var line = rep.Speaker.Lines.OrderByDescending(l => Math.Min(l[1] - l[0], 6000)).First();
+            var line = rep.Speaker.Lines[0]; // the best bit to hear this voice alone, and what its quote is from
             var mean = VoiceService.Normalize(VoiceService.Mean(g.Select(h => h.Speaker.Vec)));
             // Guesses: friends who sound alike, then friends tagged in these clips (most often first).
             var guesses = _voices.Match(mean).Where(m => m.Name != VoiceStore.MeKey && m.Score >= 0.2f).Take(3)
