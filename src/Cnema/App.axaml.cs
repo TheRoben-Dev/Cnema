@@ -181,6 +181,7 @@ public partial class App : Application
                 // (which looked like the app vanishing, and had to be force quit before it would start again).
                 Log.Error("Start-up: the main window could not be opened; quitting");
                 Console.Error.WriteLine("Start-up failed: no main window (see the log)");
+                IsQuitting = true;
                 desktop.Shutdown(1);
             }
             else if (desktop.Args?.Contains(StartSelfTestFlag) == true) _ = FinishStartSelfTestAsync(desktop);
@@ -195,6 +196,7 @@ public partial class App : Application
         await Task.Delay(TimeSpan.FromSeconds(5)); // a few layouts and frames of the real window
         var ok = _window is { IsVisible: true } w && w.Bounds.Width > 0;
         Console.WriteLine(ok ? $"start selftest OK ({_vm?.Videos.Count ?? 0} videos)" : "start selftest FAILED: no window");
+        IsQuitting = true; // so the window closing doesn't ask to quit a second time
         desktop.Shutdown(ok ? 0 : 1);
     }
 
