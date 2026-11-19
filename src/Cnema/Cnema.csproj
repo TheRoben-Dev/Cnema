@@ -49,7 +49,11 @@
     the JIT: about half the start-up time. Libraries only used later (backup, speech, models) stay as they are
     to keep the download small; they're compiled when first used, as before.
   -->
-  <PropertyGroup Condition="'$(RuntimeIdentifier)' != ''">
+  <!--
+    Windows only: on macOS (Apple Silicon) the precompiled main window set a garbage Width and failed to open
+    (v0.47.0: the app vanished after the loading screen). Macs start fast enough without it.
+  -->
+  <PropertyGroup Condition="$(RuntimeIdentifier.StartsWith('win-'))">
     <PublishReadyToRun>true</PublishReadyToRun>
   </PropertyGroup>
   <ItemGroup>
