@@ -27,6 +27,7 @@ jobs:
             echo "$sha  $file" | sha256sum -c -
           done <<'LIST'
           ggml-base-q5_1.bin 422f1ae452ade6f30a004d7e5c6a43195e4433bc370bf23fac9cc591f01a8898 https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base-q5_1.bin
+          ggml-large-v3-turbo-q5_0.bin 394221709cd5ad1f40c46e6031ca61bce88931e6e088c188294c6d5a55ffa7e2 https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q5_0.bin
           kb-whisper-small-q5_0.bin 6768836a51abc902e420c613153e6d418c90ea2774e913274d02ab23170225b7 https://huggingface.co/KBLab/kb-whisper-small/resolve/main/ggml-model-q5_0.bin
           clip-vit-b32-vision-q8.onnx 583fd1110a514667812fee7d684952aaf82a99b959760c8d7dca7e0ab9839299 https://huggingface.co/Xenova/clip-vit-base-patch32/resolve/main/onnx/vision_model_quantized.onnx
           clip-vit-b32-text-q8.onnx 73baab855d406190da9faa498cfedf65f15cf309f4cc7385b7b032e6d08e5c3a https://huggingface.co/Xenova/clip-vit-base-patch32/resolve/main/onnx/text_model_quantized.onnx

@@ -559,6 +559,19 @@
     <Setter Property="Foreground" Value="{DynamicResource Text}" />
   </Style>
 
+  <!-- Settings: a page's name above its results while searching; no page looks picked then -->
+  <Style Selector="TextBlock.pagehead">
+    <Setter Property="FontSize" Value="15" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="Margin" Value="2,10,0,0" />
+  </Style>
+  <Style Selector="ListBox.nav.searching ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="ListBox.nav.searching ListBoxItem:selected PathIcon.navicon">
+    <Setter Property="Foreground" Value="{DynamicResource TextDim}" />
+  </Style>
+
   <!-- First-run colour swatches -->
   <Style Selector="ListBox.swatches">
     <Setter Property="Background" Value="Transparent" />

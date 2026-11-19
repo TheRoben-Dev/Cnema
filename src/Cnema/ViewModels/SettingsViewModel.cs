@@ -244,18 +244,37 @@ public sealed partial class SettingsViewModel : ObservableObject
     }
 
     // ---------- pages ----------
-    public static LocalizedText[] PageNames { get; } = LocalizedText.List("General", "Features", "Editing", "Clipping", "Accessibility");
+    public static LocalizedText[] PageNames { get; } = LocalizedText.List("General", "Library", "Clipping", "Editing", "Memories", "Smart features", "Backup", "Accessibility");
+    public static SettingsPage[] Pages { get; } = PageNames.Zip(new[] { "IcSettings", "IcLibrary", "IcFilm", "IcEdit", "IcStar", "IcSparkle", "IcCloud", "IcEye" },
+        (name, icon) => new SettingsPage(name, icon)).ToArray();
+    public const int EditingPage = 3;
+
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsGeneralPage), nameof(IsFeaturesPage), nameof(IsEditingPage), nameof(IsClippingPage),
-        nameof(IsAccessibilityPage), nameof(ShowClippingSettings), nameof(ShowClippingOffNotice))]
+    [NotifyPropertyChangedFor(nameof(IsGeneralPage), nameof(IsLibraryPage), nameof(IsClippingPage), nameof(IsEditingPage), nameof(IsMemoriesPage),
+        nameof(IsSmartPage), nameof(IsBackupPage), nameof(IsAccessibilityPage), nameof(ShowClippingSettings), nameof(ShowClippingOffNotice))]
     private int _page;
-    public bool IsGeneralPage => Page == 0;
-    public bool IsFeaturesPage => Page == 1;
-    public bool IsEditingPage => Page == 2;
-    public bool IsClippingPage => Page == 3;
-    public bool IsAccessibilityPage => Page == 4;
+
+    /// <summary>Words typed in the search box: every page shows, with only the settings that match (filtered by the view).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsSearching), nameof(IsGeneralPage), nameof(IsLibraryPage), nameof(IsClippingPage), nameof(IsEditingPage), nameof(IsMemoriesPage),
+        nameof(IsSmartPage), nameof(IsBackupPage), nameof(IsAccessibilityPage), nameof(ShowClippingSettings), nameof(ShowClippingOffNotice))]
+    private string _search = "";
+    public bool IsSearching => Search.Trim().Length > 0;
+
+    private bool On(int page) => Page == page || IsSearching;
+    public bool IsGeneralPage => On(0);
+    public bool IsLibraryPage => On(1);
+    public bool IsClippingPage => On(2);
+    public bool IsEditingPage => On(EditingPage);
+    public bool IsMemoriesPage => On(4);
+    public bool IsSmartPage => On(5);
+    public bool IsBackupPage => On(6);
+    public bool IsAccessibilityPage => On(7);
     public bool ShowClippingSettings => IsClippingPage && FeatureClipping;
     public bool ShowClippingOffNotice => IsClippingPage && !FeatureClipping;
+
+    /// <summary>Picking a page ends a search.</summary>
+    partial void OnPageChanged(int value) => Search = "";
     /// <summary>Ctrl+Tab / Ctrl+Shift+Tab.</summary>
     public void CyclePage(int delta) => Page = ((Page + delta) % PageNames.Length + PageNames.Length) % PageNames.Length;
 

@@ -13,6 +13,8 @@ public static class CostMeter
     public const string Speech = "speech";
     /// <summary>The speech pass with the Swedish model (about three times the work).</summary>
     public const string SpeechSwedish = "speech-sv";
+    /// <summary>The speech pass with Whisper large-v3 turbo.</summary>
+    public const string SpeechBest = "speech-best";
     public const string Visual = "visual";
     public const string Sound = "sound";
     /// <summary>Who's talking: a voiceprint per line Voice search wrote down.</summary>
@@ -32,6 +34,7 @@ public static class CostMeter
         new(Moments, 0.5, 0.4, "one CPU core at low priority, no GPU", 30),
         new(Speech, 22, 1.5, "half your CPU cores (at most 4) at low priority", 400),
         new(SpeechSwedish, 66, 2.5, "half your CPU cores (at most 4) at low priority", 900),
+        new(SpeechBest, 130, 4, "half your CPU cores (at most 4) at low priority", 1500),
         new(Visual, 0, 3.5, "half your CPU cores (at most 4) at low priority, a few seconds per video", 250),
         new(Sound, 0.8, 0.5, "one or two CPU cores at low priority, no GPU", 40),
         new(Screen, 0, 4, "two CPU cores at low priority, a few seconds per video", 150),

@@ -54,7 +54,7 @@ public sealed partial class MainViewModel
     }
 
     public string? SuggestTitle(VideoEntry e, bool withTime = false) =>
-        Features.SmartTitles ? SmartTitles.Suggest(e, GameTest(e), withTime, Features.Voices ? VoiceName : null) : null;
+        Features.SmartTitles ? SmartTitles.Suggest(e, GameTest(e), withTime, Features.Voices ? VoiceName : null, SceneOf) : null;
 
     // ---------- best moments, in the background ----------
 

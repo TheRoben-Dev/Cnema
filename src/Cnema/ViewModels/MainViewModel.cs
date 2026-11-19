@@ -1275,7 +1275,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private void OpenEditingSettings()
     {
         OpenSettings();
-        if (SettingsEditor is { } editor) editor.Page = 2;
+        if (SettingsEditor is { } editor) editor.Page = SettingsViewModel.EditingPage;
     }
 
     [RelayCommand]
