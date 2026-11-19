@@ -495,6 +495,14 @@
               <TextBlock x:Name="FriendMontageLabel" svc:Tr.Text="Make a montage" FontSize="13" />
             </StackPanel>
           </Button>
+          <Button Classes="soft" VerticalAlignment="Center" Margin="0,0,10,0" Padding="12,8"
+                  IsVisible="{Binding ShowFriendVoiceGame}" Command="{Binding OpenVoiceGameCommand}"
+                  svc:Tr.Tip="Who's that? Listen to a few snippets and tell Mochi whose voice it is">
+            <StackPanel Orientation="Horizontal" Spacing="7">
+              <c:BlobMascot Width="18" Height="16" Mood="Listening" Still="True" />
+              <TextBlock x:Name="FriendVoiceText" svc:Tr.Text="Who's that?" FontSize="13" />
+            </StackPanel>
+          </Button>
           <Button x:Name="FriendWrappedButton" Classes="soft" VerticalAlignment="Center" Margin="0,0,10,0" Padding="12,8"
                   IsVisible="{Binding ShowFriendWrapped}" Command="{Binding MakeFriendWrappedCommand}" IsEnabled="{Binding !IsMakingWrapped}"
                   svc:Tr.Tip="A shorter Wrapped of only your clips together this year, cut to your Wrapped songs">

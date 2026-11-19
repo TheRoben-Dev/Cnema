@@ -44,6 +44,16 @@ public sealed class AppSettings
     public string Language { get; set; } = "";
     /// <summary>Download and install a newer version at launch, without asking.</summary>
     public bool AutoUpdate { get; set; } = true;
+    /// <summary>Where exports go (clips, shares, frames, montages, Wrapped). Null: next to the original video as before.</summary>
+    public string? ExportFolder { get; set; }
+
+    /// <summary>The export folder when one is chosen and can be used (made if it's missing); otherwise null.</summary>
+    public string? UsableExportFolder()
+    {
+        if (string.IsNullOrWhiteSpace(ExportFolder)) return null;
+        try { Directory.CreateDirectory(ExportFolder); return ExportFolder; }
+        catch (Exception ex) { Log.Warn($"Export folder {ExportFolder}: {ex.Message}"); return null; }
+    }
     /// <summary>The version an automatic install was last tried for, so a failing one is not retried forever.</summary>
     public string? LastUpdateAttempt { get; set; }
     /// <summary>The version that ran last time; a newer running version shows "What's new".</summary>

@@ -860,6 +860,19 @@
 
             <!-- ==== Editing ==== -->
             <StackPanel Spacing="12" IsVisible="{Binding IsEditingPage}">
+              <TextBlock Classes="label" svc:Tr.Text="EXPORTS" />
+              <Border Classes="group">
+                <Grid Classes="row" ColumnDefinitions="*,Auto,Auto">
+                  <StackPanel Spacing="2">
+                    <TextBlock svc:Tr.Text="Exported clips go to" />
+                    <TextBlock Classes="dim" Classes.mono="{Binding HasExportFolder}" FontSize="11" Text="{Binding ExportFolderText}" TextTrimming="PathSegmentEllipsis" MaxWidth="320" HorizontalAlignment="Left" />
+                    <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Exports, shares, saved frames, montages and Wrapped. A folder outside your library keeps them out of it." />
+                  </StackPanel>
+                  <Button Grid.Column="1" Classes="soft" svc:Tr.Content="Reset" Margin="0,0,8,0" Command="{Binding ResetExportFolderCommand}" IsVisible="{Binding HasExportFolder}"
+                          svc:Tr.Tip="Back to next to the original video" />
+                  <Button Grid.Column="2" Classes="soft" svc:Tr.Content="Choose…" Command="{Binding BrowseExportFolderCommand}" />
+                </Grid>
+              </Border>
               <TextBlock Classes="dim" FontSize="12" TextWrapping="Wrap" Margin="4,0"
                          svc:Tr.Text="Your watermark and intro / outro clips. Switch them on per export in the editor's Effects panel; they stay on until you switch them off." />
               <Border Classes="group" IsVisible="{Binding ShowBrandingOffNotice}">

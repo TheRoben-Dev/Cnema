@@ -25,6 +25,7 @@ public partial class MainWindow : Window
             var roomy = e.NewSize.Width >= 1320;
             FriendMontageLabel.IsVisible = roomy;
             FriendWrappedText.IsVisible = roomy;
+            FriendVoiceText.IsVisible = roomy;
         };
         SetUpDragOut();
         FrameEdit.RegionChanged += (tag, area) => Vm?.Player.MoveFrameRegion(tag, area);

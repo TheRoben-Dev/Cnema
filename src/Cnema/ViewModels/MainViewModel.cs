@@ -858,6 +858,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         RaiseEmpty();
         OnPropertyChanged(nameof(CanPlayAll));
         OnPropertyChanged(nameof(ShowFriendMontage));
+        OnPropertyChanged(nameof(ShowFriendVoiceGame));
         OnPropertyChanged(nameof(ShowFriendWrapped));
         OnPropertyChanged(nameof(FriendWrappedLabel));
         UpdateCounts();

@@ -1853,5 +1853,11 @@
   "Too long for a {0} MB copy, so the original goes instead. Trim it to {1} or shorter to share it there.": "För lång för en kopia på {0} MB, så originalet skickas i stället. Korta den till {1} eller kortare för att dela den där.",
   "The Wrapped you were making couldn't be picked up again, so please make it again.": "Wrapped som höll på att göras kunde inte fortsätta, så gör den igen.",
   "Checking for updates…": "Letar efter uppdateringar…",
-  "Updating to {0}… {1:0}%": "Uppdaterar till {0}… {1:0} %"
+  "Updating to {0}… {1:0}%": "Uppdaterar till {0}… {1:0} %",
+  "Who's that? Listen to a few snippets and tell Mochi whose voice it is": "Vem är det? Lyssna på några snuttar och berätta för Mochi vems röst det är",
+  "Back to next to the original video": "Tillbaka till bredvid originalvideon",
+  "Exported clips go to": "Exporterade klipp hamnar i",
+  "Reset": "Återställ",
+  "Next to the original video": "Bredvid originalvideon",
+  "Exports, shares, saved frames, montages and Wrapped. A folder outside your library keeps them out of it.": "Exporter, delningar, sparade bildrutor, montage och Wrapped. En mapp utanför biblioteket håller dem utanför det."
 }

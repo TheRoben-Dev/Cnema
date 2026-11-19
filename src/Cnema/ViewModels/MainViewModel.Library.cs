@@ -107,8 +107,8 @@ public sealed partial class MainViewModel
         var t = TimeSpan.FromMilliseconds(at);
         var name = $"{Path.GetFileNameWithoutExtension(item.Entry.Path)} {(int)t.TotalMinutes}m{t.Seconds:00}.{t.Milliseconds / 100}s";
         var seek = (at / 1000.0).ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
-        // Next to the video, or in Pictures when that folder can't be written to.
-        foreach (var dir in new[] { Path.GetDirectoryName(item.Entry.Path), Environment.GetFolderPath(Environment.SpecialFolder.MyPictures) })
+        // In the export folder when one is chosen, else next to the video; in Pictures when that can't be written to.
+        foreach (var dir in new[] { _settings.Current.UsableExportFolder() ?? Path.GetDirectoryName(item.Entry.Path), Environment.GetFolderPath(Environment.SpecialFolder.MyPictures) })
         {
             if (string.IsNullOrEmpty(dir) || !Directory.Exists(dir)) continue;
             var target = Path.Combine(dir, name + ".png");
@@ -310,6 +310,7 @@ public sealed partial class MainViewModel
         OnPropertyChanged(nameof(HeaderCount));
         OnPropertyChanged(nameof(CanPlayAll));
         OnPropertyChanged(nameof(ShowFriendMontage));
+        OnPropertyChanged(nameof(ShowFriendVoiceGame));
         OnPropertyChanged(nameof(ShowFriendWrapped));
         OnPropertyChanged(nameof(FriendWrappedLabel));
     }

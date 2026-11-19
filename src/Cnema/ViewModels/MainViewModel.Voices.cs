@@ -29,7 +29,12 @@ public sealed partial class MainViewModel
     [ObservableProperty] private string _voiceActivity = "";
 
     public bool CanDownloadVoice => !VoiceModelReady && !IsDownloadingVoice;
-    public bool CanPlayVoiceGame => VoiceModelReady && _items.Values.Any(v => v.Entry.Voices is { Speakers.Count: > 0 });
+    // Always there once the model is: the game itself says when Mochi hasn't heard anyone new yet. It used to
+    // hide until a voice had been found, and the button didn't notice when one was, so it looked gone.
+    public bool CanPlayVoiceGame => Features.Voices && VoiceModelReady;
+
+    /// <summary>On a friend's page: teach Mochi voices from there (it's not on the home page).</summary>
+    public bool ShowFriendVoiceGame => CanPlayVoiceGame && ActiveNav is { Kind: NavKind.Person } && !IsSelecting;
     private long VoiceDownloadBytes => ModelStore.Voice.Where(m => !ModelStore.IsInstalled(m)).Sum(m => m.Bytes);
 
     public string VoiceModelText =>
