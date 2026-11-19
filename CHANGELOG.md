@@ -2,6 +2,14 @@
 
 What changed in each Savefile (formerly Cnema) release. The app shows the entries you have not seen yet after it updates.
 
+## 0.49.0
+- Settings has a new layout: a sidebar with eight pages (General, Library, Clipping, Editing, Memories, Smart features, Backup and Accessibility) instead of one long Features page, and a search box at the top. Type a word and every page shows just the settings that match, in Swedish or English.
+- Savefile now asks before anything that can't be undone: removing a folder or another recorder from your library, deleting a video from the bin for good, deleting a collection, taking a tag or a friend off every video, removing a smart model, starting playtime over, forgetting your server's key, Start over in the editor, resetting all shortcuts and importing a settings file.
+- Captions and voice search are much more accurate, above all when Swedish and English are mixed. Savefile now works out the language of each stretch of speech on its own, out of English, the language Savefile is in and your computer's, instead of guessing once for minutes at a time (it often took Swedish for Norwegian). With Better Swedish, the English parts go to the standard model, which writes them as said instead of translating them into Swedish. In tests with Swedish and English speech over game noise, more than half the words used to come out wrong; now it's about 4 in 10 with Standard and about 1 in 7 with Better Swedish (1 in 10 for Swedish on its own), so if you speak Swedish, Better Swedish is well worth the download.
+- New speech model choice, Most accurate (Whisper large-v3 turbo, 574 MB): the best in every language, and the slowest.
+- After switching speech models, Settings offers to write down again what the old model wrote, with how many videos and about how long it takes. Nothing is redone unless you say so, and the old words stay searchable until each video is done.
+- Smart titles use more of what Savefile knows: who said the line that made everyone laugh ("Sam cracks everyone up: …"), a friend's name on a kill banner ("Quadra kill by Alex"), the game from what's on screen when a clip has no game tag, and what the picture shows when the visual model is sure (underwater, up in the air, a car crash).
+
 ## 0.48.0
 - Savefile now checks for updates first thing when it starts, before the video player, your library or the window open. With Install updates automatically on, a new version installs right there on the loading screen (with its progress shown, and a click skips it), so even a version that can't open its window can't keep you stuck on it. Offline, or when GitHub is slow, the start isn't held up: the check gives up after a couple of seconds at most.
 - If Savefile ever fails to open its window, the next start looks for a fixed version before anything else runs and installs it.

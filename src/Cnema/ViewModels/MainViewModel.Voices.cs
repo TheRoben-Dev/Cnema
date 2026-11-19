@@ -75,8 +75,9 @@ public sealed partial class MainViewModel
     [RelayCommand] private void CancelVoiceDownload() => _voiceModelCts?.Cancel();
 
     [RelayCommand]
-    private void RemoveVoiceModel()
+    private async Task RemoveVoiceModelAsync()
     {
+        if (!await Ask.SureAsync(T("Remove the model?"), T("It frees up the space. To use this again, it needs downloading again. What it already found stays."), T("Remove the model"))) return;
         StopVoicePass();
         ModelStore.Remove(ModelStore.Voice);
         VoiceModelReady = ModelStore.IsInstalled(ModelStore.Voice);

@@ -18,7 +18,21 @@ public static class ModelStore
     public static string SpeechChoice { get; set; } = "standard";
 
     /// <summary>The speech model in use (see <see cref="SpeechChoice"/>).</summary>
-    public static ModelInfo Speech => SpeechChoice == "swedish" ? SpeechSwedish : SpeechStandard;
+    public static ModelInfo Speech => SpeechChoice switch { "swedish" => SpeechSwedish, "best" => SpeechBest, _ => SpeechStandard };
+
+    /// <summary>
+    /// What the chosen speech model needs on disk: the model, and for any other than the standard one the standard
+    /// one too (it tells the languages apart quickly, and the Swedish model leaves English to it).
+    /// </summary>
+    public static IReadOnlyList<ModelInfo> SpeechPack => Speech == SpeechStandard ? new[] { SpeechStandard } : new[] { SpeechStandard, Speech };
+
+    /// <summary>
+    /// Whisper large-v3 turbo (OpenAI, MIT), 5-bit: by far the most accurate in every language, Swedish and English
+    /// mixed included, and the slowest.
+    /// </summary>
+    public static readonly ModelInfo SpeechBest = new("speech-best", "ggml-large-v3-turbo-q5_0.bin", 574_041_195,
+        "394221709cd5ad1f40c46e6031ca61bce88931e6e088c188294c6d5a55ffa7e2",
+        "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q5_0.bin");
 
     /// <summary>
     /// KB-Whisper small from the National Library of Sweden (Apache-2.0), 5-bit: much better at Swedish,

@@ -18,15 +18,17 @@ public static partial class SmartTitles
     /// you!”"), what set off a laugh ("Laughing at “did he just jump”"), or a big laugh or a loud moment. Only what
     /// was heard: a line is quoted as it was written down, and a name is only put to it when the voice is known.
     /// </summary>
-    public static string? Suggest(VideoEntry e, Func<string, bool> isGame, bool withTime = false, Func<float[], string?>? voiceName = null)
+    public static string? Suggest(VideoEntry e, Func<string, bool> isGame, bool withTime = false, Func<float[], string?>? voiceName = null,
+        Func<VideoEntry, string?>? scene = null)
     {
-        var game = e.Tags.FirstOrDefault(isGame) is { } g ? Pretty(g) : null;
+        // The game: a tag that names one, or the game's own words on screen (SPIKE PLANTED is Valorant).
+        var game = e.Tags.FirstOrDefault(isGame) is { } g ? Pretty(g) : ScreenWords.Enabled ? ScreenWords.Game(e.Screen) : null;
         var people = e.People.Where(p => p.Trim().Length > 0).Select(p => p.Trim()).ToList();
         var local = e.ModifiedUtc.ToLocalTime();
         var culture = CultureInfo.CurrentCulture;
         string Stamp() => local.ToString(local.Year == DateTime.Now.Year ? "d MMM" : "d MMM yyyy", culture) + (withTime ? " " + local.ToString("t", culture) : "");
 
-        if (Moment(e, voiceName) is { } headline)
+        if (Moment(e, voiceName, people, scene) is { } headline)
         {
             // What happened, then where and with whom, when it still reads as a title.
             var context = game ?? "";
@@ -55,7 +57,8 @@ public static partial class SmartTitles
     private const double BigLaugh = 3, LoudMoment = 2.5;
 
     /// <summary>What happened in the clip, from what was heard, or null when nothing stands out.</summary>
-    internal static string? Moment(VideoEntry e, Func<float[], string?>? voiceName)
+    internal static string? Moment(VideoEntry e, Func<float[], string?>? voiceName, IReadOnlyList<string>? people = null,
+        Func<VideoEntry, string?>? scene = null)
     {
         var laughs = e.Sound?.Laugh ?? new();
         var hype = e.Sound?.Hype ?? new();
@@ -82,17 +85,35 @@ public static partial class SmartTitles
         // A banner the game put on screen (VICTORY ROYALE, ACE): a big one beats a quote, unless the quote set off a laugh.
         var banner = ScreenWords.Event(e.Screen);
         var funny = pick is { Score: >= 1.5, Setup: true } && laughs.Count * 0.48 >= BigLaugh;
-        if (banner is { Rank: >= 7 } big && !funny) return big.Headline;
+        if (banner is { Rank: >= 7 } big && !funny) return WithName(big, e, people);
         if (pick is { Score: >= 1.5 } q)
         {
-            if (funny) return F("Laughing at “{0}”", q.Text);
-            if (Speaker(e, q.Line, voiceName) is { } who) return F("{0}: “{1}”", who, q.Text);
-            return F("“{0}”", q.Text);
+            var who = Speaker(e, q.Line, voiceName);
+            if (funny) return who is null ? F("Laughing at “{0}”", q.Text) : F("{0} cracks everyone up: “{1}”", who, q.Text);
+            return who is null ? F("“{0}”", q.Text) : F("{0}: “{1}”", who, q.Text);
         }
-        if (banner is { } b) return b.Headline;
+        if (banner is { } b) return WithName(b, e, people);
         if (laughs.Count * 0.48 >= BigLaugh) return T("Cracking up");
+        // What the picture shows, when the visual model is sure (underwater, a car crash, out in space).
+        if (scene?.Invoke(e) is { } seen) return seen;
         if (hype.Count * 0.48 >= LoudMoment && e.Smart is not { Excitement: < 0.3 }) return T("Everyone yelling");
         return null;
+    }
+
+    /// <summary>
+    /// "Ace by Alex" when a friend's name is read in the same line as the banner ("ALEX ACED THE ROUND"):
+    /// the kill feed and the banner name the player. Only a name on the same line counts.
+    /// </summary>
+    private static string WithName((string Headline, int Rank, long At) banner, VideoEntry e, IReadOnlyList<string>? people)
+    {
+        if (people is not { Count: > 0 } || e.Screen is not { } screen) return banner.Headline;
+        foreach (var line in screen.Lines.Where(l => l.At == banner.At))
+        {
+            var key = " " + ScreenService.Key(line.Text) + " ";
+            if (people.FirstOrDefault(p => p.Length >= 3 && key.Contains(" " + ScreenService.Key(p) + " ", StringComparison.Ordinal)) is { } name)
+                return F("{0} by {1}", banner.Headline, name);
+        }
+        return banner.Headline;
     }
 
     /// <summary>The friend whose voice says this line, when Mochi knows it.</summary>

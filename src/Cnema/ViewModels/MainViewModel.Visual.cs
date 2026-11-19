@@ -62,12 +62,14 @@ public sealed partial class MainViewModel
     private void CancelVisualDownload() => _visualModelCts?.Cancel();
 
     [RelayCommand]
-    private void RemoveVisualModel()
+    private async Task RemoveVisualModelAsync()
     {
+        if (!await Ask.SureAsync(T("Remove the model?"), T("It frees up the space. To use this again, it needs downloading again. What it already found stays."), T("Remove the model"))) return;
         StopVisualPass();
         _visual?.Dispose();
         _visual = null;
         _queryVectors.Clear();
+        _sceneVectors = null;
         ModelStore.Remove(ModelStore.Visual);
         VisualModelReady = ModelStore.IsInstalled(ModelStore.Visual);
         VisualModelError = null;
@@ -163,7 +165,10 @@ public sealed partial class MainViewModel
                     finally { _workGate.Release(); pace.Add(item.Entry.FileName, waited, watch.Elapsed); }
                     if (interrupted) { tried.Remove(item); continue; }
                     if (_items.TryGetValue(item.Entry.Path, out var still) && ReferenceEquals(still, item))
+                    {
                         item.Entry.Visual = info ?? new VisualInfo { Version = VisualService.Version };
+                        Retitle(item);
+                    }
                     if (++done % 10 == 0) { _library.SaveCache(); OnPropertyChanged(nameof(VisualModelText)); OnCostsChanged(); }
                     await Task.Delay(100, ct);
                 }
@@ -187,6 +192,47 @@ public sealed partial class MainViewModel
                 if (SearchText.Trim().Length > 0) RefreshView();
             }
         }
+    }
+
+    // ---------- what a clip shows, for titles ----------
+
+    private float[][]? _sceneVectors;
+    private int _sceneEmbedding;
+
+    /// <summary>The scene the clip shows ("Underwater"), when the visual model is sure; null otherwise or until it's ready.</summary>
+    private string? SceneOf(VideoEntry e)
+    {
+        if (!Features.Visual || !VisualModelReady || e.Visual is not { Version: VisualService.Version } vis || vis.Frames.Length == 0) return null;
+        if (_sceneVectors is not { } scenes || _visual?.Neutral is not { } neutral)
+        {
+            EmbedScenesLater();
+            return null;
+        }
+        return SmartTitles.SceneFrom(vis.Frames, scenes, neutral);
+    }
+
+    /// <summary>Turns the scene words into vectors once, in the background; titles made after that can use them.</summary>
+    private void EmbedScenesLater()
+    {
+        if (Interlocked.Exchange(ref _sceneEmbedding, 1) == 1) return;
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                if (VisualModel() is not { } model) return;
+                _ = model.Neutral;
+                var vectors = SmartTitles.Scenes.Select(sc => model.EmbedText(sc.Prompt)).ToArray();
+                Dispatcher.UIThread.Post(() =>
+                {
+                    _sceneVectors = vectors;
+                    // Names Savefile gave can say what the picture shows now.
+                    foreach (var item in _items.Values.Where(v => v.Entry is { TitleAuto: true, Visual: not null }).ToList()) Retitle(item);
+                    _library.SaveCache();
+                });
+            }
+            catch (Exception ex) { Log.Warn($"Scene words: {ex.Message}"); }
+            finally { Interlocked.Exchange(ref _sceneEmbedding, 0); }
+        });
     }
 
     // ---------- search by what's on screen ----------

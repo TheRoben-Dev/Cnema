@@ -129,6 +129,9 @@ public sealed partial class MainViewModel
     private async Task DeleteFromBinNowAsync(BinRowViewModel? row)
     {
         if (row is null) return;
+        if (!await Ask.SureAsync(T("Delete for good?"),
+                F("“{0}” is deleted from your drive right away. This can't be undone.", row.Name),
+                T("Delete for good"))) return;
         await Task.Run(() => _bin.DeleteNow(row.Item));
         FillBinRows();
     }

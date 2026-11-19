@@ -61,8 +61,9 @@ public sealed partial class MainViewModel
     [RelayCommand] private void CancelScreenDownload() => _screenModelCts?.Cancel();
 
     [RelayCommand]
-    private void RemoveScreenModel()
+    private async Task RemoveScreenModelAsync()
     {
+        if (!await Ask.SureAsync(T("Remove the model?"), T("It frees up the space. To use this again, it needs downloading again. What it already found stays."), T("Remove the model"))) return;
         StopScreenPass();
         ModelStore.Remove(ModelStore.Screen);
         ScreenModelReady = ModelStore.IsInstalled(ModelStore.Screen);

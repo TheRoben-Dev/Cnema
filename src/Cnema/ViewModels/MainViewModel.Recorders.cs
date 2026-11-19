@@ -56,7 +56,7 @@ public sealed partial class MainViewModel
     {
         if (row is null || PickFolder is null || await PickFolder() is not { Length: > 0 } path) return;
         var wasAdded = row.IsAdded;
-        if (wasAdded) await RemoveRecorderAsync(row);
+        if (wasAdded) await DropRecorderAsync(row);
         row.Path = NormalizeFolder(path);
         if (wasAdded) await AddRecorderAsync(row);
     }
@@ -102,6 +102,14 @@ public sealed partial class MainViewModel
     private async Task RemoveRecorderAsync(RecorderRow? row)
     {
         if (row is null) return;
+        if (!await Ask.SureAsync(F("Stop importing from {0}?", row.Name),
+                T("Its clips leave your library. Nothing is deleted: the files stay where they are, and you can add it again any time."),
+                T("Remove"))) return;
+        await DropRecorderAsync(row);
+    }
+
+    private async Task DropRecorderAsync(RecorderRow row)
+    {
         var import = _settings.Current.Recorders.FirstOrDefault(i => i.Kind == row.Kind);
         _settings.Current.Recorders.RemoveAll(i => i.Kind == row.Kind);
         _settings.Save();
@@ -110,7 +118,7 @@ public sealed partial class MainViewModel
         {
             var folder = row.IsSteam ? SteamOutput : import.Path;
             if (Folders.FirstOrDefault(f => f.Path is { } p && string.Equals(p, folder, StringComparison.OrdinalIgnoreCase)) is { } f)
-                await RemoveFolderAsync(f);
+                await DropFolderAsync(f);
         }
     }
 

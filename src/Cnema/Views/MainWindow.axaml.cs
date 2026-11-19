@@ -514,7 +514,7 @@ public partial class MainWindow : Window
     }
 
     private void OnRemoveNameClick(object? sender, RoutedEventArgs e) =>
-        Vm?.RemoveName((sender as Control)?.DataContext as FolderViewModel);
+        _ = Vm?.RemoveNameAsync((sender as Control)?.DataContext as FolderViewModel);
 
     private void OnRenameNameKeyDown(object? sender, KeyEventArgs e)
     {
@@ -666,6 +666,11 @@ public partial class MainWindow : Window
     private void OnPreviewKeyDown(object? sender, KeyEventArgs e)
     {
         if (Vm is not { } vm) return;
+        if (vm.IsConfirming)
+        {
+            if (e.Key == Key.Escape) { vm.ConfirmNoAnswerCommand.Execute(null); e.Handled = true; }
+            return;
+        }
         if (vm.IsShowingShortcuts && vm.ShortcutSheet is { } sheet)
         {
             // While a row waits for its new key, that key belongs to the sheet.

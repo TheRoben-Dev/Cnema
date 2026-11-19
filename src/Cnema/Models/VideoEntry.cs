@@ -148,6 +148,8 @@ public sealed class SpeechInfo
     public int Version { get; set; }
     /// <summary>Two-letter code of the language heard most ("en"), or null when nobody spoke.</summary>
     public string? Language { get; set; }
+    /// <summary>What wrote it down (<see cref="Cnema.Services.SpeechService.Id"/>); null for transcripts from before v0.49.</summary>
+    public string? Model { get; set; }
     public List<SpeechLine> Lines { get; set; } = new();
 }
 

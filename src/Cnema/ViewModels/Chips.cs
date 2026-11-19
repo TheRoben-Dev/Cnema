@@ -68,3 +68,16 @@ public sealed class LocalizedText : ObservableObject
 
     public static LocalizedText[] List(params string[] english) => english.Select(e => new LocalizedText(e)).ToArray();
 }
+
+/// <summary>A page in Settings: its name and its icon in the sidebar.</summary>
+public sealed class SettingsPage
+{
+    public LocalizedText Name { get; }
+    public Avalonia.Media.Geometry? Icon { get; }
+
+    public SettingsPage(LocalizedText name, string icon)
+    {
+        Name = name;
+        Icon = Avalonia.Application.Current is { } app && Avalonia.Controls.ResourceNodeExtensions.TryFindResource(app, icon, out var g) ? g as Avalonia.Media.Geometry : null;
+    }
+}

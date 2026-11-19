@@ -27,8 +27,10 @@ public sealed class AppSettings
     public bool ShowFrames { get; set; }
     /// <summary>The player shows what's said as captions (voice search must be on).</summary>
     public bool SpokenCaptions { get; set; }
-    /// <summary>The speech model: "standard" or "swedish" (see ModelStore.SpeechChoice).</summary>
+    /// <summary>The speech model: "standard", "swedish" or "best" (see ModelStore.SpeechChoice).</summary>
     public string SpeechModel { get; set; } = "standard";
+    /// <summary>The speech model (and way of listening) the user asked to redo older transcripts with; "" for none.</summary>
+    public string SpeechRedo { get; set; } = "";
 
     /// <summary>Stay alive in the tray / menu bar when the window is closed.</summary>
     public bool KeepInBackground { get; set; }

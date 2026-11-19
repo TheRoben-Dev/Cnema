@@ -97,8 +97,9 @@ public sealed partial class ShortcutsViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void ResetAll()
+    private async Task ResetAllAsync()
     {
+        if (!await Ask.SureAsync(T("Reset all shortcuts?"), T("Every shortcut you changed goes back to its default."), T("Reset all"))) return;
         Shortcuts.ResetAll();
         Message = T("All shortcuts are back to their defaults.");
         _save();

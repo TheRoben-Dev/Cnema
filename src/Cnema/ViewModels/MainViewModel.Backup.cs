@@ -69,8 +69,11 @@ public sealed partial class MainViewModel
     }
 
     [RelayCommand]
-    private void ForgetHostKey()
+    private async Task ForgetHostKeyAsync()
     {
+        if (!await Ask.SureAsync(T("Forget the server's key?"),
+                T("The next connection test trusts whatever key the server shows. Only do this if you know the server's key changed."),
+                T("Forget key"))) return;
         BackupConfig.HostKey = "";
         if (BackupPanel is { } open) { open.HostKey = ""; open.ShowStatus(T("Forgotten. Test the connection to trust the server's key again."), false); }
         _settings.Save();

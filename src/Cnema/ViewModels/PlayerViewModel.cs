@@ -674,9 +674,10 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
 
     /// <summary>Clears trim marks, parts and effects for this video, including what was remembered.</summary>
     [RelayCommand]
-    private void StartOver()
+    private async Task StartOverAsync()
     {
         if (Current is null) return;
+        if (HasEdits && !await Ask.SureAsync(T("Start over?"), T("Trim marks, parts and effects for this video are cleared."), T("Start over"))) return;
         InPoint = OutPoint = -1;
         LoopRange = false;
         Segments.Clear();
