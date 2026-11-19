@@ -2,6 +2,10 @@
 
 What changed in each Savefile (formerly Cnema) release. The app shows the entries you have not seen yet after it updates.
 
+## 0.47.1
+- Mac: fixed Savefile vanishing right after the loading screen in 0.47.0, staying stuck in the background until it was force quit. The ready-compiled build that made 0.47.0 start faster broke the main window on Apple Silicon Macs, so Macs go back to the way 0.46 started (still quick). Windows keeps the faster start.
+- If the main window ever can't open again, Savefile now quits and writes why in its log instead of lingering invisibly.
+
 ## 0.47.0
 - Faster everywhere, with nothing changed in how it looks. Scrolling a big library is smoother: cards that scroll into view take about half the work they did, thumbnails you just scrolled past stay ready when you scroll back, and hover previews wait until you stop scrolling instead of starting for every card that slides under the pointer.
 - Savefile starts about twice as fast: the app now comes ready-compiled for your computer instead of preparing itself at every start.

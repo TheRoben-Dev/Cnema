@@ -50,6 +50,28 @@ jobs:
           esac
           "$D/tools/ffmpeg" -hide_banner -version | head -1
           "$D/Cnema" --selftest
+      # The real start, window and all: the loading screen, a small library, the main window. v0.47.0 passed
+      # every self-test above yet its main window failed to open on Apple Silicon.
+      - name: Start the real app (loading screen, library, main window)
+        if: matrix.rid == 'osx-arm64' || matrix.rid == 'win-x64'
+        shell: bash
+        timeout-minutes: 6
+        run: |
+          case "${{ matrix.rid }}" in
+            osx-arm64) D=dist/Cnema.app/Contents/MacOS ;;
+            *)         D=dist/Cnema ;;
+          esac
+          clips="$RUNNER_TEMP/clips"; mkdir -p "$clips" "dist/Savefile Data"
+          for i in 1 2 3; do
+            "$D/tools/ffmpeg" -v error -f lavfi -i testsrc2=size=640x360:rate=30 -f lavfi -i sine=f=440 -t 4 \
+              -c:v libx264 -pix_fmt yuv420p -c:a aac -shortest "$clips/clip$i.mp4"
+          done
+          folder="$clips"; command -v cygpath >/dev/null && folder="$(cygpath -m "$clips")"
+          printf '{"Folders":["%s"]}' "$folder" > "dist/Savefile Data/settings.json"
+          status=0; "$D/Cnema" --selftest-start || status=$?
+          log="dist/Savefile Data/logs/cnema.log"; [ -f "$log" ] && cat "$log"
+          rm -rf "dist/Savefile Data"
+          exit $status
       - name: Self-test the smart models (downloads them like the app does, runs each on a test video)
         shell: bash
         timeout-minutes: 20

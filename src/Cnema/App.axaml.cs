@@ -175,7 +175,27 @@ public partial class App : Application
             _window?.Show();
             _window?.Activate();
             await splash.FadeOutAsync();
+            if (_window is null)
+            {
+                // The window couldn't be built: say so and quit, rather than live on with nothing on screen
+                // (which looked like the app vanishing, and had to be force quit before it would start again).
+                Log.Error("Start-up: the main window could not be opened; quitting");
+                Console.Error.WriteLine("Start-up failed: no main window (see the log)");
+                desktop.Shutdown(1);
+            }
+            else if (desktop.Args?.Contains(StartSelfTestFlag) == true) _ = FinishStartSelfTestAsync(desktop);
         }
+    }
+
+    /// <summary>CI: start like a user would (loading screen, library, window), then quit with 0 if the window is up.</summary>
+    public const string StartSelfTestFlag = "--selftest-start";
+
+    private async Task FinishStartSelfTestAsync(IClassicDesktopStyleApplicationLifetime desktop)
+    {
+        await Task.Delay(TimeSpan.FromSeconds(5)); // a few layouts and frames of the real window
+        var ok = _window is { IsVisible: true } w && w.Bounds.Width > 0;
+        Console.WriteLine(ok ? $"start selftest OK ({_vm?.Videos.Count ?? 0} videos)" : "start selftest FAILED: no window");
+        desktop.Shutdown(ok ? 0 : 1);
     }
 
     private readonly List<PosixSignalRegistration> _signals = new();
