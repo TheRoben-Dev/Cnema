@@ -142,7 +142,7 @@ public partial class MainWindow : Window
         // A new caption gets the cursor in its text box, ready to type.
         vm.Player.CaptionAdded += caption => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
         {
-            if (CaptionList.ContainerFromItem(caption) is { } container &&
+            if (ToolsLazy.Realize()?.FindControl<ItemsControl>("CaptionList")?.ContainerFromItem(caption) is { } container &&
                 container.GetVisualDescendants().OfType<TextBox>().FirstOrDefault() is { } box)
             {
                 box.Focus();
