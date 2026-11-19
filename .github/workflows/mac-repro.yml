@@ -1,0 +1,66 @@
+name: Mac start-up repro (temporary)
+on:
+  push:
+    branches: [claude/project-thread-ocvlbs]
+    paths: [.github/workflows/mac-repro.yml]
+permissions:
+  contents: read
+jobs:
+  repro:
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        version: [v0.47.0, v0.46.3]
+        clips: [40, 400]
+    timeout-minutes: 30
+    steps:
+      - name: Download release
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: |
+          gh release download ${{ matrix.version }} -R ${{ github.repository }} -p '*macos-apple-silicon.zip' -D dl
+          cd dl && ditto -x -k *.zip . && ls
+      - name: Make a library
+        run: |
+          brew list ffmpeg >/dev/null 2>&1 || true
+          FF=$(find dl -path '*MacOS/tools/ffmpeg' | head -1)
+          export H="$RUNNER_TEMP/home"; mkdir -p "$H/clips" "$H/Library/Application Support/Cnema"
+          "$FF" -v error -f lavfi -i testsrc2=size=1280x720:rate=30 -f lavfi -i sine=f=440 -t 6 -c:v libx264 -preset ultrafast -c:a aac -shortest "$H/clips/c0.mp4"
+          for i in $(seq 1 $(( ${{ matrix.clips }} - 1 ))); do cp "$H/clips/c0.mp4" "$H/clips/c$i.mp4"; done
+          printf '{"Folders":["%s"]}' "$H/clips" > "$H/Library/Application Support/Cnema/settings.json"
+      - name: Run the app (first start: scan)
+        run: |
+          export HOME="$RUNNER_TEMP/home"
+          APP=$(find "$GITHUB_WORKSPACE/dl" -maxdepth 2 -name 'Cnema.app' | head -1)
+          "$APP/Contents/MacOS/Cnema" > run1.out 2>&1 &
+          PID=$!
+          for t in 10 20 40 60; do sleep 10; done
+          screencapture -x shot1.png || true
+          if kill -0 $PID 2>/dev/null; then echo ALIVE; sample $PID 3 -file sample1.txt >/dev/null 2>&1 || true; kill -TERM $PID; sleep 5; kill -9 $PID 2>/dev/null || true; else echo "EXITED"; wait $PID; echo "exit=$?"; fi
+      - name: Run the app again (cached library)
+        run: |
+          export HOME="$RUNNER_TEMP/home"
+          APP=$(find "$GITHUB_WORKSPACE/dl" -maxdepth 2 -name 'Cnema.app' | head -1)
+          "$APP/Contents/MacOS/Cnema" > run2.out 2>&1 &
+          PID=$!
+          sleep 45
+          screencapture -x shot2.png || true
+          if kill -0 $PID 2>/dev/null; then echo ALIVE; sample $PID 3 -file sample2.txt >/dev/null 2>&1 || true; kill -TERM $PID; sleep 5; kill -9 $PID 2>/dev/null || true; else echo "EXITED"; wait $PID; echo "exit=$?"; fi
+      - name: Report
+        if: always()
+        run: |
+          export HOME="$RUNNER_TEMP/home"
+          echo "== run1"; tail -50 run1.out || true
+          echo "== run2"; tail -50 run2.out || true
+          echo "== log"; cat "$HOME/Library/Application Support/Cnema/logs/cnema.log" || true
+          ls -la "$HOME/Library/Application Support/Cnema" || true
+          for f in sample1.txt sample2.txt; do [ -f $f ] && { echo "== $f"; head -120 $f; }; done
+          ls ~/Library/Logs/DiagnosticReports 2>/dev/null | tail; ls "$RUNNER_TEMP/home/Library/Logs/DiagnosticReports" 2>/dev/null | tail
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: repro-${{ matrix.version }}-${{ matrix.clips }}
+          path: |
+            *.png
+            *.txt
+            *.out
