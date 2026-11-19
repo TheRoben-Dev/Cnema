@@ -28,7 +28,7 @@ jobs:
           "$FF" -v error -f lavfi -i testsrc2=size=1280x720:rate=30 -f lavfi -i sine=f=440 -t 6 -c:v libx264 -preset ultrafast -c:a aac -shortest "$H/clips/c0.mp4"
           for i in $(seq 1 $(( ${{ matrix.clips }} - 1 ))); do cp "$H/clips/c0.mp4" "$H/clips/c$i.mp4"; done
           printf '{"Folders":["%s"]}' "$H/clips" > "$H/Library/Application Support/Cnema/settings.json"
-      - name: Run the app (first start: scan)
+      - name: Run the app, first start
         run: |
           export HOME="$RUNNER_TEMP/home"
           APP=$(find "$GITHUB_WORKSPACE/dl" -maxdepth 2 -name 'Cnema.app' | head -1)
