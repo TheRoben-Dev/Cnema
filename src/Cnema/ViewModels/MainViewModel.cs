@@ -522,6 +522,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public MainViewModel(SettingsStore settings, LibraryService library, ClipService clips)
     {
         _settings = settings;
+        Ask.Handler = ConfirmAsync;
         CostMeter.Attach(settings);
         _library = library;
         Clips = clips;
@@ -639,6 +640,16 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private async Task RemoveFolderAsync(FolderViewModel? folder)
     {
         if (folder?.Path is null) return;
+        if (!await Ask.SureAsync(T("Remove this folder from your library?"),
+                F("Savefile stops showing the videos in {0}. Nothing is deleted: the files stay where they are, and you can add the folder again any time.", folder.Path),
+                T("Remove folder"))) return;
+        await DropFolderAsync(folder);
+    }
+
+    /// <summary>Takes a folder out of the library, without asking (the caller already did).</summary>
+    private async Task DropFolderAsync(FolderViewModel folder)
+    {
+        if (folder.Path is null) return;
         _settings.Current.Folders.RemoveAll(f => string.Equals(f, folder.Path, StringComparison.OrdinalIgnoreCase));
         _settings.Save();
         foreach (var key in _items.Keys.Where(k => !_settings.Current.Folders.Any(f => Under(k, f))).ToList())

@@ -1,3 +1,4 @@
+using Cnema.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -64,9 +65,13 @@ public sealed partial class MainViewModel
     }
 
     /// <summary>Takes a tag or friend off every video; the videos themselves stay.</summary>
-    public void RemoveName(FolderViewModel? row)
+    public async Task RemoveNameAsync(FolderViewModel? row)
     {
         if (row is not { Kind: NavKind.Tag or NavKind.Person }) return;
+        var tag = row.Kind == NavKind.Tag;
+        if (!await Ask.SureAsync(tag ? T("Remove this tag?") : T("Untag this friend?"),
+                F(tag ? "{0} comes off every video it's on. The videos stay." : "{0} is untagged from every video. The videos stay.", row.Name),
+                tag ? T("Remove tag") : T("Untag"))) return;
         var n = ReplaceName(row.Kind, row.Name, null);
         _library.SaveCache();
         if (row.Kind == NavKind.Person && _settings.Current.PlayingWith.RemoveAll(p => string.Equals(p, row.Name, StringComparison.OrdinalIgnoreCase)) > 0)

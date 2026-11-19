@@ -270,9 +270,12 @@ public sealed partial class MainViewModel
     public bool IsInCollectionView => SelectedCollection is not null;
 
     [RelayCommand]
-    private void DeleteCollection(FolderViewModel? row)
+    private async Task DeleteCollectionAsync(FolderViewModel? row)
     {
         if (row?.Collection is not { } c) return;
+        if (!await Ask.SureAsync(T("Delete this collection?"),
+                F("The collection {0} goes away. The videos in it stay in your library.", c.Name),
+                T("Delete collection"))) return;
         _collections.Collections.Remove(c);
         SaveCollections();
         RebuildCollections();

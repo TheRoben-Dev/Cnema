@@ -115,6 +115,9 @@ public sealed partial class MainViewModel
     private async Task ImportSettingsAsync()
     {
         if (PickSettingsFile is null || await PickSettingsFile() is not { } path) return;
+        if (!await Ask.SureAsync(T("Replace your settings?"),
+                T("Every setting is replaced by the ones in the file. Export your settings first if you might want them back."),
+                T("Replace settings"))) return;
         AppSettings imported;
         try
         {

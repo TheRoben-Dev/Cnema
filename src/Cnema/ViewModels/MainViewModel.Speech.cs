@@ -99,8 +99,9 @@ public sealed partial class MainViewModel
 
     /// <summary>Removes the model (the words already found stay, and stay searchable).</summary>
     [RelayCommand]
-    private void RemoveSpeechModel()
+    private async Task RemoveSpeechModelAsync()
     {
+        if (!await Ask.SureAsync(T("Remove the model?"), T("It frees up the space. To use this again, it needs downloading again. What it already found stays."), T("Remove the model"))) return;
         StopSpeechPass();
         ModelStore.Remove(ModelStore.Speech);
         SpeechModelReady = ModelStore.IsInstalled(ModelStore.Speech);

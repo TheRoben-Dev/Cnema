@@ -62,8 +62,9 @@ public sealed partial class MainViewModel
     private void CancelVisualDownload() => _visualModelCts?.Cancel();
 
     [RelayCommand]
-    private void RemoveVisualModel()
+    private async Task RemoveVisualModelAsync()
     {
+        if (!await Ask.SureAsync(T("Remove the model?"), T("It frees up the space. To use this again, it needs downloading again. What it already found stays."), T("Remove the model"))) return;
         StopVisualPass();
         _visual?.Dispose();
         _visual = null;

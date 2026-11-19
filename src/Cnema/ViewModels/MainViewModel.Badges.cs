@@ -181,8 +181,9 @@ public sealed partial class MainViewModel
     }
 
     [RelayCommand]
-    private void ResetPlaytime()
+    private async Task ResetPlaytimeAsync()
     {
+        if (!await Ask.SureAsync(T("Start counting playtime again?"), T("The hours counted so far are cleared. This can't be undone."), T("Start again"))) return;
         _playtime.Reset();
         ShowToast(T("Playtime starts counting again from now."));
     }
