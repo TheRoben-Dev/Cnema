@@ -37,6 +37,14 @@ public partial class SplashWindow : Window
 
     private void OnSkip(object? sender, PointerPressedEventArgs e) => _skipped?.TrySetResult();
 
+    /// <summary>A fresh <see cref="Skipped"/>, after a click already skipped one step (the update download).</summary>
+    public Task SkippedAgain()
+    {
+        if (_skipped is null) return Task.CompletedTask;
+        _skipped = new TaskCompletionSource();
+        return _skipped.Task;
+    }
+
     /// <summary>What's being got ready, and how far along (0 to 1).</summary>
     public void Report(string status, double progress)
     {
