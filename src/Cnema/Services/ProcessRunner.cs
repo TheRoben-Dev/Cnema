@@ -129,8 +129,17 @@ public static class BackgroundHold
             // Freezing processes is for macOS and Linux; on Windows the work runs at idle priority instead.
             if (Supported) foreach (var p in Running.ToList()) Signal(p, hold ? SigStop : SigCont);
         }
-        // Outside the lock: cancelling runs the work's own callbacks.
-        try { stop?.Cancel(); } catch (AggregateException ex) { Log.Warn($"Background hold: {ex.InnerException?.Message}"); }
+        // Off the calling thread: cancelling runs the work's own callbacks right there, and with them whatever was
+        // awaiting that work (killing ffmpeg, a model winding down). Called from the UI thread when anything starts
+        // playing, that froze the window while the passes stopped (the voice game, the moment it played a snippet).
+        if (stop is not null)
+            _ = Task.Run(() =>
+            {
+                var watch = Stopwatch.StartNew();
+                try { stop.Cancel(); }
+                catch (AggregateException ex) { Log.Warn($"Background hold: {ex.InnerException?.Message}"); }
+                if (watch.ElapsedMilliseconds > 500) Log.Info($"Background hold: stopping the work took {watch.ElapsedMilliseconds} ms");
+            });
     }
 
     private static void Signal(Process p, int sig)

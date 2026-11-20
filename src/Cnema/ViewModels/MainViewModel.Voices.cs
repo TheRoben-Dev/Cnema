@@ -409,24 +409,25 @@ public sealed partial class MainViewModel
     private void PlayVoiceRound(VoiceRound r)
     {
         if (VlcBootstrap.LibVLC is not { } lib || !File.Exists(r.Path)) return;
-        if (_voicePlayer is null)
-        {
-            _voicePlayer = new MediaPlayer(lib);
-            // libVLC's own threads: never call back into it from here, just tell the UI.
-            _voicePlayer.EndReached += (_, _) => Dispatcher.UIThread.Post(VoicePlaybackEnded);
-            _voicePlayer.EncounteredError += (_, _) => Dispatcher.UIThread.Post(VoicePlaybackEnded);
-        }
-        var player = _voicePlayer;
         _voicePlaying = true;
         UpdateBackgroundHold(); // like any playback: indexing waits, so the snippet doesn't crackle
         if (VoiceGame is { } g) g.IsPlaying = true;
+        // Every libVLC call for the snippets, making the player too, happens off the UI thread (see VoiceOp).
         VoiceOp(() =>
         {
+            if (_voicePlayer is null)
+            {
+                var made = new MediaPlayer(lib);
+                // libVLC's own threads: never call back into it from here, just tell the UI.
+                made.EndReached += (_, _) => Dispatcher.UIThread.Post(VoicePlaybackEnded);
+                made.EncounteredError += (_, _) => Dispatcher.UIThread.Post(VoicePlaybackEnded);
+                _voicePlayer = made;
+            }
             using var media = new Media(lib, r.Path, FromType.FromPath);
             media.AddOption(":no-video");
             media.AddOption($":start-time={r.StartMs / 1000.0:0.###}".Replace(',', '.'));
             media.AddOption($":stop-time={r.EndMs / 1000.0 + 0.3:0.###}".Replace(',', '.'));
-            player.Play(media);
+            _voicePlayer.Play(media);
         });
     }
 
@@ -453,7 +454,7 @@ public sealed partial class MainViewModel
 
     private void StopVoicePlayback()
     {
-        if (_voicePlayer is { } p && _voicePlaying) VoiceOp(() => p.Stop());
+        if (_voicePlaying) VoiceOp(() => _voicePlayer?.Stop());
         VoicePlaybackEnded();
     }
 

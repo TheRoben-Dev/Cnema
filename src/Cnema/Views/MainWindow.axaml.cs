@@ -679,6 +679,17 @@ public partial class MainWindow : Window
             return;
         }
         if (vm.IsSetupOpen) return;
+        if (vm.VoiceGame is { } game)
+        {
+            // On top of everything but a confirm, Settings included: Esc closes the game (or the name box), not Settings below.
+            if (e.Key == Key.Escape)
+            {
+                if (game.IsNaming) game.CancelNameCommand.Execute(null);
+                else vm.CloseVoiceGameCommand.Execute(null);
+                e.Handled = true;
+            }
+            return;
+        }
         if (vm.IsTheatreOpen)
         {
             // Only pause, scrubbing and the sound: nothing to edit here.

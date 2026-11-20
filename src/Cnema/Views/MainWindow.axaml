@@ -1317,7 +1317,8 @@
 
     <!-- ======================= MAKE ROOM ======================= -->
     <!-- ======================= WHO'S THAT? (voice game) ======================= -->
-    <Border x:Name="VoiceScrim" Background="{DynamicResource Scrim}" IsVisible="{Binding IsShowingVoiceGame}">
+    <!-- Above Settings (10), where it's opened from, and below the confirm dialog (30). Closing it goes back to Settings. -->
+    <Border x:Name="VoiceScrim" Background="{DynamicResource Scrim}" IsVisible="{Binding IsShowingVoiceGame}" ZIndex="20">
       <c:LazyView x:Name="VoiceLazy" Of="{x:Type v:VoiceGamePanel}" />
     </Border>
 

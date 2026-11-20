@@ -2,6 +2,10 @@
 
 What changed in each Savefile (formerly Cnema) release. The app shows the entries you have not seen yet after it updates.
 
+## 0.50.1
+- Who's that? now opens on top of Settings instead of behind it, and closing it (or pressing Esc) takes you back to Settings.
+- Fixed Savefile freezing around the voice game: when a snippet (or any video) started playing, the background indexing was stopped right on the window's own thread, which could lock the window up until it finished. It now stops in the background, and the snippet player talks to VLC off the window's thread too.
+
 ## 0.50.0
 - Who's that? only plays bits where one person talks. Mochi used to listen to whole transcript lines, and a line often holds a reply or two people talking at once, so the snippet could have several voices in it. Now each line is listened to in short overlapping slices, the voice is followed slice by slice, bits that sound like two people (or like game noise) are left out, and each snippet starts and ends at a pause, where people take turns. In tests with several friends talking over game noise, snippets with only one voice went from 35 of 78 to 54 of 59, and the rest have under a twentieth of another voice in them.
 - Who's talking is steadier: a voice's voiceprint is now made only from the bits where that person talks alone, the same person is far less often split into two voices (the count of voices per clip was off by 21 in the tests, now by 6), and friends are no longer recognised in clips they're not in (2 wrong guesses before, none now).
