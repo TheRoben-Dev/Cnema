@@ -516,7 +516,7 @@ public static class WrappedService
                     var flash = PulseFx.Flash(PulseFx.Hits(plan.Beats, plan.Downbeats, plan.Drops, plan.BeatEnergy, shot.At, shot.At + len).Where(h => h.Power > 1.5).ToList());
                     if (flash.Length > 0) { g.Add($"{video}null{flash}[cf]"); src = "[cf]"; }
                 }
-                g.AddRange(PulseFx.Glow(src, "[gl]", width, height, "g", shot.Kind == WrappedShotKind.Card ? 0.7 : 0.45));
+                g.AddRange(PulseFx.Glow(src, "[gl]", width, height, "g", shot.Kind == WrappedShotKind.Card ? 0.4 : 0.3));
                 video = "[gl]";
             }
             if (i == 0) { g.Add($"{video}fade=t=in:st=0:d=0.5[fi]"); video = "[fi]"; }

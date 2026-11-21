@@ -201,7 +201,7 @@ public static class MontageService
             args.AddRange(new[] { "-f", "rawvideo", "-pix_fmt", "rgba", "-s", $"{strip.Width}x{strip.Height}", "-i", glowPath });
             args.AddRange(new[] { "-f", "rawvideo", "-pix_fmt", "rgba", "-s", $"{strip.Width}x{strip.Height}", "-i", glowPath });
             var secs = total / 1000.0;
-            g.AddRange(PulseFx.Glow(vOut, "[vg]", width, height, "gm", 0.45));
+            g.AddRange(PulseFx.Glow(vOut, "[vg]", width, height, "gm", 0.3));
             g.AddRange(PulseFx.EdgeGlow("[vg]", "[ve1]", gi, strip, width, height, secs, 0.2, Math.Min(secs, 3.6), "ea"));
             g.AddRange(PulseFx.EdgeGlow("[ve1]", "[ve2]", gi + 1, strip, width, height, secs, Math.Max(0, secs - 4), secs, "eb"));
             vOut = "[ve2]";

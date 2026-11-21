@@ -91,7 +91,7 @@ public static class PulseFx
         var w = Math.Max(2, width / 4 / 2 * 2);
         var h = Math.Max(2, height / 4 / 2 * 2);
         yield return $"{input}format=gbrp,split[{tag}a][{tag}b]";
-        yield return $"[{tag}b]scale={w}:{h},colorlevels=rimin=0.62:gimin=0.62:bimin=0.62,gblur=sigma=7,scale={width}:{height}:flags=bilinear[{tag}c]";
+        yield return $"[{tag}b]scale={w}:{h},colorlevels=rimin=0.7:gimin=0.7:bimin=0.7,gblur=sigma=7,scale={width}:{height}:flags=bilinear[{tag}c]";
         yield return $"[{tag}a][{tag}c]blend=all_mode=screen:all_opacity={F(amount)},vignette=angle=PI/6:eval=init,format=yuv420p{output}";
     }
 
@@ -135,7 +135,7 @@ public static class PulseFx
             for (var y = 0; y < h; y++)
             {
                 var up = (h - 1 - y) / (double)(h - 1); // 0 at the bottom edge, 1 at the top of the strip
-                var a = Math.Exp(-Math.Pow(up / 0.42, 2)) * swell * 0.9;
+                var a = Math.Min(1, Math.Exp(-Math.Pow(up / 0.45, 2)) * swell * 1.15);
                 var i = (y * w + x) * 4;
                 data[i] = (byte)r; data[i + 1] = (byte)g; data[i + 2] = (byte)b; data[i + 3] = (byte)Math.Clamp(a * 255, 0, 255);
             }
@@ -152,7 +152,7 @@ public static class PulseFx
     public static IEnumerable<string> EdgeGlow(string input, string output, int glowInput, (int W, int H) strip, int width, int height,
         double length, double fadeIn, double end, string tag)
     {
-        var sh = Math.Max(2, height * 22 / 100 / 2 * 2);
+        var sh = Math.Max(2, height * 26 / 100 / 2 * 2);
         var d = F(length);
         var outAt = F(Math.Max(fadeIn + 0.5, end - 1.0));
         yield return $"[{glowInput}:v]loop=loop=-1:size=1,setpts=N/(30*TB),scale={width * 2}:{sh}:flags=bicubic,format=gbrap,split[{tag}1][{tag}2]";

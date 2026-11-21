@@ -261,8 +261,9 @@ public sealed class WrappedMotionCard : Control
             var y = edge == 0 ? rng.NextDouble() * H * 0.2 : edge == 2 ? H * (0.82 + rng.NextDouble() * 0.16) : rng.NextDouble() * H;
             var r = 14 + Math.Pow(rng.NextDouble(), 2) * 64;
             // Never over the words: they sit on the left (on the right for the closing card).
-            var textSide = _card.Kind == "outro" ? x > 700 - r : x < 1350 + r;
-            if (textSide && y > 60 - r && y < 960 + r) continue;
+            var textSide = _card.Kind != "outro" || x > 700 - r;
+            if (textSide && y > 300 - r && y < 1010 + r) continue;
+            if (_card.Kind != "outro" && x < 700 + r && y < 300 + r && y > 60 - r) continue; // the little "savefile" mark
             var at = 0.1 + rng.NextDouble() * 0.8;
             var k = OutBack(Phase(at, 0.6));
             if (k <= 0) continue;
