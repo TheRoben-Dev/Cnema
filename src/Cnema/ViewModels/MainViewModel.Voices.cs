@@ -19,8 +19,28 @@ public sealed partial class MainViewModel
     private Task? _voiceRun;
     private CancellationTokenSource? _voiceModelCts;
 
-    /// <summary>A friend's voice counts as recognised from here (mean of the three closest answers).</summary>
-    private const float KnowAt = 0.55f;
+    // A friend is only ever tagged by voice when Mochi is as good as certain (Roben: "don't tag people unless the
+    // voice is a perfect match, guesses in tags are not allowed"). The game still shows guesses below this, as
+    // chips you confirm yourself.
+    /// <summary>How close the voice must be to that friend's answers (mean of the three closest).</summary>
+    private const float TagAt = 0.68f;
+    /// <summary>And how far ahead of the next-closest person, so two similar voices are never mixed up.</summary>
+    private const float TagMargin = 0.15f;
+    /// <summary>Voiceprints from answers a friend needs before their voice tags anyone.</summary>
+    private const int TagPrints = 3;
+    /// <summary>Talking time in a clip needed to tag from it: a line or two isn't enough to be sure.</summary>
+    private const long TagMs = 4000;
+
+    /// <summary>Who this voice is when Mochi is certain enough to tag it (you included, as <see cref="VoiceStore.MeKey"/>), else null.</summary>
+    private string? SureOf(float[] print)
+    {
+        if (print.Length == 0) return null;
+        var match = _voices.Match(print);
+        if (match.Count == 0) return null;
+        var (name, score) = match[0];
+        var next = match.Count > 1 ? match[1].Score : 0f;
+        return score >= TagAt && score - next >= TagMargin && _voices.CountFor(name) >= TagPrints ? name : null;
+    }
 
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(VoiceModelText), nameof(CanDownloadVoice), nameof(CanPlayVoiceGame))] private bool _voiceModelReady = ModelStore.IsInstalled(ModelStore.Voice);
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(VoiceModelText), nameof(CanDownloadVoice))] private bool _isDownloadingVoice;
@@ -118,6 +138,7 @@ public sealed partial class MainViewModel
             var pace = new PassLog("Voices");
             using var awake = PlatformShell.StayAwake("Voices");
             Log.Info($"Voice pass: {_items.Values.Count(v => NeedsVoices(v.Entry))} to do");
+            FillInAllVoices(); // tags from voices only when certain: older, looser ones are checked again
             // Runs as long as Voice search keeps writing things down: new lines are picked up each round.
             while (!ct.IsCancellationRequested && Features.Voices)
             {
@@ -210,20 +231,28 @@ public sealed partial class MainViewModel
     {
         if (!Features.People || item.Entry.Voices is not { } v) return false;
         var changed = false;
-        foreach (var s in v.Speakers)
+        var sure = v.Speakers.Where(s => s.Ms >= TagMs).Select(s => SureOf(s.Vec)).Where(n => n is not null && n != VoiceStore.MeKey)
+            .Select(n => n!).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        // Tags added by voice that aren't certain any more (made under the looser rule before 0.51, or a friend's
+        // voice that's now closer to someone else) come off. Tags you added yourself are never touched.
+        foreach (var name in v.Added.ToList())
         {
-            if (s.Ms < 2500 || s.Vec.Length == 0) continue; // a word or two isn't enough to be sure
-            var best = _voices.Match(s.Vec).FirstOrDefault();
-            if (best.Name is null || best.Score < KnowAt || best.Name == VoiceStore.MeKey) continue;
-            if (item.Entry.People.Contains(best.Name, StringComparer.OrdinalIgnoreCase) || v.Added.Contains(best.Name, StringComparer.OrdinalIgnoreCase)) continue;
-            item.Entry.People.Add(best.Name);
-            v.Added.Add(best.Name);
+            if (sure.Contains(name, StringComparer.OrdinalIgnoreCase)) continue;
+            v.Added.RemoveAll(n => string.Equals(n, name, StringComparison.OrdinalIgnoreCase));
+            item.Entry.People.RemoveAll(p => string.Equals(p, name, StringComparison.OrdinalIgnoreCase));
+            changed = true;
+        }
+        foreach (var name in sure)
+        {
+            if (item.Entry.People.Contains(name, StringComparer.OrdinalIgnoreCase) || v.Added.Contains(name, StringComparer.OrdinalIgnoreCase)) continue;
+            item.Entry.People.Add(name);
+            v.Added.Add(name);
             changed = true;
         }
         return changed;
     }
 
-    /// <summary>After answers: every video gets another look with what Mochi now knows.</summary>
+    /// <summary>After answers (and once at start): every video gets another look with what Mochi now knows.</summary>
     private void FillInAllVoices()
     {
         var n = 0;
@@ -260,28 +289,71 @@ public sealed partial class MainViewModel
     private readonly Dictionary<VoiceRound, List<float[]>> _roundPrints = new();
     private MediaPlayer? _voicePlayer;
 
+    // What this game has asked about already, so the next voices fetched are new ones (a skipped voice isn't
+    // asked again this time; answered ones are known or ignored by then anyway).
+    private readonly HashSet<float[]> _askedPrints = new(ReferenceEqualityComparer.Instance);
+    private readonly List<float[]> _askedMeans = new();
+    /// <summary>Voices fetched at a time; more are fetched while the last two play.</summary>
+    private const int VoiceBatch = 6;
+
     [RelayCommand]
     private async Task OpenVoiceGameAsync()
     {
         if (!VoiceModelReady) return;
-        // A copy of the library: the passes change it on this thread while the rounds are put together on another.
-        var items = _items.Values.ToList();
-        var rounds = await Task.Run(() => BuildVoiceRounds(items));
+        _askedPrints.Clear();
+        _askedMeans.Clear();
+        _roundPrints.Clear();
+        var rounds = await NextVoiceRoundsAsync();
         var friends = _voices.Current.Known.Where(kv => kv.Value.Count > 0)
             .Select(kv => new VoiceFriend(kv.Key == VoiceStore.MeKey ? T("You") : kv.Key, kv.Value.Count))
             .OrderByDescending(f => f.Count).ToList();
-        ShowVoiceGame(rounds, friends);
+        var game = ShowVoiceGame(rounds, friends);
         if (rounds.Count > 0) PlayVoiceRound(rounds[0]);
+        game.Start();
+    }
+
+    /// <summary>The next voices to ask about, put together off the UI thread; their voiceprints are noted here.</summary>
+    private async Task<List<VoiceRound>> NextVoiceRoundsAsync()
+    {
+        // A copy of the library: the passes change it on this thread while the rounds are put together on another.
+        var items = _items.Values.ToList();
+        var askedPrints = new HashSet<float[]>(_askedPrints, ReferenceEqualityComparer.Instance);
+        var askedMeans = _askedMeans.ToList();
+        List<(VoiceRound Round, List<float[]> Prints, float[] Mean)> built;
+        try { built = await Task.Run(() => BuildVoiceRounds(items, askedPrints, askedMeans)); }
+        catch (Exception ex)
+        {
+            Log.Warn($"Who's that?: {ex.Message}");
+            built = new();
+        }
+        foreach (var (round, prints, mean) in built)
+        {
+            _roundPrints[round] = prints;
+            foreach (var p in prints) _askedPrints.Add(p);
+            _askedMeans.Add(mean);
+        }
+        return built.Select(b => b.Round).ToList();
+    }
+
+    private async void OnMoreVoicesWanted(VoiceGameViewModel game)
+    {
+        var more = await NextVoiceRoundsAsync();
+        if (!ReferenceEquals(VoiceGame, game)) return; // closed meanwhile
+        game.AddRounds(more);
     }
 
     /// <summary>Opens the game with these rounds (the real ones, or made-up ones for a preview).</summary>
-    internal void ShowVoiceGame(IEnumerable<VoiceRound> rounds, IEnumerable<VoiceFriend> friends)
+    internal VoiceGameViewModel ShowVoiceGame(IEnumerable<VoiceRound> rounds, IEnumerable<VoiceFriend> friends)
     {
-        var game = new VoiceGameViewModel(rounds, friends, FindFriends);
+        var points = Features.VoicePoints;
+        var game = new VoiceGameViewModel(rounds, friends, FindFriends,
+            points ? _voices.Current.Game : null, points ? _voices.SetGame : null);
         game.Answered += OnVoiceAnswered;
         game.Undone += OnVoiceUndone;
         game.PlayRequested += PlayVoiceRound;
+        game.MoreWanted += () => OnMoreVoicesWanted(game);
         VoiceGame = game;
+        return game;
     }
 
     [RelayCommand]
@@ -290,26 +362,29 @@ public sealed partial class MainViewModel
         StopVoicePlayback();
         VoiceGame = null;
         _roundPrints.Clear();
+        _askedPrints.Clear();
+        _askedMeans.Clear();
         OnPropertyChanged(nameof(VoiceModelText));
     }
 
     /// <summary>
-    /// Up to eight voices to ask about: the unnamed voices of all videos grouped by who they sound like, the ones
-    /// heard most first, each with Mochi's best guesses (friends with a similar voice, or friends tagged in those clips).
+    /// The next few voices to ask about: the voices of all videos Mochi isn't certain of yet, minus the ones this
+    /// game already asked about, grouped by who they sound like, the ones heard most first, each with Mochi's best
+    /// guesses (friends with a similar voice, or friends tagged in those clips). Runs off the UI thread.
     /// </summary>
-    private List<VoiceRound> BuildVoiceRounds(List<VideoItemViewModel> items)
+    private List<(VoiceRound Round, List<float[]> Prints, float[] Mean)> BuildVoiceRounds(List<VideoItemViewModel> items, HashSet<float[]> askedPrints, List<float[]> askedMeans)
     {
-        _roundPrints.Clear();
         var heard = items
             .Where(v => v.Entry.Voices is { Version: VoiceService.Version, Speakers.Count: > 0 }) // older ones can mix voices; they're being redone
             .SelectMany(v => v.Entry.Voices!.Speakers.Where(s => s.Ms >= 2500 && s.Lines.Count > 0 && s.Vec.Length > 0).Select(s => new HeardVoice(v, s)))
-            .Where(h => !_voices.IsIgnored(h.Speaker.Vec) && !(_voices.Match(h.Speaker.Vec).FirstOrDefault() is { Name: not null } m && m.Score >= KnowAt + 0.1f))
+            .Where(h => !askedPrints.Contains(h.Speaker.Vec) && !_voices.WasAnswered(h.Speaker.Vec) && !askedMeans.Any(m => VoiceService.Cosine(m, h.Speaker.Vec) >= VoiceService.SameVoice + 0.05f))
+            .Where(h => !_voices.IsIgnored(h.Speaker.Vec) && SureOf(h.Speaker.Vec) is null) // not yet certain: still worth asking about
             .OrderByDescending(h => h.Speaker.Ms).Take(300).ToList();
         var groups = VoiceService.Group(heard.Select(h => h.Speaker.Vec).ToList(), VoiceService.SameVoice - 0.05f)
             .Select(g => g.Select(i => heard[i]).ToList())
             .OrderByDescending(g => g.Sum(h => h.Speaker.Ms) * Math.Sqrt(g.Select(h => h.Item).Distinct().Count()))
-            .Take(8).ToList();
-        var rounds = new List<VoiceRound>();
+            .Take(VoiceBatch).ToList();
+        var rounds = new List<(VoiceRound, List<float[]>, float[])>();
         var c = System.Globalization.CultureInfo.CurrentCulture;
         foreach (var g in groups)
         {
@@ -343,8 +418,7 @@ public sealed partial class MainViewModel
                 Levels = SnippetLevels(e.Path, line[0], Math.Min(line[1], line[0] + 6000)),
                 Guesses = guesses,
             };
-            _roundPrints[round] = g.Select(h => h.Speaker.Vec).ToList();
-            rounds.Add(round);
+            rounds.Add((round, g.Select(h => h.Speaker.Vec).ToList(), mean));
         }
         return rounds;
     }
@@ -375,18 +449,20 @@ public sealed partial class MainViewModel
     {
         StopVoicePlayback();
         if (!_roundPrints.TryGetValue(a.Round, out var prints)) return; // the preview
+        _voices.MarkAnswered(prints); // whatever the answer, skips too: these bits are never asked about again
         switch (a.Kind)
         {
             case VoiceAnswerKind.Friend: _voices.Add(a.Name!, prints); break;
             case VoiceAnswerKind.Me: _voices.Add(VoiceStore.MeKey, prints); break;
             case VoiceAnswerKind.Ignore: _voices.Ignore(prints); break;
         }
-        if (a.Kind == VoiceAnswerKind.Friend) FillInAllVoices();
+        if (a.Kind != VoiceAnswerKind.Skip) FillInAllVoices(); // any answer can make a voice certain, or no longer certain
     }
 
     private void OnVoiceUndone(VoiceAnswer a)
     {
         if (!_roundPrints.TryGetValue(a.Round, out var prints)) return;
+        _voices.MarkAnswered(prints, undo: true);
         switch (a.Kind)
         {
             case VoiceAnswerKind.Friend: _voices.Remove(a.Name!, prints); break;
@@ -465,10 +541,7 @@ public sealed partial class MainViewModel
     /// <summary>A friend renamed or merged: their voice goes with them.</summary>
     internal void RenameVoice(string from, string to) => _voices.Rename(from, to);
 
-    /// <summary>The friend a voice belongs to, for titles: only when Mochi is sure, and never you.</summary>
-    private string? VoiceName(float[] print)
-    {
-        var best = _voices.Match(print).FirstOrDefault();
-        return best.Name is null || best.Score < KnowAt || best.Name == VoiceStore.MeKey ? null : best.Name;
-    }
+
+    /// <summary>The friend a voice belongs to, for titles: only when Mochi is certain, and never you.</summary>
+    private string? VoiceName(float[] print) => SureOf(print) is { } n && n != VoiceStore.MeKey ? n : null;
 }
