@@ -77,6 +77,10 @@ public sealed class WrappedPlan
     /// <summary>The soundtrack's beats on the video's timeline (seconds), and which of them start a bar.</summary>
     public List<double> Beats { get; set; } = new();
     public List<double> Downbeats { get; set; } = new();
+    /// <summary>Each beat's loudness in the song (0 quiet to 1 loudest), lined up with <see cref="Beats"/>.</summary>
+    public List<float> BeatEnergy { get; set; } = new();
+    /// <summary>Where the music drops (a bar where it suddenly gets much louder), on the video's timeline.</summary>
+    public List<double> Drops { get; set; } = new();
 }
 
 /// <summary>What a part of the video does with its clips.</summary>
@@ -129,7 +133,7 @@ public static class WrappedDirector
     /// <summary>How much music to bring, rounded up to the next half minute.</summary>
     public static double RecommendedMusicSeconds(double target) => Math.Ceiling(target / 30) * 30;
 
-    private sealed record Beat(double Time, bool Down, float Energy, float Drive);
+    internal sealed record Beat(double Time, bool Down, float Energy, float Drive);
 
     public static WrappedPlan Plan(IReadOnlyList<WrappedAct> acts, IReadOnlyList<double> cardSeconds, IReadOnlyList<SongInfo> songs)
     {
@@ -153,8 +157,16 @@ public static class WrappedDirector
         }
         plan.Beats = beats.Select(b => b.Time).ToList();
         plan.Downbeats = beats.Where(b => b.Down).Select(b => b.Time).ToList();
+        if (usable.Count > 0)
+        {
+            plan.BeatEnergy = beats.Select(b => b.Energy).ToList();
+            plan.Drops = Drops(beats);
+            // A cut right on the drop is the moment the whole video hits.
+            mustCut.AddRange(plan.Drops.Where(d => !mustCut.Any(c => Math.Abs(c - d) < 1)));
+            mustCut.Sort();
+        }
         CutPicture(plan, beats, mustCut, acts, cardSeconds);
-        Transitions(plan, mustCut);
+        Transitions(plan, mustCut, plan.Drops);
         return plan;
     }
 
@@ -314,6 +326,36 @@ public static class WrappedDirector
             if (i > 0) mustCut.Add(p.At + plan.Songs[i - 1].CrossfadeOut);
         }
         return grid;
+    }
+
+    /// <summary>The drops of one song on its own timeline (for Auto montage, where the song simply plays from the start).</summary>
+    public static List<double> DropsOf(SongInfo song)
+    {
+        var energy = song.Energy();
+        var beats = song.Beats.Select((t, i) => new Beat(t, i >= song.FirstDownbeat && (i - song.FirstDownbeat) % 4 == 0,
+            i < energy.Length ? energy[i] : 0.5f, i < song.BeatDrive.Count ? song.BeatDrive[i] : 1)).ToList();
+        return Drops(beats);
+    }
+
+    /// <summary>
+    /// The drops: bars where the music gets much louder than the four bars before (a chorus or a drop coming in),
+    /// at least eight bars apart.
+    /// </summary>
+    internal static List<double> Drops(IReadOnlyList<Beat> beats)
+    {
+        var drops = new List<double>();
+        var last = -1000;
+        for (var i = 0; i < beats.Count; i++)
+        {
+            if (!beats[i].Down || i < 16) continue;
+            var before = Enumerable.Range(i - 16, 16).Average(k => beats[k].Energy);
+            var after = Enumerable.Range(i, Math.Min(8, beats.Count - i)).Average(k => beats[k].Energy);
+            if (after - before < 0.25 || after < 0.55) continue;
+            if (i - last < 32) continue;
+            drops.Add(beats[i].Time);
+            last = i;
+        }
+        return drops;
     }
 
     // ---------- the picture ----------
@@ -584,7 +626,7 @@ public static class WrappedDirector
     /// How each shot comes in: cards slide and zoom, longer moments dissolve, the quick cuts stay straight cuts
     /// (with a white flash at the top of a phrase), and a change of song gets a short blur.
     /// </summary>
-    private static void Transitions(WrappedPlan plan, List<double> mustCut)
+    private static void Transitions(WrappedPlan plan, List<double> mustCut, List<double> drops)
     {
         var quickCount = 0;
         for (var i = 1; i < plan.Shots.Count; i++)
@@ -596,7 +638,9 @@ public static class WrappedDirector
                 (WrappedShotKind.Card, WrappedShotKind.Card) => ("slideleft", 0.45),
                 (_, WrappedShotKind.Card) => ("smoothup", 0.5),
                 (WrappedShotKind.Card, _) => ("zoomin", 0.45),
-                _ when cur.Story || prev.Story => ("fade", 0.35),
+                // The drop: a white flash that hands straight over, right on the beat.
+                _ when drops.Any(d => Math.Abs(d - cur.At) < 0.1) => ("fadewhite", 0.22),
+                _ when cur.Story || prev.Story => ("fade", 0.4),
                 _ when cur.Caption is not null => ("smoothleft", 0.3),
                 _ when mustCut.Any(c => Math.Abs(c - cur.At) < 0.1) => ("hblur", 0.35),
                 _ => (++quickCount % 8 == 0 ? "fadewhite" : null, 0.14),

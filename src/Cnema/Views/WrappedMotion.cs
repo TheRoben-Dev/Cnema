@@ -81,6 +81,13 @@ public sealed class WrappedMotionCard : Control
         return from + n * 0.45;
     }
 
+    private static int StableHash(string s)
+    {
+        var h = 17;
+        foreach (var ch in s) h = unchecked(h * 31 + ch);
+        return h & 0x7fffffff;
+    }
+
     // ---------- drawing ----------
 
     private FormattedText Text(string s, double size, Color c, FontWeight weight = FontWeight.Bold) =>
@@ -100,9 +107,19 @@ public sealed class WrappedMotionCard : Control
             var ft = Text(piece, size, c, weight);
             var k = OutBack(Phase(start + i * stagger, 0.5));
             var a = Clamp01(Phase(start + i * stagger, 0.25));
+            // Big words sit on a gentle wave and carry a teal offset shadow; small ones stay straight.
+            var big = size >= 120;
+            var wave = big ? Math.Sin(i * 0.9 + _t * 1.4) * size * 0.035 : 0;
             using (ctx.PushOpacity(a))
-            using (ctx.PushTransform(Matrix.CreateScale(fit, fit) * Matrix.CreateTranslation(x + cx * fit, y + (1 - k) * size * 0.6)))
+            using (ctx.PushTransform(Matrix.CreateScale(fit, fit) * Matrix.CreateTranslation(x + cx * fit, y + wave + (1 - k) * size * 0.6)))
+            {
+                if (big)
+                {
+                    var shade = Text(piece, size, Teal, weight);
+                    ctx.DrawText(shade, new Point(size * 0.045, size * 0.045));
+                }
                 ctx.DrawText(ft, new Point(0, 0));
+            }
             cx += ft.WidthIncludingTrailingWhitespace;
         }
         return whole.Height * fit;
@@ -118,6 +135,13 @@ public sealed class WrappedMotionCard : Control
         using (ctx.PushOpacity(k * opacity))
             ctx.DrawText(ft, new Point(x, y + (1 - k) * 40));
     }
+
+    /// <summary>Magenta into orange, left to right: accent bars.</summary>
+    private static IBrush Sweep() => new LinearGradientBrush
+    {
+        StartPoint = new RelativePoint(0, 0.5, RelativeUnit.Relative), EndPoint = new RelativePoint(1, 0.5, RelativeUnit.Relative),
+        GradientStops = { new GradientStop(Magenta, 0), new GradientStop(Orange, 1) },
+    };
 
     private static readonly Regex Number = new(@"^(\d[\d,.  ]*)(.*)$", RegexOptions.Compiled);
 
@@ -136,31 +160,124 @@ public sealed class WrappedMotionCard : Control
         return shown + (m.Groups[1].Value.EndsWith(' ') ? " " : "") + m.Groups[2].Value.TrimStart();
     }
 
-    /// <summary>Big flat circles that drift slowly and breathe on the beat, behind everything.</summary>
-    private void Shapes(DrawingContext ctx, int seed)
+    // ---------- the look ----------
+
+    private static readonly Color Magenta = Color.Parse("#FF3FC5"), Orange = Color.Parse("#FFA54F"), Blue = Color.Parse("#3B33FF"), Teal = Color.Parse("#3FE6D6");
+
+    private static Color Mix(Color a, Color b, double k) =>
+        Color.FromArgb((byte)(a.A + (b.A - a.A) * k), (byte)(a.R + (b.R - a.R) * k), (byte)(a.G + (b.G - a.G) * k), (byte)(a.B + (b.B - a.B) * k));
+    private static Color WithAlpha(Color c, byte a) => Color.FromArgb(a, c.R, c.G, c.B);
+
+    /// <summary>Film grain: a fixed field of light and dark specks, shown from another spot every frame so it lives.</summary>
+    private static readonly Lazy<WriteableBitmap> Grain = new(() =>
     {
-        var rng = new Random(seed);
-        var brush = new SolidColorBrush(_p.Shape);
-        var beat = Pulse(_beats);
-        for (var i = 0; i < 3; i++)
+        const int gw = 1280, gh = 720;
+        var bmp = new WriteableBitmap(new PixelSize(gw, gh), new Vector(96, 96), Avalonia.Platform.PixelFormat.Bgra8888, Avalonia.Platform.AlphaFormat.Premul);
+        using var fb = bmp.Lock();
+        var rng = new Random(7);
+        var row = new byte[gw * 4];
+        for (var y = 0; y < gh; y++)
         {
+            for (var x = 0; x < gw; x++)
+            {
+                var light = rng.Next(2) == 0;
+                var a = (byte)rng.Next(0, 46);
+                var v = (byte)(light ? a : 0); // premultiplied: white specks or black specks
+                row[x * 4] = v; row[x * 4 + 1] = v; row[x * 4 + 2] = v; row[x * 4 + 3] = a;
+            }
+            System.Runtime.InteropServices.Marshal.Copy(row, 0, fb.Address + y * fb.RowBytes, row.Length);
+        }
+        return bmp;
+    });
+
+    /// <summary>
+    /// The background: deep violet with big soft blends of violet, magenta, electric blue and orange drifting through
+    /// it, breathing on the bar, under a layer of grain (flat, but never one colour).
+    /// </summary>
+    private void Backdrop(DrawingContext ctx, int seed)
+    {
+        ctx.FillRectangle(new SolidColorBrush(_p.Bg), new Rect(0, 0, W, H));
+        var rng = new Random(seed);
+        var bar = Pulse(_downbeats.Length > 0 ? _downbeats : _beats, 0.4);
+        var colors = new[] { _p.Violet, Magenta, Blue, Orange, _p.Violet };
+        var shift = rng.Next(colors.Length);
+        for (var i = 0; i < 5; i++)
+        {
+            var c = colors[(i + shift) % colors.Length];
             var bx = rng.NextDouble() * W;
             var by = rng.NextDouble() * H;
-            var r = 260 + rng.NextDouble() * 320;
-            var sp = 0.15 + rng.NextDouble() * 0.2;
-            var x = bx + Math.Sin(_t * sp + i * 2.1) * 70;
-            var y = by + Math.Cos(_t * sp * 0.8 + i) * 50;
-            var grow = OutCubic(Phase(0.05 * i, 0.9));
-            var rr = r * grow * (1 + 0.03 * beat);
-            ctx.DrawEllipse(brush, null, new Point(x, y), rr, rr);
+            var r = 620 + rng.NextDouble() * 420;
+            var sp = 0.08 + rng.NextDouble() * 0.1;
+            var x = bx + Math.Sin(_t * sp + i * 1.7) * 260;
+            var y = by + Math.Cos(_t * sp * 0.9 + i * 0.6) * 160;
+            var rr = r * (1 + 0.05 * bar) * (0.85 + 0.15 * OutCubic(Phase(0.04 * i, 1.2)));
+            var brush = new RadialGradientBrush
+            {
+                GradientStops =
+                {
+                    new GradientStop(WithAlpha(c, 235), 0), new GradientStop(WithAlpha(c, 140), 0.42), new GradientStop(WithAlpha(c, 0), 1),
+                },
+            };
+            ctx.DrawEllipse(brush, null, new Point(x, y), rr, rr * 0.78);
+        }
+        // The grain, chunky like printed powder, from another spot every frame.
+        var frame = (int)Math.Round(_t * 30);
+        var g = Grain.Value;
+        var ox = (frame * 7919) % 320;
+        var oy = (frame * 104729) % 180;
+        ctx.DrawImage(g, new Rect(ox, oy, 960, 540), new Rect(0, 0, W, H));
+        if (bar > 0.01) ctx.FillRectangle(new SolidColorBrush(Color.FromArgb((byte)(26 * bar), 255, 255, 255)), new Rect(0, 0, W, H));
+    }
+
+    /// <summary>A glossy pearl: lit from the top left, a sharp highlight, a soft shadow under it.</summary>
+    private static void Pearl(DrawingContext ctx, Point c, double r, Color color)
+    {
+        ctx.DrawEllipse(new SolidColorBrush(Color.FromArgb(55, 10, 0, 30)), null, new Point(c.X + r * 0.18, c.Y + r * 0.32), r * 0.95, r * 0.9);
+        var body = new RadialGradientBrush
+        {
+            GradientOrigin = new RelativePoint(0.32, 0.28, RelativeUnit.Relative),
+            Center = new RelativePoint(0.42, 0.4, RelativeUnit.Relative),
+            RadiusX = new RelativeScalar(0.65, RelativeUnit.Relative), RadiusY = new RelativeScalar(0.65, RelativeUnit.Relative),
+            GradientStops =
+            {
+                new GradientStop(Mix(color, Colors.White, 0.75), 0), new GradientStop(color, 0.5), new GradientStop(Mix(color, Color.FromRgb(20, 0, 40), 0.55), 1),
+            },
+        };
+        ctx.DrawEllipse(body, null, c, r, r);
+        ctx.DrawEllipse(new SolidColorBrush(Color.FromArgb(225, 255, 255, 255)), null, new Point(c.X - r * 0.36, c.Y - r * 0.42), r * 0.2, r * 0.13);
+    }
+
+    /// <summary>Glossy pearls scattered around the edges, bobbing gently and bouncing on the beat.</summary>
+    private void Pearls(DrawingContext ctx, int seed)
+    {
+        var rng = new Random(seed ^ 0x5eed);
+        var beat = Pulse(_beats, 0.25);
+        var colors = new[] { _p.Violet, Magenta, Blue, Orange, Color.Parse("#F4E9FF") };
+        for (var i = 0; i < 18; i++)
+        {
+            // Mostly along the top, the right and the bottom, leaving the text side clear.
+            var edge = rng.Next(3);
+            var x = edge == 1 ? W * (0.72 + rng.NextDouble() * 0.26) : rng.NextDouble() * W;
+            var y = edge == 0 ? rng.NextDouble() * H * 0.2 : edge == 2 ? H * (0.82 + rng.NextDouble() * 0.16) : rng.NextDouble() * H;
+            var r = 14 + Math.Pow(rng.NextDouble(), 2) * 64;
+            // Never over the words: they sit on the left (on the right for the closing card).
+            var textSide = _card.Kind != "outro" || x > 700 - r;
+            if (textSide && y > 300 - r && y < 1010 + r) continue;
+            if (_card.Kind != "outro" && x < 700 + r && y < 300 + r && y > 60 - r) continue; // the little "savefile" mark
+            var at = 0.1 + rng.NextDouble() * 0.8;
+            var k = OutBack(Phase(at, 0.6));
+            if (k <= 0) continue;
+            var bob = Math.Sin(_t * (0.7 + rng.NextDouble() * 0.5) + i) * 10 - beat * r * 0.25;
+            Pearl(ctx, new Point(x, y + bob), r * k * (1 + 0.05 * beat), colors[rng.Next(colors.Length)]);
         }
     }
 
     public override void Render(DrawingContext ctx)
     {
-        ctx.FillRectangle(new SolidColorBrush(_p.Bg), new Rect(0, 0, W, H));
         var kind = _card.Kind;
-        Shapes(ctx, kind.GetHashCode() & 0xffff);
+        var seed = StableHash(kind + _card.Big);
+        Backdrop(ctx, seed);
+        if (kind is "intro" or "outro" or "chapter" or "squad" or "gem") Pearls(ctx, seed);
         var beat = Pulse(_downbeats.Length > 0 ? _downbeats : _beats, 0.3);
         const double x = 140;
 
@@ -194,7 +311,7 @@ public sealed class WrappedMotionCard : Control
                 Line(ctx, _card.Kicker, x, 360, 52, _p.Small, FontWeight.SemiBold, 0.1);
                 var h = Words(ctx, _card.Big, x, 430, 150, _p.Big, FontWeight.Bold, 0.25, 0.1, 1200);
                 var bar = OutCubic(Phase(0.7, 0.6));
-                ctx.DrawRectangle(new SolidColorBrush(_p.Violet), null, new RoundedRect(new Rect(x, 430 + h + 24, 260 * bar, 14), 7));
+                ctx.DrawRectangle(Sweep(), null, new RoundedRect(new Rect(x, 430 + h + 24, 260 * bar, 14), 7));
                 break;
             }
             case "squad":
@@ -216,7 +333,7 @@ public sealed class WrappedMotionCard : Control
                         var cy = y + r;
                         using (ctx.PushTransform(Matrix.CreateTranslation(-(x + r), -cy) * Matrix.CreateScale(k, k) * Matrix.CreateTranslation(x + r, cy)))
                         {
-                            ctx.DrawEllipse(new SolidColorBrush(_p.Violet), null, new Point(x + r, cy), r, r);
+                            Pearl(ctx, new Point(x + r, cy), r, i % 3 == 0 ? _p.Violet : i % 3 == 1 ? Magenta : Blue);
                             var initial = Text(names[i][..1].ToUpperInvariant(), size * 0.5, Colors.White);
                             ctx.DrawText(initial, new Point(x + r - initial.Width / 2, cy - initial.Height / 2));
                         }
@@ -250,8 +367,8 @@ public sealed class WrappedMotionCard : Control
                     var share = Regex.Match(_card.Small, @"(\d+)\s?%");
                     var f = share.Success ? int.Parse(share.Groups[1].Value, CultureInfo.InvariantCulture) / 100.0 : 0.5;
                     var grow = OutCubic(Phase(1.0, 1.1));
-                    ctx.DrawRectangle(new SolidColorBrush(_p.Shape), null, new RoundedRect(new Rect(x, 690, W - 2 * x, 18), 9));
-                    ctx.DrawRectangle(new SolidColorBrush(_p.Big), null, new RoundedRect(new Rect(x, 690, Math.Max(18, (W - 2 * x) * f * grow), 18), 9));
+                    ctx.DrawRectangle(new SolidColorBrush(Color.FromArgb(46, 255, 255, 255)), null, new RoundedRect(new Rect(x, 690, W - 2 * x, 18), 9));
+                    ctx.DrawRectangle(Sweep(), null, new RoundedRect(new Rect(x, 690, Math.Max(18, (W - 2 * x) * f * grow), 18), 9));
                     Line(ctx, _card.Small, x, 740, 50, _p.Small, FontWeight.Normal, 1.2, 0.9);
                 }
                 else
@@ -272,18 +389,24 @@ public static class WrappedMotion
     public static WrappedPalette PaletteFor(string kind)
     {
         var dark = ThemeService.Resolve(ThemeService.Schemes[0], false);
-        var light = ThemeService.Resolve(ThemeService.Schemes[0], true);
         var violet = Color.Parse(dark.Accent);
-        var night = Color.Parse(dark.Bg0);
-        var paper = Color.Parse(light.Bg0);
-        Color Mix(Color a, Color b, double k) => Color.FromRgb((byte)(a.R + (b.R - a.R) * k), (byte)(a.G + (b.G - a.G) * k), (byte)(a.B + (b.B - a.B) * k));
-        return kind switch
-        {
-            "intro" or "squad" or "outro" or "chapter" or "gem" => new(night, Mix(night, violet, 0.14), Colors.White, Colors.White, Color.Parse(dark.Highlight), violet),
-            "game" or "laughs" or "personality" => new(paper, Mix(paper, violet, 0.12), Color.Parse(light.Text), Color.Parse(light.Accent), Color.Parse(light.Text), violet),
-            _ => new(violet, Mix(violet, Colors.White, 0.1), Colors.White, Colors.White, Colors.White, Mix(violet, night, 0.35)),
-        };
+        // Every card on deep violet with colour blended through it: white type, a soft pink for the small lines.
+        var deep = Color.FromRgb(0x1C, 0x0A, 0x3C);
+        return new(deep, violet, Colors.White, Colors.White, Color.Parse("#FFD6F4"), violet);
     }
+
+    /// <summary>Mochi as a drop of glossy liquid: lighter where the light hits, deep at the edges.</summary>
+    private static IBrush GlossyBody(Color violet) => new RadialGradientBrush
+    {
+        GradientOrigin = new RelativePoint(0.35, 0.3, RelativeUnit.Relative), Center = new RelativePoint(0.45, 0.45, RelativeUnit.Relative),
+        RadiusX = new RelativeScalar(0.7, RelativeUnit.Relative), RadiusY = new RelativeScalar(0.7, RelativeUnit.Relative),
+        GradientStops =
+        {
+            new GradientStop(Color.FromRgb((byte)(violet.R + (255 - violet.R) * 0.45), (byte)(violet.G + (255 - violet.G) * 0.3), (byte)(violet.B + (255 - violet.B) * 0.45)), 0),
+            new GradientStop(violet, 0.5),
+            new GradientStop(Color.FromRgb((byte)(violet.R * 0.45), (byte)(violet.G * 0.3), (byte)(violet.B * 0.6)), 1),
+        },
+    };
 
     /// <summary>The card, plus the blob on the cards that have one, laid out at 1920×1080.</summary>
     public static (Control Page, WrappedMotionCard Card, BlobMascot? Blob) Build(WrappedCard card, double length, IReadOnlyList<double> beats, IReadOnlyList<double> downbeats)
@@ -299,7 +422,8 @@ public static class WrappedMotion
             {
                 Width = card.Kind switch { "intro" => 520, "chapter" => 360, _ => 460 },
                 Height = card.Kind switch { "intro" => 470, "chapter" => 325, _ => 415 },
-                Body = new SolidColorBrush(Color.Parse(ThemeService.Resolve(ThemeService.Schemes[0], false).Accent)),
+                Body = GlossyBody(Color.Parse(ThemeService.Resolve(ThemeService.Schemes[0], false).Accent)),
+                Gloss = true,
                 Shadow = new SolidColorBrush(Colors.Black, 0.35),
                 HorizontalAlignment = card.Kind == "outro" ? HorizontalAlignment.Left : HorizontalAlignment.Right,
                 VerticalAlignment = VerticalAlignment.Bottom,
@@ -404,14 +528,23 @@ public static class WrappedMotion
     {
         var violet = Color.Parse(ThemeService.Resolve(ThemeService.Schemes[0], false).Accent);
         var big = caption.StartsWith('#');
-        var text = new TextBlock
+        TextBlock Label(IBrush brush, double dx) => new()
         {
-            Text = caption, FontSize = big ? 120 : 52, FontWeight = FontWeight.Bold, Foreground = Brushes.White,
+            Text = caption, FontSize = big ? 120 : 52, FontWeight = FontWeight.Bold, Foreground = brush,
             FontFamily = new FontFamily("fonts:Inter#Inter, $Default"),
+            RenderTransform = new TranslateTransform(dx, dx),
         };
+        var size = big ? 120 : 52;
+        var text = new Grid { Children = { Label(new SolidColorBrush(Color.Parse("#3FE6D6")), size * 0.045), Label(Brushes.White, 0) } };
         var tag = new Border
         {
-            Child = text, Background = new SolidColorBrush(violet), CornerRadius = new CornerRadius(big ? 28 : 18),
+            Child = text, CornerRadius = new CornerRadius(big ? 28 : 18),
+            Background = new LinearGradientBrush
+            {
+                StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative), EndPoint = new RelativePoint(1, 1, RelativeUnit.Relative),
+                GradientStops = { new GradientStop(violet, 0), new GradientStop(Color.Parse("#FF3FC5"), 1) },
+            },
+            BorderBrush = new SolidColorBrush(Color.FromArgb(90, 255, 255, 255)), BorderThickness = new Thickness(2),
             Padding = big ? new Thickness(44, 18) : new Thickness(30, 14),
             HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Bottom,
             Margin = new Thickness(110, 0, 0, 110),
