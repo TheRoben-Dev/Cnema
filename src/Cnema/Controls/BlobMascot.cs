@@ -47,6 +47,8 @@ public sealed class BlobMascot : Control
 {
     /// <summary>The shadow under the blob; the theme's Line colour when not set.</summary>
     public IBrush? Shadow { get; set; }
+    /// <summary>Draws a glossy highlight over the body (the Wrapped video's glossy look); off in the app.</summary>
+    public bool Gloss { get; set; }
 
     public static readonly StyledProperty<IBrush?> BodyProperty = AvaloniaProperty.Register<BlobMascot, IBrush?>(nameof(Body));
     public static readonly StyledProperty<bool> StillProperty = AvaloniaProperty.Register<BlobMascot, bool>(nameof(Still));
@@ -597,7 +599,25 @@ public sealed class BlobMascot : Control
             var height = Math.Clamp((ry - y) / (2 * ry), 0, 1);
             pts[i] = new Point(cx + x + lean * height * height, cy + y);
         }
-        ctx.DrawGeometry(body, null, Smooth(pts));
+        var outline = Smooth(pts);
+        ctx.DrawGeometry(body, null, outline);
+        if (Gloss)
+        {
+            // Glossy, like a drop of liquid: a soft light patch top left and a sharp little highlight inside it.
+            using (ctx.PushGeometryClip(outline))
+            {
+                var hl = new RadialGradientBrush
+                {
+                    Center = new RelativePoint(0.5, 0.5, RelativeUnit.Relative), GradientOrigin = new RelativePoint(0.5, 0.5, RelativeUnit.Relative),
+                    RadiusX = new RelativeScalar(0.5, RelativeUnit.Relative), RadiusY = new RelativeScalar(0.5, RelativeUnit.Relative),
+                    GradientStops = { new GradientStop(Color.FromArgb(150, 255, 255, 255), 0), new GradientStop(Color.FromArgb(0, 255, 255, 255), 1) },
+                };
+                ctx.DrawEllipse(hl, null, new Point(cx - rx * 0.32, cy - ry * 0.42), rx * 0.55, ry * 0.4);
+                ctx.DrawEllipse(new SolidColorBrush(Color.FromArgb(210, 255, 255, 255)), null, new Point(cx - rx * 0.42, cy - ry * 0.55), rx * 0.11, ry * 0.07);
+                // A little reflected light along the bottom edge.
+                ctx.DrawEllipse(new SolidColorBrush(Color.FromArgb(40, 255, 160, 230)), null, new Point(cx + rx * 0.1, cy + ry * 0.85), rx * 0.7, ry * 0.18);
+            }
+        }
 
         foreach (var p in _drops)
         {

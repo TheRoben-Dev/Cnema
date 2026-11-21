@@ -237,6 +237,8 @@ public sealed class FeatureSettings
     public bool RecoverSessions { get; set; } = true;
     /// <summary>Auto montage: the best moments of several videos stitched with transitions.</summary>
     public bool Montage { get; set; } = true;
+    /// <summary>Beat effects: montages and Wrapped with a song punch, flash and glow on its beats.</summary>
+    public bool BeatFx { get; set; } = true;
     /// <summary>A "Worth a rewatch" row of older favourites and forgotten clips at the top of the library.</summary>
     public bool Rewatch { get; set; } = true;
     /// <summary>Friend picks: your closest friends' names above Worth a rewatch; pick one for your best clips together.</summary>
