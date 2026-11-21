@@ -28,6 +28,7 @@ public sealed partial class MainViewModel
         OnPropertyChanged(nameof(ShowBinNav));
         Player.RefreshTrimSuggestion();
         SmartCrop.Enabled = Features.SmartCrop;
+        CutGuide.Enabled = Features.SmartCuts;
         ScreenWords.Enabled = Features.ScreenText;
         if (ThumbnailService.SmartThumbs != Features.SmartThumbs)
         {

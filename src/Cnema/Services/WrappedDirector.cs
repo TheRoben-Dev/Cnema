@@ -1,3 +1,5 @@
+using Cnema.Models;
+
 namespace Cnema.Services;
 
 /// <summary>A moment that could go in the year's video: where it is, its peak, how good it is, where people talk or laugh.</summary>
@@ -14,6 +16,10 @@ public sealed record WrappedMoment(string Path, long DurationMs, long FocusMs, d
     /// <summary>Where the moment that gets the laugh starts (ms): the line or the play before it.</summary>
     public long SetupMs { get; init; } = -1;
     public bool HasLaugh => LaughToMs > LaughFromMs && LaughFromMs >= 0;
+    /// <summary>What the smart passes say about where to cut it (null: smart cuts off, or nothing known).</summary>
+    public CutGuide? Guide { get; init; }
+    /// <summary>What it looks like to the visual model (the frames averaged), so look-alikes aren't put side by side.</summary>
+    public float[]? Look { get; init; }
 }
 
 public enum WrappedShotKind { Card, Clip }
@@ -359,6 +365,7 @@ public static class WrappedDirector
         }
 
         var used = new Dictionary<WrappedMoment, int>();
+        WrappedMoment? lastPick = null;
         var shots = plan.Shots;
         double cursor = 0;
         var picked = 0;
@@ -400,7 +407,7 @@ public static class WrappedDirector
                     {
                         var m = act.Pool[i];
                         var want = Math.Min(Bars(StoryWant(act, m) * squeeze), Math.Max(quick, m.DurationMs / 1000.0 - 0.2));
-                        var end = Math.Min(Snap(cursor + want, cursor + 1.5), limit);
+                        var end = Math.Min(BestEnd(cursor, want, m, limit), limit);
                         if (end - cursor < 1) break;
                         var shot = Clip(cursor, end, m, story: true);
                         shot.Caption = act.Captions?.ElementAtOrDefault(i);
@@ -424,6 +431,13 @@ public static class WrappedDirector
                         end = Math.Min(end, limit);
                         if (end - cursor < 0.5) break;
                         var m = Pick(act.Pool, (long)((end - cursor) * 1000), story);
+                        if (story && m.Guide is not null)
+                        {
+                            // A longer moment ends on the bar line where what's being said (or laughed at) is over.
+                            var want = m.HasLaugh ? Math.Clamp(StoryWant(act, m), 6, 14) : end - cursor;
+                            var better = BestEnd(cursor, want, m, Math.Min(limit, Math.Max(stop, end) + bar));
+                            if (better - cursor >= 1.5 && better <= limit) end = better;
+                        }
                         shots.Add(Clip(cursor, end, m, story));
                         cursor = end;
                         n++;
@@ -434,18 +448,36 @@ public static class WrappedDirector
         }
         plan.Moments = used.Count;
 
+        // The bar line to end a longer moment on: about as long as it wants, where the cut hurts least
+        // (not mid-sentence, not in the middle of a laugh). Without a guide, the next bar line.
+        double BestEnd(double at, double want, WrappedMoment m, double max)
+        {
+            var plainEnd = Snap(at + want, at + 1.5);
+            if (m.Guide is null) return plainEnd;
+            var room = m.DurationMs / 1000.0 - 0.2;
+            var choices = downs.Where(d => d - at >= 1.5 && d <= max + 0.05 && Math.Abs(d - at - want) <= bar * 1.1 && d - at <= Math.Max(room, quick)).ToList();
+            if (choices.Count == 0) return plainEnd;
+            return choices.MinBy(d => Aim(m, at, d - at, story: true).Cost + 0.15 * Math.Abs(d - at - want) / bar);
+        }
+
         WrappedMoment Pick(IReadOnlyList<WrappedMoment> pool, long needMs, bool story)
         {
             var fresh = pool.Where(m => !used.ContainsKey(m)).ToList();
             if (story)
             {
                 // A longer moment is best when people talk or laugh in it.
-                var talk = fresh.Where(m => m.DurationMs >= needMs - 500).OrderByDescending(m => (m.HasLaugh ? 3 : m.Voice.Count > 0 ? 2 : 0) + m.Score).FirstOrDefault();
+                var talk = fresh.Where(m => m.DurationMs >= needMs - 500)
+                    .OrderByDescending(m => (m.HasLaugh ? 3 : m.Voice.Count > 0 ? 2 : 0) + m.Score + (m.Guide is { Voices.Count: > 0 } ? 0.5 : 0)).FirstOrDefault();
                 if (talk is not null) return talk;
             }
             else
             {
                 // A laugh needs its setup, which a quick cut doesn't have time for: those wait for a longer slot.
+                if (CutGuide.Enabled)
+                {
+                    var some = fresh.Where(m => !m.HasLaugh && m.DurationMs >= needMs - 100).Take(6).ToList();
+                    if (some.Count > 0) return Varied(some);
+                }
                 var plain = fresh.FirstOrDefault(m => !m.HasLaugh && m.DurationMs >= needMs - 100);
                 if (plain is not null) return plain;
             }
@@ -454,31 +486,78 @@ public static class WrappedDirector
                    ?? pool.OrderBy(m => used.GetValueOrDefault(m)).ThenByDescending(m => m.Score).First();
         }
 
-        WrappedShot Clip(double at, double end, WrappedMoment m, bool story)
+        // Of the best few, the one that looks least like the shot before (the visual model), and another game if it can.
+        WrappedMoment Varied(List<WrappedMoment> some)
         {
-            var shot = new WrappedShot { Kind = WrappedShotKind.Clip, At = at, Length = end - at, Energy = EnergyAt(at, end), Story = story };
-            var needMs = (long)(shot.Length * 1000);
+            if (lastPick is null || some.Count == 1) return some[0];
+            var otherGame = some.Any(m => !string.Equals(m.Game, lastPick.Game, StringComparison.OrdinalIgnoreCase));
+            return some.Select((m, i) =>
+            {
+                var value = -i * 0.25;
+                if (m.Look is { } look && lastPick.Look is { } before) value -= Math.Max(0, VisualInfo.Dot(look, before) - 0.8) * 7.5;
+                if (otherGame && m.Game is not null && string.Equals(m.Game, lastPick.Game, StringComparison.OrdinalIgnoreCase)) value -= 0.2;
+                return (m, value);
+            }).MaxBy(x => x.value).m;
+        }
+
+        // Where in the clip a shot starts, and how much its cuts hurt (0: both in a pause).
+        (long Start, double Cost) Aim(WrappedMoment m, double at, double length, bool story)
+        {
+            var needMs = (long)(length * 1000);
             var round = used.GetValueOrDefault(m);
-            used[m] = round + 1;
-            picked++;
+            var g = m.Guide;
             long start;
             if (story && m.HasLaugh)
             {
                 // The joke and the laugh: from what set it up, and the laugh plays out before the cut.
                 start = Math.Max(m.SetupMs, m.LaughToMs + 1200 - needMs);
+                if (g is not null && round == 0)
+                {
+                    var lo = m.LaughToMs + 600 - needMs;
+                    return lo <= m.SetupMs ? g.Place(needMs, start, lo, m.SetupMs)
+                        : g.Place(needMs, start, start - needMs / 8, start + needMs / 8);
+                }
             }
             else if (story)
             {
                 // Lead in a little before the peak so the moment has room to land.
                 start = m.FocusMs - (long)(needMs * 0.35);
+                if (g is not null && round == 0)
+                    return g.Place(needMs, start, m.FocusMs - (long)(needMs * 0.8), m.FocusMs - (long)(needMs * 0.12));
             }
             else
             {
                 // The peak lands on the strongest beat in the first part of the shot.
-                var hit = beats.Where(b => b.Time >= at && b.Time < at + shot.Length * 0.6).OrderByDescending(b => b.Drive).Select(b => b.Time - at).FirstOrDefault(shot.Length * 0.4);
+                var hits = beats.Where(b => b.Time >= at && b.Time < at + length * 0.6).ToList();
+                var hit = hits.OrderByDescending(b => b.Drive).Select(b => b.Time - at).FirstOrDefault(length * 0.4);
                 start = m.FocusMs - (long)(hit * 1000);
+                if (g is not null && round == 0 && hits.Count > 0)
+                {
+                    // Any beat will do for the peak, so take the one that keeps both cuts out of a sentence or a laugh.
+                    var drive = Math.Max(0.001, hits.Max(b => b.Drive));
+                    var best = hits.Select(b =>
+                    {
+                        var s = Math.Clamp(m.FocusMs - (long)((b.Time - at) * 1000), 0, Math.Max(0, m.DurationMs - needMs));
+                        var cost = g.CutCost(s, needMs);
+                        return (s, cost, score: cost - b.Drive / drive * 0.3);
+                    }).MinBy(x => x.score);
+                    return (best.s, best.cost);
+                }
             }
             if (round > 0) start += round * (long)(needMs * 1.2) * (round % 2 == 1 ? -1 : 1); // a reused clip shows another part
+            start = Math.Clamp(start, 0, Math.Max(0, m.DurationMs - needMs));
+            if (g is not null) return g.Place(needMs, start, start - needMs / 4, start + needMs / 4);
+            return (start, 0);
+        }
+
+        WrappedShot Clip(double at, double end, WrappedMoment m, bool story)
+        {
+            var shot = new WrappedShot { Kind = WrappedShotKind.Clip, At = at, Length = end - at, Energy = EnergyAt(at, end), Story = story };
+            var needMs = (long)(shot.Length * 1000);
+            var start = Aim(m, at, shot.Length, story).Start;
+            used[m] = used.GetValueOrDefault(m) + 1;
+            lastPick = m;
+            picked++;
             start = Math.Clamp(start, 0, Math.Max(0, m.DurationMs - needMs));
             if (!story && m.HasLaugh && start < m.LaughToMs && start + needMs > m.LaughFromMs)
             {
@@ -490,6 +569,8 @@ public static class WrappedDirector
             shot.StartMs = start;
             var talk = m.Voice.Sum(v => Math.Max(0, Math.Min(v.To, start + needMs) - Math.Max(v.From, start)));
             shot.Voice = talk >= Math.Min(800, needMs * 0.15);
+            // A quick shot that still catches half a sentence keeps the music up over it: chopped words aren't heard.
+            if (!story && m.Guide is { } g && g.CutsTalk(start, needMs)) shot.Voice = false;
             shot.Move = story ? WrappedMove.PushIn : WrappedMove.PullOut;
             return shot;
         }
