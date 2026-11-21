@@ -460,7 +460,7 @@ public sealed partial class MainViewModel
 
     /// <summary>Background work freezes while anything plays in Savefile (a video, or a voice snippet).</summary>
     private void UpdateBackgroundHold() =>
-        BackgroundHold.Set((Player.IsPlaying && Player.Current is not null) || _voicePlaying);
+        BackgroundHold.Set((Player.IsPlaying && Player.Current is not null) || Player.IsStopping || _voicePlaying);
 
     /// <summary>A friend renamed or merged: their voice goes with them.</summary>
     internal void RenameVoice(string from, string to) => _voices.Rename(from, to);

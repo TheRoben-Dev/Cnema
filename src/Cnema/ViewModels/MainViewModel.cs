@@ -535,7 +535,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         // Background work (indexing, Wrapped, Make room) freezes while a video plays, so playback never stutters or crackles.
         Player.PropertyChanged += (_, e) =>
         {
-            if (e.PropertyName is nameof(PlayerViewModel.IsPlaying) or nameof(PlayerViewModel.Current))
+            if (e.PropertyName is nameof(PlayerViewModel.IsPlaying) or nameof(PlayerViewModel.IsStopping) or nameof(PlayerViewModel.Current))
                 UpdateBackgroundHold();
         };
         Exports.Finished += OnExportFinished;

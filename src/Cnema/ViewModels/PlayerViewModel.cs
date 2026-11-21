@@ -36,6 +36,54 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
     private CancellationTokenSource? _exportCts;
     private bool _stopAtOut;
     private Task _pendingStop = Task.CompletedTask;
+    private int _stops;
+
+    /// <summary>
+    /// A video is still winding down after a close or a switch. Background work stays frozen until it has,
+    /// so ffmpeg waking up doesn't starve libVLC's last audio buffers (that crackled when closing the player).
+    /// </summary>
+    [ObservableProperty] private bool _isStopping;
+
+    /// <summary>
+    /// Stops off the UI thread (Stop() blocks until the decoder threads exit), fading the sound out first:
+    /// cutting audio mid-wave pops, and on macOS the half-drained output buffer crackles.
+    /// </summary>
+    private Task StopSoftly(MediaPlayer p, int fadeMs)
+    {
+        Interlocked.Increment(ref _stops);
+        IsStopping = true;
+        var volume = Volume;
+        var muted = IsMuted;
+        var fade = p.IsPlaying && !muted && volume > 0;
+        var task = Task.Run(() =>
+        {
+            try
+            {
+                if (fade)
+                {
+                    const int steps = 10;
+                    for (var i = 1; i <= steps; i++)
+                    {
+                        // Equal-power curve: sounds like a smooth fade rather than a drop at the end.
+                        var g = Math.Cos(i / (double)steps * Math.PI / 2);
+                        p.Volume = (int)Math.Round(volume * g);
+                        Thread.Sleep(fadeMs / steps);
+                    }
+                    p.Mute = true;
+                    Thread.Sleep(40); // let the silent buffers reach the speakers
+                }
+                p.Stop();
+            }
+            finally
+            {
+                // The next video gets its volume back from ApplyAudio when it starts playing.
+                try { p.Mute = muted; p.Volume = volume; } catch { /* stopped player; Playing restores it */ }
+            }
+        });
+        task.ContinueWith(_ => Ui(() => { if (Interlocked.Decrement(ref _stops) == 0) IsStopping = false; }),
+            TaskScheduler.Default);
+        return task;
+    }
 
     public VideoFrameBuffer? Frames { get; }
     public static double[] Rates { get; } = { 0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 3.0, 4.0 };
@@ -291,8 +339,7 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
         // while the new file starts; a clean stop, off the UI thread, gives the new file a fresh start.
         if (_active && _player.State is not (VLCState.Stopped or VLCState.NothingSpecial))
         {
-            var p = _player;
-            _pendingStop = Task.Run(() => p.Stop());
+            _pendingStop = StopSoftly(_player, 90);
         }
         _active = true;
         // A close, or another open, while the old video is still stopping wins over this one.
@@ -370,9 +417,7 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
         }
         _active = false;
         _exportCts?.Cancel();
-        // Stop() blocks until the decoder threads exit; keep that off the UI thread.
-        var p = _player;
-        if (p is not null) _pendingStop = Task.Run(() => p.Stop());
+        if (_player is not null) _pendingStop = StopSoftly(_player, 150);
         IsPlaying = false;
         _settings.Save();
     }

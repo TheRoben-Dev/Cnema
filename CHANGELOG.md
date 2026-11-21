@@ -2,6 +2,9 @@
 
 What changed in each Savefile (formerly Cnema) release. The app shows the entries you have not seen yet after it updates.
 
+## 0.50.2
+- No more crackle when you close the Quick player or skip to the next clip. The sound now fades out quickly instead of being cut off mid-wave, and background indexing stays paused until the video has fully stopped, so it can't steal time from the last bit of audio.
+
 ## 0.50.1
 - Who's that? now opens on top of Settings instead of behind it, and closing it (or pressing Esc) takes you back to Settings.
 - Fixed Savefile freezing around the voice game: when a snippet (or any video) started playing, the background indexing was stopped right on the window's own thread, which could lock the window up until it finished. It now stops in the background, and the snippet player talks to VLC off the window's thread too.
