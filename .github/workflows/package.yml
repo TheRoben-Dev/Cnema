@@ -67,9 +67,11 @@ jobs:
               -c:v libx264 -pix_fmt yuv420p -c:a aac -shortest "$clips/clip$i.mp4"
           done
           folder="$clips"; command -v cygpath >/dev/null && folder="$(cygpath -m "$clips")"
-          printf '{"Folders":["%s"]}' "$folder" > "dist/Savefile Data/settings.json"
-          # The update check that runs first at every start goes to the real release feed (this build is newer, so
-          # it carries on), and a start that worked must clear its "start in progress" marker.
+          # Install updates automatically is off: a pull request build is version 0.0.0, so it would install the
+          # latest release over itself mid-test (and the check below would find no app).
+          printf '{"Folders":["%s"],"AutoUpdate":false}' "$folder" > "dist/Savefile Data/settings.json"
+          # The update check that runs first at every start still goes to the real release feed, and a start that
+          # worked must clear its "start in progress" marker.
           status=0; CNEMA_UPDATE_API=https://api.github.com/repos/TheRoben-Dev/Cnema-releases/releases/latest "$D/Cnema" --selftest-start || status=$?
           [ -f "dist/Savefile Data/start-pending" ] && { echo "The start marker was left behind"; status=1; }
           log="dist/Savefile Data/logs/cnema.log"; [ -f "$log" ] && cat "$log"

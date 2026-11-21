@@ -569,7 +569,7 @@ public sealed partial class SettingsViewModel : ObservableObject
             Highlights = FeatureHighlights, SmartTitles = FeatureSmartTitles, AutoTitles = FeatureAutoTitles && FeatureSmartTitles,
             Speech = FeatureSpeech, Visual = FeatureVisual, Mascot = FeatureMascot, MakeRoom = FeatureMakeRoom, RewatchReminders = FeatureRewatchReminders, Badges = FeatureBadges, Playtime = FeaturePlaytime, MochiSaves = FeatureMochiSaves, MochiEmpty = FeatureMochiEmpty, MochiBadges = FeatureMochiBadges, MochiSeasonal = FeatureMochiSeasonal, MochiSleepy = FeatureMochiSleepy, MochiFollow = FeatureMochiFollow, MochiPoke = FeatureMochiPoke, MochiBackup = FeatureMochiBackup, MochiHelper = FeatureMochiHelper,
             Splash = FeatureSplash, Laughs = FeatureLaughs, ScreenText = FeatureScreenText, Voices = FeatureVoices, VoicePoints = FeatureVoicePoints, Wrapped = FeatureWrapped,
-            SmartThumbs = FeatureSmartThumbs, TrimSuggestions = FeatureTrimSuggestions, SmartCrop = FeatureSmartCrop,
+            SmartThumbs = FeatureSmartThumbs, TrimSuggestions = FeatureTrimSuggestions, SmartCrop = FeatureSmartCrop, SmartCuts = FeatureSmartCuts,
         };
         WriteEditing(settings);
         // Switching a module off switches off what it was doing, not only its buttons.

@@ -546,6 +546,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
         _library.FoldersChanged += () => Dispatcher.UIThread.Post(() => _ = RescanAsync());
         _library.GameTagger = GameTagFor;
+        // Montages and Wrapped only lean on a voice when it's recognised for sure, never a guess.
+        CutGuide.NameOf = s => Features.Voices && s.Ms >= TagMs && SureOf(s.Vec) is { } name && name != VoiceStore.MeKey ? name : null;
         MontageService.KnownBestMoment = path => Features.Highlights && _items.TryGetValue(path, out var v) && v.Entry.Smart is { BestMs: >= 0 } sm ? sm.BestMs : null;
         Player.Finished += OnPlayerFinished;
         VideoItemViewModel.BackedUp = e => Features.Backup && _backup.IsBackedUp(e);
@@ -587,6 +589,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         PlayerViewModel.TrimSuggestions = Features.TrimSuggestions;
         ThumbnailService.SmartThumbs = Features.SmartThumbs;
         SmartCrop.Enabled = Features.SmartCrop;
+        CutGuide.Enabled = Features.SmartCuts;
         ScreenWords.Enabled = Features.ScreenText;
         Chapters.Enabled = Features.Chapters;
         Player.Queue = Features.ExportQueue ? Exports : null;

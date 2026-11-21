@@ -2,6 +2,10 @@
 
 What changed in each Savefile (formerly Cnema) release. The app shows the entries you have not seen yet after it updates.
 
+## 0.52.0
+- Auto montage and Wrapped now use everything the smart features know about a clip to cut it, new in Settings › Smart features › Smart cuts (on by default). A cut no longer lands in the middle of a sentence: the transcript's lines are joined into sentences, and each piece starts and ends in a pause. A laugh comes with the joke that set it off, a cheer or a banner on screen (VICTORY, ACE, a penta kill) gets to play out, and moments you marked with the hotkey count the most. Clips with friends recognised by voice (only when Savefile is sure) are picked a bit more often, and with the visual model on, two look-alike clips aren't put side by side.
+- In Wrapped, cuts still land on the beat: the director picks the beat that keeps the cut out of a sentence, and ends each longer moment on the bar line where what's being said is over. When a quick shot still catches half a sentence, the music stays up over it so chopped words aren't heard.
+- Montage pieces can be up to half longer than the length you picked, so a sentence or a joke isn't cut short. Whatever smart feature is off, or hasn't looked at a clip yet, is simply left out; with nothing known, montages cut as before.
 ## 0.51.1
 - No more crackle when you close the Quick player or skip to the next clip. The sound now fades out quickly instead of being cut off mid-wave, and background indexing stays paused until the video has fully stopped, so it can't steal time from the last bit of audio.
 

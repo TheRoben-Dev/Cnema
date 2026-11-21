@@ -61,6 +61,7 @@ public sealed partial class SettingsViewModel
     [ObservableProperty] private bool _featureWrapped;
     [ObservableProperty] private bool _featureSmartThumbs;
     [ObservableProperty] private bool _featureSmartCrop;
+    [ObservableProperty] private bool _featureSmartCuts;
     [ObservableProperty] private bool _featureTrimSuggestions;
     [ObservableProperty] private bool _featureSplash;
     [ObservableProperty] private bool _featureSmartTitles;
@@ -145,6 +146,7 @@ public sealed partial class SettingsViewModel
         FeatureWrapped = f.Wrapped;
         FeatureSmartThumbs = f.SmartThumbs;
         FeatureSmartCrop = f.SmartCrop;
+        FeatureSmartCuts = f.SmartCuts;
         FeatureTrimSuggestions = f.TrimSuggestions;
         FeatureSplash = f.Splash;
         var e = settings.Effects;

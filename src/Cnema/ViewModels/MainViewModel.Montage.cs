@@ -60,7 +60,11 @@ public sealed partial class MainViewModel
     private void MakeMontage()
     {
         if (Montage is not { CanMake: true } m) return;
-        var videos = m.Videos().Select(v => (v.Entry.Path, v.Entry.DurationMs)).ToList();
+        var picked = m.Videos();
+        var videos = picked.Select(v => (v.Entry.Path, v.Entry.DurationMs)).ToList();
+        // What the smart passes know about each clip, read now on this thread (the library can change meanwhile).
+        var guides = picked.Select(v => (v.Entry.Path, G: CutGuide.For(v.Entry))).Where(x => x.G is not null)
+            .GroupBy(x => x.Path, StringComparer.Ordinal).ToDictionary(g => g.Key, g => g.First().G, StringComparer.Ordinal);
         var seconds = (int)m.Length.Value;
         var transition = (MontageTransition)m.Transition.Value;
         var music = m.HasMusic ? new MusicSpec(m.MusicPath!, (double)m.MusicVolume.Value, m.MusicDuck) : null;
@@ -84,7 +88,7 @@ public sealed partial class MainViewModel
         Exports.Add(output, P(videos.Count, "Montage of {0} video", "Montage of {0} videos"), async (progress, ct) =>
         {
             Directory.CreateDirectory(dir);
-            var parts = await MontageService.PlanAsync(videos, seconds, ct);
+            var parts = await MontageService.PlanAsync(videos, seconds, ct, p => guides.GetValueOrDefault(p));
             progress.Report(0.05);
             var inner = new Progress<double>(p => progress.Report(0.05 + p * 0.95));
             await MontageService.RenderAsync(new MontageJob(parts, transition, music, output), inner, ct);

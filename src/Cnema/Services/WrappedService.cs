@@ -48,17 +48,26 @@ public static class WrappedService
     {
         var laugh = e.Sound is { Laugh.Count: > 1 } s ? s.LaughSeconds : 0;
         var hype = e.Sound is { Hype.Count: > 1 } h ? h.HypeSeconds : 0;
-        return (e.Smart?.Excitement ?? 0.3) * 3 + (e.Favorite ? 2 : 0) + Math.Min(2.5, laugh / 2) + Math.Min(1, hype / 3)
-               + (e.People.Count > 0 ? 0.6 : 0) + (string.IsNullOrWhiteSpace(e.Note) ? 0 : 0.3);
+        var score = (e.Smart?.Excitement ?? 0.3) * 3 + (e.Favorite ? 2 : 0) + Math.Min(2.5, laugh / 2) + Math.Min(1, hype / 3)
+                    + (e.People.Count > 0 ? 0.6 : 0) + (string.IsNullOrWhiteSpace(e.Note) ? 0 : 0.3);
+        if (!CutGuide.Enabled) return score;
+        // With smart cuts: a banner on screen (a win, an ace), a moment you marked, friends heard for sure.
+        if (ScreenWords.Event(e.Screen) is { } banner) score += banner.Rank * 0.12;
+        if (e.Bookmarks.Count > 0) score += 0.4;
+        if (CutGuide.NameOf is { } nameOf && e.Voices is { Speakers.Count: > 0 } v)
+            score += Math.Min(0.6, v.Speakers.Count(s => s.Ms >= 2500 && nameOf(s) is not null) * 0.2);
+        return score;
     }
 
     /// <summary>The year's moments for the reel, best first: at most <paramref name="max"/>.</summary>
     public static List<WrappedMoment> Moments(IEnumerable<VideoEntry> clips, Func<VideoEntry, string?> gameOf, int max = 400) => clips
         .Select(e => (e, Score: Score(e)))
         .OrderByDescending(x => x.Score).Take(max)
-        .Select(x => (x.e, x.Score, W: LaughWindow(x.e)))
-        .Select(x => new WrappedMoment(x.e.Path, x.e.DurationMs, Focus(x.e), x.Score, Voice(x.e))
+        .Select(x => (x.e, x.Score, W: LaughWindow(x.e), G: CutGuide.For(x.e)))
+        .Select(x => new WrappedMoment(x.e.Path, x.e.DurationMs, Focus(x.e, x.G), x.Score, Voice(x.e))
         {
+            Guide = x.G is { HasSignals: true } ? x.G : null,
+            Look = x.G is not null && x.e.Visual is { Frames.Length: > 0 } vis ? vis.Mean : null,
             Game = gameOf(x.e), People = x.e.People.ToList(), Local = x.e.ModifiedUtc.ToLocalTime(),
             Laugh = x.e.Sound is { Laugh.Count: > 1 } so ? so.LaughSeconds : 0,
             LaughFromMs = x.W?.From ?? -1, LaughToMs = x.W?.To ?? -1, SetupMs = x.W?.Setup ?? -1,
@@ -105,8 +114,10 @@ public static class WrappedService
     }
 
     /// <summary>The peak of a clip: the densest laughter when there is some, else the best moment, else a third in.</summary>
-    private static long Focus(VideoEntry e)
+    private static long Focus(VideoEntry e, CutGuide? guide = null)
     {
+        // With smart cuts, every pass has a say: laughs, cheers, the best moment, a banner, a marked moment.
+        if (guide is { Peak: >= 0 }) return guide.Peak;
         if (e.Sound is { Laugh.Count: >= 3 } s)
         {
             var best = s.Laugh.MaxBy(m => s.Laugh.Count(o => Math.Abs(o.At - m.At) <= 3000))!;
