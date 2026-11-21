@@ -88,11 +88,14 @@ public static class PulseFx
     /// </summary>
     public static IEnumerable<string> Glow(string input, string output, int width, int height, string tag, double amount = 0.55)
     {
-        var w = Math.Max(2, width / 4 / 2 * 2);
-        var h = Math.Max(2, height / 4 / 2 * 2);
+        int Even(int v) => Math.Max(2, v / 2 * 2);
+        // Two halos: a tight one at half size and a wide one at an eighth, so lights bloom softly instead of fogging.
         yield return $"{input}format=gbrp,split[{tag}a][{tag}b]";
-        yield return $"[{tag}b]scale={w}:{h},colorlevels=rimin=0.7:gimin=0.7:bimin=0.7,gblur=sigma=7,scale={width}:{height}:flags=bilinear[{tag}c]";
-        yield return $"[{tag}a][{tag}c]blend=all_mode=screen:all_opacity={F(amount)},vignette=angle=PI/6:eval=init,format=yuv420p{output}";
+        yield return $"[{tag}b]scale={Even(width / 2)}:{Even(height / 2)},curves=all='0/0 0.55/0 0.8/0.45 1/1',split[{tag}c][{tag}d]";
+        yield return $"[{tag}c]gblur=sigma=5[{tag}e]";
+        yield return $"[{tag}d]scale={Even(width / 8)}:{Even(height / 8)},gblur=sigma=5,scale={Even(width / 2)}:{Even(height / 2)}:flags=bilinear[{tag}f]";
+        yield return $"[{tag}e][{tag}f]blend=all_mode=screen,scale={width}:{height}:flags=bilinear[{tag}h]";
+        yield return $"[{tag}a][{tag}h]blend=all_mode=screen:all_opacity={F(amount)},vignette=angle=PI/6:eval=init,format=yuv420p{output}";
     }
 
     private static string F(double v) => v.ToString("0.#####", Inv);
@@ -106,18 +109,20 @@ public static class PulseFx
     };
 
     /// <summary>
-    /// Writes the glow that flows along the bottom edge at the start and the end: a strip twice the frame's width
-    /// (its pattern repeats every frame width, so it can scroll forever), soft blends of the colours fading upwards
-    /// to nothing, as raw RGBA at a quarter size (ffmpeg scales it up, which only makes it softer). Returns its size.
+    /// Writes the light that flows along the bottom edge at the start and the end, like light seen through frosted
+    /// glass: a strip twice the frame's width (its pattern repeats every frame width, so it can scroll forever) of the
+    /// colours blending into each other, with a bright core hugging the edge and a tall soft haze above it, brighter
+    /// and dimmer stretches along it. Raw RGB on black (it's added as light), at a quarter size: ffmpeg scales it up,
+    /// which only makes it softer. Returns its size.
     /// </summary>
     public static (int Width, int Height) WriteEdgeGlow(string path, int width, int height)
     {
         var pw = Math.Max(16, width / 4); // one period
         var w = pw * 2;
-        var h = Math.Max(8, height / 4 / 4);
-        var data = new byte[w * h * 4];
+        var h = Math.Max(8, height * 34 / 100 / 4);
+        var data = new byte[w * h * 3];
         var n = GlowColors.Length;
-        var sigma = pw / (double)n * 0.55;
+        var sigma = pw / (double)n * 0.45;
         for (var x = 0; x < w; x++)
         {
             double r = 0, g = 0, b = 0, sum = 0;
@@ -130,14 +135,23 @@ public static class PulseFx
                 r += GlowColors[k].R * wgt; g += GlowColors[k].G * wgt; b += GlowColors[k].B * wgt; sum += wgt;
             }
             r /= sum; g /= sum; b /= sum;
-            // Brighter and dimmer stretches along the edge, so it reads as moving light rather than a band.
-            var swell = 0.65 + 0.35 * Math.Sin(2 * Math.PI * (x % pw) / pw * 2 + 0.7);
+            var phase = 2 * Math.PI * (x % pw) / pw;
+            var swell = 0.6 + 0.25 * Math.Sin(phase * 2 + 0.7) + 0.15 * Math.Sin(phase * 3 - 1.1);
+            // The haze rises higher where the light is stronger, so the top edge is a soft, uneven line.
+            var reach = 0.42 + 0.3 * swell;
             for (var y = 0; y < h; y++)
             {
                 var up = (h - 1 - y) / (double)(h - 1); // 0 at the bottom edge, 1 at the top of the strip
-                var a = Math.Min(1, Math.Exp(-Math.Pow(up / 0.45, 2)) * swell * 1.15);
-                var i = (y * w + x) * 4;
-                data[i] = (byte)r; data[i + 1] = (byte)g; data[i + 2] = (byte)b; data[i + 3] = (byte)Math.Clamp(a * 255, 0, 255);
+                var core = Math.Exp(-Math.Pow(up / 0.07, 2));
+                var fall = (1 - up) * (1 - up); // reaches black at the strip's top, so no edge shows
+                var haze = Math.Exp(-Math.Pow(up / reach, 2)) * fall * 1.05;
+                var a = Math.Min(1.0, (core * 0.4 + haze) * (0.5 + 0.6 * swell));
+                // Toward white in the core, like a light source; the haze keeps its colour.
+                var white = core * 0.12;
+                var i = (y * w + x) * 3;
+                data[i] = (byte)Math.Clamp((r + (255 - r) * white) * a, 0, 255);
+                data[i + 1] = (byte)Math.Clamp((g + (255 - g) * white) * a, 0, 255);
+                data[i + 2] = (byte)Math.Clamp((b + (255 - b) * white) * a, 0, 255);
             }
         }
         File.WriteAllBytes(path, data);
@@ -145,20 +159,80 @@ public static class PulseFx
     }
 
     /// <summary>
-    /// Filtergraph lines laying the flowing glow over <paramref name="input"/>: two copies of the strip drifting at
-    /// different speeds (one mirrored), lighter of the two wins, fading in at <paramref name="fadeIn"/> and out by
-    /// <paramref name="end"/> (seconds in the shot). <paramref name="glowInput"/> is the strip's ffmpeg input index.
+    /// Filtergraph lines adding the flowing light over the bottom of <paramref name="input"/>: two copies of the strip
+    /// drifting at different speeds (one mirrored and a little shorter), added as light, breathing slowly, fading in
+    /// at <paramref name="fadeIn"/> and out by <paramref name="end"/> (seconds in the shot). Only the bottom of the
+    /// picture is touched. <paramref name="glowInput"/> is the strip's ffmpeg input index (raw rgb24).
     /// </summary>
     public static IEnumerable<string> EdgeGlow(string input, string output, int glowInput, (int W, int H) strip, int width, int height,
         double length, double fadeIn, double end, string tag)
     {
-        var sh = Math.Max(2, height * 26 / 100 / 2 * 2);
+        var sh = Math.Max(2, height * 34 / 100 / 2 * 2);
+        var shortH = Math.Max(2, sh * 7 / 10 / 2 * 2);
         var d = F(length);
-        var outAt = F(Math.Max(fadeIn + 0.5, end - 1.0));
-        yield return $"[{glowInput}:v]loop=loop=-1:size=1,setpts=N/(30*TB),scale={width * 2}:{sh}:flags=bicubic,format=gbrap,split[{tag}1][{tag}2]";
-        yield return $"[{tag}1]crop={width}:{sh}:x='mod(t*{F(width * 0.07)},{width})':y=0[{tag}a]";
-        yield return $"[{tag}2]hflip,crop={width}:{sh}:x='mod(t*{F(width * 0.045)}+{width / 3},{width})':y=0[{tag}b]";
-        yield return $"[{tag}a][{tag}b]blend=all_mode=lighten,trim=duration={d},fade=t=in:st={F(fadeIn)}:d=0.8:alpha=1,fade=t=out:st={outAt}:d=1.0:alpha=1[{tag}g]";
-        yield return $"{input}[{tag}g]overlay=x=0:y={height - sh}:format=auto:eof_action=pass,format=yuv420p{output}";
+        var outAt = F(Math.Max(fadeIn + 0.5, end - 1.1));
+        // The strip is a single picture repeated at 30 fps. (No T in blend expressions: ffmpeg 6 works T out in the
+        // wrong time base when the two inputs' time bases differ, so the fades happen on the glow itself.)
+        yield return $"[{glowInput}:v]loop=loop=-1:size=1,settb=expr=1/30,setpts=N,trim=duration={d},format=gbrp,split[{tag}1][{tag}2]";
+        yield return $"[{tag}1]scale={width * 2}:{sh}:flags=bicubic,crop={width}:{sh}:x='mod(t*{F(width * 0.06)},{width})':y=0[{tag}a]";
+        yield return $"[{tag}2]hflip,scale={width * 2}:{shortH}:flags=bicubic,crop={width}:{shortH}:x='mod(t*{F(width * 0.037)}+{width / 3},{width})':y=0," +
+                     $"pad={width}:{sh}:0:{sh - shortH}:black[{tag}b]";
+        // Up over 0.9 s, down over 1.1 s (fading light on black is the same as dimming it).
+        yield return $"[{tag}a][{tag}b]blend=all_mode=screen,fade=t=in:st={F(fadeIn)}:d=0.9,fade=t=out:st={outAt}:d=1.1[{tag}g]";
+        yield return $"{input}format=gbrp,split[{tag}v][{tag}w]";
+        yield return $"[{tag}w]crop={width}:{sh}:0:{height - sh}[{tag}bot]";
+        // Added as light.
+        yield return $"[{tag}bot][{tag}g]blend=all_mode=screen[{tag}lit]";
+        yield return $"[{tag}v][{tag}lit]overlay=x=0:y={height - sh}:eof_action=pass,format=yuv420p{output}";
+    }
+
+    // ---------- organic transitions ----------
+
+    /// <summary>
+    /// The xfade options for one of Savefile's own transitions (names start with "sf:"), drawn per pixel with
+    /// ffmpeg's custom transition: a liquid blob that swells open with a wobbling, glowing rim, a wave that rolls up
+    /// the frame, ink that blooms through like clouds, and a bright burst for a drop. All ease in and out. Null for
+    /// "sf:leak", which is a straight cut with a light leak laid over it (see <see cref="LightLeak"/>).
+    /// </summary>
+    public static string? Transition(string name, int seed)
+    {
+        // Written out in full with no st()/ld(): ffmpeg runs the expression on several threads that share those
+        // registers, which turned the picture into speckled noise. p = progress 0→1 (xfade's P runs 1→0),
+        // e = eased progress, u/v = position 0..1.
+        const string p = "(1-P)";
+        const string e = "((1-P)*(1-P)*(1+2*P))";
+        const string u = "(X/W)";
+        const string v = "(Y/H)";
+        var rng = new Random(seed);
+        // Mix A to B by a front f (B where f > 0), softened over the band, plus a glowing rim of light on the front.
+        static string Mix(string f, double band, double rim, double rimWidth) =>
+            $"min(255,A+(B-A)*clip(({f})/{F(band)}+0.5,0,1)" +
+            (rim > 0 ? $"+if(eq(PLANE,0),{F(rim)}*exp(-pow(({f})/{F(rimWidth)},2))*(1-0.6*{p}),0))" : ")");
+        string Blob(double cx, double cy, double speed) =>
+            $"{e}*{F(speed)}-hypot(({u}-{F(cx)})*1.78,{v}-{F(cy)})" +
+            $"-0.05*sin(atan2({v}-{F(cy)},{u}-{F(cx)})*5+{p}*8)-0.022*sin({u}*23+{p}*11)*cos({v}*19-{p}*9)";
+        var expr = name switch
+        {
+            "sf:blob" => Mix(Blob(0.25 + rng.NextDouble() * 0.5, 0.3 + rng.NextDouble() * 0.4, 1.25), 0.05, 45, 0.03),
+            "sf:burst" => Mix(Blob(0.5, 0.5, 1.3), 0.05, 110, 0.04),
+            "sf:wave" => Mix($"{e}*1.3-0.15-(1-{v})-0.05*sin({u}*9+{p}*6)-0.03*sin({u}*21-{p}*10)", 0.06, 40, 0.035),
+            "sf:ink" => Mix($"{e}*1.6-0.3-(0.5+0.24*sin({u}*11+{v}*6+1.3)+0.14*sin({u}*23-{v}*17+{p}*2)+0.08*sin({v}*31+{u}*5-{p}*3))", 0.22, 0, 0),
+            _ => null,
+        };
+        return expr is null ? null : $"transition=custom:expr='{expr}'";
+    }
+
+    /// <summary>
+    /// A light leak over the first half second of a shot: the edge glow's colours spread over the whole frame,
+    /// drifting, flaring up and fading away. Filtergraph lines; <paramref name="glowInput"/> is the strip's input.
+    /// </summary>
+    public static IEnumerable<string> LightLeak(string input, string output, int glowInput, int width, int height, double length, string tag)
+    {
+        var d = F(length);
+        // Up fast on the cut, then away over half a second; added as light, so nothing goes grey.
+        yield return $"[{glowInput}:v]loop=loop=-1:size=1,settb=expr=1/30,setpts=N,trim=duration={d},vflip,scale={width * 2}:{height}:flags=bicubic," +
+                     $"crop={width}:{height}:x='mod(t*{F(width * 0.9)},{width})':y=0,format=gbrp,fade=t=in:st=0:d=0.06,fade=t=out:st=0.15:d=0.45,colorlevels=romax=0.85:gomax=0.85:bomax=0.85[{tag}l]";
+        yield return $"{input}format=gbrp[{tag}v]";
+        yield return $"[{tag}v][{tag}l]blend=all_mode=screen,format=yuv420p{output}";
     }
 }

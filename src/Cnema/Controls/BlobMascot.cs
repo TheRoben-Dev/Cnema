@@ -603,19 +603,33 @@ public sealed class BlobMascot : Control
         ctx.DrawGeometry(body, null, outline);
         if (Gloss)
         {
-            // Glossy, like a drop of liquid: a soft light patch top left and a sharp little highlight inside it.
+            // Glossy like a drop of liquid, following its own shape: a soft sheen over the top that fades out
+            // towards the middle, one small soft highlight, and warm light bouncing up along the bottom edge.
             using (ctx.PushGeometryClip(outline))
             {
-                var hl = new RadialGradientBrush
+                var sheenAt = new Point(cx - rx * 0.08, cy - ry * 0.32);
+                var sheenPts = pts.Select(p => new Point(sheenAt.X + (p.X - cx) * 0.8, sheenAt.Y + (p.Y - cy) * 0.62)).ToArray();
+                var sheen = new LinearGradientBrush
                 {
-                    Center = new RelativePoint(0.5, 0.5, RelativeUnit.Relative), GradientOrigin = new RelativePoint(0.5, 0.5, RelativeUnit.Relative),
-                    RadiusX = new RelativeScalar(0.5, RelativeUnit.Relative), RadiusY = new RelativeScalar(0.5, RelativeUnit.Relative),
-                    GradientStops = { new GradientStop(Color.FromArgb(150, 255, 255, 255), 0), new GradientStop(Color.FromArgb(0, 255, 255, 255), 1) },
+                    StartPoint = new RelativePoint(0.3, 0, RelativeUnit.Relative), EndPoint = new RelativePoint(0.55, 1, RelativeUnit.Relative),
+                    GradientStops =
+                    {
+                        new GradientStop(Color.FromArgb(120, 255, 255, 255), 0), new GradientStop(Color.FromArgb(40, 255, 255, 255), 0.35),
+                        new GradientStop(Color.FromArgb(0, 255, 255, 255), 0.62),
+                    },
                 };
-                ctx.DrawEllipse(hl, null, new Point(cx - rx * 0.32, cy - ry * 0.42), rx * 0.55, ry * 0.4);
-                ctx.DrawEllipse(new SolidColorBrush(Color.FromArgb(210, 255, 255, 255)), null, new Point(cx - rx * 0.42, cy - ry * 0.55), rx * 0.11, ry * 0.07);
-                // A little reflected light along the bottom edge.
-                ctx.DrawEllipse(new SolidColorBrush(Color.FromArgb(40, 255, 160, 230)), null, new Point(cx + rx * 0.1, cy + ry * 0.85), rx * 0.7, ry * 0.18);
+                ctx.DrawGeometry(sheen, null, Smooth(sheenPts));
+                var spot = new RadialGradientBrush
+                {
+                    GradientStops = { new GradientStop(Color.FromArgb(200, 255, 255, 255), 0), new GradientStop(Color.FromArgb(60, 255, 255, 255), 0.45), new GradientStop(Color.FromArgb(0, 255, 255, 255), 1) },
+                };
+                ctx.DrawEllipse(spot, null, new Point(cx - rx * 0.38, cy - ry * 0.5), rx * 0.16, ry * 0.11);
+                var bounce = new LinearGradientBrush
+                {
+                    StartPoint = new RelativePoint(0.5, 0, RelativeUnit.Relative), EndPoint = new RelativePoint(0.5, 1, RelativeUnit.Relative),
+                    GradientStops = { new GradientStop(Color.FromArgb(0, 255, 140, 220), 0.55), new GradientStop(Color.FromArgb(90, 255, 150, 210), 1) },
+                };
+                ctx.DrawGeometry(null, new Pen(bounce, rx * 0.12), outline);
             }
         }
 

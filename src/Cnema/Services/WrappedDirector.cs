@@ -633,13 +633,26 @@ public static class WrappedDirector
         {
             var prev = plan.Shots[i - 1];
             var cur = plan.Shots[i];
-            (string? name, double d) = (prev.Kind, cur.Kind) switch
+            var organic = PulseFx.Enabled && plan.Songs.Count > 0;
+            (string? name, double d) = organic
+                // Savefile's own: liquid and ink instead of slides and wipes, a burst on the drop, a light leak now and then.
+                ? (prev.Kind, cur.Kind) switch
+                {
+                    (WrappedShotKind.Card, WrappedShotKind.Card) => ("sf:blob", 0.6),
+                    (_, WrappedShotKind.Card) => ("sf:wave", 0.6),
+                    (WrappedShotKind.Card, _) => ("sf:blob", 0.55),
+                    _ when drops.Any(dr => Math.Abs(dr - cur.At) < 0.1) => ("sf:burst", 0.45),
+                    _ when cur.Story || prev.Story => ("sf:ink", 0.5),
+                    _ when cur.Caption is not null => ("sf:ink", 0.35),
+                    _ when mustCut.Any(c => Math.Abs(c - cur.At) < 0.1) => ("sf:wave", 0.45),
+                    _ => (++quickCount % 6 == 0 ? "sf:leak" : null, 0.5),
+                }
+                : (prev.Kind, cur.Kind) switch
             {
                 (WrappedShotKind.Card, WrappedShotKind.Card) => ("slideleft", 0.45),
                 (_, WrappedShotKind.Card) => ("smoothup", 0.5),
                 (WrappedShotKind.Card, _) => ("zoomin", 0.45),
-                // The drop: a white flash that hands straight over, right on the beat.
-                _ when drops.Any(d => Math.Abs(d - cur.At) < 0.1) => ("fadewhite", 0.22),
+                _ when drops.Any(dr => Math.Abs(dr - cur.At) < 0.1) => ("fadewhite", 0.22),
                 _ when cur.Story || prev.Story => ("fade", 0.4),
                 _ when cur.Caption is not null => ("smoothleft", 0.3),
                 _ when mustCut.Any(c => Math.Abs(c - cur.At) < 0.1) => ("hblur", 0.35),

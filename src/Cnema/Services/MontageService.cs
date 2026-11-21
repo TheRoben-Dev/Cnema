@@ -186,7 +186,14 @@ public static class MontageService
             for (var i = 1; i < parts.Count; i++)
             {
                 offset += lengths[i - 1] - t;
-                g.Add($"{v}[v{i}]xfade=transition={kind}:duration={S(t)}:offset={S(offset)}[x{i}]");
+                // With beat effects on, the stock wipes become organic ones: ink blooms and liquid blobs, or a rolling wave.
+                var how = (pulse ? job.Transition switch
+                {
+                    MontageTransition.Slide => PulseFx.Transition("sf:wave", i),
+                    MontageTransition.FadeBlack => null,
+                    _ => PulseFx.Transition(i % 3 == 0 ? "sf:blob" : "sf:ink", i),
+                } : null) ?? $"transition={kind}";
+                g.Add($"{v}[v{i}]xfade={how}:duration={S(t)}:offset={S(offset)}[x{i}]");
                 g.Add($"{a}[a{i}]acrossfade=d={S(t)}:c1=tri:c2=tri[ax{i}]");
                 v = $"[x{i}]";
                 a = $"[ax{i}]";
@@ -195,11 +202,11 @@ public static class MontageService
         }
         if (pulse)
         {
-            var glowPath = Path.Combine(Path.GetTempPath(), $"savefile-edge-glow-{width}x{height}.rgba");
+            var glowPath = Path.Combine(Path.GetTempPath(), $"savefile-edge-glow2-{width}x{height}.rgb");
             var strip = PulseFx.WriteEdgeGlow(glowPath, width, height);
             var gi = parts.Count + (job.Music is not null ? 1 : 0);
-            args.AddRange(new[] { "-f", "rawvideo", "-pix_fmt", "rgba", "-s", $"{strip.Width}x{strip.Height}", "-i", glowPath });
-            args.AddRange(new[] { "-f", "rawvideo", "-pix_fmt", "rgba", "-s", $"{strip.Width}x{strip.Height}", "-i", glowPath });
+            args.AddRange(new[] { "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", $"{strip.Width}x{strip.Height}", "-i", glowPath });
+            args.AddRange(new[] { "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", $"{strip.Width}x{strip.Height}", "-i", glowPath });
             var secs = total / 1000.0;
             g.AddRange(PulseFx.Glow(vOut, "[vg]", width, height, "gm", 0.3));
             g.AddRange(PulseFx.EdgeGlow("[vg]", "[ve1]", gi, strip, width, height, secs, 0.2, Math.Min(secs, 3.6), "ea"));

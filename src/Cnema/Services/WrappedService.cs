@@ -469,7 +469,16 @@ public static class WrappedService
             }
             var video = "[cur]";
             // The transition in: the shot before carries on underneath for a moment and hands over.
-            if (shot.Transition is { } tr && i > 0 && shot.TransitionSeconds > 0.05)
+            if (shot.Transition == "sf:leak" && i > 0)
+            {
+                // A straight cut on the beat with a flare of coloured light washing over it.
+                var leakStrip = PulseFx.WriteEdgeGlow(Path.Combine(work, "edge-glow.rgb"), width, height);
+                args.AddRange(new[] { "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", $"{leakStrip.Width}x{leakStrip.Height}", "-i", Path.Combine(work, "edge-glow.rgb") });
+                g.AddRange(PulseFx.LightLeak(video, "[lk]", n, width, height, len, "lk"));
+                video = "[lk]";
+                n++;
+            }
+            else if (shot.Transition is { } tr && i > 0 && shot.TransitionSeconds > 0.05)
             {
                 var prev = plan.Shots[i - 1];
                 var td = S(Math.Min(shot.TransitionSeconds, len * 0.45));
@@ -486,7 +495,10 @@ public static class WrappedService
                     g.Add($"[{n}:v:0]fps={Fps},{Fit(info)}{Zoom(ZoomOf(prev).To)},{Norm},tpad=stop_mode=clone:stop_duration={td},trim=duration={td}[prev]");
                 }
                 n++;
-                g.Add($"[prev]{video}xfade=transition={tr}:duration={td}:offset=0[x]");
+                var how = tr.StartsWith("sf:", StringComparison.Ordinal)
+                    ? (pulse ? PulseFx.Transition(tr, i) : null) ?? "transition=fade"
+                    : $"transition={tr}";
+                g.Add($"[prev]{video}xfade={how}:duration={td}:offset=0[x]");
                 video = "[x]";
             }
             // The caption, fading in and out over the picture.
@@ -524,9 +536,9 @@ public static class WrappedService
             if (pulse && (i == 0 || i == plan.Shots.Count - 1))
             {
                 // The flowing glow along the bottom edge as the video opens, and again as it ends (over the fade to black).
-                var glowPath = Path.Combine(work, "edge-glow.rgba");
+                var glowPath = Path.Combine(work, "edge-glow.rgb");
                 var strip = PulseFx.WriteEdgeGlow(glowPath, width, height);
-                args.AddRange(new[] { "-f", "rawvideo", "-pix_fmt", "rgba", "-s", $"{strip.Width}x{strip.Height}", "-i", glowPath });
+                args.AddRange(new[] { "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", $"{strip.Width}x{strip.Height}", "-i", glowPath });
                 var start = i == 0;
                 g.AddRange(PulseFx.EdgeGlow(video, "[eg]", n, strip, width, height, len,
                     start ? 0.2 : Math.Max(0, len - 4), start ? Math.Min(len, 3.6) : len, "e"));
