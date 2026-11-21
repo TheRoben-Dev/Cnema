@@ -2,6 +2,10 @@
 
 What changed in each Savefile (formerly Cnema) release. The app shows the entries you have not seen yet after it updates.
 
+## 0.51.2
+- Fixed the sound breaking up while watching clips. The loud-moment markers on the timeline read the whole video at the same time as it played, which could starve the player on the Mac; that now waits while a video plays, like the rest of the indexing, and the markers fill in when you pause. While a video plays, Savefile also keeps macOS from putting it to sleep in the background (App Nap) and keeps memory clean-ups short.
+- If the sound still breaks up, Savefile now writes down how many bits of sound were lost and what else was busy at the time, so Send diagnostics shows the cause.
+
 ## 0.51.1
 - No more crackle when you close the Quick player or skip to the next clip. The sound now fades out quickly instead of being cut off mid-wave, and background indexing stays paused until the video has fully stopped, so it can't steal time from the last bit of audio.
 

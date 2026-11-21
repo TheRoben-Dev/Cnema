@@ -23,10 +23,11 @@ public static class HighlightService
         if (Cache.TryGetValue(key, out var cached)) return cached;
         if (ToolLocator.Ffmpeg is not { } ffmpeg) return Array.Empty<double>();
 
-        // This reads the whole file while the video starts playing: give the player its first seconds, and
-        // let it have the CPU and the disk first after that.
+        // This reads the whole file. It used to run beside the playing video at below-normal priority, decoding
+        // the file as fast as it could, which made the sound break up on the Mac. Now it's background work like
+        // indexing: frozen while the video plays, so the markers fill in when you pause.
         await Task.Delay(1500, ct);
-        var levels = await Task.Run(() => ReadLevels(ffmpeg, path, ct, gentle: true), ct);
+        var levels = await Task.Run(() => ReadLevels(ffmpeg, path, ct, background: true), ct);
         var found = Pick(levels);
         Cache[key] = found;
         return found;
