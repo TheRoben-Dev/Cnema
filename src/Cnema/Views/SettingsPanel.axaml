@@ -998,6 +998,8 @@
                       </Grid>
                       <TextBlock Classes="dim" FontSize="11" Foreground="{DynamicResource Highlight}" Text="{Binding #Root.((vm:MainViewModel)DataContext).SmartActivity}"
                                  IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).SmartActivity, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                      <Button Classes="ghost" Padding="0,2" Margin="0,4,0,0" HorizontalAlignment="Left" FontSize="11" svc:Tr.Content="Reset…" IsVisible="{Binding FeatureHighlights}"
+                              svc:Tr.Tip="Forget what it found in every video and start over. What you did yourself stays." Command="{Binding #Root.((vm:MainViewModel)DataContext).ResetHighlightsCommand}" />
                     </StackPanel>
                     <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureHighlights}" />
                   </Grid>
@@ -1058,6 +1060,8 @@
                         <PathIcon Data="{StaticResource IcSpeed}" Width="11" Height="11" Margin="0,2,6,0" VerticalAlignment="Top" Foreground="{DynamicResource TextDim}" />
                         <TextBlock Grid.Column="1" Classes="dim cost" FontSize="11" TextWrapping="Wrap" Text="{Binding #Root.((vm:MainViewModel)DataContext).TitlesCostText}" />
                       </Grid>
+                      <Button Classes="ghost" Padding="0,2" Margin="0,4,0,0" HorizontalAlignment="Left" FontSize="11" svc:Tr.Content="Reset…" IsVisible="{Binding FeatureSmartTitles}"
+                              svc:Tr.Tip="Forget what it found in every video and start over. What you did yourself stays." Command="{Binding #Root.((vm:MainViewModel)DataContext).ResetTitlesCommand}" />
                     </StackPanel>
                     <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureSmartTitles}" />
                   </Grid>
@@ -1121,6 +1125,8 @@
                       <Button Classes="soft" svc:Tr.Content="Cancel" Command="{Binding #Root.((vm:MainViewModel)DataContext).CancelSpeechDownloadCommand}" IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).IsDownloadingSpeech}" />
                       <Button Classes="soft" svc:Tr.Content="Remove the model" Command="{Binding #Root.((vm:MainViewModel)DataContext).RemoveSpeechModelCommand}" IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).SpeechModelReady}"
                               svc:Tr.Tip="Frees the space. The words already found stay searchable." />
+                      <Button Classes="soft" svc:Tr.Content="Reset…" Command="{Binding #Root.((vm:MainViewModel)DataContext).ResetSpeechCommand}" IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).SpeechModelReady}"
+                              svc:Tr.Tip="Forget what it found in every video and start over. What you did yourself stays." />
                     </StackPanel>
                   </StackPanel>
                   <Border Classes="sep" />
@@ -1157,6 +1163,8 @@
                       <Button Classes="soft" svc:Tr.Content="Cancel" Command="{Binding #Root.((vm:MainViewModel)DataContext).CancelVisualDownloadCommand}" IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).IsDownloadingVisual}" />
                       <Button Classes="soft" svc:Tr.Content="Remove the model" Command="{Binding #Root.((vm:MainViewModel)DataContext).RemoveVisualModelCommand}" IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).VisualModelReady}"
                               svc:Tr.Tip="Frees the space. Videos already looked at stay searchable once it's back." />
+                      <Button Classes="soft" svc:Tr.Content="Reset…" Command="{Binding #Root.((vm:MainViewModel)DataContext).ResetVisualCommand}" IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).VisualModelReady}"
+                              svc:Tr.Tip="Forget what it found in every video and start over. What you did yourself stays." />
                     </StackPanel>
                   </StackPanel>
                   <Border Classes="sep" />
@@ -1193,6 +1201,8 @@
                       <Button Classes="soft" svc:Tr.Content="Cancel" Command="{Binding #Root.((vm:MainViewModel)DataContext).CancelSoundDownloadCommand}" IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).IsDownloadingSound}" />
                       <Button Classes="soft" svc:Tr.Content="Remove the model" Command="{Binding #Root.((vm:MainViewModel)DataContext).RemoveSoundModelCommand}" IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).SoundModelReady}"
                               svc:Tr.Tip="Frees the space. What was already heard stays." />
+                      <Button Classes="soft" svc:Tr.Content="Reset…" Command="{Binding #Root.((vm:MainViewModel)DataContext).ResetSoundCommand}" IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).SoundModelReady}"
+                              svc:Tr.Tip="Forget what it found in every video and start over. What you did yourself stays." />
                     </StackPanel>
                   </StackPanel>
 <Border Classes="sep" />
@@ -1230,6 +1240,8 @@
                       <Button Classes="soft" svc:Tr.Content="Cancel" Command="{Binding #Root.((vm:MainViewModel)DataContext).CancelScreenDownloadCommand}" IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).IsDownloadingScreen}" />
                       <Button Classes="soft" svc:Tr.Content="Remove the model" Command="{Binding #Root.((vm:MainViewModel)DataContext).RemoveScreenModelCommand}" IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).ScreenModelReady}"
                               svc:Tr.Tip="Frees the space. What was already read stays." />
+                      <Button Classes="soft" svc:Tr.Content="Reset…" Command="{Binding #Root.((vm:MainViewModel)DataContext).ResetScreenCommand}" IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).ScreenModelReady}"
+                              svc:Tr.Tip="Forget what it found in every video and start over. What you did yourself stays." />
                     </StackPanel>
                   </StackPanel>
                   <Border Classes="sep" />
@@ -1267,7 +1279,15 @@
                       <Button Classes="soft" svc:Tr.Content="Cancel" Command="{Binding #Root.((vm:MainViewModel)DataContext).CancelVoiceDownloadCommand}" IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).IsDownloadingVoice}" />
                       <Button Classes="soft" svc:Tr.Content="Remove the model" Command="{Binding #Root.((vm:MainViewModel)DataContext).RemoveVoiceModelCommand}" IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).VoiceModelReady}"
                               svc:Tr.Tip="Frees the space. The voices Mochi knows stay." />
+                      <Button Classes="soft" svc:Tr.Content="Reset…" Command="{Binding #Root.((vm:MainViewModel)DataContext).ResetVoicesCommand}" IsVisible="{Binding #Root.((vm:MainViewModel)DataContext).VoiceModelReady}"
+                              svc:Tr.Tip="Forget what it found in every video and start over. What you did yourself stays." />
                     </StackPanel>
+                    <CheckBox IsChecked="{Binding FeatureVoicePoints}">
+                      <StackPanel Spacing="1">
+                        <TextBlock svc:Tr.Text="Points and badges in Who's that?" FontSize="12" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Earn points, levels and badges for each voice you name. Skipping never costs anything." />
+                      </StackPanel>
+                    </CheckBox>
                   </StackPanel>
                 </StackPanel>
               </Border>

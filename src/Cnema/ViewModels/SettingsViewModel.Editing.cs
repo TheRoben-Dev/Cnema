@@ -56,6 +56,7 @@ public sealed partial class SettingsViewModel
     [ObservableProperty] private bool _featureLaughs;
     [ObservableProperty] private bool _featureScreenText;
     [ObservableProperty] private bool _featureVoices;
+    [ObservableProperty] private bool _featureVoicePoints;
     [ObservableProperty] private bool _featureFriendShelf;
     [ObservableProperty] private bool _featureWrapped;
     [ObservableProperty] private bool _featureSmartThumbs;
@@ -141,6 +142,7 @@ public sealed partial class SettingsViewModel
         FeatureLaughs = f.Laughs;
         FeatureScreenText = f.ScreenText;
         FeatureVoices = f.Voices;
+        FeatureVoicePoints = f.VoicePoints;
         FeatureWrapped = f.Wrapped;
         FeatureSmartThumbs = f.SmartThumbs;
         FeatureSmartCrop = f.SmartCrop;

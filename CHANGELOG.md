@@ -2,6 +2,18 @@
 
 What changed in each Savefile (formerly Cnema) release. The app shows the entries you have not seen yet after it updates.
 
+## 0.52.0
+- Auto montage and Wrapped now use everything the smart features know about a clip to cut it, new in Settings › Smart features › Smart cuts (on by default). A cut no longer lands in the middle of a sentence: the transcript's lines are joined into sentences, and each piece starts and ends in a pause. A laugh comes with the joke that set it off, a cheer or a banner on screen (VICTORY, ACE, a penta kill) gets to play out, and moments you marked with the hotkey count the most. Clips with friends recognised by voice (only when Savefile is sure) are picked a bit more often, and with the visual model on, two look-alike clips aren't put side by side.
+- In Wrapped, cuts still land on the beat: the director picks the beat that keeps the cut out of a sentence, and ends each longer moment on the bar line where what's being said is over. When a quick shot still catches half a sentence, the music stays up over it so chopped words aren't heard.
+- Montage pieces can be up to half longer than the length you picked, so a sentence or a joke isn't cut short. Whatever smart feature is off, or hasn't looked at a clip yet, is simply left out; with nothing known, montages cut as before.
+
+## 0.51.0
+- Who's that? goes on for as long as you like. Mochi fetches more voices while you play, instead of stopping after 8, and only says it's done when it has asked about every voice it has.
+- Who's that? has points, levels and badges. Naming a voice earns points, with extra for a streak, for picking Mochi's first guess and for a friend's very first voice. Skipping never costs anything; it only starts a new streak. There are 14 badges to collect, and Mochi cheers when you earn one or reach a new level. Undo takes the points back too. You can switch it off in Settings › Smart features › Who's talking.
+- A voice you've answered in Who's that? is never asked about again, whatever the answer (Not sure, skip included).
+- Who's talking is much stricter. A friend is only tagged in a clip when the voice is a near-perfect match: very close to that friend's voice, clearly closer than anyone else's, and only after a few of your answers for that friend, from more than a line or two of talking. Tags Savefile added by voice that don't pass this any more are taken off by themselves. Friends you tagged yourself are never touched.
+- Every smart feature has a Reset in Settings › Smart features (Best moments, Smart titles, Voice search, Visual search, Laughter and hype, Text on screen and Who's talking). It forgets what that feature worked out for every video and starts over in the background. It asks first, and what you did yourself stays: titles you typed, friends you tagged, thumbnails you picked and your answers in Who's that?.
+
 ## 0.50.1
 - Who's that? now opens on top of Settings instead of behind it, and closing it (or pressing Esc) takes you back to Settings.
 - Fixed Savefile freezing around the voice game: when a snippet (or any video) started playing, the background indexing was stopped right on the window's own thread, which could lock the window up until it finished. It now stops in the background, and the snippet player talks to VLC off the window's thread too.
