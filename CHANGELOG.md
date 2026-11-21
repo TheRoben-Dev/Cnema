@@ -2,6 +2,9 @@
 
 What changed in each Savefile (formerly Cnema) release. The app shows the entries you have not seen yet after it updates.
 
+## 0.51.1
+- No more crackle when you close the Quick player or skip to the next clip. The sound now fades out quickly instead of being cut off mid-wave, and background indexing stays paused until the video has fully stopped, so it can't steal time from the last bit of audio.
+
 ## 0.51.0
 - Who's that? goes on for as long as you like. Mochi fetches more voices while you play, instead of stopping after 8, and only says it's done when it has asked about every voice it has.
 - Who's that? has points, levels and badges. Naming a voice earns points, with extra for a streak, for picking Mochi's first guess and for a friend's very first voice. Skipping never costs anything; it only starts a new streak. There are 14 badges to collect, and Mochi cheers when you earn one or reach a new level. Undo takes the points back too. You can switch it off in Settings › Smart features › Who's talking.
