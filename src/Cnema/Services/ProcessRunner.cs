@@ -89,6 +89,9 @@ public static class BackgroundHold
 
     public static bool IsHeld { get { lock (Sync) return _held; } }
 
+    /// <summary>Background processes alive right now (for the playback log).</summary>
+    public static int RunningCount { get { lock (Sync) return Running.Count; } }
+
     private static CancellationTokenSource _heldCts = new();
 
     /// <summary>
