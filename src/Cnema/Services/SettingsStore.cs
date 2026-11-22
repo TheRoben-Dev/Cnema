@@ -374,6 +374,11 @@ public sealed class ClipSettings
     /// <summary>Capture device names as the OS reports them; null/empty = not recorded.</summary>
     public string? Audio1 { get; set; }
     public string? Audio2 { get; set; }
+    /// <summary>
+    /// False until the sound for clips was settled once: then, if nothing was picked, Savefile starts with
+    /// System audio where the OS offers it (clips used to start out silent, which nobody wants).
+    /// </summary>
+    public bool AudioSettled { get; set; }
     public string? Folder { get; set; }
     public bool Notify { get; set; } = true;
     public bool Sound { get; set; } = true;
@@ -462,6 +467,20 @@ public sealed class SettingsStore
     public bool IsFirstRun { get; } = !File.Exists(AppPaths.SettingsFile);
     public AppSettings Current { get; } = JsonStore.Load<AppSettings>(AppPaths.SettingsFile);
     public void Save() => JsonStore.Save(AppPaths.SettingsFile, Current);
+
+    public SettingsStore()
+    {
+        var clip = Current.Clip;
+        if (clip.AudioSettled) return;
+        clip.AudioSettled = true;
+        var systemAudio = OperatingSystem.IsWindows() ? WindowsLoopback.Supported
+            : OperatingSystem.IsMacOS() && CaptureProbe.SystemAudioHelper is not null;
+        if (systemAudio && string.IsNullOrWhiteSpace(clip.Audio1) && string.IsNullOrWhiteSpace(clip.Audio2))
+        {
+            clip.Audio1 = CaptureProbe.SystemAudio;
+            Log.Info("Clips: no sound was picked, so System audio is on now");
+        }
+    }
 
     /// <summary>Takes over every setting from an imported file, except the bookkeeping of updates.</summary>
     public void ReplaceWith(AppSettings imported)

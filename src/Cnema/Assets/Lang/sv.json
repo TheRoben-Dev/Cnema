@@ -1995,5 +1995,7 @@
   "Voice detective": "Röstdetektiv",
   "Mochi's best friend": "Mochis bästis",
   "Voice whisperer": "Rösttämjare",
-  "Ear of legend": "Legendariskt öra"
+  "Ear of legend": "Legendariskt öra",
+  "\"System audio\" records everything you hear, games included, without Savefile's own sounds. Pick your microphone as the second device to add your voice.": "”Systemljud” spelar in allt du hör, även spel, utan Savefiles egna ljud. Välj din mikrofon som andra enhet för att få med rösten.",
+  "Savefile couldn't open your PC's sound, so clips are recorded silent. Check that a playback device is connected, then turn clipping off and on.": "Savefile kunde inte öppna datorns ljud, så klippen spelas in utan ljud. Kolla att en uppspelningsenhet är ansluten och slå sedan av och på klippningen."
 }

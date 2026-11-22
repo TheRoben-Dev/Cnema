@@ -2,6 +2,11 @@
 
 What changed in each Savefile (formerly Cnema) release. The app shows the entries you have not seen yet after it updates.
 
+## 0.52.1
+- Clips on Windows now have sound. Pick "System audio (everything you hear)" in Settings › Clipping to record your game, voice chat and anything else your PC plays, with no Stereo Mix or extra software needed. On Windows 10 (version 2004 or newer) and Windows 11, Savefile's own sounds are left out, such as the save jingle and a clip you're watching in the window. If the sound can't be opened, the clip is still recorded and the clipping card says why it's silent.
+- Clips no longer start out silent. If you never picked a sound source, Savefile now uses System audio on Windows and on the Mac. You can still choose None, or add your microphone as the second device.
+- On Windows, a microphone that has been unplugged no longer stops clipping from starting. It's left out until it's back.
+
 ## 0.52.0
 - Wrapped and Auto montage have a new look and move with your music. With a song, the picture punches in on the beat (harder on the first beat of a bar, hardest when the song drops), flashes on the drop, and slow moves ease in and out instead of crawling. Shots flow into each other through liquid blobs, rolling waves and ink blooms instead of plain wipes, with a burst of light on the drop. A cut lands right on each drop, the bright parts of the picture glow softly, and a flowing glow in violet, magenta, blue and peach runs along the bottom as the video starts and ends. Turn it off in Settings › Editing › Beat effects.
 - Wrapped's cards are redrawn: soft, grainy blends of violet, magenta, blue and orange instead of one flat colour, glossy pearls bouncing on the beat, a glossy Mochi, and big white titles on a gentle wave with a teal shadow.

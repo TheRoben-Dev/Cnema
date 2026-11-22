@@ -147,7 +147,9 @@ public static class CaptureProbe
             if (OperatingSystem.IsWindows() && ffmpeg is not null)
             {
                 var r = await RunQuiet(ffmpeg, "-hide_banner", "-list_devices", "true", "-f", "dshow", "-i", "dummy");
-                return new CaptureDevices(new[] { "Primary display" }, ParseDshowAudio(r?.StdErr ?? ""))
+                var audio = ParseDshowAudio(r?.StdErr ?? "");
+                if (WindowsLoopback.Supported) audio = audio.Prepend(SystemAudio).ToList();
+                return new CaptureDevices(new[] { "Primary display" }, audio)
                 {
                     Cameras = ParseDshowVideo(r?.StdErr ?? ""),
                 };

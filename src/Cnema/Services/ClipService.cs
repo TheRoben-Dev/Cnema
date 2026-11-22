@@ -38,6 +38,9 @@ public sealed class ClipService : IDisposable
     private bool _usedDdagrab;
     /// <summary>Why capture switched to the compatible (GDI) mode, or null when it didn't.</summary>
     public string? CaptureNote { get; private set; }
+
+    /// <summary>Windows System audio: how it's being recorded ("process loopback …", "speaker loopback", "silence: why").</summary>
+    public string? SystemAudioMode { get; private set; }
     /// <summary>The raw ffmpeg output behind <see cref="Error"/>, for diagnostics; the card shows only the friendly text.</summary>
     public string? ErrorDetail { get; private set; }
     /// <summary>Which screen capture is in use: "ddagrab", "gdigrab", "avfoundation" or "x11grab".</summary>
@@ -356,7 +359,10 @@ public sealed class ClipService : IDisposable
         var ddagrab = !_gdiFallback && await CaptureProbe.HasDdagrabAsync(ffmpeg);
         _usedDdagrab = ddagrab;
         CaptureMode = OperatingSystem.IsMacOS() ? "avfoundation" : OperatingSystem.IsWindows() ? (ddagrab ? "ddagrab" : "gdigrab") : "x11grab";
-        var devices = OperatingSystem.IsMacOS() || !string.IsNullOrWhiteSpace(Cfg.Camera)
+        // Windows: probed when a microphone is picked too, so one that's unplugged can be left out.
+        var windowsMic = OperatingSystem.IsWindows() && new[] { Cfg.Audio1, Cfg.Audio2 }
+            .Any(n => !string.IsNullOrWhiteSpace(n) && n != CaptureProbe.SystemAudio);
+        var devices = OperatingSystem.IsMacOS() || windowsMic || !string.IsNullOrWhiteSpace(Cfg.Camera)
             ? await CaptureProbe.ListDevicesAsync()
             : null;
         Encoder = encoder;
@@ -577,11 +583,13 @@ public sealed class ClipService : IDisposable
     }
 
     private Process? _audioHelper;
+    private IDisposable? _windowsAudio;
     private static string SystemAudioFifo => Path.Combine(AppPaths.ClipBufferDir, "system-audio.pcm");
 
     private bool UsesSystemAudio(CaptureDevices? devices) =>
-        OperatingSystem.IsMacOS() && devices?.Audio.Contains(CaptureProbe.SystemAudio) == true &&
-        (Cfg.Audio1 == CaptureProbe.SystemAudio || Cfg.Audio2 == CaptureProbe.SystemAudio);
+        (Cfg.Audio1 == CaptureProbe.SystemAudio || Cfg.Audio2 == CaptureProbe.SystemAudio) &&
+        (OperatingSystem.IsMacOS() ? devices?.Audio.Contains(CaptureProbe.SystemAudio) == true
+            : OperatingSystem.IsWindows() && WindowsLoopback.Supported);
 
     /// <summary>
     /// macOS system audio: the helper writes PCM into a FIFO that ffmpeg reads as an extra input.
@@ -589,7 +597,33 @@ public sealed class ClipService : IDisposable
     /// </summary>
     private bool StartSystemAudio(CaptureDevices? devices)
     {
-        if (!UsesSystemAudio(devices) || CaptureProbe.SystemAudioHelper is not { } helper) return true;
+        if (!UsesSystemAudio(devices)) return true;
+        if (OperatingSystem.IsWindows())
+        {
+            try
+            {
+                var loopback = WindowsLoopback.Start();
+                loopback.Ready += l =>
+                {
+                    SystemAudioMode = l.Problem is null ? l.Mode : "silence: " + l.Problem;
+                    if (l.Problem is { } problem)
+                    {
+                        Log.Warn($"System audio: couldn't open the sound ({problem}); recording silence");
+                        CaptureNote = T("Savefile couldn't open your PC's sound, so clips are recorded silent. Check that a playback device is connected, then turn clipping off and on.");
+                        Changed?.Invoke();
+                    }
+                    else Log.Info($"System audio: {l.Mode}");
+                };
+                _windowsAudio = loopback;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Set(ClipState.Error, T("System audio could not start: ") + ex.Message);
+                return false;
+            }
+        }
+        if (CaptureProbe.SystemAudioHelper is not { } helper) return true;
         try
         {
             using (var mk = Process.Start(new ProcessStartInfo("mkfifo", $"\"{SystemAudioFifo}\"") { UseShellExecute = false }))
@@ -626,6 +660,9 @@ public sealed class ClipService : IDisposable
     private void StopSystemAudio()
     {
         PlatformShell.PlayUnrecorded = null;
+        var windows = _windowsAudio;
+        _windowsAudio = null;
+        windows?.Dispose();
         var helper = _audioHelper;
         _audioHelper = null;
         if (helper is null) return;
@@ -832,8 +869,19 @@ public sealed class ClipService : IDisposable
         }
         else if (OperatingSystem.IsWindows())
         {
+            // A device that's no longer plugged in would stop ffmpeg from starting at all: leave it out.
+            // (Only when the list came back: a failed probe must not drop a working microphone.)
+            if (devices?.Audio.Where(n => n != CaptureProbe.SystemAudio).ToList() is { Count: > 0 } mics)
+                audio = audio.Where(n => n == CaptureProbe.SystemAudio || mics.Contains(n)).ToList();
+            if (!WindowsLoopback.Supported) audio.Remove(CaptureProbe.SystemAudio);
             foreach (var name in audio)
-                a.AddRange(new[] { "-f", "dshow", "-thread_queue_size", "1024", "-i", "audio=" + name });
+                a.AddRange(name == CaptureProbe.SystemAudio
+                    ? new[]
+                    {
+                        "-f", "f32le", "-ar", "48000", "-ac", "2", "-thread_queue_size", "1024",
+                        "-i", WindowsLoopback.PipePath,
+                    }
+                    : new[] { "-f", "dshow", "-thread_queue_size", "1024", "-i", "audio=" + name });
         }
         else
         {
