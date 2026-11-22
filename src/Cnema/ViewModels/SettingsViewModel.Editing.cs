@@ -27,6 +27,7 @@ public sealed partial class SettingsViewModel
     [ObservableProperty] private bool _featureBlur;
     [ObservableProperty] private bool _featureMusic;
     [ObservableProperty] private bool _featureMontage;
+    [ObservableProperty] private bool _featureBeatFx;
     [ObservableProperty] private bool _featureRecoverSessions;
     [ObservableProperty] private bool _featureRewatch;
     [ObservableProperty] private bool _featureOnThisDay;
@@ -110,6 +111,7 @@ public sealed partial class SettingsViewModel
         FeatureBlur = f.Blur;
         FeatureMusic = f.Music;
         FeatureMontage = f.Montage;
+        FeatureBeatFx = f.BeatFx;
         FeatureRecoverSessions = f.RecoverSessions;
         FeatureRewatch = f.Rewatch;
         FeatureFriendShelf = f.FriendShelf;

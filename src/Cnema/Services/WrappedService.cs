@@ -30,6 +30,8 @@ public sealed record WrappedScript(IReadOnlyList<WrappedCard> Cards, IReadOnlyLi
 public static class WrappedService
 {
     public const int Fps = 30;
+    /// <summary>Marks a finished part (bumped when parts are drawn differently, so a resumed render redoes old ones).</summary>
+    private static string Done => PulseFx.Enabled ? ".v3" : ".v2";
     private static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
 
     /// <summary>Videos Savefile made itself (montages, earlier Wrapped videos) don't go in.</summary>
@@ -384,6 +386,8 @@ public static class WrappedService
         var ffmpeg = ToolLocator.Ffmpeg ?? throw new InvalidOperationException(T("ffmpeg not found."));
         Directory.CreateDirectory(work);
         var music = plan.Songs.Count > 0;
+        // The beat effects need the song's beats: without music, the video looks as it did.
+        var pulse = PulseFx.Enabled && music;
         var threads = Math.Clamp(Environment.ProcessorCount / 2, 1, 4).ToString(Inv);
         var parts = new List<string>();
         var infos = new Dictionary<string, StreamInfo?>(StringComparer.Ordinal);
@@ -418,7 +422,7 @@ public static class WrappedService
             var d = S(len);
             var part = Path.Combine(work, $"{i:000}.mkv");
             parts.Add(part);
-            if (File.Exists(part + ".v2") && File.Exists(part)) { progress?.Report(0.7 * (i + 1) / plan.Shots.Count); continue; }
+            if (File.Exists(part + Done) && File.Exists(part)) { progress?.Report(0.7 * (i + 1) / plan.Shots.Count); continue; }
 
             if (shot.Kind == WrappedShotKind.Card && !File.Exists(CardPath(i) + ".done"))
             {
@@ -444,17 +448,37 @@ public static class WrappedService
                 var info = await Info(shot.Path!);
                 args.AddRange(new[] { "-ss", S(shot.StartMs / 1000.0), "-t", d, "-i", shot.Path! });
                 var (z0, z1) = ZoomOf(shot);
-                // Moves are drawn from a frame twice the size, so the slow push in stays smooth.
-                var move = z0 == z1 ? ""
-                    : $",scale={width * 2}:{height * 2}:flags=bicubic,zoompan=z='{S(z0)}+({S(z1 - z0)})*min(1,on/{(shot.Move == WrappedMove.PullOut ? Math.Min(frames, 18) : frames)})':" +
-                      $"x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s={width}x{height}:fps={Fps}";
+                string move;
+                if (pulse)
+                {
+                    // Eased moves plus a punch on every beat of the song (softer where people talk).
+                    var hits = PulseFx.Hits(plan.Beats, plan.Downbeats, plan.Drops, plan.BeatEnergy, shot.At, shot.At + len);
+                    move = PulseFx.Move(width, height, Fps, frames, z0, z1, shot.Move == WrappedMove.PullOut, hits, shot.Story || shot.Voice ? 0.45 : 1)
+                           + PulseFx.Flash(hits, shot.Story ? 0.5 : 1);
+                }
+                else
+                {
+                    // Moves are drawn from a frame twice the size, so the slow push in stays smooth.
+                    move = z0 == z1 ? ""
+                        : $",scale={width * 2}:{height * 2}:flags=bicubic,zoompan=z='{S(z0)}+({S(z1 - z0)})*min(1,on/{(shot.Move == WrappedMove.PullOut ? Math.Min(frames, 18) : frames)})':" +
+                          $"x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s={width}x{height}:fps={Fps}";
+                }
                 g.Add($"[{n}:v:0]fps={Fps},{Fit(info)}{move},{Norm},tpad=stop_mode=clone:stop_duration={d},trim=duration={d}[cur]");
                 if (info is { AudioStreams: > 0 }) audioIn = $"[{n}:a:0]";
                 n++;
             }
             var video = "[cur]";
             // The transition in: the shot before carries on underneath for a moment and hands over.
-            if (shot.Transition is { } tr && i > 0 && shot.TransitionSeconds > 0.05)
+            if (shot.Transition == "sf:leak" && i > 0)
+            {
+                // A straight cut on the beat with a flare of coloured light washing over it.
+                var leakStrip = PulseFx.WriteEdgeGlow(Path.Combine(work, "edge-glow.rgb"), width, height);
+                args.AddRange(new[] { "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", $"{leakStrip.Width}x{leakStrip.Height}", "-i", Path.Combine(work, "edge-glow.rgb") });
+                g.AddRange(PulseFx.LightLeak(video, "[lk]", n, width, height, len, "lk"));
+                video = "[lk]";
+                n++;
+            }
+            else if (shot.Transition is { } tr && i > 0 && shot.TransitionSeconds > 0.05)
             {
                 var prev = plan.Shots[i - 1];
                 var td = S(Math.Min(shot.TransitionSeconds, len * 0.45));
@@ -471,7 +495,10 @@ public static class WrappedService
                     g.Add($"[{n}:v:0]fps={Fps},{Fit(info)}{Zoom(ZoomOf(prev).To)},{Norm},tpad=stop_mode=clone:stop_duration={td},trim=duration={td}[prev]");
                 }
                 n++;
-                g.Add($"[prev]{video}xfade=transition={tr}:duration={td}:offset=0[x]");
+                var how = tr.StartsWith("sf:", StringComparison.Ordinal)
+                    ? (pulse ? PulseFx.Transition(tr, i) : null) ?? "transition=fade"
+                    : $"transition={tr}";
+                g.Add($"[prev]{video}xfade={how}:duration={td}:offset=0[x]");
                 video = "[x]";
             }
             // The caption, fading in and out over the picture.
@@ -492,8 +519,32 @@ public static class WrappedService
                 video = "[ov]";
                 n++;
             }
+            if (pulse)
+            {
+                // The glow on whatever is bright, cards included (their white type gets a soft halo); cards flash on drops.
+                var src = video;
+                if (shot.Kind == WrappedShotKind.Card)
+                {
+                    var flash = PulseFx.Flash(PulseFx.Hits(plan.Beats, plan.Downbeats, plan.Drops, plan.BeatEnergy, shot.At, shot.At + len).Where(h => h.Power > 1.5).ToList());
+                    if (flash.Length > 0) { g.Add($"{video}null{flash}[cf]"); src = "[cf]"; }
+                }
+                g.AddRange(PulseFx.Glow(src, "[gl]", width, height, "g", shot.Kind == WrappedShotKind.Card ? 0.4 : 0.3));
+                video = "[gl]";
+            }
             if (i == 0) { g.Add($"{video}fade=t=in:st=0:d=0.5[fi]"); video = "[fi]"; }
             if (i == plan.Shots.Count - 1) { g.Add($"{video}fade=t=out:st={S(Math.Max(0, len - 1.5))}:d=1.5[fo]"); video = "[fo]"; }
+            if (pulse && (i == 0 || i == plan.Shots.Count - 1))
+            {
+                // The flowing glow along the bottom edge as the video opens, and again as it ends (over the fade to black).
+                var glowPath = Path.Combine(work, "edge-glow.rgb");
+                var strip = PulseFx.WriteEdgeGlow(glowPath, width, height);
+                args.AddRange(new[] { "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", $"{strip.Width}x{strip.Height}", "-i", glowPath });
+                var start = i == 0;
+                g.AddRange(PulseFx.EdgeGlow(video, "[eg]", n, strip, width, height, len,
+                    start ? 0.2 : Math.Max(0, len - 4), start ? Math.Min(len, 3.6) : len, "e"));
+                video = "[eg]";
+                n++;
+            }
             g.Add($"{video}null[v]");
 
             // Sound: talking and laughing come through; longer moments keep theirs under the music; the rest sits low.
@@ -519,7 +570,7 @@ public static class WrappedService
             var r = await ProcessRunner.RunAsync(ffmpeg, args, ct: ct, background: true);
             if (r.ExitCode != 0 || !File.Exists(part))
                 throw new InvalidOperationException(Loc.F("Couldn't prepare part {0} of the video: {1}", i + 1, r.StdErr.Trim()));
-            await File.WriteAllTextAsync(part + ".v2", "", ct);
+            await File.WriteAllTextAsync(part + Done, "", ct);
             progress?.Report(0.7 * (i + 1) / plan.Shots.Count);
         }
 

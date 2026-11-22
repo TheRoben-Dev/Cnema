@@ -590,6 +590,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         ThumbnailService.SmartThumbs = Features.SmartThumbs;
         SmartCrop.Enabled = Features.SmartCrop;
         CutGuide.Enabled = Features.SmartCuts;
+        PulseFx.Enabled = Features.BeatFx;
         ScreenWords.Enabled = Features.ScreenText;
         Chapters.Enabled = Features.Chapters;
         Player.Queue = Features.ExportQueue ? Exports : null;

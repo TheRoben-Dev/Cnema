@@ -29,6 +29,7 @@ public sealed partial class MainViewModel
         Player.RefreshTrimSuggestion();
         SmartCrop.Enabled = Features.SmartCrop;
         CutGuide.Enabled = Features.SmartCuts;
+        PulseFx.Enabled = Features.BeatFx;
         ScreenWords.Enabled = Features.ScreenText;
         if (ThumbnailService.SmartThumbs != Features.SmartThumbs)
         {

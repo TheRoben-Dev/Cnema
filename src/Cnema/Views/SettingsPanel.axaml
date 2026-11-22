@@ -706,6 +706,18 @@
                   <Border Classes="sep" />
                   <Grid Classes="row" ColumnDefinitions="*,Auto">
                     <StackPanel Spacing="2">
+                      <TextBlock svc:Tr.Text="Beat effects" />
+                      <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="With a song, Auto montage and Wrapped pulse with the music: the picture punches in on the beat, flashes on the drop and glows, cuts land on the beat, and a soft glow flows along the bottom as the video starts and ends." />
+                      <Grid ColumnDefinitions="Auto,*" Margin="0,4,0,0">
+                        <PathIcon Data="{StaticResource IcSpeed}" Width="11" Height="11" Margin="0,2,6,0" VerticalAlignment="Top" Foreground="{DynamicResource TextDim}" />
+                        <TextBlock Grid.Column="1" Classes="dim cost" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Only while a montage or Wrapped is made: it takes about a third longer to make." />
+                      </Grid>
+                    </StackPanel>
+                    <ToggleSwitch Grid.Column="1" Classes="bare" IsChecked="{Binding FeatureBeatFx}" />
+                  </Grid>
+                  <Border Classes="sep" />
+                  <Grid Classes="row" ColumnDefinitions="*,Auto">
+                    <StackPanel Spacing="2">
                       <TextBlock svc:Tr.Text="Watermark and intro" />
                       <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Your logo in a corner, and an intro or outro clip around exports." />
                     </StackPanel>
