@@ -103,6 +103,7 @@ jobs:
         run: |
           dist/Cnema/Cnema --selftest-capture
           dist/Cnema/Cnema --selftest-capture --break-ddagrab
+          dist/Cnema/Cnema --selftest-capture --system-audio
       # The Windows installer: the same app folder as the zip, installed for just me or for everyone.
       - name: Build the Windows installer
         if: matrix.rid == 'win-x64'
