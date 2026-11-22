@@ -11,7 +11,7 @@ internal static class Program
         if (args.Contains("--selftest")) return SelfTest();
         if (args.Contains(VlcBootstrap.CacheFlag)) return VlcBootstrap.WriteCache();
         if (Array.IndexOf(args, "--selftest-models") is var mi and >= 0) return ModelSelfTest(args.Skip(mi + 1).FirstOrDefault());
-        if (args.Contains("--selftest-capture")) return CaptureSelfTest(args.Contains("--break-ddagrab"));
+        if (args.Contains("--selftest-capture")) return CaptureSelfTest(args.Contains("--break-ddagrab"), args.Contains("--system-audio"));
         if (Array.IndexOf(args, "--selftest-update") is var ui and >= 0 && ui + 1 < args.Length) return UpdateService.SelfTestInstallerUpdate(args[ui + 1]);
         Log.HookUnhandled();
         Log.Info($"Cnema {UpdateService.CurrentText} starting on {System.Runtime.InteropServices.RuntimeInformation.OSDescription}");
@@ -28,7 +28,7 @@ internal static class Program
     /// run (software encoder, 720p30, no audio) and waits until segments arrive. With --break-ddagrab, Desktop
     /// Duplication is made to fail so the automatic switch to GDI capture is exercised too.
     /// </summary>
-    private static int CaptureSelfTest(bool breakDdagrab)
+    private static int CaptureSelfTest(bool breakDdagrab, bool systemAudio = false)
     {
         var settings = new SettingsStore();
         var clip = settings.Current.Clip;
@@ -37,6 +37,8 @@ internal static class Program
         clip.Fps = 30;
         clip.Height = 720;
         clip.Audio1 = clip.Audio2 = clip.Camera = null;
+        if (systemAudio) clip.Audio1 = CaptureProbe.SystemAudio;
+        clip.Folder = Path.Combine(Path.GetTempPath(), "savefile-selftest-clips");
         clip.Profiles.Clear();
         ClipService.BreakDdagrabForTest = breakDdagrab;
         using var clips = new ClipService(settings);
@@ -49,6 +51,20 @@ internal static class Program
         if (clips.Error is { } error) Console.WriteLine($"error: {error}");
         if (clips.ErrorDetail is { } detail) Console.WriteLine($"ffmpeg: {detail}");
         var ok = clips.State == ClipState.Recording && (!breakDdagrab || !OperatingSystem.IsWindows() || clips.CaptureMode == "gdigrab");
+        if (ok && systemAudio)
+        {
+            // Record a little, save a clip and check it carries a sound track.
+            PlatformShell.PlayConfirmSound();
+            Thread.Sleep(12_000);
+            Console.WriteLine($"system audio: {clips.SystemAudioMode ?? "not started"}");
+            var saved = clips.SaveClipAsync("Selftest", 5).GetAwaiter().GetResult();
+            Console.WriteLine($"saved: {saved ?? "nothing"} state={clips.State}");
+            var probe = saved is null || ToolLocator.Ffmpeg is not { } ff ? null
+                : ProcessRunner.RunAsync(ff, new[] { "-hide_banner", "-i", saved }).GetAwaiter().GetResult().StdErr;
+            var streams = probe?.Split('\n').Where(l => l.Contains("Stream #")).Select(l => l.Trim()).ToList() ?? new();
+            foreach (var line in streams) Console.WriteLine($"  {line}");
+            ok = streams.Any(l => l.Contains("Audio:")) && streams.Any(l => l.Contains("Video:"));
+        }
         Console.WriteLine(ok ? "capture selftest OK" : "capture selftest FAILED");
         return ok ? 0 : 1;
     }

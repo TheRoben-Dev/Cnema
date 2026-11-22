@@ -348,7 +348,9 @@ public sealed partial class SettingsViewModel : ObservableObject
             ? T("\"System audio\" records everything you hear (games included) and is covered by the Screen Recording permission. Pick your microphone as the second device to add your voice.")
             : T("System audio needs macOS 13 or newer. Microphones work as they are; for game sound, install a loopback device such as BlackHole and pick it here.")
         : OperatingSystem.IsWindows()
-            ? T("Microphones work as they are. For game sound, enable \"Stereo Mix\" in Windows sound settings (or install a loopback device) and pick it here.")
+            ? WindowsLoopback.Supported
+                ? T("\"System audio\" records everything you hear, games included, without Savefile's own sounds. Pick your microphone as the second device to add your voice.")
+                : T("Microphones work as they are. For game sound, enable \"Stereo Mix\" in Windows sound settings (or install a loopback device) and pick it here.")
             : T("Sources ending in \".monitor\" record what the speakers play.");
 
     /// <summary>Temp disk the rolling buffer needs; nothing else is written until a clip is saved.</summary>
