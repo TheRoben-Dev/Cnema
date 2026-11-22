@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using System.IO.Pipes;
 using System.Runtime.InteropServices;
-using System.Runtime.Versioning;
 
 namespace Cnema.Services;
 
@@ -15,7 +14,7 @@ namespace Cnema.Services;
 /// device. When nothing plays, or the sound can't be opened at all, silence is written so ffmpeg's audio clock
 /// never stalls the capture.
 /// </summary>
-[SupportedOSPlatform("windows")]
+/// Only used where <see cref="Supported"/> is true (Windows 10+).
 public sealed class WindowsLoopback : IDisposable
 {
     public const int SampleRate = 48_000;
@@ -48,7 +47,7 @@ public sealed class WindowsLoopback : IDisposable
             PipeTransmissionMode.Byte, PipeOptions.Asynchronous, 0, 1 << 20);
         _thread = new Thread(Run) { IsBackground = true, Name = "System audio" };
         // MTA: WASAPI and its activation callback are free-threaded.
-        _thread.SetApartmentState(ApartmentState.MTA);
+        if (OperatingSystem.IsWindows()) _thread.SetApartmentState(ApartmentState.MTA);
     }
 
     public static WindowsLoopback Start()
@@ -193,7 +192,7 @@ public sealed class WindowsLoopback : IDisposable
                 mode = "speaker loopback";
                 return new Capture(client, null);
             }
-            finally { Marshal.ReleaseComObject(enumerator); }
+            finally { Release(enumerator); }
         }
 
         private static void Init(IAudioClient client, uint flags)
@@ -258,8 +257,8 @@ public sealed class WindowsLoopback : IDisposable
         public void Dispose()
         {
             try { _client.Stop(); } catch { /* device gone */ }
-            try { Marshal.ReleaseComObject(_capture); } catch { /* already released */ }
-            try { Marshal.ReleaseComObject(_client); } catch { /* already released */ }
+            try { Release(_capture); } catch { /* already released */ }
+            try { Release(_client); } catch { /* already released */ }
             _event?.Dispose();
         }
     }
@@ -296,7 +295,7 @@ public sealed class WindowsLoopback : IDisposable
                 Check(handler.Result, "Process loopback");
                 return (IAudioClient)handler.Client!;
             }
-            finally { Marshal.ReleaseComObject(op); }
+            finally { Release(op); }
         }
         finally
         {
@@ -326,6 +325,11 @@ public sealed class WindowsLoopback : IDisposable
             finally { Done.Set(); }
             return 0;
         }
+    }
+
+    private static void Release(object com)
+    {
+        if (OperatingSystem.IsWindows()) Marshal.ReleaseComObject(com);
     }
 
     private static void Check(int hr, string what)
