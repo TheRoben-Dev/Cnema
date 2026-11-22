@@ -7,7 +7,11 @@ public enum MontageTransition { Cut, Crossfade, FadeBlack, Slide }
 /// <summary>One piece of a montage: a stretch of a video, in milliseconds.</summary>
 public sealed record MontagePart(string Path, long Start, long End);
 
-public sealed record MontageJob(IReadOnlyList<MontagePart> Parts, MontageTransition Transition, MusicSpec? Music, string Output);
+public sealed record MontageJob(IReadOnlyList<MontagePart> Parts, MontageTransition Transition, MusicSpec? Music, string Output)
+{
+    /// <summary>The song's beats, when it was analysed: the picture pulses with it.</summary>
+    public SongInfo? Song { get; init; }
+}
 
 /// <summary>
 /// Stitches the best moments of several videos into one, with transitions and an optional music track.
@@ -28,7 +32,50 @@ public static class MontageService
     /// Otherwise it's the stretch around the loudest moment.
     /// </summary>
     public static async Task<List<MontagePart>> PlanAsync(IReadOnlyList<(string Path, long DurationMs)> videos, int seconds, CancellationToken ct,
-        Func<string, CutGuide?>? guideOf = null)
+        Func<string, CutGuide?>? guideOf = null, SongInfo? song = null, MontageTransition transition = MontageTransition.Cut)
+    {
+        var parts = await PiecesAsync(videos, seconds, ct, guideOf);
+        if (song is { Usable: true } && PulseFx.Enabled && parts.Count > 1)
+            parts = OnTheBeat(parts, song, transition == MontageTransition.Cut ? 0 : TransitionMs, videos.ToDictionary(v => v.Path, v => v.DurationMs, StringComparer.Ordinal), guideOf);
+        return parts;
+    }
+
+    /// <summary>
+    /// Moves each cut onto a beat of the song (the first beat of a bar when one is close), by making the piece before
+    /// it a little longer or shorter, where that doesn't cut into a sentence. With a transition, its middle is on the beat.
+    /// </summary>
+    private static List<MontagePart> OnTheBeat(List<MontagePart> parts, SongInfo song, long transitionMs, Dictionary<string, long> durations, Func<string, CutGuide?>? guideOf)
+    {
+        var result = new List<MontagePart>();
+        var downs = song.Downbeats().Where(i => i < song.Beats.Count).Select(i => song.Beats[i]).ToHashSet();
+        var t = transitionMs / 1000.0;
+        var at = 0.0; // where this piece starts in the montage, seconds
+        for (var i = 0; i < parts.Count; i++)
+        {
+            var p = parts[i];
+            if (i == parts.Count - 1) { result.Add(p); break; }
+            var len = (p.End - p.Start) / 1000.0;
+            var room = (durations.GetValueOrDefault(p.Path, p.End) - p.Start) / 1000.0;
+            var guide = guideOf?.Invoke(p.Path);
+            var best = len;
+            var bestScore = double.MaxValue;
+            foreach (var b in song.Beats)
+            {
+                var newLen = b + t / 2 - at;
+                if (newLen < Math.Max(1.2, len * 0.75) || newLen > Math.Min(room, len * 1.3)) continue;
+                var score = (downs.Contains(b) ? 0 : 0.6) + Math.Abs(newLen - len) / len * 1.5
+                            + (guide?.Cost(p.Start + (long)(newLen * 1000)) ?? 0) * 0.5;
+                if (score < bestScore) { bestScore = score; best = newLen; }
+            }
+            var end = p.Start + (long)Math.Round(best * 1000);
+            result.Add(p with { End = end });
+            at += best - t;
+        }
+        return result;
+    }
+
+    private static async Task<List<MontagePart>> PiecesAsync(IReadOnlyList<(string Path, long DurationMs)> videos, int seconds, CancellationToken ct,
+        Func<string, CutGuide?>? guideOf)
     {
         var parts = new List<MontagePart>();
         foreach (var (path, duration) in videos)
@@ -93,11 +140,27 @@ public static class MontageService
         }
 
         var g = new List<string>();
+        // With a song that was analysed: punches and flashes on its beats, a glow, and the flowing edge glow.
+        var pulse = PulseFx.Enabled && job.Song is { Usable: true } && job.Music is not null;
+        var beats = pulse ? job.Song!.Beats : new List<double>();
+        var downs = pulse ? job.Song!.Downbeats().Where(k => k < beats.Count).Select(k => beats[k]).ToList() : new List<double>();
+        var drops = pulse ? WrappedDirector.DropsOf(job.Song!) : new List<double>();
+        var energy = pulse ? job.Song!.Energy().ToList() : null;
+        var ifps = (int)Math.Round(fps);
+        double outAt = 0;
         for (var i = 0; i < parts.Count; i++)
         {
             var d = S(lengths[i]);
+            var fx = "";
+            if (pulse)
+            {
+                var hits = PulseFx.Hits(beats, downs, drops, energy, outAt, outAt + lengths[i] / 1000.0);
+                var frames = (int)Math.Round(lengths[i] / 1000.0 * ifps);
+                fx = PulseFx.Move(width, height, ifps, frames, 1, 1.04, false, hits, 0.8) + PulseFx.Flash(hits);
+            }
+            outAt += (lengths[i] - t) / 1000.0;
             g.Add($"[{i}:v:0]scale={width}:{height}:force_original_aspect_ratio=decrease,pad={width}:{height}:(ow-iw)/2:(oh-ih)/2:color=black," +
-                  $"setsar=1,format=yuv420p,trim=duration={d},setpts=PTS-STARTPTS,fps={F(fps)},settb=1/{(int)Math.Round(fps * 1000)}[v{i}]");
+                  $"setsar=1,format=yuv420p,trim=duration={d},setpts=PTS-STARTPTS,fps={F(fps)}{fx},setsar=1,format=yuv420p,settb=1/{(int)Math.Round(fps * 1000)}[v{i}]");
             g.Add(infos[i].AudioStreams > 0
                 ? $"[{i}:a:0]aformat=sample_rates=48000:channel_layouts=stereo,atrim=duration={d},asetpts=PTS-STARTPTS,apad=whole_dur={d}[a{i}]"
                 : $"anullsrc=r=48000:cl=stereo,atrim=duration={d}[a{i}]");
@@ -123,12 +186,32 @@ public static class MontageService
             for (var i = 1; i < parts.Count; i++)
             {
                 offset += lengths[i - 1] - t;
-                g.Add($"{v}[v{i}]xfade=transition={kind}:duration={S(t)}:offset={S(offset)}[x{i}]");
+                // With beat effects on, the stock wipes become organic ones: ink blooms and liquid blobs, or a rolling wave.
+                var how = (pulse ? job.Transition switch
+                {
+                    MontageTransition.Slide => PulseFx.Transition("sf:wave", i),
+                    MontageTransition.FadeBlack => null,
+                    _ => PulseFx.Transition(i % 3 == 0 ? "sf:blob" : "sf:ink", i),
+                } : null) ?? $"transition={kind}";
+                g.Add($"{v}[v{i}]xfade={how}:duration={S(t)}:offset={S(offset)}[x{i}]");
                 g.Add($"{a}[a{i}]acrossfade=d={S(t)}:c1=tri:c2=tri[ax{i}]");
                 v = $"[x{i}]";
                 a = $"[ax{i}]";
             }
             (vOut, aOut) = (v, a);
+        }
+        if (pulse)
+        {
+            var glowPath = Path.Combine(Path.GetTempPath(), $"savefile-edge-glow2-{width}x{height}.rgb");
+            var strip = PulseFx.WriteEdgeGlow(glowPath, width, height);
+            var gi = parts.Count + (job.Music is not null ? 1 : 0);
+            args.AddRange(new[] { "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", $"{strip.Width}x{strip.Height}", "-i", glowPath });
+            args.AddRange(new[] { "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", $"{strip.Width}x{strip.Height}", "-i", glowPath });
+            var secs = total / 1000.0;
+            g.AddRange(PulseFx.Glow(vOut, "[vg]", width, height, "gm", 0.3));
+            g.AddRange(PulseFx.EdgeGlow("[vg]", "[ve1]", gi, strip, width, height, secs, 0.2, Math.Min(secs, 3.6), "ea"));
+            g.AddRange(PulseFx.EdgeGlow("[ve1]", "[ve2]", gi + 1, strip, width, height, secs, Math.Max(0, secs - 4), secs, "eb"));
+            vOut = "[ve2]";
         }
         var audio = new List<string> { aOut };
         if (musicInput is { } mi && job.Music is { } m) audio = RenderService.AddMusic(g, audio, mi, m, total, "m");

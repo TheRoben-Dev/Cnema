@@ -47,6 +47,8 @@ public sealed class BlobMascot : Control
 {
     /// <summary>The shadow under the blob; the theme's Line colour when not set.</summary>
     public IBrush? Shadow { get; set; }
+    /// <summary>Draws a glossy highlight over the body (the Wrapped video's glossy look); off in the app.</summary>
+    public bool Gloss { get; set; }
 
     public static readonly StyledProperty<IBrush?> BodyProperty = AvaloniaProperty.Register<BlobMascot, IBrush?>(nameof(Body));
     public static readonly StyledProperty<bool> StillProperty = AvaloniaProperty.Register<BlobMascot, bool>(nameof(Still));
@@ -597,7 +599,39 @@ public sealed class BlobMascot : Control
             var height = Math.Clamp((ry - y) / (2 * ry), 0, 1);
             pts[i] = new Point(cx + x + lean * height * height, cy + y);
         }
-        ctx.DrawGeometry(body, null, Smooth(pts));
+        var outline = Smooth(pts);
+        ctx.DrawGeometry(body, null, outline);
+        if (Gloss)
+        {
+            // Glossy like a drop of liquid, following its own shape: a soft sheen over the top that fades out
+            // towards the middle, one small soft highlight, and warm light bouncing up along the bottom edge.
+            using (ctx.PushGeometryClip(outline))
+            {
+                var sheenAt = new Point(cx - rx * 0.08, cy - ry * 0.32);
+                var sheenPts = pts.Select(p => new Point(sheenAt.X + (p.X - cx) * 0.8, sheenAt.Y + (p.Y - cy) * 0.62)).ToArray();
+                var sheen = new LinearGradientBrush
+                {
+                    StartPoint = new RelativePoint(0.3, 0, RelativeUnit.Relative), EndPoint = new RelativePoint(0.55, 1, RelativeUnit.Relative),
+                    GradientStops =
+                    {
+                        new GradientStop(Color.FromArgb(120, 255, 255, 255), 0), new GradientStop(Color.FromArgb(40, 255, 255, 255), 0.35),
+                        new GradientStop(Color.FromArgb(0, 255, 255, 255), 0.62),
+                    },
+                };
+                ctx.DrawGeometry(sheen, null, Smooth(sheenPts));
+                var spot = new RadialGradientBrush
+                {
+                    GradientStops = { new GradientStop(Color.FromArgb(200, 255, 255, 255), 0), new GradientStop(Color.FromArgb(60, 255, 255, 255), 0.45), new GradientStop(Color.FromArgb(0, 255, 255, 255), 1) },
+                };
+                ctx.DrawEllipse(spot, null, new Point(cx - rx * 0.38, cy - ry * 0.5), rx * 0.16, ry * 0.11);
+                var bounce = new LinearGradientBrush
+                {
+                    StartPoint = new RelativePoint(0.5, 0, RelativeUnit.Relative), EndPoint = new RelativePoint(0.5, 1, RelativeUnit.Relative),
+                    GradientStops = { new GradientStop(Color.FromArgb(0, 255, 140, 220), 0.55), new GradientStop(Color.FromArgb(90, 255, 150, 210), 1) },
+                };
+                ctx.DrawGeometry(null, new Pen(bounce, rx * 0.12), outline);
+            }
+        }
 
         foreach (var p in _drops)
         {

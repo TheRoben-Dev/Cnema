@@ -88,10 +88,17 @@ public sealed partial class MainViewModel
         Exports.Add(output, P(videos.Count, "Montage of {0} video", "Montage of {0} videos"), async (progress, ct) =>
         {
             Directory.CreateDirectory(dir);
-            var parts = await MontageService.PlanAsync(videos, seconds, ct, p => guides.GetValueOrDefault(p));
+            // The song's beats (analysed once and remembered), so cuts and the picture move with it.
+            SongInfo? song = null;
+            if (music is not null && PulseFx.Enabled)
+            {
+                try { song = await MusicAnalyzer.GetAsync(music.Path, ct); }
+                catch (Exception ex) when (ex is not OperationCanceledException) { Log.Warn($"Montage: couldn't read the beats of {music.Path}: {ex.Message}"); }
+            }
+            var parts = await MontageService.PlanAsync(videos, seconds, ct, p => guides.GetValueOrDefault(p), song, transition);
             progress.Report(0.05);
             var inner = new Progress<double>(p => progress.Report(0.05 + p * 0.95));
-            await MontageService.RenderAsync(new MontageJob(parts, transition, music, output), inner, ct);
+            await MontageService.RenderAsync(new MontageJob(parts, transition, music, output) { Song = song }, inner, ct);
         }, () => T("Montage ready"));
         ShowToast(T("Making the montage. It shows up in your library when it's done."));
     }
