@@ -51,6 +51,7 @@ public sealed partial class SettingsViewModel
     [ObservableProperty] private bool _featureMochiSeasonal;
     [ObservableProperty] private bool _featureMochiSleepy;
     [ObservableProperty] private bool _featureMochiFollow;
+    [ObservableProperty] private bool _featureMochi3D;
     [ObservableProperty] private bool _featureMochiPoke;
     [ObservableProperty] private bool _featureMochiBackup;
     [ObservableProperty] private bool _featureMochiHelper;
@@ -138,6 +139,7 @@ public sealed partial class SettingsViewModel
         FeatureMochiSeasonal = f.MochiSeasonal;
         FeatureMochiSleepy = f.MochiSleepy;
         FeatureMochiFollow = f.MochiFollow;
+        FeatureMochi3D = f.Mochi3D;
         FeatureMochiPoke = f.MochiPoke;
         FeatureMochiBackup = f.MochiBackup;
         FeatureMochiHelper = f.MochiHelper;

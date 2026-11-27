@@ -466,8 +466,8 @@
   <Style Selector=":is(Control)">
     <Setter Property="FocusAdorner">
       <FocusAdornerTemplate>
-        <Border Margin="-3" CornerRadius="10" BorderThickness="2" BorderBrush="{DynamicResource FocusRing}"
-                BoxShadow="{DynamicResource FocusGlow}" IsHitTestVisible="False" AdornerLayer.IsClipEnabled="False" />
+        <Border Margin="-4" CornerRadius="10" BorderThickness="3" BorderBrush="{DynamicResource FocusRing}"
+                Background="{DynamicResource FocusTint}" IsHitTestVisible="False" AdornerLayer.IsClipEnabled="False" />
       </FocusAdornerTemplate>
     </Setter>
   </Style>
@@ -978,4 +978,104 @@
   <Style Selector="Button.shelfarrow:pointerover /template/ ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource Bg2}" />
   </Style>
+
+  <!-- ===================== Nightgrid look (v0.53) =====================
+       Calm panels on a dark page, cards as tiles with the picture inset, one highlight that glides from card to
+       card (Controls/GlideRing), flat chips in the toolbar, accent "//" section headers, and a crisp 3 px accent
+       focus ring with a light tint. Colours still come from the theme (Light / Dark / Same as system). -->
+
+  <!-- Cards are tiles: a panel with the thumbnail inset, the title and details inside it -->
+  <Style Selector="Button.card">
+    <Setter Property="Background" Value="{DynamicResource Bg2}" />
+    <Setter Property="CornerRadius" Value="12" />
+    <Setter Property="RenderTransform" Value="scale(1)" />
+    <Setter Property="Transitions">
+      <Transitions><TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.09" /></Transitions>
+    </Setter>
+  </Style>
+  <Style Selector="Button.card:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Bg3}" />
+  </Style>
+  <Style Selector="Button.card:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Bg3}" />
+  </Style>
+  <Style Selector="Button.card:pressed">
+    <Setter Property="RenderTransform" Value="scale(0.98)" />
+  </Style>
+  <Style Selector="Button.card:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Bg3}" />
+  </Style>
+  <!-- The glide ring replaces the per-card glow and hover ring; the picture stays put inside its tile -->
+  <Style Selector="Button.card Border.glow, Button.card:pointerover Border.glow, Button.card:focus-visible Border.glow">
+    <Setter Property="Opacity" Value="0" />
+  </Style>
+  <Style Selector="Button.card:pointerover Border.ring, Button.card:focus-visible Border.ring">
+    <Setter Property="Opacity" Value="0" />
+  </Style>
+  <Style Selector="Button.card Border.ring.selected, Button.card:pointerover Border.ring.selected">
+    <Setter Property="Opacity" Value="1" />
+  </Style>
+  <Style Selector="Button.card:pointerover Border.thumb, Button.card:focus-visible Border.thumb">
+    <Setter Property="RenderTransform" Value="scale(1)" />
+  </Style>
+  <Style Selector="Button.card Border.thumb">
+    <Setter Property="Background" Value="{DynamicResource Bg3}" />
+  </Style>
+  <Style Selector="Window.reduced Button.card:pressed">
+    <Setter Property="RenderTransform" Value="scale(1)" />
+  </Style>
+
+  <!-- Toolbar: flat chips on the page, no borders -->
+  <Style Selector="Grid#Toolbar Button.soft">
+    <Setter Property="Background" Value="{DynamicResource Bg2}" />
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="Padding" Value="14,9" />
+  </Style>
+  <Style Selector="Grid#Toolbar Button.soft:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Bg3}" />
+  </Style>
+  <Style Selector="ComboBox.chip">
+    <Setter Property="Background" Value="{DynamicResource Bg2}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="MinHeight" Value="38" />
+    <Setter Property="Padding" Value="14,0,8,0" />
+  </Style>
+  <Style Selector="ComboBox.chip:pointerover /template/ Border#Background">
+    <Setter Property="Background" Value="{DynamicResource Bg3}" />
+  </Style>
+  <Style Selector="TextBox.search">
+    <Setter Property="Background" Value="{DynamicResource Bg2}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="MinHeight" Value="38" />
+  </Style>
+  <Style Selector="TextBox.search:focus /template/ Border#PART_BorderElement">
+    <Setter Property="BorderThickness" Value="2" />
+  </Style>
+
+  <!-- Sidebar: the current section is an accent pill with accent text -->
+  <Style Selector="ListBox.nav ListBoxItem">
+    <Setter Property="Padding" Value="10,9" />
+  </Style>
+  <Style Selector="ListBox.nav ListBoxItem:selected TextBlock:not(.dim):not(.navicon)">
+    <Setter Property="Foreground" Value="{DynamicResource Highlight}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="Button.navbutton">
+    <Setter Property="Padding" Value="10,9" />
+  </Style>
+
+  <!-- Section headers: // EVERYTHING -->
+  <Style Selector="TextBlock.slashes">
+    <Setter Property="Foreground" Value="{DynamicResource Accent}" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="FontWeight" Value="Bold" />
+  </Style>
+  <Style Selector="TextBlock.section">
+    <Setter Property="Foreground" Value="{DynamicResource Text}" />
+    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="LetterSpacing" Value="1.4" />
+  </Style>
+
 </Styles>

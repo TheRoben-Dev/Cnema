@@ -95,6 +95,7 @@ public sealed class BlobMascot : Control
     private const int N = 30;              // points around the edge
     private const double Gravity = 7.0;    // in heights per second²
 
+    private readonly Mochi3D _body3D = new();
     private readonly DateTime _start = Clock();
     private readonly Random _rng = new();
     private bool _running;
@@ -243,6 +244,7 @@ public sealed class BlobMascot : Control
         _top = TopLevel.GetTopLevel(this);
         _top?.AddHandler(PointerMovedEvent, OnWindowPointerMoved, RoutingStrategies.Tunnel, handledEventsToo: true);
         EffectiveViewportChanged += OnViewportChanged;
+        Mochi3D.Changed += InvalidateVisual;
         ClipToBounds = ActualMood == MochiMood.Peek;
         Kick();
     }
@@ -253,6 +255,7 @@ public sealed class BlobMascot : Control
         // The window it was added to: once detached, the blob can't look its top level up any more.
         _top?.RemoveHandler(PointerMovedEvent, OnWindowPointerMoved);
         EffectiveViewportChanged -= OnViewportChanged;
+        Mochi3D.Changed -= InvalidateVisual;
         _inView = true;
         _top = null;
         _wake?.Stop();
@@ -339,7 +342,7 @@ public sealed class BlobMascot : Control
         if (!_inView || !Shown(top)) { _running = false; return; }
         var now = Now;
         // The small ones run for hours: a lower frame rate there is plenty and costs little.
-        if (_lastDraw >= 0 && now - _lastDraw < 1 / Math.Max(10, MaxFps) - 0.002) { top.RequestAnimationFrame(Frame); return; }
+        if (_lastDraw >= 0 && now - _lastDraw < 1 / Math.Max(10, Mochi3D.Enabled && !Gloss ? Math.Min(MaxFps, Mochi3D.MaxFps) : MaxFps) - 0.002) { top.RequestAnimationFrame(Frame); return; }
         if (_last >= 0) Step(now, Math.Min(now - _last, 1 / 15.0));
         _last = now;
         _lastDraw = now;
@@ -600,7 +603,12 @@ public sealed class BlobMascot : Control
             pts[i] = new Point(cx + x + lean * height * height, cy + y);
         }
         var outline = Smooth(pts);
-        ctx.DrawGeometry(body, null, outline);
+        // 3D Mochi (anime cel shading) when it's on and the shader runs; the flat body otherwise.
+        var drawn3D = !Gloss && body is ISolidColorBrush solid && _body3D.Draw(ctx, new Mochi3D.Frame(
+            new Point(cx, cy), rx, ry, lean, still ? 0 : -_look * 0.45, _d, still, solid.Color,
+            _drops.Select(p => { var r = p.R * w * Math.Max(0.2, 1 - p.Age * 0.8); return (new Point(cx + p.X * w, ground - p.Y * h - r), r); }).ToList()),
+            TopLevel.GetTopLevel(this)?.RenderScaling ?? 1);
+        if (!drawn3D) ctx.DrawGeometry(body, null, outline);
         if (Gloss)
         {
             // Glossy like a drop of liquid, following its own shape: a soft sheen over the top that fades out
@@ -633,7 +641,7 @@ public sealed class BlobMascot : Control
             }
         }
 
-        foreach (var p in _drops)
+        foreach (var p in drawn3D ? Enumerable.Empty<Drop>() : _drops)
         {
             var r = p.R * w * Math.Max(0.2, 1 - p.Age * 0.8);
             ctx.DrawEllipse(p.Brush ?? body, null, new Point(cx + p.X * w, ground - p.Y * h - r), r, r);
