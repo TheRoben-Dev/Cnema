@@ -594,11 +594,10 @@ public sealed class BlobMascot : Control
             var a = i * 2 * Math.PI / N;
             var c = Math.Cos(a);
             var s = Math.Sin(a);
-            var ex = s > 0 ? 0.78 : 1.0; // a round dome on top, a soft flat base where it sits
+            var ex = s > 0 ? 0.66 : 1.0; // a round dome on top, a broad flat base where it sits (grounded)
             var r = 1 + (still ? 0 : _d[i]);
             var y = ry * r * Math.Sign(s) * Math.Pow(Math.Abs(s), ex);
             var x = rx * r * Math.Sign(c) * Math.Pow(Math.Abs(c), ex) * Mochi3D.SlimeWidth(y / ry);
-            if (y < 0) y *= Mochi3D.SlimePeak(x / rx); // a soft, rounded crown
             // The top sways more than the bottom, which stays put on the ground.
             var height = Math.Clamp((ry - y) / (2 * ry), 0, 1);
             pts[i] = new Point(cx + x + lean * height * height, cy + y);

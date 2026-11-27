@@ -87,13 +87,10 @@ internal sealed class Mochi3D
     }
 
     /// <summary>
-    /// The slime silhouette: how much wider than the round blob it is at a height (−1 top … 1 bottom). The top is a
-    /// little narrower and the base spreads out where it sits, so it looks heavy, like it pools on the ground.
+    /// The slime silhouette: how much wider than the round blob it is at a height (−1 top … 1 bottom). The dome stays
+    /// fully round; only the base spreads out where it sits, so it looks heavy and grounded, pooling on the floor.
     /// </summary>
-    public static double SlimeWidth(double uy) => 1 - 0.07 * SmoothStep(0.1, 1, -uy) + 0.17 * SmoothStep(0.05, 1.05, uy);
-
-    /// <summary>A soft rounded crown on top: the dome is a little taller in the middle (never a point).</summary>
-    public static double SlimePeak(double ux) => 1 + 0.1 * Math.Exp(-ux * ux / 0.16);
+    public static double SlimeWidth(double uy) => 1 + 0.2 * SmoothStep(0.15, 1.05, uy);
 
     private int _key;
     private Coarse[] _coarse = [];
@@ -237,7 +234,6 @@ internal sealed class Mochi3D
         var uy = qy / f.Ry;
         var width = SlimeWidth(uy);
         var ux = qx / f.Rx / width;
-        if (uy < 0) uy /= SlimePeak(ux);
         if (ux * ux + uy * uy > 1.75)
         {
             normal = (0, 0, 1); gx = gy = 0;
@@ -257,7 +253,7 @@ internal sealed class Mochi3D
         }
         else
         {
-            n = 2 + 0.564 * SmoothStep(-0.2, 0.35, uy);
+            n = 2 + 1.03 * SmoothStep(-0.2, 0.35, uy); // 2 / 0.66: the flat outline's broad base
             // Single precision is plenty here and twice as quick.
             var nf = (float)n;
             rn = MathF.Pow((float)r, nf);
