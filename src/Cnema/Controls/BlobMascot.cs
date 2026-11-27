@@ -342,7 +342,7 @@ public sealed class BlobMascot : Control
         if (!_inView || !Shown(top)) { _running = false; return; }
         var now = Now;
         // The small ones run for hours: a lower frame rate there is plenty and costs little.
-        if (_lastDraw >= 0 && now - _lastDraw < 1 / Math.Max(10, Mochi3D.Enabled && !Gloss ? Math.Min(MaxFps, Mochi3D.MaxFps) : MaxFps) - 0.002) { top.RequestAnimationFrame(Frame); return; }
+        if (_lastDraw >= 0 && now - _lastDraw < 1 / Math.Max(10, MaxFps) - 0.002) { top.RequestAnimationFrame(Frame); return; }
         if (_last >= 0) Step(now, Math.Min(now - _last, 1 / 15.0));
         _last = now;
         _lastDraw = now;

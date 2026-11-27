@@ -30,9 +30,6 @@ internal sealed class Mochi3D
     }
     private static bool _enabled = true;
 
-    /// <summary>3D Mochi moves at up to 30 frames a second, like hand-drawn animation, which halves its cost.</summary>
-    public const double MaxFps = 30;
-
     /// <summary>Raised when <see cref="Enabled"/> changes, so a still Mochi redraws.</summary>
     public static event Action? Changed;
 
@@ -90,6 +87,11 @@ internal sealed class Mochi3D
     }
 
     private int _key;
+    private Coarse[] _coarse = [];
+
+    private readonly record struct Coarse(double Sd, (double X, double Y, double Z) N);
+
+    private static double Lerp(double a, double b, double t) => a + (b - a) * t;
 
     private static int Wobble(double[] d)
     {
@@ -127,22 +129,66 @@ internal sealed class Mochi3D
         var drops = f.Drops.Count == 0 ? [] : f.Drops.ToArray();
         var light = new Light(Norm(-0.62, -0.7, 0.42), Norm(-0.5, -0.82, 0.55), Norm(0.3, 0.95, 0.1), cy, sy);
 
+        // A coarse pass first (every third pixel): deep inside the body the surface is smooth, so normals there are
+        // interpolated from it; only pixels near the edge get their own evaluation. About a quarter of the work.
+        const int C = 3;
+        var cw = (pw + C - 1) / C + 1;
+        var ch = (ph + C - 1) / C + 1;
+        if (_coarse.Length < cw * ch) _coarse = new Coarse[cw * ch];
+        for (var cj = 0; cj < ch; cj++)
+        {
+            var y = top + (cj * C + 0.5) * px;
+            for (var ci = 0; ci < cw; ci++)
+            {
+                var x = left + (ci * C + 0.5) * px;
+                var g = Body(f, x, y, out var nrm, out var gx, out var gy);
+                var sd = g / Math.Max(Math.Sqrt(gx * gx + gy * gy) * px, 1e-9);
+                _coarse[cj * cw + ci] = new Coarse(sd, nrm);
+            }
+        }
+        var safe = ink * 1.5 + C * 1.5; // this far inside, no edge, ink line or anti-aliasing can be near
+
         for (var j = 0; j < ph; j++)
         {
             var y = top + (j + 0.5) * px;
+            var cj = j / C;
+            var fy = (j - cj * C) / (double)C;
             for (var i = 0; i < pw; i++)
             {
                 var x = left + (i + 0.5) * px;
                 double r = 0, gg = 0, b = 0, alpha = 0;
-                var g = Body(f, x, y, out var nrm, out var gx, out var gy);
-                if (g > -0.25)
+                var ci = i / C;
+                var c00 = _coarse[cj * cw + ci];
+                var c10 = _coarse[cj * cw + ci + 1];
+                var c01 = _coarse[(cj + 1) * cw + ci];
+                var c11 = _coarse[(cj + 1) * cw + ci + 1];
+                if (c00.Sd < -safe && c10.Sd < -safe && c01.Sd < -safe && c11.Sd < -safe && drops.Length == 0)
                 {
-                    var sd = g / Math.Max(Math.Sqrt(gx * gx + gy * gy) * px, 1e-9); // pixels inside the edge
-                    if (sd > -0.5)
+                    _pixels[j * pw + i] = 0; // well outside
+                    continue;
+                }
+                if (c00.Sd > safe && c10.Sd > safe && c01.Sd > safe && c11.Sd > safe)
+                {
+                    var fx = (i - ci * C) / (double)C;
+                    var nrm = Norm(
+                        Lerp(Lerp(c00.N.X, c10.N.X, fx), Lerp(c01.N.X, c11.N.X, fx), fy),
+                        Lerp(Lerp(c00.N.Y, c10.N.Y, fx), Lerp(c01.N.Y, c11.N.Y, fx), fy),
+                        Lerp(Lerp(c00.N.Z, c10.N.Z, fx), Lerp(c01.N.Z, c11.N.Z, fx), fy));
+                    (r, gg, b) = ShadeAt(nrm, 0, light);
+                    alpha = 1;
+                }
+                else
+                {
+                    var g = Body(f, x, y, out var nrm, out var gx, out var gy);
+                    if (g > -0.25)
                     {
-                        var edge = 1 - SmoothStep(ink * 0.5, ink * 1.5, sd);
-                        (r, gg, b) = ShadeAt(nrm, edge, light);
-                        alpha = Math.Clamp(sd + 0.5, 0, 1);
+                        var sd = g / Math.Max(Math.Sqrt(gx * gx + gy * gy) * px, 1e-9); // pixels inside the edge
+                        if (sd > -0.5)
+                        {
+                            var edge = 1 - SmoothStep(ink * 0.5, ink * 1.5, sd);
+                            (r, gg, b) = ShadeAt(nrm, edge, light);
+                            alpha = Math.Clamp(sd + 0.5, 0, 1);
+                        }
                     }
                 }
                 // Drops in front of the body (they fly out of it, so they're drawn over it).
@@ -271,7 +317,7 @@ internal sealed class Mochi3D
 
     private static int Pack(double r, double g, double b, double a)
     {
-        static int B(double v) => (int)Math.Clamp(Math.Round(v * 255), 0, 255);
+        static int B(double v) => v <= 0 ? 0 : v >= 1 ? 255 : (int)(v * 255 + 0.5);
         return (B(a) << 24) | (B(r * a) << 16) | (B(g * a) << 8) | B(b * a);
     }
 
