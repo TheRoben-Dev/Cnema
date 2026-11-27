@@ -164,6 +164,7 @@ public static class ThemeService
         // Keyboard focus: the same accent glow as a hovered card, a little tighter and stronger.
         r["FocusGlow"] = new BoxShadows(new BoxShadow { Blur = 14, Spread = 1, Color = Color.FromArgb(0x73, accent.R, accent.G, accent.B) });
         r["FocusRing"] = new SolidColorBrush(Mix(accent, s.Light ? Colors.Black : Colors.White, 0.12));
+        r["FocusTint"] = new SolidColorBrush(Color.FromArgb(s.Light ? (byte)0x20 : (byte)0x26, accent.R, accent.G, accent.B));
         // Badges and small buttons sit on thumbnails and video, so they stay dark in light mode too.
         r["Overlay"] = s.Light ? new SolidColorBrush(C("#161616"), 0.78) : new SolidColorBrush(C(s.Bg0), 0.88);
         r["OnOverlay"] = B(s.Light ? "#FFFFFF" : s.Text);

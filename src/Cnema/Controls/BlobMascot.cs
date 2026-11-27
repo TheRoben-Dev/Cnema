@@ -93,8 +93,9 @@ public sealed class BlobMascot : Control
     private static readonly IBrush Gold = new SolidColorBrush(Color.FromRgb(0xFF, 0xC5, 0x3D));
     private static readonly IBrush GoldDark = new SolidColorBrush(Color.FromRgb(0xE0, 0x9B, 0x1A));
     private const int N = 30;              // points around the edge
-    private const double Gravity = 7.0;    // in heights per second²
+    private const double Gravity = 9.5;    // in heights per second² (a heavy slime: short, weighty hops)
 
+    private readonly Mochi3D _body3D = new();
     private readonly DateTime _start = Clock();
     private readonly Random _rng = new();
     private bool _running;
@@ -113,6 +114,9 @@ public sealed class BlobMascot : Control
     private double _idleNext = 3, _idleUntil = -1;
     private int _idleLast = -1;
     private double _squintUntil = -1;                 // poked: eyes squeezed shut
+    // Eased weights, so faces and moods blend into each other instead of switching: one per mood, and the eye shapes.
+    private readonly double[] _moodW = new double[Enum.GetValues<MochiMood>().Length];
+    private double _happyW, _squintW, _dizzyW, _size = 1;
     private double _spinAt = -10, _dizzyUntil = -1;
     private double _nextZ = 1, _nextBeat;
     private double _pointerAt = -10;
@@ -147,7 +151,7 @@ public sealed class BlobMascot : Control
         else if (change.Property == SparkleTickProperty) Sparkle();
         else if (change.Property == MoodProperty || change.Property == ReadingProperty)
         {
-            ClipToBounds = ActualMood == MochiMood.Peek;
+            ClipToBounds = ActualMood == MochiMood.Peek || _moodW[(int)MochiMood.Peek] > 0.01;
             if (ActualMood == MochiMood.Proud) _cheerAt = Now - 0.5;
             Kick();
         }
@@ -187,9 +191,9 @@ public sealed class BlobMascot : Control
     private void Hop(double speed)
     {
         if (_y > 0.01 || _crouchUntil > Now) return;
-        _crouchUntil = Now + 0.12 + speed * 0.03;
+        _crouchUntil = Now + 0.2 + speed * 0.05; // a longer, deeper wind-up: it's heavy
         _pendingHop = speed;
-        _qv -= 1.3 + speed * 0.6;
+        _qv -= 1.8 + speed * 0.8;
     }
 
     private void Burst(int count)
@@ -243,6 +247,7 @@ public sealed class BlobMascot : Control
         _top = TopLevel.GetTopLevel(this);
         _top?.AddHandler(PointerMovedEvent, OnWindowPointerMoved, RoutingStrategies.Tunnel, handledEventsToo: true);
         EffectiveViewportChanged += OnViewportChanged;
+        Mochi3D.Changed += InvalidateVisual;
         ClipToBounds = ActualMood == MochiMood.Peek;
         Kick();
     }
@@ -253,6 +258,7 @@ public sealed class BlobMascot : Control
         // The window it was added to: once detached, the blob can't look its top level up any more.
         _top?.RemoveHandler(PointerMovedEvent, OnWindowPointerMoved);
         EffectiveViewportChanged -= OnViewportChanged;
+        Mochi3D.Changed -= InvalidateVisual;
         _inView = true;
         _top = null;
         _wake?.Stop();
@@ -466,16 +472,17 @@ public sealed class BlobMascot : Control
             var before = _look;
             _look += (_lookTo - _look) * Math.Min(1, s * (pointerRecent ? 10 : 18));
             _lookY += (_lookYTo - _lookY) * Math.Min(1, s * 9);
+            Blend(t, s, mood);
             _leanV += (_look - before) * 1.6; // a dart of the eyes tips the body after them
 
             // Breathing pulls the squash gently in and out; the springs give it overshoot and a settling wobble.
-            var breathe = mood == MochiMood.Sleepy ? Math.Sin(t * 2 * Math.PI / 4.4) * 0.05 : Math.Sin(t * 2 * Math.PI / 2.6) * 0.03;
+            var breathe = mood == MochiMood.Sleepy ? Math.Sin(t * 2 * Math.PI / 5.0) * 0.05 - 0.04 : Math.Sin(t * 2 * Math.PI / 3.4) * 0.035 - 0.03; // settled low, slow heavy breaths
             var airborne = _y > 0 || _yv > 0;
             var crouching = _crouchUntil > 0;
-            var qTarget = airborne ? 0.06 : crouching ? -0.16 : t < _stretchUntil ? 0.13 : breathe;
-            _qv += (-(_q - qTarget) * 170 - _qv * 4.2) * s;
+            var qTarget = airborne ? 0.08 : crouching ? -0.24 : t < _stretchUntil ? 0.13 : breathe;
+            _qv += (-(_q - qTarget) * 95 - _qv * 3.0) * s; // slow and heavy: big squash, a lazy overshoot
             _q += _qv * s;
-            _leanV += (-(_lean - leanTarget) * 110 - _leanV * 3.5) * s;
+            _leanV += (-(_lean - leanTarget) * 70 - _leanV * 2.8) * s; // the top lags behind, then sloshes back
             _lean += _leanV * s;
 
             if (airborne)
@@ -496,7 +503,7 @@ public sealed class BlobMascot : Control
                 var a = i * 2 * Math.PI / N;
                 var drift = 0.010 * Math.Sin(2 * a + t * 1.3) + 0.007 * Math.Sin(3 * a - t * 1.9 + 1) + 0.004 * Math.Sin(5 * a + t * 2.7);
                 var lap = _d[(i + N - 1) % N] + _d[(i + 1) % N] - 2 * _d[i];
-                _v[i] += (-(_d[i] - drift) * 140 - _v[i] * 3.2 + lap * 520) * s;
+                _v[i] += (-(_d[i] - drift) * 80 - _v[i] * 2.2 + lap * 380) * s; // gel: slower, longer jiggle
             }
             for (var i = 0; i < N; i++) _d[i] = Math.Clamp(_d[i] + _v[i] * s, -0.18, 0.18);
 
@@ -522,11 +529,42 @@ public sealed class BlobMascot : Control
         }
     }
 
+    /// <summary>
+    /// Eases every face and mood towards where it's heading, so nothing switches in one frame: the eyes melt from
+    /// open to ^ ^ to &gt; &lt;, props fade and pop in and out, peeking sinks and rises.
+    /// </summary>
+    private void Blend(double t, double s, MochiMood mood)
+    {
+        static double Ease(double v, double to, double rate, double s) => v + (to - v) * (1 - Math.Exp(-rate * s));
+        var happy = t - _cheerAt is >= 0 && t - _cheerAt < _happyFor || t < _squintUntil;
+        _happyW = Ease(_happyW, happy ? 1 : 0, 16, s);
+        _squintW = Ease(_squintW, t < _squintUntil ? 1 : 0, 24, s);
+        _dizzyW = Ease(_dizzyW, t < _dizzyUntil && t > _spinAt + 0.5 ? 1 : 0, 10, s);
+        for (var m = 0; m < _moodW.Length; m++) _moodW[m] = Ease(_moodW[m], (int)mood == m ? 1 : 0, 7, s);
+        _size = Ease(_size, SizeFor(mood), 7, s);
+        var clip = mood == MochiMood.Peek || _moodW[(int)MochiMood.Peek] > 0.01;
+        if (ClipToBounds != clip) ClipToBounds = clip;
+    }
+
+    /// <summary>A little smaller when something sits on its head, so the hat or the box stays in the frame.</summary>
+    private double SizeFor(MochiMood mood) => mood == MochiMood.Carrying ? 0.8 : Hat != MochiHat.None && mood != MochiMood.Peek ? 0.9 : 1;
+
+    /// <summary>How much of a mood shows right now (Reduced motion: all or nothing).</summary>
+    private double W(MochiMood m, bool still) => still ? (ActualMood == m ? 1 : 0) : _moodW[(int)m];
+
+    /// <summary>Overshoots a little on the way in, so props pop rather than fade.</summary>
+    private static double Pop(double x)
+    {
+        x = Math.Clamp(x, 0, 1);
+        const double c1 = 1.70158, c3 = c1 + 1;
+        return 1 + c3 * Math.Pow(x - 1, 3) + c1 * Math.Pow(x - 1, 2);
+    }
+
     /// <summary>Touch-down: a squash, a ripple from the bottom, and a couple of drops thrown off.</summary>
     private void Land(double speed)
     {
-        _qv -= speed * 1.6;
-        Ripple(Math.PI / 2, -speed * 0.5); // the bottom (angles grow downwards on screen)
+        _qv -= speed * 2.3; // lands with a heavy splat
+        Ripple(Math.PI / 2, -speed * 0.75); // the bottom (angles grow downwards on screen)
         var count = speed > 1 ? 3 : speed > 0.5 ? 2 : 0;
         for (var k = 0; k < count; k++)
         {
@@ -555,16 +593,16 @@ public sealed class BlobMascot : Control
         var t = still ? 0 : Now;
         var mood = ActualMood;
 
-        var q = still ? 0 : Math.Clamp(_q, -0.22, 0.3); // lively, never rubbery
+        var q = still ? -0.03 : Math.Clamp(_q, -0.27, 0.3); // heavy: squashes a lot, sits a little low
         var sy = 1 + q;
         var sx = 1 / sy; // the same amount of blob, just squashed or stretched
         // Peeking: the same blob sitting below the bottom edge, so only its top shows (and a bit more on hover).
         var peek = mood == MochiMood.Peek;
-        var ground = peek ? h * (IsPointerOver ? 1.0 : 1.1) : h * 0.94;
-        // A little smaller when something sits on its head, so the hat or the box stays in the frame.
-        var size = mood == MochiMood.Carrying ? 0.8 : Hat != MochiHat.None && !peek ? 0.9 : 1;
-        var rx = w * 0.43 * sx * size;
-        var ry = h * 0.41 * sy * size;
+        var peekW = W(MochiMood.Peek, still);
+        var ground = h * 0.94 + (h * (IsPointerOver ? 1.0 : 1.1) - h * 0.94) * peekW;
+        var size = still ? SizeFor(mood) : _size;
+        var rx = w * 0.41 * sx * size; // a low, wide dome
+        var ry = h * 0.36 * sy * size;
         var cx = w / 2;
         var lift = still ? 0 : _y * h;
         var cy = ground - ry - lift;
@@ -581,7 +619,7 @@ public sealed class BlobMascot : Control
         {
             // A flat shadow that shrinks while it's in the air.
             var air = Math.Clamp(_y / 0.12, 0, 1);
-            ctx.DrawEllipse(shadow, null, new Point(cx, ground), rx * (0.92 - air * 0.3), h * 0.035);
+            ctx.DrawEllipse(shadow, null, new Point(cx, ground), rx * (1.12 - air * 0.35), h * 0.04);
         }
 
         // The edge points: a soft squircle (a round dome on top, flatter where it sits), each moved by its spring.
@@ -591,16 +629,21 @@ public sealed class BlobMascot : Control
             var a = i * 2 * Math.PI / N;
             var c = Math.Cos(a);
             var s = Math.Sin(a);
-            var ex = s > 0 ? 0.78 : 1.0; // a round dome on top, a soft flat base where it sits
+            var ex = s > 0 ? 0.72 : 1.0; // a round dome on top, a broad flat base where it sits (grounded)
             var r = 1 + (still ? 0 : _d[i]);
-            var x = rx * r * Math.Sign(c) * Math.Pow(Math.Abs(c), ex);
             var y = ry * r * Math.Sign(s) * Math.Pow(Math.Abs(s), ex);
+            var x = rx * r * Math.Sign(c) * Math.Pow(Math.Abs(c), ex) * Mochi3D.SlimeWidth(y / ry);
             // The top sways more than the bottom, which stays put on the ground.
             var height = Math.Clamp((ry - y) / (2 * ry), 0, 1);
             pts[i] = new Point(cx + x + lean * height * height, cy + y);
         }
         var outline = Smooth(pts);
-        ctx.DrawGeometry(body, null, outline);
+        // 3D Mochi (anime cel shading) when it's on and the shader runs; the flat body otherwise.
+        var drawn3D = !Gloss && body is ISolidColorBrush solid && _body3D.Draw(ctx, new Mochi3D.Frame(
+            new Point(cx, cy), rx, ry, lean, still ? 0 : -_look * 0.45, _d, still, solid.Color,
+            _drops.Select(p => { var r = p.R * w * Math.Max(0.2, 1 - p.Age * 0.8); return (new Point(cx + p.X * w, ground - p.Y * h - r), r); }).ToList()),
+            TopLevel.GetTopLevel(this)?.RenderScaling ?? 1);
+        if (!drawn3D) ctx.DrawGeometry(body, null, outline);
         if (Gloss)
         {
             // Glossy like a drop of liquid, following its own shape: a soft sheen over the top that fades out
@@ -633,23 +676,48 @@ public sealed class BlobMascot : Control
             }
         }
 
-        foreach (var p in _drops)
+        foreach (var p in drawn3D ? Enumerable.Empty<Drop>() : _drops)
         {
             var r = p.R * w * Math.Max(0.2, 1 - p.Age * 0.8);
             ctx.DrawEllipse(p.Brush ?? body, null, new Point(cx + p.X * w, ground - p.Y * h - r), r, r);
         }
 
         var top = new Point(cx + lean, cy - ry); // the top of the dome, where hats and boxes sit
-        if (Hat != MochiHat.None && mood != MochiMood.Carrying) DrawHat(ctx, top, rx, ry, lean / w);
-        if (mood == MochiMood.Carrying) DrawBox(ctx, top, rx, ry, lean / w, body);
-        if (mood == MochiMood.Reading) DrawCards(ctx, w, h, ground, t, still);
+        // Props blend in and out with their mood: they pop in from where they sit and fade away.
+        var carryW = W(MochiMood.Carrying, still);
+        if (Hat != MochiHat.None && carryW < 0.99)
+            using (ctx.PushOpacity(1 - carryW))
+                DrawHat(ctx, top, rx, ry, lean / w);
+        if (carryW > 0.01)
+            using (ctx.PushOpacity(Math.Min(1, carryW * 1.5)))
+            using (ctx.PushTransform(Matrix.CreateTranslation(0, -(1 - carryW) * ry * 0.7)))
+                DrawBox(ctx, top, rx, ry, lean / w, body);
+        var readW = W(MochiMood.Reading, still);
+        if (readW > 0.01)
+            using (ctx.PushOpacity(Math.Min(1, readW * 1.5)))
+            using (ctx.PushTransform(Matrix.CreateTranslation(0, (1 - readW) * h * 0.12)))
+                DrawCards(ctx, w, h, ground, t, still);
 
         DrawEyes(ctx, w, h, cx, cy, rx, ry, sy, lean, t, still, mood);
-        if (mood == MochiMood.Proud) DrawBadge(ctx, w, h, body, cx, cy, rx, ry, lean, t, still);
+        var proudW = W(MochiMood.Proud, still);
+        if (proudW > 0.01)
+        {
+            var at = new Point(cx + lean * 0.3, cy + ry * 0.58);
+            using (ctx.PushOpacity(Math.Min(1, proudW * 2)))
+            using (ScaleAt(ctx, at, Pop(proudW)))
+                DrawBadge(ctx, w, h, body, cx, cy, rx, ry, lean, t, still);
+        }
 
-        if (mood == MochiMood.Puzzled) DrawQuestion(ctx, w, h, top, rx, t, still);
-        if (mood == MochiMood.Sleepy) DrawZs(ctx, w, h, top, rx, t);
-        if (mood == MochiMood.Listening) DrawWaves(ctx, h, cx + lean, cy, rx, t, still);
+        var puzzW = W(MochiMood.Puzzled, still);
+        if (puzzW > 0.01)
+            using (ctx.PushOpacity(Math.Min(1, puzzW * 2)))
+            using (ScaleAt(ctx, new Point(top.X + rx * 0.7, top.Y), Pop(puzzW)))
+                DrawQuestion(ctx, w, h, top, rx, t, still);
+        DrawZs(ctx, w, h, top, rx, t); // each z fades in and out on its own
+        var listenW = W(MochiMood.Listening, still);
+        if (listenW > 0.01)
+            using (ctx.PushOpacity(listenW))
+                DrawWaves(ctx, h, cx + lean, cy, rx, t, still);
         foreach (var p in _sparks) DrawSpark(ctx, w, h, cx, ground, p);
     }
 
@@ -659,16 +727,23 @@ public sealed class BlobMascot : Control
         // Eyes ride along with the body: they squash with it and sway with the top.
         var look = still ? 0 : _look * w * 0.035;
         var lookY = still ? 0 : _lookY * h * 0.03;
-        var eyeY = cy - ry * (mood == MochiMood.Reading ? 0.22 : 0.08) + lookY;
+        var eyeY = cy - ry * (0.08 + 0.14 * W(MochiMood.Reading, still)) + lookY;
         var eyeLean = lean * 0.45;
         var gap = rx * 0.4;
         var ew = w * 0.085;
         var eh = h * 0.13 * Math.Sqrt(sy);
 
-        // Dizzy after the spin: little spirals.
-        if (!still && t < _dizzyUntil && t > _spinAt + 0.5)
+        // Reduced motion: faces switch outright; otherwise they're the eased weights from Blend.
+        var happyOn = t - _cheerAt is >= 0 && t - _cheerAt < _happyFor || t < _squintUntil;
+        var happyW = still ? (mood == MochiMood.Proud ? 1 : 0) : _happyW;
+        var squintW = still ? 0 : _squintW;
+        var dizzyW = still ? 0 : _dizzyW;
+
+        // Dizzy after the spin: little spirals, melting in over the eyes and back out.
+        if (dizzyW > 0.01)
         {
             var pen = new Pen(Eye, Math.Max(1.2, w * 0.03), lineCap: PenLineCap.Round);
+            using var fade = ctx.PushOpacity(dizzyW);
             foreach (var side in new[] { -1, 1 })
             {
                 var c = new Point(cx + side * gap + eyeLean, eyeY);
@@ -679,7 +754,7 @@ public sealed class BlobMascot : Control
                     for (var k = 0; k <= 28; k++)
                     {
                         var a = turn + k * 0.42;
-                        var r = ew * 1.1 * k / 28.0;
+                        var r = ew * 1.1 * k / 28.0 * (0.6 + 0.4 * dizzyW);
                         var p = new Point(c.X + Math.Cos(a) * r, c.Y + Math.Sin(a) * r * 0.9);
                         if (k == 0) gc.BeginFigure(p, false); else gc.LineTo(p);
                     }
@@ -687,72 +762,75 @@ public sealed class BlobMascot : Control
                 }
                 ctx.DrawGeometry(null, pen, g);
             }
-            return;
         }
+        if (dizzyW > 0.99) return;
+        using var eyesFade = ctx.PushOpacity(1 - dizzyW);
 
-        var happy = !still && (t - _cheerAt is >= 0 && t - _cheerAt < _happyFor || t < _squintUntil);
-        if (happy || (still && mood == MochiMood.Proud))
-        {
-            // ^ ^ : two white arcs with round ends (squeezed flatter when poked).
-            var squint = t < _squintUntil;
-            var pen = new Pen(Eye, Math.Max(1.5, w * 0.055), lineCap: PenLineCap.Round);
-            foreach (var side in new[] { -1, 1 })
-            {
-                var ex0 = cx + side * gap + look + eyeLean;
-                var arc = new StreamGeometry();
-                using (var g = arc.Open())
-                {
-                    if (squint)
-                    {
-                        // > < : squeezed shut
-                        g.BeginFigure(new Point(ex0 - side * ew, eyeY - eh * 0.45), false);
-                        g.LineTo(new Point(ex0 + side * ew * 0.6, eyeY));
-                        g.LineTo(new Point(ex0 - side * ew, eyeY + eh * 0.45));
-                    }
-                    else
-                    {
-                        g.BeginFigure(new Point(ex0 - ew, eyeY + eh * 0.25), false);
-                        g.QuadraticBezierTo(new Point(ex0, eyeY - eh * 0.9), new Point(ex0 + ew, eyeY + eh * 0.25));
-                    }
-                    g.EndFigure(false);
-                }
-                ctx.DrawGeometry(null, pen, arc);
-            }
-            return;
-        }
-
-        // Blinks every few seconds, 140 ms each (slower and heavier when sleepy).
+        // Blinks every few seconds, 140 ms each (slower and heavier when sleepy), as a smooth close and open.
         var open = 1.0;
         var blinkLength = mood == MochiMood.Sleepy ? 0.45 : 0.14;
-        if (!still)
+        if (!still && !happyOn)
         {
             if (t > _nextBlink + blinkLength) _nextBlink = t + (mood == MochiMood.Sleepy ? 1.8 : 2.8) + _rng.NextDouble() * 3.2;
             if (t >= _nextBlink) open = Math.Max(0.1, 1 - Math.Sin((t - _nextBlink) / blinkLength * Math.PI));
         }
-        if (mood == MochiMood.Sleepy) open *= 0.4;
-        // Smiling eyes: a rounded dome on top and a gentle upward curve below, like a cheek pushing up. Outlined
-        // with a round join as well as filled, so both tips are round, never points.
+        open *= 1 - 0.6 * W(MochiMood.Sleepy, still);
+        var puzzled = W(MochiMood.Puzzled, still);
+
+        // One eye shape that morphs: smiling open eyes (a rounded dome over a gentle upward curve), ^ ^ arcs and
+        // squeezed > < all share the same six points, so they blend into each other. Outlined with a round
+        // join and round caps as well as filled, so every tip is round, never a point.
         var tip = Math.Max(1.2, ew * 0.42);
-        var join = new Pen(Eye, tip, lineJoin: PenLineJoin.Round);
+        var arcPen = Math.Max(1.5, w * 0.055);
         foreach (var side in new[] { -1, 1 })
         {
             var ex0 = cx + side * gap + look + eyeLean;
             // Puzzled: one eye narrowed, the other wide, like a raised eyebrow.
-            var o = mood == MochiMood.Puzzled ? open * (side < 0 ? 0.55 : 1.15) : open;
+            var o = open * (1 + ((side < 0 ? 0.55 : 1.15) - 1) * puzzled);
             var top = eh * o;
             var lift2 = eh * 0.26 * o;
             var hw = ew - tip / 2;
             var y0 = eyeY + top * 0.35;
-            var eye = new StreamGeometry();
-            using (var g = eye.Open())
+            Span<Point> eye =
+            [
+                new(ex0 - hw, y0), new(ex0 - hw, y0 - top * 1.25), new(ex0 + hw, y0 - top * 1.25), new(ex0 + hw, y0),
+                new(ex0 + hw * 0.5, y0 - lift2), new(ex0 - hw * 0.5, y0 - lift2),
+            ];
+            if (happyW > 0.001)
             {
-                g.BeginFigure(new Point(ex0 - hw, y0), true);
-                g.CubicBezierTo(new Point(ex0 - hw, y0 - top * 1.25), new Point(ex0 + hw, y0 - top * 1.25), new Point(ex0 + hw, y0));
-                g.CubicBezierTo(new Point(ex0 + hw * 0.5, y0 - lift2), new Point(ex0 - hw * 0.5, y0 - lift2), new Point(ex0 - hw, y0));
+                // ^ : one arc, its two sides on top of each other (no area left, just the stroke).
+                var p0 = new Point(ex0 - ew, eyeY + eh * 0.25);
+                var q = new Point(ex0, eyeY - eh * 0.9);
+                var p2 = new Point(ex0 + ew, eyeY + eh * 0.25);
+                var c1 = p0 + (q - p0) * (2 / 3.0);
+                var c2 = p2 + (q - p2) * (2 / 3.0);
+                Mix(eye, [p0, c1, c2, p2, c2, c1], happyW);
+            }
+            if (squintW > 0.001)
+            {
+                // > < : squeezed shut, a rounded chevron through its point.
+                var u = new Point(ex0 - side * ew, eyeY - eh * 0.45);
+                var l = new Point(ex0 - side * ew, eyeY + eh * 0.45);
+                var v = new Point(ex0 + side * ew * 0.6, eyeY);
+                var c = (v * 8 - u - l) / 6;
+                Mix(eye, [u, c, c, l, c, c], squintW);
+            }
+            var stroke = tip + (arcPen - tip) * Math.Max(happyW, squintW);
+            var geo = new StreamGeometry();
+            using (var g = geo.Open())
+            {
+                g.BeginFigure(eye[0], true);
+                g.CubicBezierTo(eye[1], eye[2], eye[3]);
+                g.CubicBezierTo(eye[4], eye[5], eye[0]);
                 g.EndFigure(true);
             }
-            ctx.DrawGeometry(Eye, join, eye);
+            ctx.DrawGeometry(Eye, new Pen(Eye, stroke, lineCap: PenLineCap.Round, lineJoin: PenLineJoin.Round), geo);
         }
+    }
+
+    private static void Mix(Span<Point> into, ReadOnlySpan<Point> to, double k)
+    {
+        for (var i = 0; i < into.Length; i++) into[i] += (to[i] - into[i]) * k;
     }
 
     /// <summary>A seasonal hat on the dome, tipping with the sway: a Santa hat, or a striped party hat.</summary>
@@ -918,6 +996,9 @@ public sealed class BlobMascot : Control
         var r = p.Size * w * scale;
         ctx.DrawGeometry(p.White ? Eye : Res("Highlight", Brushes.MediumPurple), null, Star(c, r, r * 0.32, 4));
     }
+
+    private static DrawingContext.PushedState ScaleAt(DrawingContext ctx, Point at, double scale) =>
+        ctx.PushTransform(Matrix.CreateTranslation(-at.X, -at.Y) * Matrix.CreateScale(scale, scale) * Matrix.CreateTranslation(at.X, at.Y));
 
     private static StreamGeometry Star(Point c, double outer, double inner, int points)
     {

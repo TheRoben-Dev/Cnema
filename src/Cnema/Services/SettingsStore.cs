@@ -298,6 +298,8 @@ public sealed class FeatureSettings
     public bool MochiSleepy { get; set; } = true;
     /// <summary>Its eyes follow the pointer when it's idle.</summary>
     public bool MochiFollow { get; set; } = true;
+    /// <summary>Mochi drawn in 3D with light anime-style shading (off: the original flat Mochi).</summary>
+    public bool Mochi3D { get; set; } = true;
     /// <summary>A click wobbles it like jelly (and lots of quick clicks do something silly).</summary>
     public bool MochiPoke { get; set; } = true;
     /// <summary>Carries a box in the sidebar while a backup runs.</summary>

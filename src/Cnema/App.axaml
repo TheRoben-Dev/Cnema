@@ -26,6 +26,7 @@
       <SolidColorBrush x:Key="TextDim" Color="{StaticResource TextDimColor}" />
       <SolidColorBrush x:Key="Accent" Color="{StaticResource AccentColor}" />
       <SolidColorBrush x:Key="AccentSoft" Color="{StaticResource AccentColor}" Opacity="0.18" />
+      <SolidColorBrush x:Key="FocusTint" Color="#268E6BFF" />
       <SolidColorBrush x:Key="Danger" Color="{StaticResource DangerColor}" />
       <SolidColorBrush x:Key="DangerHover" Color="#FF5C87" />
       <SolidColorBrush x:Key="Highlight" Color="#C2AEFF" />

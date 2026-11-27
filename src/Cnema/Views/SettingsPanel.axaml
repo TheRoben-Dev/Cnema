@@ -885,6 +885,12 @@
                         <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="After midnight Mochi yawns and asks if it's a late session." />
                       </StackPanel>
                     </CheckBox>
+                    <CheckBox IsChecked="{Binding FeatureMochi3D}">
+                      <StackPanel Spacing="1">
+                        <TextBlock svc:Tr.Text="3D Mochi" FontSize="12" />
+                        <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap" svc:Tr.Text="Mochi is drawn in 3D with soft anime-style shading. Turn it off for the original flat Mochi." />
+                      </StackPanel>
+                    </CheckBox>
                     <CheckBox IsChecked="{Binding FeatureMochiFollow}">
                       <StackPanel Spacing="1">
                         <TextBlock svc:Tr.Text="Watches the pointer" FontSize="12" />
