@@ -133,7 +133,7 @@ internal sealed class Mochi3D
         var cy = Math.Cos(f.Yaw);
         var sy = Math.Sin(f.Yaw);
         var drops = f.Drops.Count == 0 ? [] : f.Drops.ToArray();
-        var light = new Light(Norm(-0.62, -0.7, 0.42), Norm(-0.58, -0.68, 0.62), Norm(0.3, 0.95, 0.1), cy, sy, Norm(-0.62, -0.42, 0.66));
+        var light = new Light(Norm(-0.62, -0.7, 0.42), Norm(-0.5, -0.82, 0.55), Norm(0.3, 0.95, 0.1), cy, sy, Norm(-0.62, -0.42, 0.66));
 
         // A coarse pass first (every third pixel): deep inside the body the surface is smooth, so normals there are
         // interpolated from it; only pixels near the edge get their own evaluation. About a quarter of the work.
@@ -306,8 +306,8 @@ internal sealed class Mochi3D
         r += (br - r) * rim; g += (bg - g) * rim; b += (bb - b) * rim;
         var core = SmoothStep(0.55, 0.95, nz) * SmoothStep(-0.5, 0.3, ny) * 0.32;
         r += (sr - r) * core; g += (sg - g) * core; b += (sb - b) * core;
-        // The anime highlight: one big soft spot up on the dome.
-        var sp = SmoothStep(0.93, 0.975, nx * l.Half.X + ny * l.Half.Y + nz * l.Half.Z) * 0.85;
+        // The anime highlight: one small soft-edged spot up on the dome.
+        var sp = SmoothStep(0.972, 0.982, nx * l.Half.X + ny * l.Half.Y + nz * l.Half.Z) * 0.9;
         // A second, smaller glint just below it: wet, like gel.
         var sp2 = SmoothStep(0.986, 0.991, nx * l.Glint.X + ny * l.Glint.Y + nz * l.Glint.Z) * 0.75;
         sp = Math.Max(sp, sp2);
