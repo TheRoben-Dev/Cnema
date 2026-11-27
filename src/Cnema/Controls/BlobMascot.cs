@@ -566,8 +566,8 @@ public sealed class BlobMascot : Control
         var ground = peek ? h * (IsPointerOver ? 1.0 : 1.1) : h * 0.94;
         // A little smaller when something sits on its head, so the hat or the box stays in the frame.
         var size = mood == MochiMood.Carrying ? 0.8 : Hat != MochiHat.None && !peek ? 0.9 : 1;
-        var rx = w * 0.39 * sx * size; // narrower at rest: the base pools out wider than this
-        var ry = h * 0.41 * sy * size;
+        var rx = w * 0.41 * sx * size; // a low, wide dome
+        var ry = h * 0.36 * sy * size;
         var cx = w / 2;
         var lift = still ? 0 : _y * h;
         var cy = ground - ry - lift;
@@ -594,7 +594,7 @@ public sealed class BlobMascot : Control
             var a = i * 2 * Math.PI / N;
             var c = Math.Cos(a);
             var s = Math.Sin(a);
-            var ex = s > 0 ? 0.66 : 1.0; // a round dome on top, a broad flat base where it sits (grounded)
+            var ex = s > 0 ? 0.72 : 1.0; // a round dome on top, a broad flat base where it sits (grounded)
             var r = 1 + (still ? 0 : _d[i]);
             var y = ry * r * Math.Sign(s) * Math.Pow(Math.Abs(s), ex);
             var x = rx * r * Math.Sign(c) * Math.Pow(Math.Abs(c), ex) * Mochi3D.SlimeWidth(y / ry);

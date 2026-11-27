@@ -90,7 +90,7 @@ internal sealed class Mochi3D
     /// The slime silhouette: how much wider than the round blob it is at a height (−1 top … 1 bottom). The dome stays
     /// fully round; only the base spreads out where it sits, so it looks heavy and grounded, pooling on the floor.
     /// </summary>
-    public static double SlimeWidth(double uy) => 1 + 0.2 * SmoothStep(0.15, 1.05, uy);
+    public static double SlimeWidth(double uy) => 1 + 0.15 * SmoothStep(-0.95, 0.75, uy);
 
     private int _key;
     private Coarse[] _coarse = [];
@@ -133,7 +133,7 @@ internal sealed class Mochi3D
         var cy = Math.Cos(f.Yaw);
         var sy = Math.Sin(f.Yaw);
         var drops = f.Drops.Count == 0 ? [] : f.Drops.ToArray();
-        var light = new Light(Norm(-0.62, -0.7, 0.42), Norm(-0.5, -0.82, 0.55), Norm(0.3, 0.95, 0.1), cy, sy, Norm(-0.62, -0.42, 0.66));
+        var light = new Light(Norm(-0.62, -0.7, 0.42), Norm(-0.58, -0.68, 0.62), Norm(0.3, 0.95, 0.1), cy, sy, Norm(-0.62, -0.42, 0.66));
 
         // A coarse pass first (every third pixel): deep inside the body the surface is smooth, so normals there are
         // interpolated from it; only pixels near the edge get their own evaluation. About a quarter of the work.
@@ -253,7 +253,7 @@ internal sealed class Mochi3D
         }
         else
         {
-            n = 2 + 1.03 * SmoothStep(-0.2, 0.35, uy); // 2 / 0.66: the flat outline's broad base
+            n = 2 + 0.78 * SmoothStep(-0.2, 0.35, uy); // 2 / 0.72: the flat outline's broad base
             // Single precision is plenty here and twice as quick.
             var nf = (float)n;
             rn = MathF.Pow((float)r, nf);
@@ -301,8 +301,13 @@ internal sealed class Mochi3D
         var bo = SmoothStep(0.55, 0.68, nx * l.Bounce.X + ny * l.Bounce.Y + nz * l.Bounce.Z) * (1 - t) * 0.75;
         var (br, bg, bb) = _rgb[2];
         r += (br - r) * bo; g += (bg - g) * bo; b += (bb - b) * bo;
-        // The anime highlight: one small soft-edged spot up on the dome.
-        var sp = SmoothStep(0.972, 0.982, nx * l.Half.X + ny * l.Half.Y + nz * l.Half.Z) * 0.9;
+        // Gel: light shining through lights up the lower rim, and the middle reads deeper, so it has a core.
+        var rim = SmoothStep(0.5, 0.8, 1 - nz) * SmoothStep(-0.15, 0.55, ny) * 0.6;
+        r += (br - r) * rim; g += (bg - g) * rim; b += (bb - b) * rim;
+        var core = SmoothStep(0.55, 0.95, nz) * SmoothStep(-0.5, 0.3, ny) * 0.32;
+        r += (sr - r) * core; g += (sg - g) * core; b += (sb - b) * core;
+        // The anime highlight: one big soft spot up on the dome.
+        var sp = SmoothStep(0.93, 0.975, nx * l.Half.X + ny * l.Half.Y + nz * l.Half.Z) * 0.85;
         // A second, smaller glint just below it: wet, like gel.
         var sp2 = SmoothStep(0.986, 0.991, nx * l.Glint.X + ny * l.Glint.Y + nz * l.Glint.Z) * 0.75;
         sp = Math.Max(sp, sp2);
