@@ -93,7 +93,7 @@ public sealed class BlobMascot : Control
     private static readonly IBrush Gold = new SolidColorBrush(Color.FromRgb(0xFF, 0xC5, 0x3D));
     private static readonly IBrush GoldDark = new SolidColorBrush(Color.FromRgb(0xE0, 0x9B, 0x1A));
     private const int N = 30;              // points around the edge
-    private const double Gravity = 7.0;    // in heights per second²
+    private const double Gravity = 9.5;    // in heights per second² (a heavy slime: short, weighty hops)
 
     private readonly Mochi3D _body3D = new();
     private readonly DateTime _start = Clock();
@@ -188,9 +188,9 @@ public sealed class BlobMascot : Control
     private void Hop(double speed)
     {
         if (_y > 0.01 || _crouchUntil > Now) return;
-        _crouchUntil = Now + 0.12 + speed * 0.03;
+        _crouchUntil = Now + 0.2 + speed * 0.05; // a longer, deeper wind-up: it's heavy
         _pendingHop = speed;
-        _qv -= 1.3 + speed * 0.6;
+        _qv -= 1.8 + speed * 0.8;
     }
 
     private void Burst(int count)
@@ -472,13 +472,13 @@ public sealed class BlobMascot : Control
             _leanV += (_look - before) * 1.6; // a dart of the eyes tips the body after them
 
             // Breathing pulls the squash gently in and out; the springs give it overshoot and a settling wobble.
-            var breathe = mood == MochiMood.Sleepy ? Math.Sin(t * 2 * Math.PI / 4.4) * 0.05 : Math.Sin(t * 2 * Math.PI / 2.6) * 0.03;
+            var breathe = mood == MochiMood.Sleepy ? Math.Sin(t * 2 * Math.PI / 5.0) * 0.05 - 0.04 : Math.Sin(t * 2 * Math.PI / 3.4) * 0.035 - 0.03; // settled low, slow heavy breaths
             var airborne = _y > 0 || _yv > 0;
             var crouching = _crouchUntil > 0;
-            var qTarget = airborne ? 0.06 : crouching ? -0.16 : t < _stretchUntil ? 0.13 : breathe;
-            _qv += (-(_q - qTarget) * 170 - _qv * 4.2) * s;
+            var qTarget = airborne ? 0.08 : crouching ? -0.24 : t < _stretchUntil ? 0.13 : breathe;
+            _qv += (-(_q - qTarget) * 95 - _qv * 3.0) * s; // slow and heavy: big squash, a lazy overshoot
             _q += _qv * s;
-            _leanV += (-(_lean - leanTarget) * 110 - _leanV * 3.5) * s;
+            _leanV += (-(_lean - leanTarget) * 70 - _leanV * 2.8) * s; // the top lags behind, then sloshes back
             _lean += _leanV * s;
 
             if (airborne)
@@ -499,7 +499,7 @@ public sealed class BlobMascot : Control
                 var a = i * 2 * Math.PI / N;
                 var drift = 0.010 * Math.Sin(2 * a + t * 1.3) + 0.007 * Math.Sin(3 * a - t * 1.9 + 1) + 0.004 * Math.Sin(5 * a + t * 2.7);
                 var lap = _d[(i + N - 1) % N] + _d[(i + 1) % N] - 2 * _d[i];
-                _v[i] += (-(_d[i] - drift) * 140 - _v[i] * 3.2 + lap * 520) * s;
+                _v[i] += (-(_d[i] - drift) * 80 - _v[i] * 2.2 + lap * 380) * s; // gel: slower, longer jiggle
             }
             for (var i = 0; i < N; i++) _d[i] = Math.Clamp(_d[i] + _v[i] * s, -0.18, 0.18);
 
@@ -528,8 +528,8 @@ public sealed class BlobMascot : Control
     /// <summary>Touch-down: a squash, a ripple from the bottom, and a couple of drops thrown off.</summary>
     private void Land(double speed)
     {
-        _qv -= speed * 1.6;
-        Ripple(Math.PI / 2, -speed * 0.5); // the bottom (angles grow downwards on screen)
+        _qv -= speed * 2.3; // lands with a heavy splat
+        Ripple(Math.PI / 2, -speed * 0.75); // the bottom (angles grow downwards on screen)
         var count = speed > 1 ? 3 : speed > 0.5 ? 2 : 0;
         for (var k = 0; k < count; k++)
         {
@@ -558,7 +558,7 @@ public sealed class BlobMascot : Control
         var t = still ? 0 : Now;
         var mood = ActualMood;
 
-        var q = still ? 0 : Math.Clamp(_q, -0.22, 0.3); // lively, never rubbery
+        var q = still ? -0.03 : Math.Clamp(_q, -0.27, 0.3); // heavy: squashes a lot, sits a little low
         var sy = 1 + q;
         var sx = 1 / sy; // the same amount of blob, just squashed or stretched
         // Peeking: the same blob sitting below the bottom edge, so only its top shows (and a bit more on hover).
@@ -566,7 +566,7 @@ public sealed class BlobMascot : Control
         var ground = peek ? h * (IsPointerOver ? 1.0 : 1.1) : h * 0.94;
         // A little smaller when something sits on its head, so the hat or the box stays in the frame.
         var size = mood == MochiMood.Carrying ? 0.8 : Hat != MochiHat.None && !peek ? 0.9 : 1;
-        var rx = w * 0.43 * sx * size;
+        var rx = w * 0.39 * sx * size; // narrower at rest: the base pools out wider than this
         var ry = h * 0.41 * sy * size;
         var cx = w / 2;
         var lift = still ? 0 : _y * h;
@@ -584,7 +584,7 @@ public sealed class BlobMascot : Control
         {
             // A flat shadow that shrinks while it's in the air.
             var air = Math.Clamp(_y / 0.12, 0, 1);
-            ctx.DrawEllipse(shadow, null, new Point(cx, ground), rx * (0.92 - air * 0.3), h * 0.035);
+            ctx.DrawEllipse(shadow, null, new Point(cx, ground), rx * (1.12 - air * 0.35), h * 0.04);
         }
 
         // The edge points: a soft squircle (a round dome on top, flatter where it sits), each moved by its spring.
@@ -596,8 +596,9 @@ public sealed class BlobMascot : Control
             var s = Math.Sin(a);
             var ex = s > 0 ? 0.78 : 1.0; // a round dome on top, a soft flat base where it sits
             var r = 1 + (still ? 0 : _d[i]);
-            var x = rx * r * Math.Sign(c) * Math.Pow(Math.Abs(c), ex);
             var y = ry * r * Math.Sign(s) * Math.Pow(Math.Abs(s), ex);
+            var x = rx * r * Math.Sign(c) * Math.Pow(Math.Abs(c), ex) * Mochi3D.SlimeWidth(y / ry);
+            if (y < 0) y *= Mochi3D.SlimePeak(x / rx); // a soft, rounded crown
             // The top sways more than the bottom, which stays put on the ground.
             var height = Math.Clamp((ry - y) / (2 * ry), 0, 1);
             pts[i] = new Point(cx + x + lean * height * height, cy + y);

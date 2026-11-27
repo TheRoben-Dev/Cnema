@@ -49,9 +49,9 @@ internal sealed class Mochi3D
     {
         if (!Enabled) return false;
         // The area the body (and its drops) can cover, in control units.
-        var left = f.Center.X - f.Rx * 1.25 - Math.Abs(f.Lean);
-        var right = f.Center.X + f.Rx * 1.25 + Math.Abs(f.Lean);
-        var top = f.Center.Y - f.Ry * 1.25;
+        var left = f.Center.X - f.Rx * 1.45 - Math.Abs(f.Lean);
+        var right = f.Center.X + f.Rx * 1.45 + Math.Abs(f.Lean);
+        var top = f.Center.Y - f.Ry * 1.4;
         var bottom = f.Center.Y + f.Ry * 1.25;
         foreach (var (at, r) in f.Drops)
         {
@@ -85,6 +85,15 @@ internal sealed class Mochi3D
         ctx.DrawImage(_bitmap, new Rect(0, 0, pw, ph), new Rect(left, top, pw / scale, ph / scale));
         return true;
     }
+
+    /// <summary>
+    /// The slime silhouette: how much wider than the round blob it is at a height (−1 top … 1 bottom). The top is a
+    /// little narrower and the base spreads out where it sits, so it looks heavy, like it pools on the ground.
+    /// </summary>
+    public static double SlimeWidth(double uy) => 1 - 0.07 * SmoothStep(0.1, 1, -uy) + 0.17 * SmoothStep(0.05, 1.05, uy);
+
+    /// <summary>A soft rounded crown on top: the dome is a little taller in the middle (never a point).</summary>
+    public static double SlimePeak(double ux) => 1 + 0.1 * Math.Exp(-ux * ux / 0.16);
 
     private int _key;
     private Coarse[] _coarse = [];
@@ -127,7 +136,7 @@ internal sealed class Mochi3D
         var cy = Math.Cos(f.Yaw);
         var sy = Math.Sin(f.Yaw);
         var drops = f.Drops.Count == 0 ? [] : f.Drops.ToArray();
-        var light = new Light(Norm(-0.62, -0.7, 0.42), Norm(-0.5, -0.82, 0.55), Norm(0.3, 0.95, 0.1), cy, sy);
+        var light = new Light(Norm(-0.62, -0.7, 0.42), Norm(-0.5, -0.82, 0.55), Norm(0.3, 0.95, 0.1), cy, sy, Norm(-0.62, -0.42, 0.66));
 
         // A coarse pass first (every third pixel): deep inside the body the surface is smooth, so normals there are
         // interpolated from it; only pixels near the edge get their own evaluation. About a quarter of the work.
@@ -225,8 +234,10 @@ internal sealed class Mochi3D
         var h = Math.Clamp((f.Ry - qy) / (2 * f.Ry), 0, 1);
         qx -= f.Lean * h * h;
         var shear = h is > 0 and < 1 ? f.Lean * h / f.Ry : 0; // d(qx)/dy
-        var ux = qx / f.Rx;
         var uy = qy / f.Ry;
+        var width = SlimeWidth(uy);
+        var ux = qx / f.Rx / width;
+        if (uy < 0) uy /= SlimePeak(ux);
         if (ux * ux + uy * uy > 1.75)
         {
             normal = (0, 0, 1); gx = gy = 0;
@@ -259,7 +270,7 @@ internal sealed class Mochi3D
         }
         var g = rn - px - py;
         // Gradient in control units (the shear tilts it a little with the sway).
-        var dgx = -dux / f.Rx;
+        var dgx = -dux / (f.Rx * width);
         var dgy = -duy / f.Ry - dux / f.Rx * -shear;
         gx = dgx / rn;
         gy = dgy / rn;
@@ -275,7 +286,7 @@ internal sealed class Mochi3D
     }
 
     private readonly record struct Light((double X, double Y, double Z) Key, (double X, double Y, double Z) Half,
-        (double X, double Y, double Z) Bounce, double Cos, double Sin);
+        (double X, double Y, double Z) Bounce, double Cos, double Sin, (double X, double Y, double Z) Glint);
 
     private (double, double, double) ShadeAt((double X, double Y, double Z) n, double edge, in Light l)
     {
@@ -291,11 +302,14 @@ internal sealed class Mochi3D
         var g = sg + (lg - sg) * t;
         var b = sb + (lb - sb) * t;
         // Bounce light along the bottom edge, only in the shadow tone.
-        var bo = SmoothStep(0.66, 0.72, nx * l.Bounce.X + ny * l.Bounce.Y + nz * l.Bounce.Z) * (1 - t) * 0.6;
+        var bo = SmoothStep(0.55, 0.68, nx * l.Bounce.X + ny * l.Bounce.Y + nz * l.Bounce.Z) * (1 - t) * 0.75;
         var (br, bg, bb) = _rgb[2];
         r += (br - r) * bo; g += (bg - g) * bo; b += (bb - b) * bo;
         // The anime highlight: one small soft-edged spot up on the dome.
         var sp = SmoothStep(0.972, 0.982, nx * l.Half.X + ny * l.Half.Y + nz * l.Half.Z) * 0.9;
+        // A second, smaller glint just below it: wet, like gel.
+        var sp2 = SmoothStep(0.986, 0.991, nx * l.Glint.X + ny * l.Glint.Y + nz * l.Glint.Z) * 0.75;
+        sp = Math.Max(sp, sp2);
         r += (1 - r) * sp; g += (1 - g) * sp; b += (1 - b) * sp;
         // The ink line round the edge.
         var (ir, ig, ib) = _rgb[3];
