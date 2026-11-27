@@ -2,6 +2,12 @@
 
 What changed in each Savefile (formerly Cnema) release. The app shows the entries you have not seen yet after it updates.
 
+## 0.53.0
+- A fresh look for the library. Clips sit on clean tiles with more room between them, and one soft violet highlight glides from card to card as you move the pointer or tab through them, staying on its card while you scroll. Toolbar buttons and the sort menu are flat chips, the search box is borderless, and sections have "// EVERYTHING"-style headings. Keyboard focus shows as a clear violet ring. Your theme stays the same; Light, Dark and Same as system all get the new look.
+- Mochi is now 3D, shaded like an anime character: two crisp tones, a small bright highlight, light glowing through the bottom edge and a thin outline. He's also a proper slime now. He's a low, wide dome with a round top and a flat base that sits on the ground, and he moves with more weight: deeper squashes, slower wobbles and heavier landings.
+- Everything Mochi does now flows. His eyes melt from open to ^ ^ to > < instead of switching, the dizzy spirals fade in and out, and moods blend into each other: the question mark, badge and box pop in and fade away, and peeking sinks and rises. With Reduced motion on, it all switches instantly as before.
+- Prefer the flat Mochi? Turn off "3D Mochi" in Settings, next to the other Mochi switches.
+
 ## 0.52.1
 - Clips on Windows now have sound. Pick "System audio (everything you hear)" in Settings › Clipping to record your game, voice chat and anything else your PC plays, with no Stereo Mix or extra software needed. On Windows 10 (version 2004 or newer) and Windows 11, Savefile's own sounds are left out, such as the save jingle and a clip you're watching in the window. If the sound can't be opened, the clip is still recorded and the clipping card says why it's silent.
 - Clips no longer start out silent. If you never picked a sound source, Savefile now uses System audio on Windows and on the Mac. You can still choose None, or add your microphone as the second device.
